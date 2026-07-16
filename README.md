@@ -1,36 +1,79 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Sitio web de GPI
 
-## Getting Started
+Sitio web corporativo de **GPI — Optimización de Procesos Industriales y Ambientales**
+(Cali, Colombia). Rediseño y migración del sitio anterior a una aplicación moderna,
+rápida y optimizada para SEO, lista para producción en Vercel.
 
-First, run the development server:
+Dominio: [gpiprofesionales.com](https://www.gpiprofesionales.com)
+
+## Stack
+
+- **Next.js 16** (App Router, carpeta `src/`)
+- **TypeScript**
+- **Tailwind CSS v4** (tokens de marca con `@theme` en `globals.css`)
+- **next/font** (Inter + Manrope, autoalojadas)
+- **next/image** para optimización de imágenes
+- Iconos SVG propios en línea (sin dependencias externas)
+- Cero dependencias de UI adicionales
+
+## Comandos
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run dev     # Entorno de desarrollo (http://localhost:3000)
+npm run build   # Compilación de producción
+npm start       # Servir la compilación de producción
+npm run lint    # Análisis con ESLint
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Estructura
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+src/
+├── app/                     # Rutas (App Router)
+│   ├── layout.tsx           # Layout raíz: fuentes, metadata, JSON-LD, header/footer
+│   ├── page.tsx             # Inicio
+│   ├── nosotros/            # Quiénes somos, valores, video y FAQ
+│   ├── servicios/           # Hub de servicios
+│   │   └── [slug]/          # Página por servicio (11 servicios)
+│   ├── proyectos/           # Proyectos realizados
+│   ├── contacto/            # Datos, mapa y formulario → WhatsApp
+│   ├── sitemap.ts           # Sitemap dinámico
+│   ├── robots.ts            # robots.txt
+│   └── icon.png             # Favicon
+├── components/
+│   ├── layout/              # Header, Footer, botón flotante de WhatsApp
+│   ├── sections/            # Bloques reutilizables (hero, tarjetas, FAQ, formulario…)
+│   └── ui/                  # Primitivas (Container, Button, SectionHeading, Reveal)
+├── data/                    # Contenido editable centralizado (fuente de verdad)
+│   ├── services.ts          # 11 servicios + 2 categorías
+│   ├── projects.ts          # Proyectos
+│   ├── clients.ts           # Logos de clientes
+│   ├── contact.ts           # Datos de contacto oficiales
+│   ├── faq.ts               # Preguntas frecuentes
+│   └── values.ts            # Valores corporativos
+└── lib/
+    └── icons.tsx            # Set de iconos SVG en línea
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Contenido editable
 
-## Learn More
+Todo el contenido textual y de datos vive en `src/data/`. Las páginas y componentes
+solo consumen de ahí, lo que facilita su edición y prepara el terreno para el panel
+de administración con Supabase (Fase 2).
 
-To learn more about Next.js, take a look at the following resources:
+## SEO
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `metadataBase`, títulos con plantilla `%s | GPI` y descripción única por página.
+- OpenGraph y Twitter Card.
+- JSON-LD: `Organization` + `LocalBusiness` (layout) y `FAQPage` (Nosotros).
+- `sitemap.xml` y `robots.txt` generados dinámicamente.
+- HTML semántico, `lang="es"` y texto alternativo en todas las imágenes.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Despliegue
 
-## Deploy on Vercel
+Optimizado para [Vercel](https://vercel.com). El dominio se apuntará por DNS cuando
+GPI apruebe la publicación.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Desarrollado por **GOCAS Automations**.
