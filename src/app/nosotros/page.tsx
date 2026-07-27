@@ -121,19 +121,22 @@ export default function NosotrosPage() {
         </Container>
       </section>
 
-      {/* Video corporativo */}
+      {/* Video de servicios */}
       <section className="py-20 sm:py-24">
         <Container size="narrow">
           <Reveal>
             <SectionHeading
               align="center"
-              eyebrow="Video corporativo"
-              title="Conoce GPI en un minuto"
-              description="Descubre cómo integramos disciplinas para optimizar los procesos de nuestros clientes."
+              eyebrow="Conoce nuestro trabajo"
+              title="Inspección con drones para ingeniería"
+              description="Una muestra de nuestros servicios profesionales de inspección con drones 4K."
             />
           </Reveal>
           <Reveal className="mt-10">
-            <YouTubeFacade id={contact.youtube.id} title="Video corporativo de GPI" />
+            <YouTubeFacade
+              id={contact.youtube.id}
+              title="Inspección con Drones 4K | Servicios Profesionales GPI para Ingeniería"
+            />
           </Reveal>
         </Container>
       </section>

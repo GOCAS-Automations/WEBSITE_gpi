@@ -12,6 +12,7 @@ import {
   WhatsApp,
   Facebook,
   Instagram,
+  YouTube,
 } from "@/lib/icons";
 
 export const metadata: Metadata = {
@@ -125,6 +126,15 @@ export default function ContactoPage() {
                   className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-mist text-ink-soft transition-colors hover:bg-brand hover:text-white"
                 >
                   <Instagram className="h-5 w-5" />
+                </a>
+                <a
+                  href={contact.social.youtube}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Canal de YouTube de GPI"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-mist text-ink-soft transition-colors hover:bg-brand hover:text-white"
+                >
+                  <YouTube className="h-5 w-5" />
                 </a>
               </div>
             </Reveal>

@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { contact, whatsappLink, telLink } from "@/data/contact";
 import { services } from "@/data/services";
-import { Facebook, Instagram, WhatsApp, MapPin, Phone, Mail } from "@/lib/icons";
+import { Facebook, Instagram, YouTube, WhatsApp, MapPin, Phone, Mail } from "@/lib/icons";
 
 const navLinks = [
   { label: "Inicio", href: "/" },
@@ -21,15 +21,13 @@ export function Footer() {
         <div className="grid gap-12 lg:grid-cols-12">
           {/* Marca */}
           <div className="lg:col-span-4">
-            <div className="inline-flex items-center rounded-xl bg-white px-3 py-2">
-              <Image
-                src="/images/logo.png"
-                alt="GPI — Optimización de Procesos Industriales y Ambientales"
-                width={3300}
-                height={1875}
-                className="h-9 w-auto"
-              />
-            </div>
+            <Image
+              src="/images/logo2.png"
+              alt="GPI — Optimización de Procesos Industriales y Ambientales"
+              width={137}
+              height={69}
+              className="h-14 w-auto sm:h-16"
+            />
             <p className="mt-5 max-w-sm text-sm leading-relaxed">
               Empresa de gestión estratégica y ejecución enfocada en generar
               rentabilidad y cumplimiento, integrando las variables del modelo de
@@ -42,6 +40,9 @@ export function Footer() {
               </SocialLink>
               <SocialLink href={contact.social.instagram} label="Instagram de GPI">
                 <Instagram className="h-5 w-5" />
+              </SocialLink>
+              <SocialLink href={contact.social.youtube} label="Canal de YouTube de GPI">
+                <YouTube className="h-5 w-5" />
               </SocialLink>
               <SocialLink
                 href={whatsappLink(contact.primaryWhatsApp)}

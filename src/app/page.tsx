@@ -167,7 +167,7 @@ export default function HomePage() {
                           </li>
                         ))}
                       </ul>
-                      <div className="mt-7">
+                      <div className="mt-auto pt-7">
                         <ButtonLink href="/servicios" variant="outline">
                           Ver {cat.name.toLowerCase()}
                           <ArrowRight className="h-4 w-4" />

@@ -113,6 +113,12 @@ export const Instagram = (p: IconProps) => (
   </Base>
 );
 
+export const YouTube = (p: IconProps) => (
+  <Base {...p} fill="currentColor" stroke="none">
+    <path d="M21.6 7.2a2.9 2.9 0 0 0-2.05-2.06C17.8 4.7 12 4.7 12 4.7s-5.8 0-7.55.44A2.9 2.9 0 0 0 2.4 7.2 30.4 30.4 0 0 0 2 12a30.4 30.4 0 0 0 .4 4.8 2.9 2.9 0 0 0 2.05 2.06C6.2 19.3 12 19.3 12 19.3s5.8 0 7.55-.44a2.9 2.9 0 0 0 2.05-2.06A30.4 30.4 0 0 0 22 12a30.4 30.4 0 0 0-.4-4.8ZM10 15.3V8.7L15.5 12 10 15.3Z" />
+  </Base>
+);
+
 /* ---------- Valores corporativos ---------- */
 export const Handshake = (p: IconProps) => (
   <Base {...p}>

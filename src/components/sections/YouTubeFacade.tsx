@@ -37,7 +37,7 @@ export function YouTubeFacade({ id, title }: YouTubeFacadeProps) {
             <Play className="ml-1 h-9 w-9" />
           </span>
           <span className="relative mt-5 text-lg font-bold text-white">
-            Ver video corporativo
+            Reproducir video
           </span>
           <span className="relative mt-1 text-sm text-white/60">
             GPI — Optimización de Procesos

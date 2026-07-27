@@ -45,14 +45,15 @@ export const contact = {
   social: {
     facebook: "https://www.facebook.com/gpiprofesionales",
     instagram: "https://www.instagram.com/gpiprofesionales/",
+    youtube: "https://www.youtube.com/@GPI-PROFESIONALESS.A.S",
   },
   youtube: {
-    watchUrl: "https://www.youtube.com/watch?v=dFD_bF7wf_o",
-    id: "dFD_bF7wf_o",
+    watchUrl: "https://www.youtube.com/watch?v=wqrzBwApBik",
+    id: "wqrzBwApBik",
   },
-  /** Mapa de Google Maps embebido sin API key */
+  /** Mapa de Google Maps embebido sin API key — busca la ficha del negocio en Google Maps */
   mapEmbedUrl:
-    "https://www.google.com/maps?q=Cl.+33+%235-76,+Comuna+4,+Cali,+Valle+del+Cauca,+Colombia&output=embed&hl=es",
+    "https://www.google.com/maps?q=GRUPO+DE+PROFESIONALES+EN+INGENIER%C3%8DA+GPI+S.A.S+Cali&output=embed&hl=es",
   siteUrl: "https://www.gpiprofesionales.com",
 } as const;
 

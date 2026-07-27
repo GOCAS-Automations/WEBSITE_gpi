@@ -51,7 +51,7 @@ export function Header() {
         scrolled ? "shadow-[0_4px_20px_-12px_rgba(21,24,27,0.35)]" : ""
       } border-b border-line`}
     >
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-6 lg:px-8 lg:h-[74px]">
+      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 sm:px-6 lg:px-8 lg:h-24">
         {/* Logo */}
         <Link href="/" className="flex shrink-0 items-center" aria-label="GPI — Inicio">
           <Image
@@ -60,7 +60,7 @@ export function Header() {
             width={3300}
             height={1875}
             priority
-            className="h-9 w-auto sm:h-10 lg:h-11"
+            className="h-11 w-auto sm:h-12 lg:h-16"
           />
         </Link>
 
@@ -122,7 +122,7 @@ export function Header() {
       {/* Menú móvil */}
       {mobileOpen && (
         <div className="lg:hidden">
-          <div className="max-h-[calc(100dvh-4rem)] overflow-y-auto border-t border-line bg-white px-5 pb-8 pt-2">
+          <div className="max-h-[calc(100dvh-5rem)] overflow-y-auto border-t border-line bg-white px-5 pb-8 pt-2">
             <nav className="flex flex-col" aria-label="Móvil">
               {mainNav.map((item) =>
                 item.hasDropdown ? (
