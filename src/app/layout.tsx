@@ -4,7 +4,7 @@ import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { WhatsAppFloat } from "@/components/layout/WhatsAppFloat";
-import { contact } from "@/data/contact";
+import { getServices, getSettings, type ContactSettings } from "@/lib/content";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -17,6 +17,12 @@ const manrope = Manrope({
   variable: "--font-manrope",
   display: "swap",
 });
+
+/**
+ * Revalidación ISR: el contenido se refresca cada 5 minutos y, además, de forma
+ * inmediata al guardar desde /admin (revalidatePath("/", "layout")).
+ */
+export const revalidate = 300;
 
 const siteUrl = "https://www.gpiprofesionales.com";
 const homeTitle =
@@ -87,7 +93,7 @@ export const metadata: Metadata = {
   category: "business",
 };
 
-function OrganizationJsonLd() {
+function OrganizationJsonLd({ contact }: { contact: ContactSettings }) {
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
@@ -100,7 +106,7 @@ function OrganizationJsonLd() {
         url: siteUrl,
         logo: `${siteUrl}/images/logo_full.jpg`,
         description: homeDescription,
-        email: contact.emails[0].address,
+        email: contact.emails[0]?.address,
         sameAs: [
           contact.social.facebook,
           contact.social.instagram,
@@ -114,7 +120,7 @@ function OrganizationJsonLd() {
         legalName: "Grupo de Profesionales en Ingeniería GPI S.A.S",
         image: `${siteUrl}/images/logo_full.jpg`,
         url: siteUrl,
-        telephone: `+${contact.phones[0].intl}`,
+        telephone: `+${contact.phones[0]?.intl ?? ""}`,
         priceRange: "$$",
         address: {
           "@type": "PostalAddress",
@@ -156,25 +162,27 @@ function OrganizationJsonLd() {
   );
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const [settings, services] = await Promise.all([getSettings(), getServices()]);
+
   return (
     <html lang="es" className={`${inter.variable} ${manrope.variable} h-full`}>
       <head>
-        <OrganizationJsonLd />
+        <OrganizationJsonLd contact={settings.contact} />
         {/* Fallback: si el usuario no tiene JavaScript, revela el contenido animado */}
         <noscript>
           <style>{`[data-reveal]{opacity:1 !important;transform:none !important;}`}</style>
         </noscript>
       </head>
       <body className="flex min-h-full flex-col bg-white font-sans text-ink antialiased">
-        <Header />
+        <Header services={services} />
         <main className="flex-1">{children}</main>
-        <Footer />
-        <WhatsAppFloat />
+        <Footer settings={settings} services={services} />
+        <WhatsAppFloat contact={settings.contact} />
       </body>
     </html>
   );

@@ -7,6 +7,8 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
+      // Portal privado: no debe indexarse.
+      disallow: ["/admin", "/admin/", "/mi-cuenta"],
     },
     sitemap: `${baseUrl}/sitemap.xml`,
     host: baseUrl,

@@ -8,9 +8,7 @@ import { ValueCard } from "@/components/sections/ValueCard";
 import { YouTubeFacade } from "@/components/sections/YouTubeFacade";
 import { FaqAccordion } from "@/components/sections/FaqAccordion";
 import { CtaBand } from "@/components/sections/CtaBand";
-import { values } from "@/data/values";
-import { faq } from "@/data/faq";
-import { contact } from "@/data/contact";
+import { getFaqs, getSettings, getValues, type FaqItem } from "@/lib/content";
 import { Check } from "@/lib/icons";
 
 export const metadata: Metadata = {
@@ -20,7 +18,9 @@ export const metadata: Metadata = {
   alternates: { canonical: "/nosotros" },
 };
 
-function FaqJsonLd() {
+export const revalidate = 300;
+
+function FaqJsonLd({ faq }: { faq: FaqItem[] }) {
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
@@ -40,10 +40,17 @@ function FaqJsonLd() {
   );
 }
 
-export default function NosotrosPage() {
+export default async function NosotrosPage() {
+  const [values, faq, settings] = await Promise.all([
+    getValues(),
+    getFaqs(),
+    getSettings(),
+  ]);
+  const { youtube, contact } = settings;
+
   return (
     <>
-      <FaqJsonLd />
+      <FaqJsonLd faq={faq} />
       <PageHero
         eyebrow="Nosotros"
         title="Optimizamos procesos, generamos rentabilidad"
@@ -127,16 +134,13 @@ export default function NosotrosPage() {
           <Reveal>
             <SectionHeading
               align="center"
-              eyebrow="Conoce nuestro trabajo"
-              title="Inspección con drones para ingeniería"
-              description="Una muestra de nuestros servicios profesionales de inspección con drones 4K."
+              eyebrow={youtube.sectionEyebrow}
+              title={youtube.sectionTitle}
+              description={youtube.sectionDescription}
             />
           </Reveal>
           <Reveal className="mt-10">
-            <YouTubeFacade
-              id={contact.youtube.id}
-              title="Inspección con Drones 4K | Servicios Profesionales GPI para Ingeniería"
-            />
+            <YouTubeFacade id={youtube.id} title={youtube.title} />
           </Reveal>
         </Container>
       </section>
@@ -157,7 +161,7 @@ export default function NosotrosPage() {
         </Container>
       </section>
 
-      <CtaBand />
+      <CtaBand contact={contact} />
     </>
   );
 }

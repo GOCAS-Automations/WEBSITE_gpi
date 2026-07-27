@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { serviceCategories, getServicesByCategory } from "@/data/services";
+import { serviceCategories, type Service } from "@/data/services";
 import { iconMap } from "@/lib/icons";
-import { ArrowRight, ChevronDown, Menu, Close } from "@/lib/icons";
+import { ArrowRight, ChevronDown, Menu, Close, User } from "@/lib/icons";
 
 const mainNav = [
   { label: "Inicio", href: "/" },
@@ -16,7 +16,7 @@ const mainNav = [
   { label: "Contacto", href: "/contacto" },
 ];
 
-export function Header() {
+export function Header({ services }: { services: Service[] }) {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -44,6 +44,9 @@ export function Header() {
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
+
+  const byCategory = (id: Service["category"]) =>
+    services.filter((s) => s.category === id);
 
   return (
     <header
@@ -80,7 +83,7 @@ export function Header() {
                   {item.label}
                   <ChevronDown className="h-4 w-4 transition-transform duration-200 group-hover:rotate-180" />
                 </Link>
-                <MegaMenu />
+                <MegaMenu services={services} />
               </div>
             ) : (
               <Link
@@ -99,6 +102,19 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-2">
+          {/* Acceso discreto al portal */}
+          <Link
+            href="/mi-cuenta"
+            className={`hidden items-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium transition-colors lg:inline-flex ${
+              isActive("/mi-cuenta") || isActive("/admin")
+                ? "text-brand-dark"
+                : "text-graphite hover:text-brand-dark"
+            }`}
+          >
+            <User className="h-4 w-4" />
+            Mi Cuenta
+          </Link>
+
           <Link
             href="/contacto"
             className="hidden rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-dark hover:shadow-card lg:inline-flex"
@@ -156,7 +172,7 @@ export function Header() {
                             <p className="px-1 py-1.5 text-xs font-bold uppercase tracking-wider text-brand-dark">
                               {cat.name}
                             </p>
-                            {getServicesByCategory(cat.id).map((svc) => (
+                            {byCategory(cat.id).map((svc) => (
                               <Link
                                 key={svc.slug}
                                 href={`/servicios/${svc.slug}`}
@@ -182,6 +198,14 @@ export function Header() {
                   </Link>
                 ),
               )}
+              <Link
+                href="/mi-cuenta"
+                onClick={closeMobile}
+                className="flex items-center gap-2 border-b border-line/70 py-3.5 text-base font-semibold text-graphite"
+              >
+                <User className="h-5 w-5" />
+                Mi Cuenta
+              </Link>
             </nav>
             <Link
               href="/contacto"
@@ -199,7 +223,7 @@ export function Header() {
 }
 
 /** Mega-menú de servicios (escritorio) */
-function MegaMenu() {
+function MegaMenu({ services }: { services: Service[] }) {
   return (
     <div className="invisible absolute left-1/2 top-full z-50 w-[640px] -translate-x-1/2 pt-3 opacity-0 transition-all duration-200 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
       <div className="overflow-hidden rounded-2xl border border-line bg-white shadow-card">
@@ -215,22 +239,24 @@ function MegaMenu() {
                   </span>
                 </div>
                 <ul>
-                  {getServicesByCategory(cat.id).map((svc) => {
-                    const Icon = iconMap[svc.icon];
-                    return (
-                      <li key={svc.slug}>
-                        <Link
-                          href={`/servicios/${svc.slug}`}
-                          className="flex items-start gap-2.5 rounded-xl px-2 py-2 transition-colors hover:bg-mist"
-                        >
-                          <Icon className="mt-0.5 h-4 w-4 shrink-0 text-graphite" />
-                          <span className="text-sm font-medium leading-snug text-ink-soft">
-                            {svc.navTitle}
-                          </span>
-                        </Link>
-                      </li>
-                    );
-                  })}
+                  {services
+                    .filter((s) => s.category === cat.id)
+                    .map((svc) => {
+                      const Icon = iconMap[svc.icon];
+                      return (
+                        <li key={svc.slug}>
+                          <Link
+                            href={`/servicios/${svc.slug}`}
+                            className="flex items-start gap-2.5 rounded-xl px-2 py-2 transition-colors hover:bg-mist"
+                          >
+                            <Icon className="mt-0.5 h-4 w-4 shrink-0 text-graphite" />
+                            <span className="text-sm font-medium leading-snug text-ink-soft">
+                              {svc.navTitle}
+                            </span>
+                          </Link>
+                        </li>
+                      );
+                    })}
                 </ul>
               </div>
             );

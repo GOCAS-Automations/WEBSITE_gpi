@@ -8,22 +8,38 @@ import { Reveal } from "@/components/ui/Reveal";
 import { ValueCard } from "@/components/sections/ValueCard";
 import { ClientLogos } from "@/components/sections/ClientLogos";
 import { CtaBand } from "@/components/sections/CtaBand";
-import { values } from "@/data/values";
-import { serviceCategories, getServicesByCategory } from "@/data/services";
+import {
+  getClients,
+  getServiceCategories,
+  getServices,
+  getSettings,
+  getValues,
+} from "@/lib/content";
 import { iconMap, ArrowRight, Check } from "@/lib/icons";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
 
-export default function HomePage() {
+export const revalidate = 300;
+
+export default async function HomePage() {
+  const [settings, services, values, clients] = await Promise.all([
+    getSettings(),
+    getServices(),
+    getValues(),
+    getClients(),
+  ]);
+  const { hero, excellence, contact } = settings;
+  const categories = getServiceCategories();
+
   return (
     <>
       {/* ---------------- HERO ---------------- */}
       <section className="relative isolate flex min-h-[88vh] items-center overflow-hidden bg-ink">
         <Image
-          src="/images/slides/1.jpg"
-          alt="Ingeniero de GPI realizando mediciones de campo con equipo especializado"
+          src={hero.image}
+          alt={hero.imageAlt}
           fill
           priority
           sizes="100vw"
@@ -38,26 +54,24 @@ export default function HomePage() {
           <div className="max-w-3xl animate-fade-up">
             <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-white backdrop-blur">
               <span className="h-1.5 w-1.5 rounded-full bg-brand-light" aria-hidden="true" />
-              +5 años en el sector industrial-ambiental
+              {hero.badge}
             </span>
             <h1 className="mt-6 text-4xl font-extrabold leading-[1.05] text-white sm:text-6xl">
-              Optimización de{" "}
+              {hero.titleLead}{" "}
               <span className="bg-gradient-to-r from-brand-light to-brand bg-clip-text text-transparent">
-                procesos
+                {hero.titleHighlight}
               </span>
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-relaxed text-white/85 sm:text-xl">
-              Adaptamos los procesos a través de la integración de diferentes
-              disciplinas, logrando eficiencia y rentabilidad sin exceder los
-              límites de diseño y de seguridad.
+              {hero.description}
             </p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-              <ButtonLink href="/servicios" variant="primary" size="lg">
-                Ver servicios
+              <ButtonLink href={hero.primaryCtaHref} variant="primary" size="lg">
+                {hero.primaryCtaLabel}
                 <ArrowRight className="h-5 w-5" />
               </ButtonLink>
-              <ButtonLink href="/contacto" variant="white" size="lg">
-                Contáctanos
+              <ButtonLink href={hero.secondaryCtaHref} variant="white" size="lg">
+                {hero.secondaryCtaLabel}
               </ButtonLink>
             </div>
           </div>
@@ -97,12 +111,7 @@ export default function HomePage() {
             </Reveal>
 
             <Reveal delay={120} className="grid grid-cols-2 gap-4">
-              {[
-                { value: "+5", label: "años en el sector industrial-ambiental" },
-                { value: "100%", label: "objetivo en el desempeño del cliente" },
-                { value: "11", label: "servicios industriales y ambientales" },
-                { value: "2", label: "grandes áreas: industrial y ambiental" },
-              ].map((stat) => (
+              {excellence.stats.map((stat) => (
                 <div
                   key={stat.label}
                   className="rounded-2xl border border-line bg-mist p-6 shadow-soft"
@@ -128,9 +137,9 @@ export default function HomePage() {
             />
           </Reveal>
           <div className="mt-12 grid gap-6 lg:grid-cols-2">
-            {serviceCategories.map((cat, i) => {
+            {categories.map((cat, i) => {
               const CatIcon = iconMap[cat.icon];
-              const catServices = getServicesByCategory(cat.id);
+              const catServices = services.filter((s) => s.category === cat.id);
               return (
                 <Reveal key={cat.id} delay={i * 120}>
                   <article className="group relative flex h-full flex-col overflow-hidden rounded-3xl border border-line bg-white shadow-soft transition-all duration-300 hover:shadow-card">
@@ -212,16 +221,15 @@ export default function HomePage() {
         <Container className="relative">
           <div className="mx-auto max-w-3xl text-center">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand-light">
-              Más de 5 años en el sector industrial-ambiental
+              {excellence.eyebrow}
             </p>
             <p className="mt-5 text-2xl font-bold leading-snug text-white sm:text-3xl">
-              Trabajamos para lograr el 100% en el desempeño de nuestros
-              clientes, siempre buscando la{" "}
-              <span className="text-brand-light">EXCELENCIA</span>.
+              {excellence.messageLead}{" "}
+              <span className="text-brand-light">{excellence.messageHighlight}</span>.
             </p>
             <div className="mt-8">
-              <ButtonLink href="/proyectos" variant="white">
-                Ver proyectos realizados
+              <ButtonLink href={excellence.ctaHref} variant="white">
+                {excellence.ctaLabel}
                 <ArrowRight className="h-4 w-4" />
               </ButtonLink>
             </div>
@@ -241,13 +249,13 @@ export default function HomePage() {
             />
           </Reveal>
           <Reveal className="mt-12">
-            <ClientLogos />
+            <ClientLogos clients={clients} />
           </Reveal>
         </Container>
       </section>
 
       {/* ---------------- CTA FINAL ---------------- */}
-      <CtaBand />
+      <CtaBand contact={contact} />
     </>
   );
 }

@@ -1,15 +1,18 @@
 import { Container } from "@/components/ui/Container";
 import { ButtonLink } from "@/components/ui/Button";
-import { contact, whatsappLink } from "@/data/contact";
+import { whatsappLink } from "@/data/contact";
+import type { ContactSettings } from "@/data/site";
 import { ArrowRight, WhatsApp } from "@/lib/icons";
 
 interface CtaBandProps {
+  contact: ContactSettings;
   title?: string;
   description?: string;
   whatsappMessage?: string;
 }
 
 export function CtaBand({
+  contact,
   title = "¿Listo para optimizar sus procesos?",
   description = "Cuéntenos su necesidad y le presentamos una propuesta a la medida de su proceso y su presupuesto.",
   whatsappMessage = "Hola GPI, me gustaría solicitar una cotización.",

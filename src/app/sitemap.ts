@@ -1,10 +1,12 @@
 import type { MetadataRoute } from "next";
-import { services } from "@/data/services";
+import { getServices } from "@/lib/content";
 
 const baseUrl = "https://www.gpiprofesionales.com";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+// /mi-cuenta y /admin quedan fuera del sitemap a propósito (portal privado).
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const lastModified = new Date();
+  const services = await getServices();
 
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: `${baseUrl}/`, lastModified, changeFrequency: "monthly", priority: 1 },

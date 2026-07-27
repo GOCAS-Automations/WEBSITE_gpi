@@ -1,9 +1,19 @@
-import { contact, whatsappLink } from "@/data/contact";
+"use client";
+
+import { usePathname } from "next/navigation";
+import { whatsappLink } from "@/data/contact";
+import type { ContactSettings } from "@/data/site";
 import { WhatsApp } from "@/lib/icons";
 
 const defaultMessage = "Hola GPI, quiero más información sobre sus servicios.";
 
-export function WhatsAppFloat() {
+/** Rutas del portal privado donde el botón flotante no debe aparecer. */
+const hiddenOn = ["/admin", "/mi-cuenta"];
+
+export function WhatsAppFloat({ contact }: { contact: ContactSettings }) {
+  const pathname = usePathname();
+  if (hiddenOn.some((prefix) => pathname.startsWith(prefix))) return null;
+
   return (
     <a
       href={whatsappLink(contact.primaryWhatsApp, defaultMessage)}

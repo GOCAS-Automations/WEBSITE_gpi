@@ -4,7 +4,7 @@ import { Reveal } from "@/components/ui/Reveal";
 import { PageHero } from "@/components/sections/PageHero";
 import { ProjectCard } from "@/components/sections/ProjectCard";
 import { CtaBand } from "@/components/sections/CtaBand";
-import { projects } from "@/data/projects";
+import { getProjects, getSettings } from "@/lib/content";
 
 export const metadata: Metadata = {
   title: "Proyectos realizados",
@@ -13,7 +13,11 @@ export const metadata: Metadata = {
   alternates: { canonical: "/proyectos" },
 };
 
-export default function ProyectosPage() {
+export const revalidate = 300;
+
+export default async function ProyectosPage() {
+  const [projects, settings] = await Promise.all([getProjects(), getSettings()]);
+
   return (
     <>
       <PageHero
@@ -29,7 +33,7 @@ export default function ProyectosPage() {
         <Container>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {projects.map((project, i) => (
-              <Reveal key={project.title} delay={(i % 4) * 90}>
+              <Reveal key={`${project.title}-${i}`} delay={(i % 4) * 90}>
                 <ProjectCard project={project} />
               </Reveal>
             ))}
@@ -38,6 +42,7 @@ export default function ProyectosPage() {
       </section>
 
       <CtaBand
+        contact={settings.contact}
         title="¿Quiere ser nuestro próximo caso de éxito?"
         description="Conversemos sobre su proyecto y construyamos juntos la solución."
       />

@@ -1,8 +1,21 @@
 import Link from "next/link";
 import Image from "next/image";
-import { contact, whatsappLink, telLink } from "@/data/contact";
-import { services } from "@/data/services";
-import { Facebook, Instagram, YouTube, WhatsApp, MapPin, Phone, Mail } from "@/lib/icons";
+import {
+  whatsappLink,
+  telLink,
+  type Service,
+  type SiteSettings,
+} from "@/lib/content";
+import {
+  Facebook,
+  Instagram,
+  YouTube,
+  WhatsApp,
+  MapPin,
+  Phone,
+  Mail,
+  User,
+} from "@/lib/icons";
 
 const navLinks = [
   { label: "Inicio", href: "/" },
@@ -12,7 +25,14 @@ const navLinks = [
   { label: "Contacto", href: "/contacto" },
 ];
 
-export function Footer() {
+export function Footer({
+  settings,
+  services,
+}: {
+  settings: SiteSettings;
+  services: Service[];
+}) {
+  const { contact } = settings;
   const featured = services.slice(0, 6);
 
   return (
@@ -93,6 +113,15 @@ export function Footer() {
                   </Link>
                 </li>
               ))}
+              <li>
+                <Link
+                  href="/mi-cuenta"
+                  className="inline-flex items-center gap-1.5 transition-colors hover:text-brand-light"
+                >
+                  <User className="h-4 w-4" />
+                  Mi Cuenta
+                </Link>
+              </li>
             </ul>
           </div>
 

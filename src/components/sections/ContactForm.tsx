@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { contact, whatsappLink } from "@/data/contact";
+import { whatsappLink } from "@/data/contact";
 import { WhatsApp } from "@/lib/icons";
 
 const inputClass =
   "w-full rounded-xl border border-line bg-white px-4 py-3 text-sm text-ink placeholder:text-graphite/60 transition-colors focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30";
 
-export function ContactForm() {
+export function ContactForm({ whatsappNumber }: { whatsappNumber: string }) {
   const [form, setForm] = useState({
     nombre: "",
     empresa: "",
@@ -29,7 +29,7 @@ export function ContactForm() {
       form.mensaje.trim() ? `\n\n${form.mensaje.trim()}` : "",
     ];
     const message = parts.join("");
-    const url = whatsappLink(contact.primaryWhatsApp, message);
+    const url = whatsappLink(whatsappNumber, message);
     window.open(url, "_blank", "noopener,noreferrer");
   }
 

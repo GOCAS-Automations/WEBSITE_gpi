@@ -3,7 +3,7 @@ import { Container } from "@/components/ui/Container";
 import { Reveal } from "@/components/ui/Reveal";
 import { PageHero } from "@/components/sections/PageHero";
 import { ContactForm } from "@/components/sections/ContactForm";
-import { contact, whatsappLink, telLink } from "@/data/contact";
+import { getSettings, whatsappLink, telLink } from "@/lib/content";
 import {
   MapPin,
   Phone,
@@ -22,7 +22,11 @@ export const metadata: Metadata = {
   alternates: { canonical: "/contacto" },
 };
 
-export default function ContactoPage() {
+export const revalidate = 300;
+
+export default async function ContactoPage() {
+  const { contact } = await getSettings();
+
   return (
     <>
       <PageHero
@@ -80,7 +84,7 @@ export default function ContactoPage() {
                 </InfoCard>
 
                 <InfoCard icon={<Clock className="h-5 w-5" />} title="Horario de atención">
-                  Lunes a viernes, 8:00 a. m. – 5:00 p. m.
+                  {contact.schedule}
                 </InfoCard>
               </div>
 
@@ -147,7 +151,7 @@ export default function ContactoPage() {
                   Completa el formulario y continúa la conversación por WhatsApp.
                 </p>
                 <div className="mt-6">
-                  <ContactForm />
+                  <ContactForm whatsappNumber={contact.primaryWhatsApp} />
                 </div>
               </div>
             </Reveal>

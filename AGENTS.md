@@ -46,3 +46,14 @@ Repo remoto: https://github.com/GOCAS-Automations/website_GPI.git
 ## Referencia
 - Contenido original extraído del sitio viejo: `docs/CONTENIDO.md` (fuente de verdad de textos e inventario de imágenes).
 - El sitio viejo tenía: link roto a "Recursos Hídricos" (404), lorem ipsum en FAQ de Nosotros, title "GPI" sin metadata — todo eso ya se corrige aquí.
+
+## Backend / Supabase
+- El contenido vive en Supabase (tablas `site_services`, `site_projects`, `site_clients`, `site_faqs`, `site_values`, `site_settings`) y se consume desde `src/lib/content.ts`, que **cae en `src/data/*` si no hay env vars o si la consulta falla** — el sitio nunca depende de la BD.
+- Credenciales y roles en `profiles` (`admin` | `employee`, trigger desde `auth.users`); RLS: SELECT público, escritura solo `is_admin()`. Imágenes en el bucket público `site-images`.
+- `/mi-cuenta` = login con marca GPI; `/admin` = panel CRUD (servicios, proyectos, clientes, FAQ, valores, contacto/ajustes) con server actions que validan rol y llaman `revalidatePath("/", "layout")`.
+- Migración lista para pegar en el SQL Editor: `supabase/migrations/0001_site_content.sql`. Guía completa (env vars, credenciales, fallback): `docs/ADMIN.md`.
+- Env vars en `.env.example` (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`); la sesión se refresca en `src/proxy.ts` (el `middleware` de Next 16).
+
+## Flujo de trabajo con Claude
+- **Fable solo analiza, planea y orquesta** (recon ligero, verificación de builds, git, memoria/docs). **La ejecución de código la hacen agentes**: Opus para tareas complejas (features, backend) y Sonnet para tareas rápidas (fixes visuales, documentos). Ediciones triviales de una línea no ameritan agente.
+- El diseño es prioridad del cliente: el sitio debe verse claramente más profesional y moderno que el anterior — cuidar estética en cada cambio.

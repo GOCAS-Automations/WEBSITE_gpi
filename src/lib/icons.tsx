@@ -92,6 +92,77 @@ export const Play = (p: IconProps) => (
   </Base>
 );
 
+export const User = (p: IconProps) => (
+  <Base {...p}>
+    <circle cx="12" cy="8" r="4" />
+    <path d="M4.5 20a7.5 7.5 0 0 1 15 0" />
+  </Base>
+);
+
+export const Lock = (p: IconProps) => (
+  <Base {...p}>
+    <rect x="4" y="10" width="16" height="11" rx="2" />
+    <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+  </Base>
+);
+
+export const LogOut = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4" />
+    <path d="M10 8 6 12l4 4M6 12h9" />
+  </Base>
+);
+
+export const Plus = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M12 5v14M5 12h14" />
+  </Base>
+);
+
+export const Trash = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+    <path d="M6 7v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7M10 11v6M14 11v6" />
+  </Base>
+);
+
+export const Upload = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M12 16V4m0 0L8 8m4-4 4 4" />
+    <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+  </Base>
+);
+
+export const Pencil = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M4 20h4L20 8a2.8 2.8 0 0 0-4-4L4 16v4Z" />
+    <path d="m14.5 5.5 4 4" />
+  </Base>
+);
+
+export const Sliders = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M4 7h10M18 7h2M4 17h4M12 17h8" />
+    <circle cx="16" cy="7" r="2" />
+    <circle cx="10" cy="17" r="2" />
+  </Base>
+);
+
+export const Photo = (p: IconProps) => (
+  <Base {...p}>
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <circle cx="8.5" cy="9.5" r="1.5" />
+    <path d="m4 17 5-5 4 4 3-2 4 4" />
+  </Base>
+);
+
+export const Info = (p: IconProps) => (
+  <Base {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 11v5M12 8h.01" />
+  </Base>
+);
+
 /* ---------- Redes sociales ---------- */
 export const WhatsApp = (p: IconProps) => (
   <Base {...p} fill="currentColor" stroke="none">

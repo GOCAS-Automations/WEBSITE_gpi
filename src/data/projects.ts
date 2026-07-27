@@ -2,6 +2,8 @@ export interface Project {
   title: string;
   client?: string;
   category: "industrial" | "ambiental";
+  /** Texto descriptivo opcional (editable desde /admin) */
+  description?: string;
   image: string;
   imageAlt: string;
 }

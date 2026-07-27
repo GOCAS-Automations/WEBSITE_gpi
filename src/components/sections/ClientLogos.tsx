@@ -1,7 +1,7 @@
 import Image from "next/image";
-import { clients } from "@/data/clients";
+import type { Client } from "@/data/clients";
 
-export function ClientLogos() {
+export function ClientLogos({ clients }: { clients: Client[] }) {
   return (
     <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
       {clients.map((client) => (

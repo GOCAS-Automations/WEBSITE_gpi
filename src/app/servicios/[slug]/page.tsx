@@ -6,21 +6,23 @@ import { Container } from "@/components/ui/Container";
 import { ButtonLink } from "@/components/ui/Button";
 import { PageHero } from "@/components/sections/PageHero";
 import { CtaBand } from "@/components/sections/CtaBand";
-import {
-  services,
-  getServiceBySlug,
-  getCategory,
-} from "@/data/services";
-import { contact, whatsappLink } from "@/data/contact";
+import { services as staticServices, getCategory } from "@/data/services";
+import { whatsappLink } from "@/data/contact";
+import { getService, getServices, getSettings } from "@/lib/content";
 import { iconMap, Check, ArrowRight, WhatsApp } from "@/lib/icons";
 
 type Params = { slug: string };
 
+/**
+ * Pre-genera los 11 servicios conocidos. Con `dynamicParams = true` (valor por
+ * defecto) los slugs nuevos creados desde /admin se renderizan bajo demanda.
+ */
 export function generateStaticParams(): Params[] {
-  return services.map((s) => ({ slug: s.slug }));
+  return staticServices.map((s) => ({ slug: s.slug }));
 }
 
-export const dynamicParams = false;
+export const dynamicParams = true;
+export const revalidate = 300;
 
 export async function generateMetadata({
   params,
@@ -28,7 +30,7 @@ export async function generateMetadata({
   params: Promise<Params>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const service = getServiceBySlug(slug);
+  const service = await getService(slug);
   if (!service) return {};
 
   return {
@@ -50,7 +52,8 @@ export default async function ServiceDetailPage({
   params: Promise<Params>;
 }) {
   const { slug } = await params;
-  const service = getServiceBySlug(slug);
+  const [services, settings] = await Promise.all([getServices(), getSettings()]);
+  const service = services.find((s) => s.slug === slug);
   if (!service) notFound();
 
   const category = getCategory(service.category);
@@ -134,7 +137,7 @@ export default async function ServiceDetailPage({
                   </p>
                 </div>
                 <ButtonLink
-                  href={whatsappLink(contact.primaryWhatsApp, quoteMessage)}
+                  href={whatsappLink(settings.contact.primaryWhatsApp, quoteMessage)}
                   variant="primary"
                   size="lg"
                   className="shrink-0"
@@ -194,7 +197,7 @@ export default async function ServiceDetailPage({
         </Container>
       </section>
 
-      <CtaBand whatsappMessage={quoteMessage} />
+      <CtaBand contact={settings.contact} whatsappMessage={quoteMessage} />
     </>
   );
 }

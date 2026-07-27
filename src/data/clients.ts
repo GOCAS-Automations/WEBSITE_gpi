@@ -1,6 +1,8 @@
 export interface Client {
   name: string;
   logo: string;
+  /** Sitio web del cliente (opcional, editable desde /admin) */
+  website?: string;
 }
 
 // Logos de clientes de GPI (public/images/portfolio/1-6.jpg).

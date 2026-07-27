@@ -5,7 +5,7 @@ import { Reveal } from "@/components/ui/Reveal";
 import { PageHero } from "@/components/sections/PageHero";
 import { ServiceCard } from "@/components/sections/ServiceCard";
 import { CtaBand } from "@/components/sections/CtaBand";
-import { serviceCategories, getServicesByCategory } from "@/data/services";
+import { getServiceCategories, getServices, getSettings } from "@/lib/content";
 import { iconMap } from "@/lib/icons";
 
 export const metadata: Metadata = {
@@ -15,7 +15,12 @@ export const metadata: Metadata = {
   alternates: { canonical: "/servicios" },
 };
 
-export default function ServiciosPage() {
+export const revalidate = 300;
+
+export default async function ServiciosPage() {
+  const [services, settings] = await Promise.all([getServices(), getSettings()]);
+  const categories = getServiceCategories();
+
   return (
     <>
       <PageHero
@@ -27,9 +32,9 @@ export default function ServiciosPage() {
         breadcrumbs={[{ label: "Inicio", href: "/" }, { label: "Servicios" }]}
       />
 
-      {serviceCategories.map((cat, index) => {
+      {categories.map((cat, index) => {
         const CatIcon = iconMap[cat.icon];
-        const catServices = getServicesByCategory(cat.id);
+        const catServices = services.filter((s) => s.category === cat.id);
         return (
           <section
             key={cat.id}
@@ -58,6 +63,7 @@ export default function ServiciosPage() {
       })}
 
       <CtaBand
+        contact={settings.contact}
         title="¿No sabe por dónde empezar?"
         description="Escríbanos y le ayudamos a identificar el servicio que mejor responde a su necesidad."
       />
