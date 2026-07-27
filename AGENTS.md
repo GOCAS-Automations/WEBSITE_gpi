@@ -40,8 +40,8 @@ Repo remoto: https://github.com/GOCAS-Automations/website_GPI.git
 - Redes: facebook.com/gpiprofesionales · instagram.com/gpiprofesionales
 
 ## Roadmap
-- Fase 1: sitio migrado y mejorado + SEO ✅. Mi Cuenta GPI + panel admin (login, CRUD de servicios/proyectos/clientes/FAQ/valores/contacto) ✅ código listo — falta aplicar la migración en Supabase y desplegar (ver `docs/PLAN.md`).
-- Fase 2 (tras aprobación de cotización): sistema de registro/aprobación de horas extra para empleados con Supabase (auth + DB gratis) — sección interna con credenciales por empleado y dashboard para administradores.
+- Fase 1: sitio migrado y mejorado + SEO ✅. Mi Cuenta GPI + panel admin (login, CRUD de servicios/proyectos/clientes/FAQ/valores/contacto) ✅ código listo — falta aplicar las migraciones en Supabase y desplegar (ver `docs/PLAN.md`).
+- Fase 2 (núcleo) ✅ código listo: roles ampliados, CRUD de empleados con cuentas (contraseña autogenerada vía Auth Admin API), portal del empleado con registro de jornadas y horas extra, aprobaciones para managers y visibilidad del contenido. Pendiente: tablero de métricas/gráficas.
 - Estado detallado, decisiones técnicas y pendientes del cliente: `docs/PLAN.md`.
 
 ## Referencia
@@ -50,10 +50,11 @@ Repo remoto: https://github.com/GOCAS-Automations/website_GPI.git
 
 ## Backend / Supabase
 - El contenido vive en Supabase (tablas `site_services`, `site_projects`, `site_clients`, `site_faqs`, `site_values`, `site_settings`) y se consume desde `src/lib/content.ts`, que **cae en `src/data/*` si no hay env vars o si la consulta falla** — el sitio nunca depende de la BD.
-- Credenciales y roles en `profiles` (`admin` | `employee`, trigger desde `auth.users`); RLS: SELECT público, escritura solo `is_admin()`. Imágenes en el bucket público `site-images`.
-- `/mi-cuenta` = login con marca GPI; `/admin` = panel CRUD (servicios, proyectos, clientes, FAQ, valores, contacto/ajustes) con server actions que validan rol y llaman `revalidatePath("/", "layout")`.
-- Migración lista para pegar en el SQL Editor: `supabase/migrations/0001_site_content.sql`. Guía completa (env vars, credenciales, fallback): `docs/ADMIN.md`.
-- Env vars en `.env.example` (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`); la sesión se refresca en `src/proxy.ts` (el `middleware` de Next 16).
+- Credenciales y roles en `profiles`: `admin` | `coordinador` | `marketing` | `empleado` (trigger desde `auth.users`, columnas `active`/`cargo`/`phone`). RLS: SELECT público solo de lo `published`, escritura si `is_content_editor()`, cuentas y jornadas si `is_manager()`. Imágenes en el bucket público `site-images`.
+- `/mi-cuenta` = login con marca GPI + **portal del empleado** (registrar jornadas, historial, cambiar contraseña); `/admin` = panel (contenido + `/admin/empleados` y `/admin/jornadas`, estas dos solo para managers). Todas las server actions validan rol y llaman `revalidatePath`.
+- Migraciones para pegar en el SQL Editor, **en orden**: `supabase/migrations/0001_site_content.sql` y `0002_empleados_jornadas.sql`. Guía completa (env vars, roles, jornadas, visibilidad, fallback): `docs/ADMIN.md`.
+- Env vars en `.env.example`: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` y `SUPABASE_SERVICE_ROLE_KEY` (secreta, solo servidor, necesaria para crear/eliminar cuentas). La sesión se refresca en `src/proxy.ts` (el `middleware` de Next 16).
+- Cálculo de horas extra: `src/lib/jornada.ts` (módulo puro, hora de Colombia fija UTC-5, festivos 2026 hardcodeados). Parámetros y recargos configurables en `site_settings.jornada_config`.
 
 ## Flujo de trabajo con Claude
 - **Fable solo analiza, planea y orquesta** (recon ligero, verificación de builds, git, memoria/docs). **La ejecución de código la hacen agentes**: Opus para tareas complejas (features, backend) y Sonnet para tareas rápidas (fixes visuales, documentos). Ediciones triviales de una línea no ameritan agente.

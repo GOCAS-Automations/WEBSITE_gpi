@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { getBrowserSupabase } from "@/lib/supabase/client";
+import { isContentEditorRole, normalizeRole } from "@/lib/roles";
 import { Lock, Mail, ArrowRight, LogOut } from "@/lib/icons";
 
 const inputClass =
@@ -13,8 +14,8 @@ type Status =
   | { kind: "idle" }
   | { kind: "loading" }
   | { kind: "error"; message: string }
-  | { kind: "admin"; email: string }
-  | { kind: "employee" };
+  | { kind: "panel"; email: string }
+  | { kind: "inactive" };
 
 export function LoginForm() {
   const router = useRouter();
@@ -53,25 +54,35 @@ export function LoginForm() {
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role")
+      .select("role, active")
       .eq("id", data.user.id)
       .maybeSingle();
 
-    if (profile?.role === "admin") {
-      // Refresca el árbol de servidor para que las cookies de sesión queden
-      // disponibles antes de entrar al panel.
-      router.refresh();
-      setStatus({ kind: "admin", email: data.user.email ?? email.trim() });
+    // Cuenta desactivada por un administrador: se cierra la sesión al instante.
+    // (La comprobación autoritativa vive en el servidor; esto solo evita que la
+    // persona entre y se encuentre con puertas cerradas sin explicación.)
+    if (profile?.active === false) {
+      await supabase.auth.signOut();
+      setStatus({ kind: "inactive" });
       return;
     }
 
-    // Empleados: la sección interna llega en la Fase 2.
-    await supabase.auth.signOut();
-    setStatus({ kind: "employee" });
+    // Refresca el árbol de servidor para que las cookies de sesión queden
+    // disponibles antes de pintar el portal o el panel.
+    router.refresh();
+
+    if (isContentEditorRole(normalizeRole(profile?.role))) {
+      setStatus({ kind: "panel", email: data.user.email ?? email.trim() });
+      return;
+    }
+
+    // Empleado: el portal de jornadas se renderiza en esta misma ruta cuando el
+    // servidor detecta la sesión, así que basta con recargar.
+    router.refresh();
   }
 
-  /* ---------------- Sesión de administrador iniciada ---------------- */
-  if (status.kind === "admin") {
+  /* ---------------- Sesión con acceso al panel ---------------- */
+  if (status.kind === "panel") {
     return (
       <div className="text-center">
         <p className="text-base font-bold text-ink">¡Bienvenido de nuevo!</p>
@@ -102,16 +113,14 @@ export function LoginForm() {
     );
   }
 
-  /* ---------------- Empleado (Fase 2) ---------------- */
-  if (status.kind === "employee") {
+  /* ---------------- Cuenta desactivada ---------------- */
+  if (status.kind === "inactive") {
     return (
-      <div className="rounded-2xl border border-brand/30 bg-brand-tint p-6 text-center">
-        <p className="text-base font-bold text-ink">
-          El portal de empleados estará disponible próximamente
-        </p>
+      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center">
+        <p className="text-base font-bold text-ink">Tu cuenta está desactivada</p>
         <p className="mt-2 text-sm leading-relaxed text-graphite">
-          Tu cuenta es válida, pero la sección de registro de horas extra todavía
-          está en construcción. Te avisaremos cuando esté habilitada.
+          Tus datos son correctos, pero un administrador desactivó el acceso de
+          esta cuenta. Comunícate con tu coordinador para reactivarla.
         </p>
         <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-center">
           <button
@@ -122,10 +131,10 @@ export function LoginForm() {
             Volver a intentar
           </button>
           <Link
-            href="/"
+            href="/contacto"
             className="inline-flex items-center justify-center gap-2 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-dark"
           >
-            Ir al sitio
+            Contactar a GPI
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
@@ -197,7 +206,8 @@ export function LoginForm() {
       </button>
 
       <p className="text-center text-xs leading-relaxed text-graphite">
-        ¿Olvidaste tu contraseña? Escríbenos y te ayudamos a restablecerla.
+        ¿Olvidaste tu contraseña? Pídele a tu coordinador que la restablezca
+        desde el panel: te entregará una nueva y podrás cambiarla al ingresar.
       </p>
     </form>
   );

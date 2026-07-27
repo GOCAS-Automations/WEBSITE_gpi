@@ -2,16 +2,23 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { getAdminOrNull } from "@/lib/supabase/auth";
+import { getContentEditorOrNull } from "@/lib/supabase/auth";
+import { visibilityDefaults } from "@/data/site";
 import type { ActionState, GalleryImage } from "@/lib/admin-types";
 
 /* ------------------------------------------------------------------ */
 /* Utilidades internas                                                 */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Todas las acciones de esta sección requieren rol de contenido
+ * (admin | coordinador | marketing) con la cuenta activa. La comprobación se
+ * repite en CADA acción: el layout y el proxy son solo la primera barrera.
+ */
 const NOT_ADMIN: ActionState = {
   status: "error",
-  message: "Tu sesión expiró o no tienes permisos de administrador.",
+  message:
+    "Tu sesión expiró o tu cuenta no tiene permisos para editar el contenido del sitio.",
 };
 
 const ok = (message: string): ActionState => ({ status: "success", message });
@@ -38,6 +45,19 @@ function textOrNull(formData: FormData, key: string): string | null {
 function num(formData: FormData, key: string, fallback = 0): number {
   const parsed = Number(text(formData, key));
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+/**
+ * Lee un interruptor del componente `Switch`.
+ *
+ * `Switch` envía siempre un input oculto con "false" y, cuando está encendido,
+ * además el checkbox con "true". Así el formulario distingue "apagado" de
+ * "campo ausente" (un checkbox suelto no envía nada al estar desmarcado).
+ */
+function bool(formData: FormData, key: string, fallback = true): boolean {
+  const values = formData.getAll(key);
+  if (values.length === 0) return fallback;
+  return values.includes("true");
 }
 
 function list(formData: FormData, key: string): string[] {
@@ -82,7 +102,7 @@ export async function saveService(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const session = await getAdminOrNull();
+  const session = await getContentEditorOrNull();
   if (!session) return NOT_ADMIN;
 
   const id = text(formData, "id");
@@ -113,6 +133,7 @@ export async function saveService(
     meta_title: textOrNull(formData, "meta_title") ?? title,
     meta_description: textOrNull(formData, "meta_description"),
     sort: num(formData, "sort"),
+    published: bool(formData, "published"),
   };
 
   const query = id
@@ -134,7 +155,7 @@ export async function deleteService(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const session = await getAdminOrNull();
+  const session = await getContentEditorOrNull();
   if (!session) return NOT_ADMIN;
 
   const id = text(formData, "id");
@@ -158,7 +179,7 @@ export async function saveProject(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const session = await getAdminOrNull();
+  const session = await getContentEditorOrNull();
   if (!session) return NOT_ADMIN;
 
   const title = text(formData, "title");
@@ -173,6 +194,7 @@ export async function saveProject(
     image_url: textOrNull(formData, "image_url"),
     image_alt: textOrNull(formData, "image_alt") ?? title,
     sort: num(formData, "sort"),
+    published: bool(formData, "published"),
   };
 
   const { error } = id
@@ -188,7 +210,7 @@ export async function deleteProject(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const session = await getAdminOrNull();
+  const session = await getContentEditorOrNull();
   if (!session) return NOT_ADMIN;
 
   const id = text(formData, "id");
@@ -212,7 +234,7 @@ export async function saveClient(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const session = await getAdminOrNull();
+  const session = await getContentEditorOrNull();
   if (!session) return NOT_ADMIN;
 
   const name = text(formData, "name");
@@ -224,6 +246,7 @@ export async function saveClient(
     logo_url: textOrNull(formData, "logo_url"),
     website: textOrNull(formData, "website"),
     sort: num(formData, "sort"),
+    published: bool(formData, "published"),
   };
 
   const { error } = id
@@ -239,7 +262,7 @@ export async function deleteClient(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const session = await getAdminOrNull();
+  const session = await getContentEditorOrNull();
   if (!session) return NOT_ADMIN;
 
   const id = text(formData, "id");
@@ -263,7 +286,7 @@ export async function saveFaq(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const session = await getAdminOrNull();
+  const session = await getContentEditorOrNull();
   if (!session) return NOT_ADMIN;
 
   const question = text(formData, "question");
@@ -272,7 +295,12 @@ export async function saveFaq(
     return fail("La pregunta y la respuesta son obligatorias.");
 
   const id = text(formData, "id");
-  const payload = { question, answer, sort: num(formData, "sort") };
+  const payload = {
+    question,
+    answer,
+    sort: num(formData, "sort"),
+    published: bool(formData, "published"),
+  };
 
   const { error } = id
     ? await session.supabase.from("site_faqs").update(payload).eq("id", id)
@@ -287,7 +315,7 @@ export async function deleteFaq(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const session = await getAdminOrNull();
+  const session = await getContentEditorOrNull();
   if (!session) return NOT_ADMIN;
 
   const id = text(formData, "id");
@@ -308,7 +336,7 @@ export async function saveValue(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const session = await getAdminOrNull();
+  const session = await getContentEditorOrNull();
   if (!session) return NOT_ADMIN;
 
   const title = text(formData, "title");
@@ -320,6 +348,7 @@ export async function saveValue(
     description: textOrNull(formData, "description"),
     icon_key: text(formData, "icon_key") || "shield",
     sort: num(formData, "sort"),
+    published: bool(formData, "published"),
   };
 
   const { error } = id
@@ -335,7 +364,7 @@ export async function deleteValue(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const session = await getAdminOrNull();
+  const session = await getContentEditorOrNull();
   if (!session) return NOT_ADMIN;
 
   const id = text(formData, "id");
@@ -359,7 +388,7 @@ async function upsertSetting(
   key: string,
   value: unknown,
 ): Promise<ActionState> {
-  const session = await getAdminOrNull();
+  const session = await getContentEditorOrNull();
   if (!session) return NOT_ADMIN;
 
   const { error } = await session.supabase
@@ -490,6 +519,23 @@ export async function saveYouTubeSettings(
     sectionDescription: text(formData, "sectionDescription"),
   };
   return upsertSetting("youtube", value);
+}
+
+/**
+ * Visibilidad de secciones completas del sitio público.
+ * Apagar una sección NO borra su contenido: solo deja de mostrarse.
+ */
+export async function saveVisibilitySettings(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const value = {
+    valuesSection: bool(formData, "valuesSection", visibilityDefaults.valuesSection),
+    clientsSection: bool(formData, "clientsSection", visibilityDefaults.clientsSection),
+    videoSection: bool(formData, "videoSection", visibilityDefaults.videoSection),
+    faqSection: bool(formData, "faqSection", visibilityDefaults.faqSection),
+  };
+  return upsertSetting("visibility", value);
 }
 
 /* El cierre de sesión vive en `src/lib/session-actions.ts` (lo comparten el

@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { listServices } from "@/lib/admin";
-import { AdminPageHeader, EmptyState, PrimaryLink } from "@/components/admin/ui";
+import {
+  AdminPageHeader,
+  EmptyState,
+  PrimaryLink,
+  PublishedBadge,
+} from "@/components/admin/ui";
 import { DeleteForm } from "@/components/admin/AdminForm";
 import { deleteService } from "../actions";
 import { iconMap, Plus, Pencil, ArrowRight } from "@/lib/icons";
@@ -59,6 +64,7 @@ export default async function AdminServiciosPage() {
                     >
                       {service.category}
                     </span>
+                    <PublishedBadge published={service.published} />
                     <span className="text-xs text-graphite">orden {service.sort}</span>
                   </div>
                   <p className="mt-1 truncate text-sm text-graphite">

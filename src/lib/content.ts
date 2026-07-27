@@ -30,11 +30,13 @@ import {
   contactDefaults,
   excellenceDefaults,
   heroDefaults,
+  visibilityDefaults,
   youtubeDefaults,
   type ContactSettings,
   type ExcellenceSettings,
   type HeroSettings,
   type SiteSettings,
+  type VisibilitySettings,
   type YouTubeSettings,
 } from "@/data/site";
 
@@ -50,6 +52,7 @@ export type {
   HeroSettings,
   ExcellenceSettings,
   YouTubeSettings,
+  VisibilitySettings,
   SiteSettings,
 };
 
@@ -58,7 +61,20 @@ export const defaultSettings: SiteSettings = {
   hero: heroDefaults,
   excellence: excellenceDefaults,
   youtube: youtubeDefaults,
+  visibility: visibilityDefaults,
 };
+
+/**
+ * Visibilidad por ítem (columna `published`, migración 0002).
+ *
+ * Se filtra también en JavaScript —además de hacerlo la política RLS de anon—
+ * por dos motivos: 1) si la migración 0002 todavía no está aplicada la columna
+ * no existe y `published` llega `undefined`, que aquí se considera publicado;
+ * 2) deja el comportamiento explícito y auditable en el código.
+ */
+function estaPublicado(row: { published?: unknown }): boolean {
+  return row.published !== false;
+}
 
 /* ------------------------------------------------------------------ */
 /* Utilidades de normalización                                         */
@@ -113,6 +129,7 @@ interface ServiceRow {
   images: unknown;
   meta_title: string | null;
   meta_description: string | null;
+  published?: boolean;
 }
 
 function rowToService(row: ServiceRow): Service {
@@ -147,15 +164,18 @@ export async function getServices(): Promise<Service[]> {
   if (!supabase) return staticServices;
 
   try {
+    // `select("*")` en vez de una lista de columnas: así la consulta sigue
+    // funcionando tanto si la migración 0002 (columna `published`) está
+    // aplicada como si no.
     const { data, error } = await supabase
       .from("site_services")
-      .select(
-        "slug, category, title, nav_title, icon_key, summary, description, items, images, meta_title, meta_description",
-      )
+      .select("*")
       .order("sort", { ascending: true });
 
+    // Solo se cae al contenido estático si la tabla no responde o está vacía.
+    // Si hay filas pero todas están ocultas, se respeta la decisión del panel.
     if (error || !data || data.length === 0) return staticServices;
-    return (data as ServiceRow[]).map(rowToService);
+    return (data as ServiceRow[]).filter(estaPublicado).map(rowToService);
   } catch {
     return staticServices;
   }
@@ -185,12 +205,12 @@ export async function getProjects(): Promise<Project[]> {
   try {
     const { data, error } = await supabase
       .from("site_projects")
-      .select("title, client, category, description, image_url, image_alt")
+      .select("*")
       .order("sort", { ascending: true });
 
     if (error || !data || data.length === 0) return staticProjects;
 
-    return data.map((row) => ({
+    return data.filter(estaPublicado).map((row) => ({
       title: str(row.title, "Proyecto"),
       client: str(row.client) || undefined,
       category: row.category === "ambiental" ? "ambiental" : "industrial",
@@ -210,12 +230,13 @@ export async function getClients(): Promise<Client[]> {
   try {
     const { data, error } = await supabase
       .from("site_clients")
-      .select("name, logo_url, website")
+      .select("*")
       .order("sort", { ascending: true });
 
     if (error || !data || data.length === 0) return staticClients;
 
     return data
+      .filter(estaPublicado)
       .map((row) => ({
         name: str(row.name),
         logo: str(row.logo_url),
@@ -234,12 +255,13 @@ export async function getFaqs(): Promise<FaqItem[]> {
   try {
     const { data, error } = await supabase
       .from("site_faqs")
-      .select("question, answer")
+      .select("*")
       .order("sort", { ascending: true });
 
     if (error || !data || data.length === 0) return staticFaq;
 
     return data
+      .filter(estaPublicado)
       .map((row) => ({ question: str(row.question), answer: str(row.answer) }))
       .filter((f) => f.question !== "");
   } catch {
@@ -254,12 +276,13 @@ export async function getValues(): Promise<CorporateValue[]> {
   try {
     const { data, error } = await supabase
       .from("site_values")
-      .select("title, description, icon_key")
+      .select("*")
       .order("sort", { ascending: true });
 
     if (error || !data || data.length === 0) return staticValues;
 
     return data
+      .filter(estaPublicado)
       .map((row) => ({
         title: str(row.title),
         description: str(row.description),
@@ -319,11 +342,25 @@ export async function getSettings(): Promise<SiteSettings> {
       excellence.stats = excellenceDefaults.stats;
     }
 
+    // Visibilidad: solo se aceptan booleanos; cualquier otra cosa usa el
+    // valor por defecto (visible). Si la clave no existe todavía en la base
+    // de datos, el sitio se muestra completo.
+    const visibilityValue = map.get("visibility");
+    const visibility: VisibilitySettings = { ...visibilityDefaults };
+    if (isRecord(visibilityValue)) {
+      for (const key of Object.keys(visibilityDefaults) as (keyof VisibilitySettings)[]) {
+        if (typeof visibilityValue[key] === "boolean") {
+          visibility[key] = visibilityValue[key];
+        }
+      }
+    }
+
     return {
       contact,
       hero: mergeSetting(heroDefaults, map.get("hero")),
       excellence,
       youtube: mergeSetting(youtubeDefaults, map.get("youtube")),
+      visibility,
     };
   } catch {
     return defaultSettings;

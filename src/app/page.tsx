@@ -30,8 +30,13 @@ export default async function HomePage() {
     getValues(),
     getClients(),
   ]);
-  const { hero, excellence, contact } = settings;
+  const { hero, excellence, contact, visibility } = settings;
   const categories = getServiceCategories();
+
+  // Secciones que se pueden apagar desde /admin/ajustes → «Visibilidad de
+  // secciones». También se ocultan solas si se quedan sin contenido.
+  const showValues = visibility.valuesSection && values.length > 0;
+  const showClients = visibility.clientsSection && clients.length > 0;
 
   return (
     <>
@@ -192,24 +197,26 @@ export default async function HomePage() {
       </section>
 
       {/* ---------------- VALORES ---------------- */}
-      <section className="py-20 sm:py-24">
-        <Container>
-          <Reveal>
-            <SectionHeading
-              align="center"
-              eyebrow="Nuestros valores"
-              title="Los principios que guían cada proyecto"
-            />
-          </Reveal>
-          <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {values.map((value, i) => (
-              <Reveal key={value.title} delay={(i % 3) * 100}>
-                <ValueCard value={value} />
-              </Reveal>
-            ))}
-          </div>
-        </Container>
-      </section>
+      {showValues && (
+        <section className="py-20 sm:py-24">
+          <Container>
+            <Reveal>
+              <SectionHeading
+                align="center"
+                eyebrow="Nuestros valores"
+                title="Los principios que guían cada proyecto"
+              />
+            </Reveal>
+            <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {values.map((value, i) => (
+                <Reveal key={value.title} delay={(i % 3) * 100}>
+                  <ValueCard value={value} />
+                </Reveal>
+              ))}
+            </div>
+          </Container>
+        </section>
+      )}
 
       {/* ---------------- BANDA EXCELENCIA ---------------- */}
       <section className="relative isolate overflow-hidden bg-ink py-20 sm:py-24">
@@ -238,21 +245,23 @@ export default async function HomePage() {
       </section>
 
       {/* ---------------- CLIENTES ---------------- */}
-      <section className="py-20 sm:py-24">
-        <Container>
-          <Reveal>
-            <SectionHeading
-              align="center"
-              eyebrow="Clientes"
-              title="Empresas que confían en GPI"
-              description="Nos respalda el trabajo realizado junto a compañías de distintos sectores."
-            />
-          </Reveal>
-          <Reveal className="mt-12">
-            <ClientLogos clients={clients} />
-          </Reveal>
-        </Container>
-      </section>
+      {showClients && (
+        <section className="py-20 sm:py-24">
+          <Container>
+            <Reveal>
+              <SectionHeading
+                align="center"
+                eyebrow="Clientes"
+                title="Empresas que confían en GPI"
+                description="Nos respalda el trabajo realizado junto a compañías de distintos sectores."
+              />
+            </Reveal>
+            <Reveal className="mt-12">
+              <ClientLogos clients={clients} />
+            </Reveal>
+          </Container>
+        </section>
+      )}
 
       {/* ---------------- CTA FINAL ---------------- */}
       <CtaBand contact={contact} />

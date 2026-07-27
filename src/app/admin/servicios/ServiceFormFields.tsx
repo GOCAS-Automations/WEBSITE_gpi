@@ -1,4 +1,11 @@
-import { Field, Select, TextArea, Card, CardTitle } from "@/components/admin/ui";
+import {
+  Field,
+  Select,
+  Switch,
+  TextArea,
+  Card,
+  CardTitle,
+} from "@/components/admin/ui";
 import { ImageField } from "@/components/admin/ImageField";
 import { ListField, GalleryField } from "@/components/admin/ListField";
 import { iconMap } from "@/lib/icons";
@@ -66,6 +73,12 @@ export function ServiceFormFields({ service }: { service?: ServiceRecord }) {
             type="number"
             defaultValue={service?.sort ?? 0}
             hint="Menor número = aparece antes."
+          />
+          <Switch
+            label="Visibilidad en el sitio"
+            name="published"
+            defaultChecked={service?.published ?? true}
+            hint="Si lo ocultas, el servicio deja de aparecer en el menú y en /servicios, pero no se borra."
           />
         </div>
 

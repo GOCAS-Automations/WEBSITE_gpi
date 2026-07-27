@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { requireAdmin } from "@/lib/supabase/auth";
+import { requireContentEditor } from "@/lib/supabase/auth";
 import { signOutAction } from "@/lib/session-actions";
 
 export const metadata: Metadata = {
@@ -21,11 +21,17 @@ export default async function AdminLayout({
   // Sin Supabase configurado no existe panel: se envía al portal.
   if (!isSupabaseConfigured()) redirect("/mi-cuenta");
 
-  // Verificación autoritativa: sesión válida + role = 'admin'.
-  const { profile } = await requireAdmin();
+  // Verificación autoritativa: sesión válida, cuenta activa y rol con permiso
+  // de contenido (admin | coordinador | marketing). Las secciones internas
+  // (Equipo y Jornadas) vuelven a exigir rol de manager en su propia página.
+  const { profile } = await requireContentEditor();
 
   return (
-    <AdminShell email={profile.email} signOut={signOutAction}>
+    <AdminShell
+      email={profile.email}
+      role={profile.role}
+      signOut={signOutAction}
+    >
       {children}
     </AdminShell>
   );

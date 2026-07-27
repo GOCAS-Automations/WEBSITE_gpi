@@ -11,16 +11,27 @@ import {
   contactDefaults,
   excellenceDefaults,
   heroDefaults,
+  visibilityDefaults,
   youtubeDefaults,
   type ContactSettings,
   type ExcellenceSettings,
   type HeroSettings,
+  type VisibilitySettings,
   type YouTubeSettings,
 } from "@/data/site";
+import { normalizeRole } from "@/lib/roles";
+import {
+  normalizarJornadaConfig,
+  jornadaConfigDefaults,
+  type JornadaConfig,
+} from "@/lib/jornada";
 import type {
   AdminSettings,
   ClientRecord,
   FaqRecord,
+  JornadaRecord,
+  JornadaStatus,
+  ProfileRecord,
   ProjectRecord,
   ServiceImages,
   ServiceRecord,
@@ -60,6 +71,14 @@ function normalizeImages(value: unknown): ServiceImages {
   };
 }
 
+/**
+ * `published` llega `undefined` mientras la migración 0002 no esté aplicada:
+ * en ese caso se considera publicado (el comportamiento anterior a 0002).
+ */
+function isPublished(value: unknown): boolean {
+  return value !== false;
+}
+
 /* ------------------------------------------------------------------ */
 /* Lecturas                                                            */
 /* ------------------------------------------------------------------ */
@@ -86,6 +105,7 @@ export async function listServices(): Promise<ServiceRecord[]> {
     meta_title: row.meta_title ?? null,
     meta_description: row.meta_description ?? null,
     sort: Number(row.sort ?? 0),
+    published: isPublished(row.published),
   }));
 }
 
@@ -113,6 +133,7 @@ export async function listProjects(): Promise<ProjectRecord[]> {
     image_url: row.image_url ?? null,
     image_alt: row.image_alt ?? null,
     sort: Number(row.sort ?? 0),
+    published: isPublished(row.published),
   }));
 }
 
@@ -130,6 +151,7 @@ export async function listClients(): Promise<ClientRecord[]> {
     logo_url: row.logo_url ?? null,
     website: row.website ?? null,
     sort: Number(row.sort ?? 0),
+    published: isPublished(row.published),
   }));
 }
 
@@ -146,6 +168,7 @@ export async function listFaqs(): Promise<FaqRecord[]> {
     question: String(row.question ?? ""),
     answer: String(row.answer ?? ""),
     sort: Number(row.sort ?? 0),
+    published: isPublished(row.published),
   }));
 }
 
@@ -163,6 +186,7 @@ export async function listValues(): Promise<ValueRecord[]> {
     description: row.description ?? null,
     icon_key: String(row.icon_key ?? "shield"),
     sort: Number(row.sort ?? 0),
+    published: isPublished(row.published),
   }));
 }
 
@@ -173,6 +197,7 @@ export async function getAdminSettings(): Promise<AdminSettings> {
     hero: heroDefaults,
     excellence: excellenceDefaults,
     youtube: youtubeDefaults,
+    visibility: visibilityDefaults,
   };
   if (!supabase) return fallback;
 
@@ -217,6 +242,16 @@ export async function getAdminSettings(): Promise<AdminSettings> {
   };
   if (!Array.isArray(excellence.stats)) excellence.stats = excellenceDefaults.stats;
 
+  const visibilityValue = map.get("visibility");
+  const visibility: VisibilitySettings = { ...visibilityDefaults };
+  if (isRecord(visibilityValue)) {
+    for (const key of Object.keys(visibilityDefaults) as (keyof VisibilitySettings)[]) {
+      if (typeof visibilityValue[key] === "boolean") {
+        visibility[key] = visibilityValue[key];
+      }
+    }
+  }
+
   return {
     contact,
     hero: {
@@ -232,7 +267,190 @@ export async function getAdminSettings(): Promise<AdminSettings> {
         ? (map.get("youtube") as Partial<YouTubeSettings>)
         : {}),
     },
+    visibility,
   };
+}
+
+/**
+ * Parámetros de cálculo de jornadas (`site_settings.jornada_config`).
+ * Si la base de datos no responde o la clave no existe, devuelve los valores
+ * por defecto de `src/lib/jornada.ts`: el portal nunca depende de la BD.
+ */
+export async function getJornadaConfig(): Promise<JornadaConfig> {
+  const supabase = await getServerSupabase();
+  if (!supabase) return jornadaConfigDefaults;
+
+  try {
+    const { data, error } = await supabase
+      .from("site_settings")
+      .select("value")
+      .eq("key", "jornada_config")
+      .maybeSingle();
+
+    if (error || !data) return jornadaConfigDefaults;
+    return normalizarJornadaConfig(data.value);
+  } catch {
+    return jornadaConfigDefaults;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Cuentas del equipo (`profiles`)                                     */
+/* ------------------------------------------------------------------ */
+
+function rowToProfile(row: Record<string, unknown>): ProfileRecord {
+  const email = typeof row.email === "string" ? row.email : "";
+  return {
+    id: String(row.id),
+    email,
+    full_name: typeof row.full_name === "string" && row.full_name ? row.full_name : email,
+    role: normalizeRole(row.role),
+    cargo: typeof row.cargo === "string" && row.cargo ? row.cargo : null,
+    phone: typeof row.phone === "string" && row.phone ? row.phone : null,
+    active: row.active !== false,
+    created_at: typeof row.created_at === "string" ? row.created_at : null,
+  };
+}
+
+/** Todas las cuentas del portal, ordenadas por nombre. */
+export async function listProfiles(): Promise<ProfileRecord[]> {
+  const supabase = await getServerSupabase();
+  if (!supabase) return [];
+
+  try {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .order("full_name", { ascending: true });
+
+    if (error || !data) return [];
+    return data.map(rowToProfile);
+  } catch {
+    return [];
+  }
+}
+
+export async function getProfileRecord(id: string): Promise<ProfileRecord | null> {
+  const supabase = await getServerSupabase();
+  if (!supabase) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (error || !data) return null;
+    return rowToProfile(data);
+  } catch {
+    return null;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Jornadas                                                            */
+/* ------------------------------------------------------------------ */
+
+function rowToJornada(row: Record<string, unknown>): JornadaRecord {
+  const status = row.status;
+  return {
+    id: String(row.id),
+    employee_id: String(row.employee_id ?? ""),
+    work_order: String(row.work_order ?? ""),
+    work_date: String(row.work_date ?? ""),
+    start_at: String(row.start_at ?? ""),
+    end_at: String(row.end_at ?? ""),
+    description: String(row.description ?? ""),
+    observations:
+      typeof row.observations === "string" && row.observations ? row.observations : null,
+    status:
+      status === "aprobada" || status === "rechazada"
+        ? (status as JornadaStatus)
+        : "pendiente",
+    review_note:
+      typeof row.review_note === "string" && row.review_note ? row.review_note : null,
+    reviewed_by: typeof row.reviewed_by === "string" ? row.reviewed_by : null,
+    reviewed_at: typeof row.reviewed_at === "string" ? row.reviewed_at : null,
+    created_at: typeof row.created_at === "string" ? row.created_at : null,
+  };
+}
+
+export interface JornadaFilters {
+  status?: JornadaStatus | "todas";
+  employeeId?: string;
+  /** `YYYY-MM-DD` */
+  from?: string;
+  /** `YYYY-MM-DD` */
+  to?: string;
+  limit?: number;
+}
+
+/**
+ * Jornadas visibles para el usuario actual (RLS decide el alcance: un empleado
+ * solo ve las suyas, un manager las de todo el equipo). Adjunta el nombre del
+ * empleado y del revisor resolviéndolos contra `profiles` en una segunda
+ * consulta (más robusto que depender del nombre de la clave foránea).
+ */
+export async function listJornadas(
+  filters: JornadaFilters = {},
+): Promise<JornadaRecord[]> {
+  const supabase = await getServerSupabase();
+  if (!supabase) return [];
+
+  try {
+    let query = supabase
+      .from("jornadas")
+      .select("*")
+      .order("work_date", { ascending: false })
+      .order("start_at", { ascending: false })
+      .limit(filters.limit ?? 300);
+
+    if (filters.status && filters.status !== "todas") {
+      query = query.eq("status", filters.status);
+    }
+    if (filters.employeeId) query = query.eq("employee_id", filters.employeeId);
+    if (filters.from) query = query.gte("work_date", filters.from);
+    if (filters.to) query = query.lte("work_date", filters.to);
+
+    const { data, error } = await query;
+    if (error || !data) return [];
+
+    const jornadas = data.map(rowToJornada);
+
+    const ids = [
+      ...new Set(
+        jornadas
+          .flatMap((j) => [j.employee_id, j.reviewed_by])
+          .filter((id): id is string => Boolean(id)),
+      ),
+    ];
+    if (ids.length === 0) return jornadas;
+
+    const { data: people } = await supabase
+      .from("profiles")
+      .select("id, full_name, email")
+      .in("id", ids);
+
+    const byId = new Map(
+      (people ?? []).map((p) => [
+        String(p.id),
+        {
+          name: String(p.full_name ?? p.email ?? ""),
+          email: String(p.email ?? ""),
+        },
+      ]),
+    );
+
+    return jornadas.map((j) => ({
+      ...j,
+      employee_name: byId.get(j.employee_id)?.name,
+      employee_email: byId.get(j.employee_id)?.email,
+      reviewer_name: j.reviewed_by ? byId.get(j.reviewed_by)?.name : undefined,
+    }));
+  } catch {
+    return [];
+  }
 }
 
 /** Conteo rápido para el tablero del panel. */
@@ -251,4 +469,23 @@ export async function getContentCounts() {
     faqs: faqs.length,
     values: values.length,
   };
+}
+
+/** Conteos de la sección de gestión interna (solo managers). */
+export async function getTeamCounts() {
+  const supabase = await getServerSupabase();
+  if (!supabase) return { people: 0, pending: 0 };
+
+  try {
+    const [{ count: people }, { count: pending }] = await Promise.all([
+      supabase.from("profiles").select("id", { count: "exact", head: true }),
+      supabase
+        .from("jornadas")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pendiente"),
+    ]);
+    return { people: people ?? 0, pending: pending ?? 0 };
+  } catch {
+    return { people: 0, pending: 0 };
+  }
 }

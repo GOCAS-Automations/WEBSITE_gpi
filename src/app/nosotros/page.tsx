@@ -46,11 +46,18 @@ export default async function NosotrosPage() {
     getFaqs(),
     getSettings(),
   ]);
-  const { youtube, contact } = settings;
+  const { youtube, contact, visibility } = settings;
+
+  // Interruptores de /admin/ajustes → «Visibilidad de secciones».
+  const showValues = visibility.valuesSection && values.length > 0;
+  const showVideo = visibility.videoSection && youtube.id !== "";
+  const showFaq = visibility.faqSection && faq.length > 0;
 
   return (
     <>
-      <FaqJsonLd faq={faq} />
+      {/* El marcado FAQPage solo se emite si la sección está visible: no se le
+          promete a Google contenido que la página no muestra. */}
+      {showFaq && <FaqJsonLd faq={faq} />}
       <PageHero
         eyebrow="Nosotros"
         title="Optimizamos procesos, generamos rentabilidad"
@@ -108,58 +115,64 @@ export default async function NosotrosPage() {
       </section>
 
       {/* Valores */}
-      <section className="bg-mist py-20 sm:py-24">
-        <Container>
-          <Reveal>
-            <SectionHeading
-              align="center"
-              eyebrow="Nuestros valores"
-              title="Lo que nos define"
-              description="Seis principios que están presentes en cada propuesta y ejecución de valor para nuestros clientes."
-            />
-          </Reveal>
-          <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {values.map((value, i) => (
-              <Reveal key={value.title} delay={(i % 3) * 100}>
-                <ValueCard value={value} />
-              </Reveal>
-            ))}
-          </div>
-        </Container>
-      </section>
+      {showValues && (
+        <section className="bg-mist py-20 sm:py-24">
+          <Container>
+            <Reveal>
+              <SectionHeading
+                align="center"
+                eyebrow="Nuestros valores"
+                title="Lo que nos define"
+                description="Los principios que están presentes en cada propuesta y ejecución de valor para nuestros clientes."
+              />
+            </Reveal>
+            <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {values.map((value, i) => (
+                <Reveal key={value.title} delay={(i % 3) * 100}>
+                  <ValueCard value={value} />
+                </Reveal>
+              ))}
+            </div>
+          </Container>
+        </section>
+      )}
 
       {/* Video de servicios */}
-      <section className="py-20 sm:py-24">
-        <Container size="narrow">
-          <Reveal>
-            <SectionHeading
-              align="center"
-              eyebrow={youtube.sectionEyebrow}
-              title={youtube.sectionTitle}
-              description={youtube.sectionDescription}
-            />
-          </Reveal>
-          <Reveal className="mt-10">
-            <YouTubeFacade id={youtube.id} title={youtube.title} />
-          </Reveal>
-        </Container>
-      </section>
+      {showVideo && (
+        <section className="py-20 sm:py-24">
+          <Container size="narrow">
+            <Reveal>
+              <SectionHeading
+                align="center"
+                eyebrow={youtube.sectionEyebrow}
+                title={youtube.sectionTitle}
+                description={youtube.sectionDescription}
+              />
+            </Reveal>
+            <Reveal className="mt-10">
+              <YouTubeFacade id={youtube.id} title={youtube.title} />
+            </Reveal>
+          </Container>
+        </section>
+      )}
 
       {/* FAQ */}
-      <section className="bg-mist py-20 sm:py-24">
-        <Container size="narrow">
-          <Reveal>
-            <SectionHeading
-              align="center"
-              eyebrow="Preguntas frecuentes"
-              title="Resolvemos tus dudas"
-            />
-          </Reveal>
-          <Reveal className="mt-10">
-            <FaqAccordion items={faq} />
-          </Reveal>
-        </Container>
-      </section>
+      {showFaq && (
+        <section className="bg-mist py-20 sm:py-24">
+          <Container size="narrow">
+            <Reveal>
+              <SectionHeading
+                align="center"
+                eyebrow="Preguntas frecuentes"
+                title="Resolvemos tus dudas"
+              />
+            </Reveal>
+            <Reveal className="mt-10">
+              <FaqAccordion items={faq} />
+            </Reveal>
+          </Container>
+        </section>
+      )}
 
       <CtaBand contact={contact} />
     </>

@@ -66,11 +66,29 @@ export interface YouTubeSettings {
   sectionDescription: string;
 }
 
+/**
+ * Interruptores de visibilidad de secciones completas del sitio público.
+ * Se editan en /admin/ajustes y viven en `site_settings` con la clave
+ * `visibility`. Todo `true` por defecto: el sitio se ve completo salvo que
+ * alguien apague algo a propósito.
+ */
+export interface VisibilitySettings {
+  /** Bloque "Nuestros valores" (inicio y Nosotros). */
+  valuesSection: boolean;
+  /** Banda de logos de clientes (inicio). */
+  clientsSection: boolean;
+  /** Video corporativo de YouTube (Nosotros). */
+  videoSection: boolean;
+  /** Preguntas frecuentes (Nosotros, incluido el marcado FAQPage). */
+  faqSection: boolean;
+}
+
 export interface SiteSettings {
   contact: ContactSettings;
   hero: HeroSettings;
   excellence: ExcellenceSettings;
   youtube: YouTubeSettings;
+  visibility: VisibilitySettings;
 }
 
 export const contactDefaults: ContactSettings = {
@@ -116,6 +134,13 @@ export const excellenceDefaults: ExcellenceSettings = {
     { value: "11", label: "servicios industriales y ambientales" },
     { value: "2", label: "grandes áreas: industrial y ambiental" },
   ],
+};
+
+export const visibilityDefaults: VisibilitySettings = {
+  valuesSection: true,
+  clientsSection: true,
+  videoSection: true,
+  faqSection: true,
 };
 
 export const youtubeDefaults: YouTubeSettings = {

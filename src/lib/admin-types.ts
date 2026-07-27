@@ -9,8 +9,10 @@ import type {
   ContactSettings,
   ExcellenceSettings,
   HeroSettings,
+  VisibilitySettings,
   YouTubeSettings,
 } from "@/data/site";
+import type { UserRole } from "@/lib/roles";
 
 export type ActionStatus = "idle" | "success" | "error";
 
@@ -20,6 +22,20 @@ export interface ActionState {
 }
 
 export const idleState: ActionState = { status: "idle" };
+
+/**
+ * Estado extendido para las acciones que generan una contraseña: el panel la
+ * muestra UNA sola vez (no se puede volver a consultar, solo restablecer).
+ */
+export interface CredentialState extends ActionState {
+  credential?: {
+    email: string;
+    password: string;
+    kind: "created" | "reset";
+  };
+}
+
+export const idleCredentialState: CredentialState = { status: "idle" };
 
 export interface GalleryImage {
   src: string;
@@ -46,6 +62,8 @@ export interface ServiceRecord {
   meta_title: string | null;
   meta_description: string | null;
   sort: number;
+  /** false = oculto en el sitio público (sigue editable en /admin). */
+  published: boolean;
 }
 
 export interface ProjectRecord {
@@ -57,6 +75,7 @@ export interface ProjectRecord {
   image_url: string | null;
   image_alt: string | null;
   sort: number;
+  published: boolean;
 }
 
 export interface ClientRecord {
@@ -65,6 +84,7 @@ export interface ClientRecord {
   logo_url: string | null;
   website: string | null;
   sort: number;
+  published: boolean;
 }
 
 export interface FaqRecord {
@@ -72,6 +92,7 @@ export interface FaqRecord {
   question: string;
   answer: string;
   sort: number;
+  published: boolean;
 }
 
 export interface ValueRecord {
@@ -80,6 +101,7 @@ export interface ValueRecord {
   description: string | null;
   icon_key: string;
   sort: number;
+  published: boolean;
 }
 
 export interface AdminSettings {
@@ -87,4 +109,61 @@ export interface AdminSettings {
   hero: HeroSettings;
   excellence: ExcellenceSettings;
   youtube: YouTubeSettings;
+  visibility: VisibilitySettings;
 }
+
+/* ------------------------------------------------------------------ */
+/* Cuentas del equipo (`profiles`)                                     */
+/* ------------------------------------------------------------------ */
+
+export interface ProfileRecord {
+  id: string;
+  email: string;
+  full_name: string;
+  role: UserRole;
+  cargo: string | null;
+  phone: string | null;
+  active: boolean;
+  created_at: string | null;
+}
+
+/* ------------------------------------------------------------------ */
+/* Jornadas (registro de horas extra)                                  */
+/* ------------------------------------------------------------------ */
+
+export type JornadaStatus = "pendiente" | "aprobada" | "rechazada";
+
+export interface JornadaRecord {
+  id: string;
+  employee_id: string;
+  work_order: string;
+  /** Día laboral en formato `YYYY-MM-DD`. */
+  work_date: string;
+  /** Instantes ISO (con zona horaria). */
+  start_at: string;
+  end_at: string;
+  description: string;
+  observations: string | null;
+  status: JornadaStatus;
+  review_note: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  created_at: string | null;
+  /** Datos del empleado, resueltos aparte (la tabla solo guarda el id). */
+  employee_name?: string;
+  employee_email?: string;
+  /** Nombre de quien revisó, resuelto aparte. */
+  reviewer_name?: string;
+}
+
+export const JORNADA_STATUS_LABELS: Record<JornadaStatus, string> = {
+  pendiente: "Pendiente",
+  aprobada: "Aprobada",
+  rechazada: "Rechazada",
+};
+
+export const JORNADA_STATUS_CLASSES: Record<JornadaStatus, string> = {
+  pendiente: "bg-amber-100 text-amber-800",
+  aprobada: "bg-brand-tint text-brand-dark",
+  rechazada: "bg-red-100 text-red-700",
+};

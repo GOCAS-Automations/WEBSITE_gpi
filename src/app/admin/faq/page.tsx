@@ -4,6 +4,8 @@ import {
   Card,
   CardTitle,
   Field,
+  PublishedBadge,
+  Switch,
   TextArea,
 } from "@/components/admin/ui";
 import { AdminForm, DeleteForm } from "@/components/admin/AdminForm";
@@ -36,6 +38,12 @@ function FaqFields({ faq }: { faq?: FaqRecord }) {
         defaultValue={faq?.answer}
         placeholder="Respuesta clara y concreta para el visitante."
       />
+      <Switch
+        label="Visibilidad en el sitio"
+        name="published"
+        defaultChecked={faq?.published ?? true}
+        hint="Oculta = no se muestra en Nosotros ni en el marcado FAQPage de Google."
+      />
     </>
   );
 }
@@ -57,11 +65,14 @@ export default async function AdminFaqPage() {
             <CardTitle
               title={faq.question}
               action={
-                <DeleteForm
-                  action={deleteFaq}
-                  id={faq.id}
-                  confirmMessage={`¿Eliminar la pregunta "${faq.question}"?`}
-                />
+                <div className="flex items-center gap-2">
+                  <PublishedBadge published={faq.published} />
+                  <DeleteForm
+                    action={deleteFaq}
+                    id={faq.id}
+                    confirmMessage={`¿Eliminar la pregunta "${faq.question}"?`}
+                  />
+                </div>
               }
             />
             <AdminForm action={saveFaq} submitLabel="Guardar pregunta">

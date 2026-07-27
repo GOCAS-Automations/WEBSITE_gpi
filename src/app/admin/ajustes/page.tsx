@@ -4,6 +4,7 @@ import {
   Card,
   CardTitle,
   Field,
+  Switch,
   TextArea,
 } from "@/components/admin/ui";
 import { AdminForm } from "@/components/admin/AdminForm";
@@ -13,11 +14,13 @@ import {
   saveContactSettings,
   saveHeroSettings,
   saveExcellenceSettings,
+  saveVisibilitySettings,
   saveYouTubeSettings,
 } from "../actions";
 
 export default async function AdminAjustesPage() {
-  const { contact, hero, excellence, youtube } = await getAdminSettings();
+  const { contact, hero, excellence, youtube, visibility } =
+    await getAdminSettings();
 
   return (
     <>
@@ -31,6 +34,45 @@ export default async function AdminAjustesPage() {
       />
 
       <div className="space-y-6">
+        {/* ---------------- Visibilidad de secciones ---------------- */}
+        <Card>
+          <CardTitle
+            title="Visibilidad de secciones"
+            description="Apaga temporalmente bloques completos del sitio público. Nada se borra: al volver a encenderlos, el contenido reaparece tal como estaba."
+          />
+          <AdminForm
+            action={saveVisibilitySettings}
+            submitLabel="Guardar visibilidad"
+          >
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Switch
+                label="Valores corporativos"
+                name="valuesSection"
+                defaultChecked={visibility.valuesSection}
+                hint="Bloque «Nuestros valores» del inicio y de la página Nosotros."
+              />
+              <Switch
+                label="Clientes"
+                name="clientsSection"
+                defaultChecked={visibility.clientsSection}
+                hint="Banda de logos de clientes en la página de inicio."
+              />
+              <Switch
+                label="Video corporativo"
+                name="videoSection"
+                defaultChecked={visibility.videoSection}
+                hint="Video de YouTube que se muestra en la página Nosotros."
+              />
+              <Switch
+                label="Preguntas frecuentes"
+                name="faqSection"
+                defaultChecked={visibility.faqSection}
+                hint="Acordeón de FAQ en Nosotros (y su marcado FAQPage para Google)."
+              />
+            </div>
+          </AdminForm>
+        </Card>
+
         {/* ---------------- Contacto ---------------- */}
         <Card>
           <CardTitle

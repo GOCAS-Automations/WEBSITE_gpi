@@ -1,5 +1,12 @@
 import { listClients, type ClientRecord } from "@/lib/admin";
-import { AdminPageHeader, Card, CardTitle, Field } from "@/components/admin/ui";
+import {
+  AdminPageHeader,
+  Card,
+  CardTitle,
+  Field,
+  PublishedBadge,
+  Switch,
+} from "@/components/admin/ui";
 import { AdminForm, DeleteForm } from "@/components/admin/AdminForm";
 import { ImageField } from "@/components/admin/ImageField";
 import { saveClient, deleteClient } from "../actions";
@@ -37,6 +44,12 @@ function ClientFields({ client }: { client?: ClientRecord }) {
         defaultValue={client?.website}
         placeholder="https://..."
       />
+      <Switch
+        label="Visibilidad en el sitio"
+        name="published"
+        defaultChecked={client?.published ?? true}
+        hint="Oculto = su logo no aparece en la portada, pero se conserva aquí."
+      />
     </>
   );
 }
@@ -58,11 +71,14 @@ export default async function AdminClientesPage() {
             <CardTitle
               title={client.name}
               action={
-                <DeleteForm
-                  action={deleteClient}
-                  id={client.id}
-                  confirmMessage={`¿Eliminar el cliente "${client.name}"?`}
-                />
+                <div className="flex items-center gap-2">
+                  <PublishedBadge published={client.published} />
+                  <DeleteForm
+                    action={deleteClient}
+                    id={client.id}
+                    confirmMessage={`¿Eliminar el cliente "${client.name}"?`}
+                  />
+                </div>
               }
             />
             <AdminForm action={saveClient} submitLabel="Guardar cliente">

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
+import { isManagerRole, ROLE_LABELS, type UserRole } from "@/lib/roles";
 import {
   Cog,
   Photo,
@@ -12,6 +13,8 @@ import {
   Sliders,
   LogOut,
   ArrowRight,
+  User,
+  Clock,
 } from "@/lib/icons";
 
 interface AdminSection {
@@ -20,9 +23,15 @@ interface AdminSection {
   icon: (props: { className?: string }) => ReactNode;
   /** true = solo activo con coincidencia exacta de ruta. */
   exact?: boolean;
+  /** true = solo para managers (admin | coordinador). */
+  managerOnly?: boolean;
 }
 
-/** Secciones del panel — se usan tanto en el sidebar como en las tabs móviles. */
+/**
+ * Secciones del panel — se usan tanto en el sidebar como en las tabs móviles.
+ * Las marcadas `managerOnly` se ocultan a marketing; además cada página vuelve
+ * a comprobar el rol en el servidor (`requireManager`), que es la barrera real.
+ */
 export const adminSections: AdminSection[] = [
   { href: "/admin", label: "Dashboard", icon: Sliders, exact: true },
   { href: "/admin/servicios", label: "Servicios", icon: Cog },
@@ -31,7 +40,15 @@ export const adminSections: AdminSection[] = [
   { href: "/admin/faq", label: "FAQ", icon: Info },
   { href: "/admin/valores", label: "Valores", icon: Shield },
   { href: "/admin/ajustes", label: "Contacto y ajustes", icon: Sliders },
+  { href: "/admin/empleados", label: "Equipo", icon: User, managerOnly: true },
+  { href: "/admin/jornadas", label: "Jornadas", icon: Clock, managerOnly: true },
 ];
+
+/** Secciones visibles para un rol concreto. */
+export function sectionsForRole(role: UserRole): AdminSection[] {
+  const manager = isManagerRole(role);
+  return adminSections.filter((s) => !s.managerOnly || manager);
+}
 
 function useIsActive() {
   const pathname = usePathname();
@@ -45,14 +62,17 @@ function useIsActive() {
  */
 export function AdminShell({
   email,
+  role,
   signOut,
   children,
 }: {
   email: string;
+  role: UserRole;
   signOut: () => Promise<void>;
   children: ReactNode;
 }) {
   const isActive = useIsActive();
+  const secciones = sectionsForRole(role);
 
   return (
     <div className="bg-mist">
@@ -64,7 +84,10 @@ export function AdminShell({
               Panel de administración
             </p>
             <p className="truncate text-sm text-graphite">
-              Sesión iniciada como <span className="font-semibold text-ink">{email}</span>
+              Sesión iniciada como <span className="font-semibold text-ink">{email}</span>{" "}
+              <span className="whitespace-nowrap rounded-full bg-mist px-2 py-0.5 text-xs font-semibold text-graphite">
+                {ROLE_LABELS[role]}
+              </span>
             </p>
           </div>
 
@@ -96,7 +119,7 @@ export function AdminShell({
           className="border-t border-line lg:hidden"
         >
           <ul className="flex gap-1 overflow-x-auto px-4 py-2">
-            {adminSections.map((section) => {
+            {secciones.map((section) => {
               const active = isActive(section.href, section.exact);
               const Icon = section.icon;
               return (
@@ -125,7 +148,7 @@ export function AdminShell({
         <aside className="hidden w-60 shrink-0 lg:block">
           <nav aria-label="Secciones del panel" className="sticky top-28">
             <ul className="space-y-1">
-              {adminSections.map((section) => {
+              {secciones.map((section) => {
                 const active = isActive(section.href, section.exact);
                 const Icon = section.icon;
                 return (

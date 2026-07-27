@@ -5,8 +5,15 @@ import { Container } from "@/components/ui/Container";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { getSessionProfile } from "@/lib/supabase/auth";
 import { signOutAction } from "@/lib/session-actions";
+import { getJornadaConfig, listJornadas } from "@/lib/admin";
+import { isContentEditorRole, ROLE_LABELS } from "@/lib/roles";
+import { hoyEnColombia } from "@/lib/jornada";
 import { LoginForm } from "./LoginForm";
-import { Info, Lock, ArrowRight, LogOut } from "@/lib/icons";
+import { JornadaForm } from "./JornadaForm";
+import { MisJornadas } from "./MisJornadas";
+import { PasswordForm } from "./PasswordForm";
+import { saveJornada, deleteJornada, changeOwnPassword } from "./actions";
+import { Info, Lock, ArrowRight, LogOut, Clock } from "@/lib/icons";
 
 export const metadata: Metadata = {
   title: "Mi Cuenta GPI",
@@ -14,9 +21,17 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+/** Depende de la sesión: nunca se cachea. */
+export const dynamic = "force-dynamic";
+
 export default async function MiCuentaPage() {
   const configured = isSupabaseConfigured();
   const session = configured ? await getSessionProfile() : null;
+
+  // Portal completo del empleado: registro de jornadas + historial.
+  if (session && session.profile.active && !isContentEditorRole(session.profile.role)) {
+    return <PortalEmpleado profile={session.profile} />;
+  }
 
   return (
     <section className="relative isolate overflow-hidden bg-mist py-14 sm:py-20">
@@ -66,12 +81,15 @@ export default async function MiCuentaPage() {
             <div className="p-7 sm:p-8">
               {!configured && <NotConfigured />}
 
-              {configured && session && session.profile.role === "admin" && (
-                <ActiveAdminSession email={session.profile.email} />
+              {configured && session && !session.profile.active && (
+                <CuentaDesactivada email={session.profile.email} />
               )}
 
-              {configured && session && session.profile.role !== "admin" && (
-                <EmployeeSession email={session.profile.email} />
+              {configured && session && session.profile.active && (
+                <SesionDeEquipo
+                  email={session.profile.email}
+                  rol={ROLE_LABELS[session.profile.role]}
+                />
               )}
 
               {configured && !session && <LoginForm />}
@@ -92,6 +110,159 @@ export default async function MiCuentaPage() {
 }
 
 /* ------------------------------------------------------------------ */
+/* Portal del empleado                                                 */
+/* ------------------------------------------------------------------ */
+
+async function PortalEmpleado({
+  profile,
+}: {
+  profile: { id: string; fullName: string; email: string; cargo: string | null };
+}) {
+  const [jornadas, config] = await Promise.all([
+    listJornadas({ employeeId: profile.id, limit: 100 }),
+    getJornadaConfig(),
+  ]);
+
+  const hoy = hoyEnColombia();
+  const pendientes = jornadas.filter((j) => j.status === "pendiente").length;
+  const aprobadas = jornadas.filter((j) => j.status === "aprobada").length;
+  const rechazadas = jornadas.filter((j) => j.status === "rechazada").length;
+
+  return (
+    <div className="bg-mist">
+      {/* Barra superior del portal */}
+      <div className="border-b border-line bg-white">
+        <Container className="flex flex-wrap items-center justify-between gap-3 py-4">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-dark">
+              Mi Cuenta GPI
+            </p>
+            <p className="truncate text-sm text-graphite">
+              Hola,{" "}
+              <span className="font-semibold text-ink">{profile.fullName}</span>
+              {profile.cargo && ` · ${profile.cargo}`}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold text-ink-soft transition-colors hover:border-brand hover:text-brand-dark"
+            >
+              <span aria-hidden="true">←</span>
+              Ir al sitio
+            </Link>
+            <form action={signOutAction}>
+              <button
+                type="submit"
+                className="inline-flex items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-ink-soft"
+              >
+                <LogOut className="h-4 w-4" />
+                Cerrar sesión
+              </button>
+            </form>
+          </div>
+        </Container>
+      </div>
+
+      <Container className="py-8 sm:py-10">
+        {/* Resumen */}
+        <div className="mb-7 grid gap-3 sm:grid-cols-3">
+          <Resumen
+            label="Pendientes de aprobación"
+            valor={pendientes}
+            className="bg-amber-50 text-amber-900"
+          />
+          <Resumen
+            label="Aprobadas"
+            valor={aprobadas}
+            className="bg-brand-tint text-brand-dark"
+          />
+          <Resumen
+            label="Rechazadas"
+            valor={rechazadas}
+            className="bg-red-50 text-red-700"
+          />
+        </div>
+
+        {/* Registrar jornada */}
+        <section className="rounded-2xl border border-line bg-white p-5 shadow-soft sm:p-7">
+          <header className="mb-5">
+            <h1 className="flex items-center gap-2 text-xl font-extrabold text-ink sm:text-2xl">
+              <Clock className="h-6 w-6 text-brand" />
+              Registrar una jornada
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-graphite">
+              Cuéntanos qué día trabajaste, en qué orden de trabajo y en qué
+              horario. Mientras escribes verás cómo quedan tus horas ordinarias y
+              extra. Al guardar, tu coordinador la revisará.
+            </p>
+          </header>
+
+          <JornadaForm action={saveJornada} config={config} hoy={hoy} />
+        </section>
+
+        {/* Historial */}
+        <section className="mt-8">
+          <h2 className="text-lg font-bold text-ink">Mis jornadas</h2>
+          <p className="mb-4 mt-1 text-sm leading-relaxed text-graphite">
+            Aquí queda el historial de lo que has registrado y el estado de cada
+            jornada. Puedes corregir o eliminar las que sigan pendientes.
+          </p>
+          <MisJornadas
+            jornadas={jornadas}
+            config={config}
+            hoy={hoy}
+            saveAction={saveJornada}
+            deleteAction={deleteJornada}
+          />
+        </section>
+
+        {/* Contraseña */}
+        <section className="mt-8 rounded-2xl border border-line bg-white p-5 shadow-soft sm:p-7">
+          <h2 className="flex items-center gap-2 text-lg font-bold text-ink">
+            <Lock className="h-5 w-5 text-brand" />
+            Mi contraseña
+          </h2>
+          <p className="mb-4 mt-1 max-w-2xl text-sm leading-relaxed text-graphite">
+            Si te entregaron una contraseña generada, este es el lugar para
+            cambiarla por una que recuerdes. Debe tener al menos 8 caracteres.
+          </p>
+          <PasswordForm action={changeOwnPassword} />
+        </section>
+
+        <p className="mt-8 flex items-start gap-2 text-xs leading-relaxed text-graphite">
+          <Info className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            ¿Algo no cuadra con tus horas o necesitas corregir una jornada ya
+            revisada? Habla con tu coordinador: él puede devolverla al estado
+            pendiente para que la edites.
+          </span>
+        </p>
+      </Container>
+    </div>
+  );
+}
+
+function Resumen({
+  label,
+  valor,
+  className,
+}: {
+  label: string;
+  valor: number;
+  className: string;
+}) {
+  return (
+    <div className={`rounded-2xl px-5 py-4 ${className}`}>
+      <p className="text-3xl font-extrabold">{valor}</p>
+      <p className="mt-0.5 text-sm font-medium opacity-90">{label}</p>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Estados de la tarjeta de acceso                                     */
+/* ------------------------------------------------------------------ */
 
 function NotConfigured() {
   return (
@@ -104,8 +275,8 @@ function NotConfigured() {
       </p>
       <p className="mt-2 text-sm leading-relaxed text-graphite">
         Estamos terminando de configurar el acceso privado de GPI. Muy pronto
-        podrás ingresar con tus credenciales para administrar el contenido del
-        sitio.
+        podrás ingresar con tus credenciales para registrar tus jornadas y
+        administrar el contenido del sitio.
       </p>
       <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
         <Link
@@ -126,12 +297,15 @@ function NotConfigured() {
   );
 }
 
-function ActiveAdminSession({ email }: { email: string }) {
+/** Sesión de alguien del equipo con acceso al panel (admin/coordinador/marketing). */
+function SesionDeEquipo({ email, rol }: { email: string; rol: string }) {
   return (
     <div className="text-center">
       <p className="text-base font-bold text-ink">Tu sesión sigue activa</p>
       <p className="mt-1.5 text-sm text-graphite">
         Ingresaste como <span className="font-semibold text-ink">{email}</span>
+        <br />
+        Rol: <span className="font-semibold text-ink">{rol}</span>
       </p>
       <Link
         href="/admin"
@@ -153,15 +327,17 @@ function ActiveAdminSession({ email }: { email: string }) {
   );
 }
 
-function EmployeeSession({ email }: { email: string }) {
+function CuentaDesactivada({ email }: { email: string }) {
   return (
     <div className="text-center">
-      <p className="text-base font-bold text-ink">
-        El portal de empleados estará disponible próximamente
-      </p>
+      <span className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
+        <Lock className="h-7 w-7" />
+      </span>
+      <p className="mt-5 text-lg font-bold text-ink">Tu cuenta está desactivada</p>
       <p className="mt-2 text-sm leading-relaxed text-graphite">
-        Tu cuenta ({email}) es válida, pero la sección de registro de horas extra
-        todavía está en construcción.
+        La cuenta <span className="font-semibold text-ink">{email}</span> existe,
+        pero un administrador desactivó su acceso. Comunícate con tu coordinador
+        para reactivarla.
       </p>
       <form action={signOutAction} className="mt-6">
         <button
@@ -172,13 +348,6 @@ function EmployeeSession({ email }: { email: string }) {
           Cerrar sesión
         </button>
       </form>
-      <Link
-        href="/"
-        className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full border border-line bg-white px-6 py-3 text-sm font-semibold text-ink-soft transition-colors hover:border-brand hover:text-brand-dark"
-      >
-        <span aria-hidden="true">←</span>
-        Volver al sitio
-      </Link>
     </div>
   );
 }

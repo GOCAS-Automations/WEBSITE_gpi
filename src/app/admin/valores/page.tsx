@@ -4,7 +4,9 @@ import {
   Card,
   CardTitle,
   Field,
+  PublishedBadge,
   Select,
+  Switch,
   TextArea,
 } from "@/components/admin/ui";
 import { AdminForm, DeleteForm } from "@/components/admin/AdminForm";
@@ -48,6 +50,12 @@ function ValueFields({ value }: { value?: ValueRecord }) {
         defaultValue={value?.description}
         placeholder="La rentabilidad de nuestros clientes es nuestra obligación."
       />
+      <Switch
+        label="Visibilidad en el sitio"
+        name="published"
+        defaultChecked={value?.published ?? true}
+        hint="Oculto = no aparece en el inicio ni en Nosotros, pero se conserva aquí."
+      />
     </>
   );
 }
@@ -69,11 +77,14 @@ export default async function AdminValoresPage() {
             <CardTitle
               title={value.title}
               action={
-                <DeleteForm
-                  action={deleteValue}
-                  id={value.id}
-                  confirmMessage={`¿Eliminar el valor "${value.title}"?`}
-                />
+                <div className="flex items-center gap-2">
+                  <PublishedBadge published={value.published} />
+                  <DeleteForm
+                    action={deleteValue}
+                    id={value.id}
+                    confirmMessage={`¿Eliminar el valor "${value.title}"?`}
+                  />
+                </div>
               }
             />
             <AdminForm action={saveValue} submitLabel="Guardar valor">

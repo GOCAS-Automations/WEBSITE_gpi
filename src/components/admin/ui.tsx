@@ -112,6 +112,86 @@ export function Select({
   );
 }
 
+/**
+ * Interruptor visible/oculto.
+ *
+ * Envía SIEMPRE un valor: un input oculto con "false" y, si está encendido,
+ * también el checkbox con "true". Sin el oculto, un checkbox desmarcado no
+ * manda nada y el servidor no podría distinguir "apagado" de "no enviado".
+ * Del lado del servidor se lee con el helper `bool()` de `admin/actions.ts`.
+ */
+export function Switch({
+  label,
+  name,
+  defaultChecked = true,
+  hint,
+  onLabel = "Visible",
+  offLabel = "Oculto",
+}: {
+  label: string;
+  name: string;
+  defaultChecked?: boolean;
+  hint?: string;
+  onLabel?: string;
+  offLabel?: string;
+}) {
+  return (
+    <div>
+      <span className="mb-1.5 block text-sm font-semibold text-ink">{label}</span>
+      <label className="inline-flex cursor-pointer items-center gap-3 rounded-xl border border-line bg-white px-3.5 py-2.5 transition-colors hover:border-brand/50">
+        <input type="hidden" name={name} value="false" />
+        {/* El propio checkbox es el riel del interruptor (appearance-none) y su
+            pseudo-elemento ::before hace de perilla: así los estados dependen
+            solo de :checked, sin JavaScript. */}
+        <input
+          type="checkbox"
+          name={name}
+          value="true"
+          defaultChecked={defaultChecked}
+          className="peer relative h-6 w-11 shrink-0 cursor-pointer appearance-none rounded-full bg-graphite/30 outline-none transition-colors before:absolute before:left-0.5 before:top-0.5 before:h-5 before:w-5 before:rounded-full before:bg-white before:shadow-soft before:transition-transform before:content-[''] checked:bg-brand checked:before:translate-x-5 focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2"
+        />
+        <span className="text-sm font-semibold text-graphite peer-checked:hidden">
+          {offLabel}
+        </span>
+        <span className="hidden text-sm font-semibold text-brand-dark peer-checked:inline">
+          {onLabel}
+        </span>
+      </label>
+      {hint && <p className="mt-1.5 text-xs text-graphite">{hint}</p>}
+    </div>
+  );
+}
+
+/** Etiqueta de estado (publicado/oculto, rol, estado de una jornada…). */
+export function Badge({
+  children,
+  className = "bg-mist text-graphite",
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${className}`}
+    >
+      {children}
+    </span>
+  );
+}
+
+/** Badge específico para la visibilidad de un ítem de contenido. */
+export function PublishedBadge({ published }: { published: boolean }) {
+  return (
+    <Badge
+      className={
+        published ? "bg-brand-tint text-brand-dark" : "bg-amber-100 text-amber-800"
+      }
+    >
+      {published ? "Visible" : "Oculto"}
+    </Badge>
+  );
+}
+
 /* ------------------------------------------------------------------ */
 /* Contenedores                                                        */
 /* ------------------------------------------------------------------ */

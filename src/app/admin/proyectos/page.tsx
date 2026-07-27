@@ -4,7 +4,9 @@ import {
   Card,
   CardTitle,
   Field,
+  PublishedBadge,
   Select,
+  Switch,
   TextArea,
 } from "@/components/admin/ui";
 import { AdminForm, DeleteForm } from "@/components/admin/AdminForm";
@@ -48,6 +50,12 @@ function ProjectFields({ project }: { project?: ProjectRecord }) {
           defaultValue={project?.sort ?? 0}
           hint="Menor número = aparece antes."
         />
+        <Switch
+          label="Visibilidad en el sitio"
+          name="published"
+          defaultChecked={project?.published ?? true}
+          hint="Oculto = no se muestra en /proyectos, pero se conserva aquí."
+        />
       </div>
       <TextArea
         label="Descripción (opcional)"
@@ -89,11 +97,14 @@ export default async function AdminProyectosPage() {
             <CardTitle
               title={project.title}
               action={
-                <DeleteForm
-                  action={deleteProject}
-                  id={project.id}
-                  confirmMessage={`¿Eliminar el proyecto "${project.title}"?`}
-                />
+                <div className="flex items-center gap-2">
+                  <PublishedBadge published={project.published} />
+                  <DeleteForm
+                    action={deleteProject}
+                    id={project.id}
+                    confirmMessage={`¿Eliminar el proyecto "${project.title}"?`}
+                  />
+                </div>
               }
             />
             <AdminForm action={saveProject} submitLabel="Guardar proyecto">
