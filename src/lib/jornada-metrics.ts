@@ -1,0 +1,232 @@
+/**
+ * MÉTRICAS DE JORNADAS — modelo de datos del tablero
+ * ==================================================
+ * Módulo PURO (sin Supabase ni `next/headers`): lo importan por igual el Server
+ * Component que trae los datos y el Client Component que filtra y grafica.
+ *
+ * La idea: el servidor calcula UNA sola vez el desglose de cada jornada con
+ * `calcularJornada` (que recorre el turno minuto a minuto) y manda al navegador
+ * una fila plana y liviana. El cliente solo suma, filtra y dibuja.
+ *
+ * GOTCHA DE ZONA HORARIA: para saber a qué día de la semana pertenece una fecha
+ * `YYYY-MM-DD` SIEMPRE se construye `new Date(fecha + "T12:00:00")`. Una fecha
+ * ISO "pura" se interpreta en UTC y en Colombia (UTC-5) caería en el día
+ * anterior.
+ */
+
+import type { JornadaRecord, JornadaStatus } from "@/lib/admin-types";
+import {
+  calcularJornada,
+  fechaColombia,
+  horaColombia,
+  jornadaConfigDefaults,
+  type JornadaConfig,
+} from "@/lib/jornada";
+
+/* ------------------------------------------------------------------ */
+/* Fila del tablero                                                    */
+/* ------------------------------------------------------------------ */
+
+export interface JornadaMetrica {
+  id: string;
+  empleadoId: string;
+  empleadoNombre: string;
+  ordenTrabajo: string;
+  /** Día laboral imputado, `YYYY-MM-DD`. */
+  fecha: string;
+  /** Hora de pared colombiana, `HH:MM`. */
+  inicio: string;
+  fin: string;
+  /** Hora decimal para el Gantt (el fin puede pasar de 24 si cruza medianoche). */
+  inicioDecimal: number;
+  finDecimal: number;
+
+  totalMinutos: number;
+  ordinariasMin: number;
+  extrasMin: number;
+  extraDiurnaMin: number;
+  extraNocturnaMin: number;
+  extraDominicalDiurnaMin: number;
+  extraDominicalNocturnaMin: number;
+  nocturnasMin: number;
+  dominicalMin: number;
+
+  esDominicalFestivo: boolean;
+  cruzaMedianoche: boolean;
+  festivos: string[];
+  status: JornadaStatus;
+  /** Instante de creación (para el pill de frescura). */
+  creadaEn: string | null;
+}
+
+/** "07:58" → 7.9667. Devuelve 0 si la hora no es válida. */
+export function horaADecimal(hora: string): number {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(hora ?? "");
+  if (!m) return 0;
+  return Number(m[1]) + Number(m[2]) / 60;
+}
+
+/**
+ * Convierte una fila cruda de `jornadas` en la fila plana del tablero.
+ * Nunca lanza: si las horas no son válidas devuelve una fila en ceros para que
+ * el tablero siga dibujándose.
+ */
+export function construirMetrica(
+  jornada: JornadaRecord,
+  config: JornadaConfig = jornadaConfigDefaults,
+): JornadaMetrica {
+  const desglose = calcularJornada(
+    jornada.start_at,
+    jornada.end_at,
+    jornada.work_date,
+    config,
+  );
+
+  const inicio = horaColombia(jornada.start_at);
+  const fin = horaColombia(jornada.end_at);
+  const inicioDecimal = horaADecimal(inicio);
+
+  return {
+    id: jornada.id,
+    empleadoId: jornada.employee_id,
+    empleadoNombre: jornada.employee_name?.trim() || "Sin nombre",
+    ordenTrabajo: jornada.work_order,
+    fecha: jornada.work_date || fechaColombia(jornada.start_at),
+    inicio,
+    fin,
+    inicioDecimal,
+    // Si el turno cruzó la medianoche la hora de fin es "menor" que la de
+    // inicio: para la barra del Gantt se prolonga más allá de las 24.
+    finDecimal: inicioDecimal + desglose.totalMinutos / 60,
+
+    totalMinutos: desglose.totalMinutos,
+    ordinariasMin: desglose.ordinarias,
+    extrasMin: desglose.extras,
+    extraDiurnaMin: desglose.extraDiurna,
+    extraNocturnaMin: desglose.extraNocturna,
+    extraDominicalDiurnaMin: desglose.extraDominicalDiurna,
+    extraDominicalNocturnaMin: desglose.extraDominicalNocturna,
+    nocturnasMin: desglose.minutosNocturnos,
+    dominicalMin: desglose.minutosDominicales,
+
+    esDominicalFestivo: desglose.esDominicalFestivo,
+    cruzaMedianoche: desglose.cruzaMedianoche,
+    festivos: desglose.festivos,
+    status: jornada.status,
+    creadaEn: jornada.created_at,
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/* Fechas (siempre con el ancla de mediodía)                           */
+/* ------------------------------------------------------------------ */
+
+const DIAS_CORTOS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+
+/** `YYYY-MM-DD` → Date anclado al mediodía (nunca cambia de día por la zona). */
+export function fechaLocal(fecha: string): Date {
+  return new Date(`${fecha}T12:00:00`);
+}
+
+/** Date → `YYYY-MM-DD`. */
+export function aISO(fecha: Date): string {
+  const y = fecha.getFullYear();
+  const m = String(fecha.getMonth() + 1).padStart(2, "0");
+  const d = String(fecha.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/** Suma (o resta) días a una fecha `YYYY-MM-DD`. */
+export function sumarDias(fecha: string, dias: number): string {
+  const d = fechaLocal(fecha);
+  d.setDate(d.getDate() + dias);
+  return aISO(d);
+}
+
+/** "2026-07-27" → "Lun 27/07" (etiqueta compacta de los ejes). */
+export function etiquetaDia(fecha: string): string {
+  const d = fechaLocal(fecha);
+  if (Number.isNaN(d.getTime())) return fecha;
+  return `${DIAS_CORTOS[d.getDay()]} ${fecha.slice(8)}/${fecha.slice(5, 7)}`;
+}
+
+/** Lunes de la semana a la que pertenece la fecha (`YYYY-MM-DD`). */
+export function inicioDeSemana(fecha: string): string {
+  const d = fechaLocal(fecha);
+  if (Number.isNaN(d.getTime())) return fecha;
+  // getDay(): 0 = domingo. Se retrocede hasta el lunes.
+  const diff = (d.getDay() + 6) % 7;
+  d.setDate(d.getDate() - diff);
+  return aISO(d);
+}
+
+/* ------------------------------------------------------------------ */
+/* Agregaciones                                                        */
+/* ------------------------------------------------------------------ */
+
+export interface ResumenSemanal {
+  clave: string;
+  empleadoId: string;
+  empleadoNombre: string;
+  /** Lunes de la semana, `YYYY-MM-DD`. */
+  semanaInicio: string;
+  semanaFin: string;
+  extrasMin: number;
+  totalMin: number;
+  jornadas: number;
+  /** Jornadas de esa semana que superan el tope diario. */
+  diasSobreTope: number;
+  /** true si la semana supera el tope semanal configurado. */
+  excedeSemana: boolean;
+}
+
+/**
+ * Acumulado semanal de horas extra por empleado, de mayor a menor.
+ * `limiteSemanaHoras` y `limiteDiaHoras` vienen de `jornada_config`.
+ */
+export function resumenSemanalExtras(
+  datos: JornadaMetrica[],
+  limiteSemanaHoras: number,
+  limiteDiaHoras: number,
+): ResumenSemanal[] {
+  const mapa = new Map<string, ResumenSemanal>();
+  const topeDiaMin = limiteDiaHoras * 60;
+
+  for (const j of datos) {
+    const semanaInicio = inicioDeSemana(j.fecha);
+    const clave = `${j.empleadoId}|${semanaInicio}`;
+    let fila = mapa.get(clave);
+    if (!fila) {
+      fila = {
+        clave,
+        empleadoId: j.empleadoId,
+        empleadoNombre: j.empleadoNombre,
+        semanaInicio,
+        semanaFin: sumarDias(semanaInicio, 6),
+        extrasMin: 0,
+        totalMin: 0,
+        jornadas: 0,
+        diasSobreTope: 0,
+        excedeSemana: false,
+      };
+      mapa.set(clave, fila);
+    }
+    fila.extrasMin += j.extrasMin;
+    fila.totalMin += j.totalMinutos;
+    fila.jornadas += 1;
+    if (topeDiaMin > 0 && j.extrasMin > topeDiaMin) fila.diasSobreTope += 1;
+  }
+
+  const topeSemanaMin = limiteSemanaHoras * 60;
+  return [...mapa.values()]
+    .map((f) => ({
+      ...f,
+      excedeSemana: topeSemanaMin > 0 && f.extrasMin > topeSemanaMin,
+    }))
+    .sort(
+      (a, b) =>
+        b.extrasMin - a.extrasMin ||
+        b.semanaInicio.localeCompare(a.semanaInicio) ||
+        a.empleadoNombre.localeCompare(b.empleadoNombre),
+    );
+}

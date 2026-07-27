@@ -43,6 +43,10 @@ export interface JornadaConfig {
   /** Franja nocturna (cruza la medianoche). */
   inicioNocturno: string;
   finNocturno: string;
+  /** Tope de horas extra por día antes de encender la alerta del tablero. */
+  limiteExtrasDia: number;
+  /** Tope de horas extra por semana antes de encender la alerta del tablero. */
+  limiteExtrasSemana: number;
   recargos: JornadaRecargos;
 }
 
@@ -50,7 +54,9 @@ export interface JornadaConfig {
  * Valores por defecto — normativa laboral colombiana vigente en 2026:
  * jornada ordinaria de 8 horas, franja nocturna desde las 7:00 p. m.
  * (Ley 2101 de 2021) y recargo dominical del 80% (Ley 2466 de 2025).
- * Son AJUSTABLES desde /admin/ajustes cuando GPI confirme sus reglas.
+ * Los topes de horas extra (2 h al día, 12 h a la semana) son los del artículo
+ * 22 de la Ley 50 de 1990; el tablero solo los usa para avisar, nunca bloquea.
+ * Son AJUSTABLES desde `jornada_config` cuando GPI confirme sus reglas.
  */
 export const jornadaConfigDefaults: JornadaConfig = {
   jornadaOrdinariaInicio: "07:00",
@@ -58,6 +64,8 @@ export const jornadaConfigDefaults: JornadaConfig = {
   horasOrdinariasDia: 8,
   inicioNocturno: "19:00",
   finNocturno: "06:00",
+  limiteExtrasDia: 2,
+  limiteExtrasSemana: 12,
   recargos: {
     extraDiurna: 0.25,
     extraNocturna: 0.75,
@@ -399,6 +407,28 @@ export function formatearDuracion(minutos: number): string {
   return `${h} h ${m} min`;
 }
 
+/**
+ * Versión compacta para el tablero de métricas: 510 → "8h 30m"; 480 → "8h";
+ * 45 → "45m". Es el formato que piden las tarjetas y los tooltips (menos
+ * ancho que "8 h 30 min", que se sigue usando en las fichas de aprobación).
+ */
+export function formatearHoras(minutos: number): string {
+  if (!Number.isFinite(minutos) || minutos <= 0) return "0h";
+  const total = Math.round(minutos);
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  if (h === 0) return `${m}m`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
+}
+
+/** "2026-07-27" → "27/07/2026" (formato de fecha de toda la interfaz). */
+export function formatearFechaNumerica(fecha: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return fecha;
+  const [y, m, d] = fecha.split("-");
+  return `${d}/${m}/${y}`;
+}
+
 /** "2026-07-27" → "lunes, 27 de julio de 2026". */
 export function formatearFechaLarga(fecha: string): string {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return fecha;
@@ -479,6 +509,17 @@ export function normalizarJornadaConfig(value: unknown): JornadaConfig {
     ),
     inicioNocturno: horaOr(value.inicioNocturno, d.inicioNocturno),
     finNocturno: horaOr(value.finNocturno, d.finNocturno),
+    // Claves nuevas: si `jornada_config` todavía no las trae (la migración 0002
+    // no las sembró), se usan los topes legales por defecto. No hace falta
+    // ninguna migración adicional para que el tablero funcione.
+    limiteExtrasDia: Math.min(
+      24,
+      Math.max(0, numeroOr(value.limiteExtrasDia, d.limiteExtrasDia)),
+    ),
+    limiteExtrasSemana: Math.min(
+      168,
+      Math.max(0, numeroOr(value.limiteExtrasSemana, d.limiteExtrasSemana)),
+    ),
     recargos: {
       extraDiurna: numeroOr(recargosRaw.extraDiurna, d.recargos.extraDiurna),
       extraNocturna: numeroOr(recargosRaw.extraNocturna, d.recargos.extraNocturna),

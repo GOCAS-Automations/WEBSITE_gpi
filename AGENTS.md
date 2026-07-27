@@ -41,7 +41,7 @@ Repo remoto: https://github.com/GOCAS-Automations/website_GPI.git
 
 ## Roadmap
 - Fase 1: sitio migrado y mejorado + SEO ✅. Mi Cuenta GPI + panel admin (login, CRUD de servicios/proyectos/clientes/FAQ/valores/contacto) ✅ código listo — falta aplicar las migraciones en Supabase y desplegar (ver `docs/PLAN.md`).
-- Fase 2 (núcleo) ✅ código listo: roles ampliados, CRUD de empleados con cuentas (contraseña autogenerada vía Auth Admin API), portal del empleado con registro de jornadas y horas extra, aprobaciones para managers y visibilidad del contenido. Pendiente: tablero de métricas/gráficas.
+- Fase 2 ✅ completa: roles ampliados, CRUD de empleados con cuentas (contraseña autogenerada vía Auth Admin API), portal del empleado con registro de jornadas y horas extra, aprobaciones para managers, visibilidad del contenido, y tablero de métricas en `/admin/jornadas?vista=metricas` (Recharts: KPIs, gráficas, Gantt de turnos, control semanal de extras, export CSV). Migraciones 0001+0002 aplicadas en el GPI Project.
 - Estado detallado, decisiones técnicas y pendientes del cliente: `docs/PLAN.md`.
 
 ## Referencia

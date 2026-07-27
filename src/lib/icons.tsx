@@ -170,6 +170,99 @@ export const Info = (p: IconProps) => (
   </Base>
 );
 
+export const ChevronUp = (p: IconProps) => (
+  <Base {...p}>
+    <path d="m6 15 6-6 6 6" />
+  </Base>
+);
+
+export const ChevronLeft = (p: IconProps) => (
+  <Base {...p}>
+    <path d="m15 18-6-6 6-6" />
+  </Base>
+);
+
+export const ChevronRight = (p: IconProps) => (
+  <Base {...p}>
+    <path d="m9 6 6 6-6 6" />
+  </Base>
+);
+
+export const Search = (p: IconProps) => (
+  <Base {...p}>
+    <circle cx="11" cy="11" r="7" />
+    <path d="m20 20-3.5-3.5" />
+  </Base>
+);
+
+/** Embudo tachado: "quitar filtros". */
+export const FilterX = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M3 4h18l-7 8v6l-4 2v-8L3 4Z" />
+    <path d="m16 16 5 5M21 16l-5 5" />
+  </Base>
+);
+
+export const Download = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M12 4v12m0 0 4-4m-4 4-4-4" />
+    <path d="M4 18v1a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1" />
+  </Base>
+);
+
+export const Users = (p: IconProps) => (
+  <Base {...p}>
+    <circle cx="9" cy="8" r="3.5" />
+    <path d="M2.5 20a6.5 6.5 0 0 1 13 0" />
+    <path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M17.5 14.2A6.5 6.5 0 0 1 21.5 20" />
+  </Base>
+);
+
+export const Calendar = (p: IconProps) => (
+  <Base {...p}>
+    <rect x="3" y="5" width="18" height="16" rx="2" />
+    <path d="M3 10h18M8 3v4M16 3v4" />
+  </Base>
+);
+
+/** Reloj con flecha: horas extra / tiempo adicional. */
+export const ClockPlus = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M20.9 13a9 9 0 1 1-2.6-6.9" />
+    <path d="M12 7v5l3 2" />
+    <path d="M18 15v6M15 18h6" />
+  </Base>
+);
+
+export const BarChart = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M3 21h18" />
+    <path d="M6 21V11M11 21V4M16 21v-6M21 21v-9" />
+  </Base>
+);
+
+export const AlertTriangle = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M12 4.5 2.8 20h18.4L12 4.5Z" />
+    <path d="M12 10v4M12 17h.01" />
+  </Base>
+);
+
+export const CheckCircle = (p: IconProps) => (
+  <Base {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="m8.5 12 2.5 2.5 4.5-5" />
+  </Base>
+);
+
+export const ClipboardList = (p: IconProps) => (
+  <Base {...p}>
+    <rect x="5" y="4" width="14" height="17" rx="2" />
+    <path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1" />
+    <path d="M9 10h6M9 14h6M9 18h3" />
+  </Base>
+);
+
 /* ---------- Redes sociales ---------- */
 export const WhatsApp = (p: IconProps) => (
   <Base {...p} fill="currentColor" stroke="none">

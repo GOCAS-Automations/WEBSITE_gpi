@@ -499,7 +499,16 @@ on conflict (key) do nothing;
 --   jornadaOrdinariaInicio / Fin → horario base de oficina de GPI (referencia)
 --   horasOrdinariasDia           → horas antes de que empiecen a contar extras
 --   inicioNocturno / finNocturno → franja nocturna (cruza la medianoche)
+--   limiteExtrasDia / Semana     → topes legales de horas extra (Ley 50 de 1990);
+--                                  el tablero de métricas solo AVISA al superarlos
 --   recargos                     → factores ADICIONALES sobre la hora ordinaria
+--
+--   NOTA: si esta fila ya existe sin `limiteExtrasDia`/`limiteExtrasSemana`
+--   (bases creadas antes del tablero de métricas), no pasa nada: el código usa
+--   2 h/día y 12 h/semana por defecto. Para editarlos desde la base:
+--     update public.site_settings
+--        set value = value || '{"limiteExtrasDia": 2, "limiteExtrasSemana": 12}'::jsonb
+--      where key = 'jornada_config';
 insert into public.site_settings (key, value) values
 (
   'jornada_config',
@@ -509,6 +518,8 @@ insert into public.site_settings (key, value) values
     "horasOrdinariasDia": 8,
     "inicioNocturno": "19:00",
     "finNocturno": "06:00",
+    "limiteExtrasDia": 2,
+    "limiteExtrasSemana": 12,
     "recargos": {
       "extraDiurna": 0.25,
       "extraNocturna": 0.75,
