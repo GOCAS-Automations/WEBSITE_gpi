@@ -40,8 +40,9 @@ Repo remoto: https://github.com/GOCAS-Automations/website_GPI.git
 - Redes: facebook.com/gpiprofesionales · instagram.com/gpiprofesionales
 
 ## Roadmap
-- Fase 1 (actual): sitio migrado y mejorado + SEO. Luego: panel admin (login) para editar logos de clientes, textos e imágenes principales y datos de contacto.
+- Fase 1: sitio migrado y mejorado + SEO ✅. Mi Cuenta GPI + panel admin (login, CRUD de servicios/proyectos/clientes/FAQ/valores/contacto) ✅ código listo — falta aplicar la migración en Supabase y desplegar (ver `docs/PLAN.md`).
 - Fase 2 (tras aprobación de cotización): sistema de registro/aprobación de horas extra para empleados con Supabase (auth + DB gratis) — sección interna con credenciales por empleado y dashboard para administradores.
+- Estado detallado, decisiones técnicas y pendientes del cliente: `docs/PLAN.md`.
 
 ## Referencia
 - Contenido original extraído del sitio viejo: `docs/CONTENIDO.md` (fuente de verdad de textos e inventario de imágenes).

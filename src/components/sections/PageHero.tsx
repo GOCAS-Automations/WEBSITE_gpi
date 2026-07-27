@@ -1,12 +1,7 @@
-import Link from "next/link";
 import Image from "next/image";
 import { Container } from "@/components/ui/Container";
+import { Breadcrumbs, type Crumb } from "@/components/ui/Breadcrumbs";
 import type { ReactNode } from "react";
-
-interface Crumb {
-  label: string;
-  href?: string;
-}
 
 interface PageHeroProps {
   eyebrow?: string;
@@ -37,24 +32,7 @@ export function PageHero({
       />
       <div className="absolute inset-0 bg-gradient-to-br from-ink/85 via-ink/70 to-brand-dark/75" />
       <Container className="relative py-16 sm:py-20 lg:py-24">
-        {breadcrumbs && (
-          <nav aria-label="Ruta de navegación" className="mb-5">
-            <ol className="flex flex-wrap items-center gap-1.5 text-sm text-white/60">
-              {breadcrumbs.map((c, i) => (
-                <li key={i} className="flex items-center gap-1.5">
-                  {c.href ? (
-                    <Link href={c.href} className="transition-colors hover:text-brand-light">
-                      {c.label}
-                    </Link>
-                  ) : (
-                    <span className="text-white/85">{c.label}</span>
-                  )}
-                  {i < breadcrumbs.length - 1 && <span aria-hidden="true">/</span>}
-                </li>
-              ))}
-            </ol>
-          </nav>
-        )}
+        {breadcrumbs && <Breadcrumbs items={breadcrumbs} tone="light" className="mb-5" />}
         {eyebrow && (
           <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-brand-light">
             <span className="h-px w-6 bg-current" aria-hidden="true" />

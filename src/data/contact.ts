@@ -16,7 +16,7 @@ export interface EmailContact {
 
 export const contact = {
   companyName: "GPI",
-  legalName: "GPI — Optimización de Procesos Industriales y Ambientales",
+  legalName: "Grupo de Profesionales en Ingeniería GPI S.A.S",
   tagline: "Optimización de Procesos Industriales y Ambientales",
   address: {
     street: "Cl. 33 #5-76",

@@ -9,7 +9,7 @@ import { CtaBand } from "@/components/sections/CtaBand";
 import { services as staticServices, getCategory } from "@/data/services";
 import { whatsappLink } from "@/data/contact";
 import { getService, getServices, getSettings } from "@/lib/content";
-import { iconMap, Check, ArrowRight, WhatsApp } from "@/lib/icons";
+import { iconMap, Check, ArrowLeft, ArrowRight, WhatsApp } from "@/lib/icons";
 
 type Params = { slug: string };
 
@@ -59,6 +59,14 @@ export default async function ServiceDetailPage({
   const category = getCategory(service.category);
   const CatIcon = iconMap[service.icon];
   const quoteMessage = `Hola GPI, quiero cotizar el servicio de ${service.title}.`;
+
+  // Orden industrial → ambiental respetando el orden ya devuelto por getServices().
+  const currentIndex = services.findIndex((s) => s.slug === service.slug);
+  const prevService = currentIndex > 0 ? services[currentIndex - 1] : undefined;
+  const nextService =
+    currentIndex >= 0 && currentIndex < services.length - 1
+      ? services[currentIndex + 1]
+      : undefined;
 
   return (
     <>
@@ -193,6 +201,58 @@ export default async function ServiceDetailPage({
                 </ButtonLink>
               </div>
             </aside>
+          </div>
+        </Container>
+      </section>
+
+      {/* Navegación entre servicios (anterior / todos / siguiente) */}
+      <section className="border-t border-line bg-mist py-10 sm:py-12">
+        <Container>
+          <div className="grid gap-4 sm:grid-cols-3 sm:items-stretch">
+            {prevService ? (
+              <Link
+                href={`/servicios/${prevService.slug}`}
+                className="group flex items-center gap-3 rounded-2xl border border-line bg-white p-5 shadow-soft transition-all duration-300 hover:-translate-y-1 hover:border-brand/40 hover:shadow-card"
+              >
+                <ArrowLeft className="h-5 w-5 shrink-0 text-graphite transition-transform duration-200 group-hover:-translate-x-1 group-hover:text-brand-dark" />
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-graphite">
+                    Servicio anterior
+                  </p>
+                  <p className="truncate text-sm font-bold text-ink group-hover:text-brand-dark">
+                    {prevService.title}
+                  </p>
+                </div>
+              </Link>
+            ) : (
+              <div aria-hidden="true" className="hidden sm:block" />
+            )}
+
+            <Link
+              href="/servicios"
+              className="flex items-center justify-center rounded-2xl border border-line bg-white p-5 text-center text-sm font-semibold text-ink-soft shadow-soft transition-colors duration-200 hover:border-brand/40 hover:text-brand-dark"
+            >
+              Todos los servicios
+            </Link>
+
+            {nextService ? (
+              <Link
+                href={`/servicios/${nextService.slug}`}
+                className="group flex items-center justify-end gap-3 rounded-2xl border border-line bg-white p-5 text-right shadow-soft transition-all duration-300 hover:-translate-y-1 hover:border-brand/40 hover:shadow-card"
+              >
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-graphite">
+                    Siguiente servicio
+                  </p>
+                  <p className="truncate text-sm font-bold text-ink group-hover:text-brand-dark">
+                    {nextService.title}
+                  </p>
+                </div>
+                <ArrowRight className="h-5 w-5 shrink-0 text-graphite transition-transform duration-200 group-hover:translate-x-1 group-hover:text-brand-dark" />
+              </Link>
+            ) : (
+              <div aria-hidden="true" className="hidden sm:block" />
+            )}
           </div>
         </Container>
       </section>
