@@ -56,6 +56,14 @@ export interface JornadaMetrica {
   extraDominicalNocturnaMin: number;
   nocturnasMin: number;
   dominicalMin: number;
+  /** Minutos ordinarios "puros": dentro de la jornada, diurnos, día laboral normal. */
+  ordinariaDiurnaMin: number;
+  /** Minutos ordinarios con recargo nocturno (dentro de la jornada, franja nocturna). */
+  ordinariaNocturnaMin: number;
+  /** Minutos ordinarios en domingo/festivo, diurnos. */
+  dominicalDiurnaMin: number;
+  /** Minutos ordinarios en domingo/festivo, nocturnos. */
+  dominicalNocturnaMin: number;
 
   esDominicalFestivo: boolean;
   cruzaMedianoche: boolean;
@@ -119,6 +127,10 @@ export function construirMetrica(
     extraDominicalNocturnaMin: desglose.extraDominicalNocturna,
     nocturnasMin: desglose.minutosNocturnos,
     dominicalMin: desglose.minutosDominicales,
+    ordinariaDiurnaMin: desglose.ordinariaDiurna,
+    ordinariaNocturnaMin: desglose.ordinariaNocturna,
+    dominicalDiurnaMin: desglose.dominicalDiurna,
+    dominicalNocturnaMin: desglose.dominicalNocturna,
 
     esDominicalFestivo: desglose.esDominicalFestivo,
     cruzaMedianoche: desglose.cruzaMedianoche,
@@ -159,6 +171,12 @@ export function etiquetaDia(fecha: string): string {
   const d = fechaLocal(fecha);
   if (Number.isNaN(d.getTime())) return fecha;
   return `${DIAS_CORTOS[d.getDay()]} ${fecha.slice(8)}/${fecha.slice(5, 7)}`;
+}
+
+/** Lunes de una semana, `"2026-07-27"` → `"Sem del 27/07"` (eje de tendencias). */
+export function etiquetaSemana(lunes: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(lunes)) return lunes;
+  return `Sem del ${lunes.slice(8, 10)}/${lunes.slice(5, 7)}`;
 }
 
 /** Lunes de la semana a la que pertenece la fecha (`YYYY-MM-DD`). */

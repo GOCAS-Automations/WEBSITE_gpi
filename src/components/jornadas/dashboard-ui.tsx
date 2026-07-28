@@ -43,6 +43,21 @@ export const COLOR_ORDINARIAS = "#8cc63f";
 export const COLOR_EXTRAS = "#f59e0b";
 export const COLOR_RIESGO = "#dc2626";
 
+/**
+ * Familia de colores para el desglose fino de "Composición de horas": las
+ * horas ordinarias van en verde de marca; las categorías con recargo o extra
+ * usan tonos ámbar → naranja → morado, de menor a mayor "excepcionalidad".
+ */
+export const COLOR_EXTRA_DIURNA = COLOR_EXTRAS;
+export const COLOR_EXTRA_NOCTURNA = "#ea580c";
+export const COLOR_RECARGO_NOCTURNO = "#8b5cf6";
+export const COLOR_DOMINICAL = "#6d28d9";
+
+/** Colores del estado de una jornada (coinciden con `JORNADA_STATUS_CLASSES`). */
+export const COLOR_PENDIENTE = "#f59e0b";
+export const COLOR_APROBADA = BRAND;
+export const COLOR_RECHAZADA = "#dc2626";
+
 /** Paleta para el Gantt: una serie por empleado. */
 export const COLORES_EMPLEADO = [
   "#3dae2b", "#2563eb", "#f59e0b", "#8b5cf6", "#0ea5e9",
@@ -226,6 +241,7 @@ export function StatCard({
 export function ChartCard({
   title,
   hint,
+  info,
   children,
   page,
   totalPages,
@@ -235,6 +251,8 @@ export function ChartCard({
   title: string;
   /** Una línea que explica qué se está viendo, en lenguaje llano. */
   hint?: string;
+  /** Glosario opcional: dibuja un botón "Ayuda" junto al título. */
+  info?: { label: string; desc: string }[];
   children: ReactNode;
   page?: number;
   totalPages?: number;
@@ -245,8 +263,19 @@ export function ChartCard({
     <div
       className={`rounded-2xl border border-line bg-white p-5 shadow-soft ${className}`}
     >
-      <h3 className="text-sm font-bold text-ink">{title}</h3>
-      {hint && <p className="mt-1 text-xs leading-relaxed text-graphite">{hint}</p>}
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="text-sm font-bold text-ink">{title}</h3>
+          {hint && (
+            <p className="mt-1 text-xs leading-relaxed text-graphite">{hint}</p>
+          )}
+        </div>
+        {info && info.length > 0 && (
+          <div className="shrink-0">
+            <InfoTooltip titulo={title} items={info} />
+          </div>
+        )}
+      </div>
       <div className="mt-4">{children}</div>
       {totalPages != null && page != null && onPageChange && (
         <Pagination page={page} totalPages={totalPages} onPageChange={onPageChange} />

@@ -469,7 +469,7 @@ export function JornadasDashboard({
             },
           ]}
         />
-        <JornadasCharts datos={datos} />
+        <JornadasCharts datos={datos} limiteExtrasSemana={config.limiteExtrasSemana} />
       </div>
 
       {/* ---------------- Control de horas extra ---------------- */}

@@ -3,22 +3,36 @@
 /**
  * GRÁFICAS DEL TABLERO DE JORNADAS
  * ================================
- * Cuatro lecturas del mismo conjunto de jornadas ya filtrado:
- *   1. Horas por día (ordinarias + extra apiladas).
- *   2. Horas por empleado.
- *   3. Horas extra por empleado (se oculta si nadie tiene extras).
- *   4. Turnos: una barra por turno, de la hora de entrada a la de salida.
+ * Ocho lecturas del mismo conjunto de jornadas ya filtrado, agrupadas por tema:
  *
- * Todas las series se paginan para que la tarjeta se lea bien aunque el rango
- * abarque meses o el equipo sea grande.
+ *   Tiempo:
+ *     1. Horas por día (ordinarias + extra apiladas).
+ *     2. Composición de horas (dona): ordinarias, extra y recargos.
+ *     3. Tendencia semanal de horas extra, con el tope legal de referencia.
+ *   Personas:
+ *     4. Horas por empleado.
+ *     5. Horas extra por empleado (se oculta si nadie tiene extras).
+ *     6. Turnos: una barra por turno, de la hora de entrada a la de salida.
+ *   Órdenes de trabajo:
+ *     7. Horas por orden de trabajo (top 10).
+ *   Estados:
+ *     8. Estado de las jornadas (pendiente / aprobada / rechazada).
+ *
+ * Todas las series paginables se paginan para que la tarjeta se lea bien
+ * aunque el rango abarque meses o el equipo sea grande.
  */
 
 import { useMemo, useState } from "react";
 import {
+  Area,
+  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
   Cell,
+  Pie,
+  PieChart,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -28,21 +42,37 @@ import {
   BRAND,
   BRAND_LIGHT,
   COLORES_EMPLEADO,
+  COLOR_APROBADA,
+  COLOR_DOMINICAL,
   COLOR_EXTRAS,
+  COLOR_EXTRA_DIURNA,
+  COLOR_EXTRA_NOCTURNA,
   COLOR_ORDINARIAS,
+  COLOR_PENDIENTE,
+  COLOR_RECARGO_NOCTURNO,
+  COLOR_RECHAZADA,
+  COLOR_RIESGO,
   ChartCard,
   ChartEmpty,
   Leyenda,
   tooltipStyle,
   usePaginacion,
 } from "./dashboard-ui";
-import { etiquetaDia, type JornadaMetrica } from "@/lib/jornada-metrics";
+import {
+  etiquetaDia,
+  etiquetaSemana,
+  inicioDeSemana,
+  type JornadaMetrica,
+} from "@/lib/jornada-metrics";
 import { formatearHoras } from "@/lib/jornada";
 import { ChevronDown, ChevronUp, Users } from "@/lib/icons";
 
 const DIAS_POR_PAGINA = 7;
 const EMPLEADOS_POR_PAGINA = 8;
 const DIAS_GANTT_POR_PAGINA = 3;
+const ORDENES_POR_PAGINA = 8;
+/** Cuántas órdenes de trabajo entran en el ranking (con paginación si no caben). */
+const TOP_ORDENES = 10;
 
 /** Minutos → horas decimales con un decimal (lo que consumen las barras). */
 function aHoras(minutos: number): number {
@@ -52,6 +82,11 @@ function aHoras(minutos: number): number {
 /** Altura proporcional al número de barras horizontales. */
 function altoBarras(n: number): number {
   return Math.max(200, n * 40);
+}
+
+/** Redondea una proporción a un porcentaje entero, sin dividir por cero. */
+function porcentaje(parte: number, total: number): number {
+  return total > 0 ? Math.round((parte / total) * 100) : 0;
 }
 
 /* ------------------------------------------------------------------ */
@@ -132,9 +167,70 @@ function TurnoTooltip({
 }
 
 /* ------------------------------------------------------------------ */
+/* Tooltip de órdenes de trabajo                                       */
+/* ------------------------------------------------------------------ */
 
-export function JornadasCharts({ datos }: { datos: JornadaMetrica[] }) {
+interface OrdenFila {
+  orden: string;
+  horas: number;
+  totalMin: number;
+  ordinariasMin: number;
+  extrasMin: number;
+  empleados: number;
+}
+
+/** "OT-1234 · Total 42h · Ordinarias 38h · Extra 4h · 3 empleados". */
+function OrdenTooltip({
+  active,
+  payload,
+}: {
+  active?: boolean;
+  payload?: { payload?: OrdenFila }[];
+}) {
+  if (!active || !payload?.length) return null;
+  const d = payload[0]?.payload;
+  if (!d) return null;
+
+  return (
+    <div className="max-w-xs rounded-xl border border-line bg-white p-3 text-xs shadow-soft">
+      <p className="mb-1.5 font-bold text-ink">{d.orden}</p>
+      <p className="text-graphite">
+        Total: <span className="font-semibold text-ink-soft">{formatearHoras(d.totalMin)}</span>
+      </p>
+      <p className="text-graphite">
+        Ordinarias:{" "}
+        <span className="font-semibold text-ink-soft">
+          {formatearHoras(d.ordinariasMin)}
+        </span>
+      </p>
+      {d.extrasMin > 0 && (
+        <p className="text-amber-700">
+          Horas extra: <span className="font-semibold">{formatearHoras(d.extrasMin)}</span>
+        </p>
+      )}
+      <p className="mt-1.5 text-graphite">
+        {d.empleados} empleado{d.empleados === 1 ? "" : "s"}{" "}
+        {d.empleados === 1 ? "participó" : "participaron"}
+      </p>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+
+export function JornadasCharts({
+  datos,
+  limiteExtrasSemana,
+}: {
+  datos: JornadaMetrica[];
+  /** Tope semanal de horas extra configurado (para la línea de referencia). */
+  limiteExtrasSemana: number;
+}) {
   const [leyendaAbierta, setLeyendaAbierta] = useState(false);
+
+  /* ==================================================================
+     TIEMPO
+     ================================================================== */
 
   /* ---- 1. Horas por día ------------------------------------------ */
   const porDia = useMemo(() => {
@@ -157,7 +253,79 @@ export function JornadasCharts({ datos }: { datos: JornadaMetrica[] }) {
 
   const dias = usePaginacion(porDia, DIAS_POR_PAGINA, true);
 
-  /* ---- 2 y 3. Por empleado --------------------------------------- */
+  /* ---- 2. Composición de horas (dona) ----------------------------- */
+  const composicion = useMemo(() => {
+    let ordinaria = 0;
+    let extraDiurna = 0;
+    let extraNocturna = 0;
+    let recargoNocturno = 0;
+    let dominical = 0;
+    for (const j of datos) {
+      ordinaria += j.ordinariaDiurnaMin;
+      extraDiurna += j.extraDiurnaMin;
+      extraNocturna += j.extraNocturnaMin;
+      recargoNocturno += j.ordinariaNocturnaMin;
+      dominical +=
+        j.dominicalDiurnaMin +
+        j.dominicalNocturnaMin +
+        j.extraDominicalDiurnaMin +
+        j.extraDominicalNocturnaMin;
+    }
+    return [
+      { categoria: "Ordinarias", minutos: ordinaria, color: COLOR_ORDINARIAS },
+      { categoria: "Extra diurna", minutos: extraDiurna, color: COLOR_EXTRA_DIURNA },
+      { categoria: "Extra nocturna", minutos: extraNocturna, color: COLOR_EXTRA_NOCTURNA },
+      {
+        categoria: "Recargo nocturno",
+        minutos: recargoNocturno,
+        color: COLOR_RECARGO_NOCTURNO,
+      },
+      { categoria: "Dominical/festivo", minutos: dominical, color: COLOR_DOMINICAL },
+      // Se ocultan las categorías en cero: con un solo empleado o un rango
+      // corto es normal que varias no apliquen.
+    ].filter((c) => c.minutos > 0);
+  }, [datos]);
+
+  const totalComposicionMin = useMemo(
+    () => composicion.reduce((acc, c) => acc + c.minutos, 0),
+    [composicion],
+  );
+
+  /**
+   * ---- 3. Tendencia semanal de horas extra --------------------------
+   * El tope legal (`limiteExtrasSemana`) aplica POR PERSONA, no al equipo
+   * completo: sumar las extras de todos daría un número que casi siempre
+   * está por encima del tope con más de un par de empleados, y la línea de
+   * referencia dejaría de significar nada. Por eso la tendencia sigue, semana
+   * a semana, a la persona que MÁS horas extra acumuló esa semana: así la
+   * línea cruza el tope solo cuando alguien realmente se acercó o se pasó,
+   * justo lo que detalla la tabla de control más abajo.
+   */
+  const porSemana = useMemo(() => {
+    const porEmpleadoSemana = new Map<string, number>();
+    for (const j of datos) {
+      const clave = `${j.empleadoId}|${inicioDeSemana(j.fecha)}`;
+      porEmpleadoSemana.set(clave, (porEmpleadoSemana.get(clave) ?? 0) + j.extrasMin);
+    }
+    const maxPorSemana = new Map<string, number>();
+    for (const [clave, minutos] of porEmpleadoSemana) {
+      const lunes = clave.split("|")[1];
+      maxPorSemana.set(lunes, Math.max(maxPorSemana.get(lunes) ?? 0, minutos));
+    }
+    return [...maxPorSemana.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([lunes, extrasMin]) => ({
+        lunes,
+        etiqueta: etiquetaSemana(lunes),
+        extras: aHoras(extrasMin),
+      }));
+  }, [datos]);
+
+  /* ==================================================================
+     PERSONAS
+     ================================================================== */
+
+  /* ---- 4 y 5. Por empleado ----------------------------------------- */
   const porEmpleado = useMemo(() => {
     const mapa = new Map<
       string,
@@ -194,7 +362,7 @@ export function JornadasCharts({ datos }: { datos: JornadaMetrica[] }) {
   const horas = usePaginacion(horasEmpleado, EMPLEADOS_POR_PAGINA);
   const extras = usePaginacion(extrasEmpleado, EMPLEADOS_POR_PAGINA);
 
-  /* ---- 4. Gantt de turnos ---------------------------------------- */
+  /* ---- 6. Gantt de turnos ------------------------------------------ */
   const empleados = useMemo(() => {
     const mapa = new Map<string, string>();
     for (const j of datos) if (!mapa.has(j.empleadoId)) mapa.set(j.empleadoId, j.empleadoNombre);
@@ -270,10 +438,76 @@ export function JornadasCharts({ datos }: { datos: JornadaMetrica[] }) {
     };
   }, [filasGantt, empleadosVisibles]);
 
+  /* ==================================================================
+     ÓRDENES DE TRABAJO
+     ================================================================== */
+
+  const porOrden = useMemo(() => {
+    const mapa = new Map<
+      string,
+      { ordinariasMin: number; extrasMin: number; totalMin: number; empleados: Set<string> }
+    >();
+    for (const j of datos) {
+      const clave = j.ordenTrabajo?.trim() || "Sin orden asignada";
+      const actual = mapa.get(clave) ?? {
+        ordinariasMin: 0,
+        extrasMin: 0,
+        totalMin: 0,
+        empleados: new Set<string>(),
+      };
+      actual.ordinariasMin += j.ordinariasMin;
+      actual.extrasMin += j.extrasMin;
+      actual.totalMin += j.totalMinutos;
+      actual.empleados.add(j.empleadoId);
+      mapa.set(clave, actual);
+    }
+    return [...mapa.entries()]
+      .map(([orden, v]): OrdenFila => ({
+        orden,
+        horas: aHoras(v.totalMin),
+        totalMin: v.totalMin,
+        ordinariasMin: v.ordinariasMin,
+        extrasMin: v.extrasMin,
+        empleados: v.empleados.size,
+      }))
+      .sort((a, b) => b.totalMin - a.totalMin)
+      .slice(0, TOP_ORDENES);
+  }, [datos]);
+
+  const ordenes = usePaginacion(porOrden, ORDENES_POR_PAGINA);
+
+  /* ==================================================================
+     ESTADOS
+     ================================================================== */
+
+  const porEstado = useMemo(() => {
+    let pendiente = 0;
+    let aprobada = 0;
+    let rechazada = 0;
+    for (const j of datos) {
+      if (j.status === "pendiente") pendiente += 1;
+      else if (j.status === "aprobada") aprobada += 1;
+      else rechazada += 1;
+    }
+    return [
+      { estado: "pendiente" as const, label: "Pendiente", valor: pendiente, color: COLOR_PENDIENTE },
+      { estado: "aprobada" as const, label: "Aprobada", valor: aprobada, color: COLOR_APROBADA },
+      { estado: "rechazada" as const, label: "Rechazada", valor: rechazada, color: COLOR_RECHAZADA },
+    ];
+  }, [datos]);
+
+  const estadoConDatos = useMemo(() => porEstado.filter((e) => e.valor > 0), [porEstado]);
+  const totalEstados = datos.length;
+  const soloAprobadas =
+    totalEstados > 0 &&
+    (porEstado.find((e) => e.estado === "aprobada")?.valor ?? 0) === totalEstados;
+
   const sinDatos = datos.length === 0;
 
   return (
     <div className="grid gap-5 lg:grid-cols-2">
+      {/* ============================= TIEMPO ============================= */}
+
       {/* 1. Horas por día ------------------------------------------- */}
       <ChartCard
         title="Horas trabajadas por día"
@@ -338,7 +572,160 @@ export function JornadasCharts({ datos }: { datos: JornadaMetrica[] }) {
         )}
       </ChartCard>
 
-      {/* 2. Horas por empleado -------------------------------------- */}
+      {/* 2. Composición de horas (dona) ------------------------------ */}
+      <ChartCard
+        title="Composición de horas"
+        hint="De qué está hecho el total de horas del período: ordinarias, extra y los distintos recargos."
+        info={[
+          {
+            label: "Ordinarias",
+            desc: "Tiempo dentro de la jornada normal del día, en horario diurno.",
+          },
+          {
+            label: "Extra diurna / Extra nocturna",
+            desc: "Tiempo trabajado por fuera de la jornada ordinaria, de día o en franja nocturna (desde las 7:00 p. m.).",
+          },
+          {
+            label: "Recargo nocturno",
+            desc: "Horas dentro de la jornada ordinaria, pero en franja nocturna: no son horas extra, solo llevan un recargo por el horario.",
+          },
+          {
+            label: "Dominical/festivo",
+            desc: "Agrupa toda hora (ordinaria o extra) trabajada en domingo o festivo, sin importar si fue de día o de noche.",
+          },
+        ]}
+      >
+        {composicion.length === 0 ? (
+          <ChartEmpty>No hay horas que componer en el período seleccionado.</ChartEmpty>
+        ) : (
+          <>
+            <div className="relative">
+              <ResponsiveContainer width="100%" height={220}>
+                <PieChart>
+                  <Pie
+                    data={composicion}
+                    dataKey="minutos"
+                    nameKey="categoria"
+                    innerRadius={58}
+                    outerRadius={86}
+                    paddingAngle={composicion.length > 1 ? 2 : 0}
+                    strokeWidth={0}
+                  >
+                    {composicion.map((c) => (
+                      <Cell key={c.categoria} fill={c.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={tooltipStyle}
+                    formatter={(value, name) => [
+                      `${formatearHoras(Number(value))} (${porcentaje(Number(value), totalComposicionMin)}%)`,
+                      String(name),
+                    ]}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-lg font-extrabold text-ink">
+                  {formatearHoras(totalComposicionMin)}
+                </span>
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-graphite">
+                  Total
+                </span>
+              </div>
+            </div>
+            <Leyenda
+              className="mt-2"
+              items={composicion.map((c) => ({
+                color: c.color,
+                label: `${c.categoria} · ${porcentaje(c.minutos, totalComposicionMin)}% · ${formatearHoras(c.minutos)}`,
+              }))}
+            />
+          </>
+        )}
+      </ChartCard>
+
+      {/* 3. Tendencia semanal de horas extra --------------------------- */}
+      <ChartCard
+        title="Tendencia semanal de horas extra"
+        hint="La persona que más horas extra acumuló cada semana (lunes a domingo). El tope legal es por persona, así que esta línea muestra qué tan cerca estuvo alguien de pasarse."
+        info={[
+          {
+            label: "Semana",
+            desc: "Cada punto es el mayor total de horas extra que acumuló una sola persona esa semana (de lunes a domingo), no la suma de todo el equipo.",
+          },
+          {
+            label: "Tope legal",
+            desc: `Línea roja punteada: el límite semanal de horas extra por persona (${limiteExtrasSemana} h). Si la línea de la gráfica lo supera, revisa el control semanal más abajo para ver quién fue y cuántas horas acumuló.`,
+          },
+        ]}
+        className="lg:col-span-2"
+      >
+        {porSemana.length === 0 ? (
+          <ChartEmpty>No hay jornadas en el período seleccionado.</ChartEmpty>
+        ) : (
+          <ResponsiveContainer width="100%" height={220}>
+            <AreaChart data={porSemana} margin={{ left: 4, right: 48, top: 12, bottom: 4 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#eef0ee" vertical={false} />
+              <XAxis
+                dataKey="etiqueta"
+                tick={{ fontSize: 10, fill: "#6d6e71" }}
+                tickLine={false}
+                axisLine={false}
+                // A diferencia de las otras gráficas (pocas etiquetas cortas),
+                // aquí puede haber hasta ~13 semanas con una etiqueta larga:
+                // se deja que Recharts salte las que no quepan, en vez de
+                // forzarlas todas y que se amontonen en pantallas angostas.
+                interval="preserveStartEnd"
+                minTickGap={24}
+              />
+              <YAxis
+                tick={{ fontSize: 10, fill: "#6d6e71" }}
+                tickLine={false}
+                axisLine={false}
+                unit="h"
+                width={44}
+                domain={[0, (max: number) => Math.max(max, limiteExtrasSemana) * 1.15]}
+              />
+              <Tooltip
+                contentStyle={tooltipStyle}
+                cursor={{ stroke: "#eef0ee", strokeWidth: 1 }}
+                formatter={(value) => [
+                  formatearHoras(Number(value) * 60),
+                  "Máximo de una persona esa semana",
+                ]}
+              />
+              <ReferenceLine
+                y={limiteExtrasSemana}
+                stroke={COLOR_RIESGO}
+                strokeDasharray="5 4"
+                strokeWidth={1.5}
+                label={{
+                  value: "Tope legal",
+                  position: "insideTopRight",
+                  fill: COLOR_RIESGO,
+                  fontSize: 10,
+                  fontWeight: 700,
+                }}
+              />
+              <Area
+                type="monotone"
+                dataKey="extras"
+                name="Máximo de una persona esa semana"
+                stroke={COLOR_EXTRAS}
+                fill={COLOR_EXTRAS}
+                fillOpacity={0.22}
+                strokeWidth={2}
+                dot={{ r: 3, fill: COLOR_EXTRAS, strokeWidth: 0 }}
+                activeDot={{ r: 5 }}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        )}
+      </ChartCard>
+
+      {/* ============================ PERSONAS ============================ */}
+
+      {/* 4. Horas por empleado -------------------------------------- */}
       <ChartCard
         title="Horas por empleado"
         hint="Total de horas trabajadas por cada persona en el período, de mayor a menor."
@@ -390,7 +777,7 @@ export function JornadasCharts({ datos }: { datos: JornadaMetrica[] }) {
         )}
       </ChartCard>
 
-      {/* 3. Horas extra por empleado (solo si existen) --------------- */}
+      {/* 5. Horas extra por empleado (solo si existen) --------------- */}
       {extrasEmpleado.length > 0 && (
         <ChartCard
           title="Horas extra por empleado"
@@ -436,7 +823,7 @@ export function JornadasCharts({ datos }: { datos: JornadaMetrica[] }) {
         </ChartCard>
       )}
 
-      {/* 4. Gantt de turnos ----------------------------------------- */}
+      {/* 6. Gantt de turnos ----------------------------------------- */}
       <ChartCard
         title="Turnos del día (entrada → salida)"
         hint="Cada barra va de la hora en que la persona empezó a la hora en que terminó. Pasa el mouse por encima para ver el detalle."
@@ -519,6 +906,144 @@ export function JornadasCharts({ datos }: { datos: JornadaMetrica[] }) {
                 }))}
               />
             )}
+          </>
+        )}
+      </ChartCard>
+
+      {/* ======================== ÓRDENES DE TRABAJO ======================= */}
+
+      {/* 7. Horas por orden de trabajo -------------------------------- */}
+      <ChartCard
+        title="Horas por orden de trabajo"
+        hint="Cuánto tiempo se fue en cada orden de trabajo: se muestran las 10 con más horas en el período."
+        info={[
+          {
+            label: "Cómo se suma",
+            desc: "Cada barra suma las horas de todas las personas que registraron turnos con esa orden de trabajo, ordinarias más extra.",
+          },
+          {
+            label: "Sin orden asignada",
+            desc: "Agrupa las jornadas que se registraron sin escribir un número de orden de trabajo.",
+          },
+          {
+            label: "Detalle al pasar el mouse",
+            desc: "El tooltip muestra el total, las horas ordinarias, las horas extra y cuántos empleados participaron en esa orden.",
+          },
+        ]}
+        page={ordenes.page}
+        totalPages={ordenes.totalPages}
+        onPageChange={ordenes.setPage}
+      >
+        {porOrden.length === 0 ? (
+          <ChartEmpty>No hay jornadas en el período seleccionado.</ChartEmpty>
+        ) : (
+          <ResponsiveContainer width="100%" height={altoBarras(ordenes.visibles.length)}>
+            <BarChart
+              data={ordenes.visibles}
+              layout="vertical"
+              barSize={14}
+              margin={{ left: 4, right: 16, top: 4, bottom: 4 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#eef0ee" horizontal={false} />
+              <XAxis
+                type="number"
+                tick={{ fontSize: 10, fill: "#6d6e71" }}
+                tickLine={false}
+                axisLine={false}
+                unit="h"
+              />
+              <YAxis
+                type="category"
+                dataKey="orden"
+                tick={{ fontSize: 11, fill: "#23272b" }}
+                tickLine={false}
+                axisLine={false}
+                width={130}
+                tickFormatter={(v: string) => (v.length > 16 ? `${v.slice(0, 15)}…` : v)}
+              />
+              <Tooltip content={<OrdenTooltip />} cursor={{ fill: "rgba(21,24,27,0.04)" }} />
+              <Bar dataKey="horas" radius={[0, 4, 4, 0]}>
+                {ordenes.visibles.map((_, i) => (
+                  <Cell key={i} fill={i % 2 === 0 ? BRAND : BRAND_LIGHT} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </ChartCard>
+
+      {/* ============================ ESTADOS ============================= */}
+
+      {/* 8. Estado de las jornadas -------------------------------------- */}
+      <ChartCard
+        title="Estado de las jornadas"
+        hint="Cuántas jornadas del período están pendientes, aprobadas o rechazadas."
+        info={[
+          {
+            label: "Pendiente",
+            desc: "Todavía nadie la ha revisado. Puede cambiar de horas si se corrige antes de aprobarla.",
+          },
+          {
+            label: "Aprobada",
+            desc: "Confirmada por un coordinador o administrador: es una cifra oficial.",
+          },
+          {
+            label: "Rechazada",
+            desc: "El empleado debe corregirla y volver a registrarla.",
+          },
+        ]}
+      >
+        {sinDatos ? (
+          <ChartEmpty>No hay jornadas en el período seleccionado.</ChartEmpty>
+        ) : soloAprobadas ? (
+          <div className="rounded-2xl border border-dashed border-line bg-brand-tint/50 p-8 text-center">
+            <p className="text-base font-bold text-ink">Todo revisado 🎉</p>
+            <p className="mx-auto mt-2 max-w-xs text-sm leading-relaxed text-graphite">
+              Las {totalEstados} jornada{totalEstados === 1 ? "" : "s"} del período
+              están aprobadas: no hay nada pendiente por revisar.
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="relative">
+              <ResponsiveContainer width="100%" height={200}>
+                <PieChart>
+                  <Pie
+                    data={estadoConDatos}
+                    dataKey="valor"
+                    nameKey="label"
+                    innerRadius={52}
+                    outerRadius={80}
+                    paddingAngle={estadoConDatos.length > 1 ? 3 : 0}
+                    strokeWidth={0}
+                  >
+                    {estadoConDatos.map((e) => (
+                      <Cell key={e.estado} fill={e.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={tooltipStyle}
+                    formatter={(value, name) => [
+                      `${Number(value)} jornada${Number(value) === 1 ? "" : "s"}`,
+                      String(name),
+                    ]}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-xl font-extrabold text-ink">{totalEstados}</span>
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-graphite">
+                  jornadas
+                </span>
+              </div>
+            </div>
+            <Leyenda
+              className="mt-2"
+              items={estadoConDatos.map((e) => ({
+                color: e.color,
+                label: `${e.label} · ${e.valor} (${porcentaje(e.valor, totalEstados)}%)`,
+              }))}
+            />
           </>
         )}
       </ChartCard>
