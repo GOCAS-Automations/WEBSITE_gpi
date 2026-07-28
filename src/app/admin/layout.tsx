@@ -28,7 +28,7 @@ export default async function AdminLayout({
 
   return (
     <AdminShell
-      email={profile.email}
+      identificador={profile.identificador}
       role={profile.role}
       signOut={signOutAction}
     >

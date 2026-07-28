@@ -14,7 +14,7 @@ export default async function NuevaCuentaPage() {
     <>
       <AdminPageHeader
         title="Nueva cuenta"
-        description="La contraseña se genera automáticamente y se muestra una sola vez al terminar."
+        description="La persona ingresa al portal con un usuario. La contraseña se genera automáticamente y se muestra una sola vez al terminar."
         backHref="/admin/empleados"
         backLabel="Volver al equipo"
         breadcrumb={[
@@ -52,7 +52,7 @@ export default async function NuevaCuentaPage() {
         <Card>
           <CardTitle
             title="Datos de la persona"
-            description="Solo el nombre, el correo y el rol son obligatorios."
+            description="Solo el nombre, el usuario y el rol son obligatorios. La persona ingresa con su USUARIO, no con un correo."
           />
 
           <CredentialForm
@@ -67,9 +67,11 @@ export default async function NuevaCuentaPage() {
             <p className="flex items-start gap-2 rounded-xl bg-mist px-4 py-3 text-sm leading-relaxed text-graphite">
               <Info className="mt-0.5 h-4 w-4 shrink-0" />
               <span>
-                Al guardar se generará una contraseña segura que verás{" "}
-                <strong>una sola vez</strong>. Cópiala y compártela con la
-                persona; podrá cambiarla cuando quiera desde Mi Cuenta.
+                Al guardar se generará una contraseña fácil de dictar (por
+                ejemplo <strong>Sol-Andes42</strong>) que verás{" "}
+                <strong>una sola vez</strong>. Cópiala junto con el usuario y
+                compártelas con la persona; podrá cambiar la contraseña cuando
+                quiera desde Mi Cuenta.
               </span>
             </p>
           </CredentialForm>

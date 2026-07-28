@@ -15,6 +15,7 @@ import {
   ArrowRight,
   User,
   Clock,
+  Calendar,
 } from "@/lib/icons";
 
 interface AdminSection {
@@ -41,6 +42,7 @@ export const adminSections: AdminSection[] = [
   { href: "/admin/valores", label: "Valores", icon: Shield },
   { href: "/admin/ajustes", label: "Contacto y ajustes", icon: Sliders },
   { href: "/admin/empleados", label: "Equipo", icon: User, managerOnly: true },
+  { href: "/admin/horarios", label: "Horarios", icon: Calendar, managerOnly: true },
   { href: "/admin/jornadas", label: "Jornadas", icon: Clock, managerOnly: true },
 ];
 
@@ -61,12 +63,13 @@ function useIsActive() {
  * móvil, y acciones siempre visibles ("Ver sitio" y "Cerrar sesión").
  */
 export function AdminShell({
-  email,
+  identificador,
   role,
   signOut,
   children,
 }: {
-  email: string;
+  /** Usuario del portal (o el correo, en las cuentas antiguas). */
+  identificador: string;
   role: UserRole;
   signOut: () => Promise<void>;
   children: ReactNode;
@@ -84,7 +87,8 @@ export function AdminShell({
               Panel de administración
             </p>
             <p className="truncate text-sm text-graphite">
-              Sesión iniciada como <span className="font-semibold text-ink">{email}</span>{" "}
+              Sesión iniciada como{" "}
+              <span className="font-semibold text-ink">{identificador}</span>{" "}
               <span className="whitespace-nowrap rounded-full bg-mist px-2 py-0.5 text-xs font-semibold text-graphite">
                 {ROLE_LABELS[role]}
               </span>

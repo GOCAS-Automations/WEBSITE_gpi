@@ -18,7 +18,12 @@
  * se rompe ni el build depende de la base de datos.
  */
 
-import { getJornadaConfig, listJornadas, listProfiles } from "@/lib/admin";
+import {
+  getJornadaConfig,
+  getMapaHorarios,
+  listJornadas,
+  listProfiles,
+} from "@/lib/admin";
 import { hoyEnColombia } from "@/lib/jornada";
 import { construirMetrica, sumarDias } from "@/lib/jornada-metrics";
 import { JornadasDashboard } from "@/components/jornadas/JornadasDashboard";
@@ -30,7 +35,7 @@ export async function MetricasView() {
   const hoy = hoyEnColombia();
   const rangoDesde = sumarDias(hoy, -(DIAS_DE_HISTORIA - 1));
 
-  const [jornadas, perfiles, config] = await Promise.all([
+  const [jornadas, perfiles, config, horarios] = await Promise.all([
     listJornadas({
       status: "todas",
       from: rangoDesde,
@@ -40,12 +45,15 @@ export async function MetricasView() {
     }),
     listProfiles(),
     getJornadaConfig(),
+    getMapaHorarios(),
   ]);
 
-  const datos = jornadas.map((j) => construirMetrica(j, config));
+  const datos = jornadas.map((j) => construirMetrica(j, config, horarios));
 
+  // Cualquier cuenta activa puede registrar jornadas (el Community Manager
+  // también es empleado de GPI), así que el filtro las incluye a todas.
   const empleados = perfiles
-    .filter((p) => p.active && p.role === "empleado")
+    .filter((p) => p.active)
     .map((p) => ({ id: p.id, nombre: p.full_name }));
 
   return (

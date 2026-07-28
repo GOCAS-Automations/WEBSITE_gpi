@@ -97,11 +97,16 @@ export function JornadaBreakdown({
             {fila.label}: {formatearDuracion(desglose[fila.key] as number)}
           </span>
         ))}
+        {desglose.almuerzoMinutos > 0 && (
+          <span className="inline-flex items-center rounded-full bg-mist px-2.5 py-0.5 text-[11px] font-semibold text-graphite">
+            Almuerzo descontado: {formatearDuracion(desglose.almuerzoMinutos)}
+          </span>
+        )}
         {desglose.esDominicalFestivo && (
           <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-900">
             {desglose.festivos.length > 0
               ? `Festivo: ${desglose.festivos.join(", ")}`
-              : "Domingo"}
+              : "Domingo o día no laboral"}
           </span>
         )}
       </div>
@@ -119,6 +124,37 @@ export function JornadaBreakdown({
           </span>
         </p>
       </div>
+
+      {/* De dónde sale la jornada ordinaria del día y qué se descontó */}
+      <p className="mt-1.5 text-xs leading-relaxed text-graphite">
+        {desglose.diaLaboral ? (
+          <>
+            Jornada ordinaria de ese día:{" "}
+            <strong className="text-ink-soft">
+              {formatearDuracion(desglose.jornadaOrdinariaMinutos)}
+            </strong>
+            {desglose.almuerzoMinutos > 0 && (
+              <>
+                {" "}
+                · almuerzo descontado:{" "}
+                <strong className="text-ink-soft">
+                  {formatearDuracion(desglose.almuerzoMinutos)}
+                </strong>{" "}
+                (no cuenta como trabajo) · tiempo trabajado:{" "}
+                <strong className="text-ink-soft">
+                  {formatearDuracion(desglose.minutosTrabajados)}
+                </strong>
+              </>
+            )}
+          </>
+        ) : (
+          <>
+            Ese día <strong className="text-ink-soft">no es laboral</strong> en el
+            horario del mes (o es festivo): todo el turno se calcula con recargo
+            dominical/festivo.
+          </>
+        )}
+      </p>
 
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
         <Resumen
@@ -166,7 +202,7 @@ export function JornadaBreakdown({
             <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-900">
               {desglose.festivos.length > 0
                 ? `Festivo: ${desglose.festivos.join(", ")}`
-                : "Domingo"}
+                : "Domingo o día no laboral"}
             </span>
           )}
         </div>

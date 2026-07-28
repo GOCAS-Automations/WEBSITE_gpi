@@ -8,12 +8,18 @@ import {
   normalizeRole,
   type UserRole,
 } from "@/lib/roles";
+import { identificadorCuenta, usuarioDesdeEmail } from "@/lib/usuarios";
 
 export type { UserRole };
 
 export interface SessionProfile {
   id: string;
+  /** Correo con el que Supabase Auth identifica la cuenta (puede ser sintético). */
   email: string;
+  /** Usuario del portal; `null` en las cuentas anteriores a la migración 0003. */
+  username: string | null;
+  /** Lo que se muestra en la interfaz: el usuario si lo hay, si no el correo. */
+  identificador: string;
   fullName: string;
   role: UserRole;
   cargo: string | null;
@@ -50,12 +56,22 @@ export async function getSessionProfile(): Promise<Session | null> {
     .eq("id", user.id)
     .maybeSingle();
 
+  const email = data?.email ?? user.email ?? "";
+  // `username` llega `undefined` mientras la migración 0003 no esté aplicada:
+  // en ese caso la cuenta se identifica por su correo, como siempre.
+  const username =
+    typeof data?.username === "string" && data.username.trim() !== ""
+      ? data.username.trim()
+      : usuarioDesdeEmail(email);
+
   return {
     supabase,
     profile: {
       id: user.id,
-      email: data?.email ?? user.email ?? "",
-      fullName: data?.full_name ?? user.email ?? "",
+      email,
+      username,
+      identificador: identificadorCuenta({ username, email }),
+      fullName: data?.full_name ?? email,
       role: normalizeRole(data?.role),
       cargo: data?.cargo ?? null,
       phone: data?.phone ?? null,
@@ -130,7 +146,15 @@ export async function getAdminOrNull(): Promise<Session | null> {
   return session;
 }
 
-/** Empleado (rol 'empleado') activo o `null` — portal de jornadas. */
+/**
+ * Cuenta con rol EXACTAMENTE 'empleado', o `null`.
+ *
+ * OJO: el portal de jornadas de `/mi-cuenta` ya NO usa esta guarda — desde
+ * julio de 2026 cualquier cuenta activa registra sus propias jornadas (basta
+ * con `getActiveSession()`, y las políticas RLS exigen `employee_id =
+ * auth.uid()`). Esta función queda para reglas que sí necesiten distinguir al
+ * personal de campo del resto del equipo.
+ */
 export async function getEmployeeOrNull(): Promise<Session | null> {
   const session = await getActiveSession();
   if (!session || !isEmployeeRole(session.profile.role)) return null;

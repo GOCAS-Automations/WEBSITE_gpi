@@ -1,19 +1,42 @@
 /**
  * CÁLCULO DE JORNADAS Y HORAS EXTRA
  * =================================
- * Módulo PURO y sin dependencias: lo usan por igual el portal del empleado
- * (vista previa en vivo), la pantalla de aprobaciones de /admin/jornadas y —en
- * el futuro— el tablero de métricas.
+ * Módulo PURO (solo depende de `src/lib/horarios.ts`, que también lo es): lo
+ * usan por igual el portal del empleado (vista previa en vivo), la pantalla de
+ * aprobaciones de /admin/jornadas y el tablero de métricas.
  *
  * Zona horaria: todo el cálculo trabaja con la hora de pared de Colombia
  * (America/Bogotá, UTC-5 fijo, sin horario de verano). Así el resultado es el
  * mismo en el navegador del empleado, en el servidor de Vercel y en la base de
  * datos, sin depender de la zona horaria de la máquina.
  *
+ * QUÉ CUENTA COMO JORNADA ORDINARIA
+ * ---------------------------------
+ * Desde la migración 0003 la jornada ordinaria **sale del horario del mes**
+ * (tabla `horarios_mensuales`, ver `src/lib/horarios.ts`), no de un número fijo:
+ * para la fecha trabajada se busca el horario de ese año/mes, se toma el día de
+ * la semana y la jornada ordinaria neta es `(fin − inicio) − almuerzo`. Lo que
+ * exceda esa jornada es hora extra. Si no hay horario cargado para ese mes se
+ * usa el horario predeterminado de GPI, así que el cálculo nunca depende de la
+ * base de datos.
+ *
  * IMPORTANTE: los porcentajes de recargo son PARÁMETROS, no reglas fijas.
  * Salen del ajuste `jornada_config` de Supabase (editable) y aquí solo viven
  * como valores por defecto. GPI debe confirmar sus propias reglas.
  */
+
+import {
+  claveDiaSemana,
+  diaSemanaDeFecha,
+  horarioDeFecha,
+  horarioPredeterminado,
+  minutosAlmuerzoDia,
+  minutosDesdeHora,
+  minutosJornadaDia,
+  normalizarHorarioDias,
+  type HorarioDias,
+  type MapaHorarios,
+} from "@/lib/horarios";
 
 /* ------------------------------------------------------------------ */
 /* Configuración                                                       */
@@ -35,11 +58,24 @@ export interface JornadaRecargos {
 }
 
 export interface JornadaConfig {
-  /** Horario base de oficina de GPI (referencia informativa). */
+  /**
+   * Horario base de oficina (LEGADO / referencia informativa).
+   * Desde la migración 0003 la jornada ordinaria real sale de
+   * `horarios_mensuales`; estos campos solo se conservan como referencia.
+   */
   jornadaOrdinariaInicio: string;
   jornadaOrdinariaFin: string;
-  /** Horas trabajadas antes de que empiecen a contar las extras. */
+  /**
+   * Horas ordinarias por día (LEGADO). Ya no se usa para clasificar el turno:
+   * la jornada ordinaria de cada día la define el horario del mes.
+   */
   horasOrdinariasDia: number;
+  /**
+   * Horario semanal POR DEFECTO: se usa para crear meses nuevos en
+   * `/admin/horarios` y como red de seguridad cuando la base de datos no tiene
+   * el mes cargado.
+   */
+  horarioSemanal: HorarioDias;
   /** Franja nocturna (cruza la medianoche). */
   inicioNocturno: string;
   finNocturno: string;
@@ -51,17 +87,20 @@ export interface JornadaConfig {
 }
 
 /**
- * Valores por defecto — normativa laboral colombiana vigente en 2026:
- * jornada ordinaria de 8 horas, franja nocturna desde las 7:00 p. m.
- * (Ley 2101 de 2021) y recargo dominical del 80% (Ley 2466 de 2025).
+ * Valores por defecto — horario confirmado por GPI (lunes a jueves 8:00 a. m.
+ * a 5:30 p. m., viernes hasta las 5:00 p. m., 1 hora de almuerzo, 42 h
+ * semanales netas) y normativa laboral colombiana vigente en 2026: franja
+ * nocturna desde las 7:00 p. m. (Ley 2101 de 2021) y recargo dominical del 80%
+ * (Ley 2466 de 2025).
  * Los topes de horas extra (2 h al día, 12 h a la semana) son los del artículo
  * 22 de la Ley 50 de 1990; el tablero solo los usa para avisar, nunca bloquea.
  * Son AJUSTABLES desde `jornada_config` cuando GPI confirme sus reglas.
  */
 export const jornadaConfigDefaults: JornadaConfig = {
-  jornadaOrdinariaInicio: "07:00",
-  jornadaOrdinariaFin: "17:00",
-  horasOrdinariasDia: 8,
+  jornadaOrdinariaInicio: "08:00",
+  jornadaOrdinariaFin: "17:30",
+  horasOrdinariasDia: 8.5,
+  horarioSemanal: horarioPredeterminado,
   inicioNocturno: "19:00",
   finNocturno: "06:00",
   limiteExtrasDia: 2,
@@ -197,8 +236,17 @@ export interface DesgloseJornada {
   /** Mensaje amable para mostrarle al usuario cuando `valido` es false. */
   error?: string;
 
-  /** Duración total del turno, en minutos. */
+  /** Duración total del turno (de la hora de entrada a la de salida), en minutos. */
   totalMinutos: number;
+
+  /** Minutos de almuerzo descontados: NO cuentan como trabajo. */
+  almuerzoMinutos: number;
+  /** Minutos efectivamente trabajados = `totalMinutos − almuerzoMinutos`. */
+  minutosTrabajados: number;
+  /** Jornada ordinaria neta del día según el horario del mes, en minutos. */
+  jornadaOrdinariaMinutos: number;
+  /** false = el día no es laboral en el horario del mes (o es festivo). */
+  diaLaboral: boolean;
 
   /* Minutos por categoría (las ocho combinaciones posibles). */
   ordinariaDiurna: number;
@@ -239,6 +287,10 @@ function desgloseVacio(error?: string): DesgloseJornada {
     valido: error === undefined,
     error,
     totalMinutos: 0,
+    almuerzoMinutos: 0,
+    minutosTrabajados: 0,
+    jornadaOrdinariaMinutos: 0,
+    diaLaboral: true,
     ordinariaDiurna: 0,
     ordinariaNocturna: 0,
     extraDiurna: 0,
@@ -259,16 +311,35 @@ function desgloseVacio(error?: string): DesgloseJornada {
 }
 
 function minutosDeHora(hora: string, porDefecto: number): number {
-  const match = /^(\d{1,2}):(\d{2})$/.exec(hora ?? "");
-  if (!match) return porDefecto;
-  const h = Number(match[1]);
-  const m = Number(match[2]);
-  if (h > 23 || m > 59) return porDefecto;
-  return h * 60 + m;
+  return minutosDesdeHora(hora) ?? porDefecto;
 }
 
 /** Duración máxima admitida para un turno (24 horas). */
 const MAX_MINUTOS_TURNO = 24 * 60;
+
+/**
+ * REGLA DEL ALMUERZO — pendiente de confirmar con GPI.
+ *
+ * El horario del mes dice cuántas horas de almuerzo tiene cada día laboral,
+ * pero el empleado solo registra su hora de entrada y su hora de salida. Para
+ * saber si dentro de ese rango hubo almuerzo se aplica una regla pragmática:
+ *
+ *   · En un día LABORAL, si el turno dura más de 6 horas se descuenta el
+ *     almuerzo del día (normalmente 1 hora).
+ *   · En turnos de 6 horas o menos NO se descuenta nada (no dio tiempo de
+ *     almorzar en la jornada).
+ *   · En días NO laborales (sábado, domingo o festivo) tampoco se descuenta:
+ *     todo el tiempo es trabajo con recargo.
+ *
+ * El almuerzo se ubica en el centro del tramo ordinario del turno, que es lo
+ * que ocurre en la práctica (empezando a las 8:00 a. m., cae alrededor del
+ * mediodía). Esto solo afecta a la clasificación diurna/nocturna de esos
+ * minutos, no a su cantidad.
+ *
+ * Está documentada también en `docs/ADMIN.md` para que GPI la confirme o la
+ * ajuste.
+ */
+const UMBRAL_ALMUERZO_MINUTOS = 6 * 60;
 
 /**
  * Calcula el desglose de una jornada minuto a minuto.
@@ -277,12 +348,16 @@ const MAX_MINUTOS_TURNO = 24 * 60;
  * @param endAt     Instante de fin (Date o ISO string). Puede ser del día siguiente.
  * @param workDate  Día laboral `YYYY-MM-DD` al que se imputa la jornada.
  * @param config    Parámetros de cálculo (por defecto, los de `jornadaConfigDefaults`).
+ * @param horarios  Horarios mensuales de GPI indexados por `"YYYY-MM"`. Si no
+ *                  se pasa (o el mes no está cargado) se usa el horario
+ *                  semanal por defecto de `config`.
  */
 export function calcularJornada(
   startAt: Date | string,
   endAt: Date | string,
   workDate: string,
   config: JornadaConfig = jornadaConfigDefaults,
+  horarios?: MapaHorarios | null,
 ): DesgloseJornada {
   const inicio = typeof startAt === "string" ? new Date(startAt) : startAt;
   const fin = typeof endAt === "string" ? new Date(endAt) : endAt;
@@ -306,32 +381,91 @@ export function calcularJornada(
 
   const inicioNocturno = minutosDeHora(config.inicioNocturno, 19 * 60);
   const finNocturno = minutosDeHora(config.finNocturno, 6 * 60);
-  const limiteOrdinario = Math.max(
-    0,
-    Math.round((Number(config.horasOrdinariasDia) || 8) * 60),
-  );
 
   const esNocturno = (minutosDelDia: number): boolean =>
     inicioNocturno > finNocturno
       ? minutosDelDia >= inicioNocturno || minutosDelDia < finNocturno
       : minutosDelDia >= inicioNocturno && minutosDelDia < finNocturno;
 
+  /* ---- Horario del mes que rige cada fecha (con caché por día) ---- */
+  const semanaPorDefecto = normalizarHorarioDias(
+    config.horarioSemanal ?? horarioPredeterminado,
+    horarioPredeterminado,
+  );
+  const cacheDias = new Map<string, HorarioDias>();
+  const diasDe = (fecha: string): HorarioDias => {
+    let dias = cacheDias.get(fecha);
+    if (!dias) {
+      dias = horarioDeFecha(fecha, horarios, semanaPorDefecto);
+      cacheDias.set(fecha, dias);
+    }
+    return dias;
+  };
+
+  /* ---- Jornada ordinaria del día laboral imputado ---------------- */
+  const fechaBase = /^\d{4}-\d{2}-\d{2}$/.test(workDate)
+    ? workDate
+    : partesLocales(inicio).fecha;
+
+  const horarioBase =
+    diasDe(fechaBase)[claveDiaSemana(diaSemanaDeFecha(fechaBase))];
+  const festivoBase = nombreFestivo(fechaBase);
+
+  // Día laboral = el horario del mes lo marca como laboral y no es festivo.
+  // Sábado, domingo, festivo o día apagado en el horario → jornada ordinaria 0:
+  // todo el turno se paga como extra con tratamiento dominical/festivo.
+  const diaLaboral = horarioBase !== null && festivoBase === null;
+  const jornadaOrdinariaMinutos = diaLaboral ? minutosJornadaDia(horarioBase) : 0;
+
+  // Regla del almuerzo (ver comentario de UMBRAL_ALMUERZO_MINUTOS).
+  const almuerzoMinutos =
+    diaLaboral && totalMinutos > UMBRAL_ALMUERZO_MINUTOS
+      ? Math.min(minutosAlmuerzoDia(horarioBase), totalMinutos)
+      : 0;
+
+  // Tramo ordinario medido en tiempo transcurrido desde la entrada: la jornada
+  // neta más el almuerzo que ocurre dentro de ella. Con el horario de GPI
+  // (8,5 h netas + 1 h de almuerzo) el reloj de las extras empieza a las 5:30
+  // p. m. para quien entró a las 8:00 a. m., que es justo lo esperado.
+  const limiteTranscurrido = Math.min(
+    totalMinutos,
+    jornadaOrdinariaMinutos + almuerzoMinutos,
+  );
+
+  // Ventana de almuerzo, centrada en ese tramo ordinario.
+  const almuerzoDesde =
+    almuerzoMinutos > 0
+      ? Math.max(0, Math.round((limiteTranscurrido - almuerzoMinutos) / 2))
+      : -1;
+  const almuerzoHasta = almuerzoDesde + almuerzoMinutos;
+
   const resultado = desgloseVacio();
   resultado.valido = true;
   resultado.totalMinutos = totalMinutos;
+  resultado.almuerzoMinutos = almuerzoMinutos;
+  resultado.minutosTrabajados = totalMinutos - almuerzoMinutos;
+  resultado.jornadaOrdinariaMinutos = jornadaOrdinariaMinutos;
+  resultado.diaLaboral = diaLaboral;
 
   const festivos = new Set<string>();
 
   for (let i = 0; i < totalMinutos; i += 1) {
+    // El almuerzo no es tiempo de trabajo: no entra en ninguna categoría.
+    if (almuerzoMinutos > 0 && i >= almuerzoDesde && i < almuerzoHasta) continue;
+
     const instante = new Date(inicio.getTime() + i * 60_000);
     const { fecha, minutosDelDia, diaSemana } = partesLocales(instante);
 
     const festivo = nombreFestivo(fecha);
     if (festivo) festivos.add(festivo);
 
-    const dominical = diaSemana === 0 || festivo !== null;
+    // Se evalúa con la fecha REAL de cada minuto: un turno que cruza la
+    // medianoche hacia un domingo o un festivo cambia de tratamiento a partir
+    // de las 12:00 a. m.
+    const noLaboral = diasDe(fecha)[claveDiaSemana(diaSemana)] === null;
+    const dominical = diaSemana === 0 || festivo !== null || noLaboral;
     const nocturno = esNocturno(minutosDelDia);
-    const extra = i >= limiteOrdinario;
+    const extra = i >= limiteTranscurrido;
 
     if (dominical) {
       if (extra) {
@@ -384,11 +518,6 @@ export function calcularJornada(
     resultado.extraDominicalNocturna * (1 + r.extraDominicalNocturna);
 
   resultado.horasEquivalentes = Math.round((equivalente / 60) * 100) / 100;
-
-  // `workDate` no cambia el cálculo (que usa los instantes reales) pero sí la
-  // presentación: se conserva por claridad de la firma y para futuros topes
-  // semanales o mensuales que sí dependen del día imputado.
-  void workDate;
 
   return resultado;
 }
@@ -506,6 +635,12 @@ export function normalizarJornadaConfig(value: unknown): JornadaConfig {
     horasOrdinariasDia: Math.min(
       24,
       Math.max(1, numeroOr(value.horasOrdinariasDia, d.horasOrdinariasDia)),
+    ),
+    // Horario semanal por defecto: si `jornada_config` todavía no lo trae
+    // (bases anteriores a la migración 0003) se usa el horario de GPI.
+    horarioSemanal: normalizarHorarioDias(
+      value.horarioSemanal,
+      d.horarioSemanal,
     ),
     inicioNocturno: horaOr(value.inicioNocturno, d.inicioNocturno),
     finNocturno: horaOr(value.finNocturno, d.finNocturno),

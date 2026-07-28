@@ -1,5 +1,6 @@
 import { Field, Select, Switch } from "@/components/admin/ui";
 import { ROLE_DESCRIPTIONS, ROLE_LABELS, USER_ROLES, type UserRole } from "@/lib/roles";
+import { AYUDA_USUARIO } from "@/lib/usuarios";
 import type { ProfileRecord } from "@/lib/admin-types";
 
 /**
@@ -13,7 +14,13 @@ export function opcionesDeRol(actorRole: UserRole) {
   ).map((role) => ({ value: role, label: ROLE_LABELS[role] }));
 }
 
-/** Campos compartidos entre crear y editar una cuenta. */
+/**
+ * Campos compartidos entre crear y editar una cuenta.
+ *
+ * El equipo de GPI entra al portal con un **usuario** (no con un correo): el
+ * correo real de la persona, si lo tiene, es solo un dato de contacto. El
+ * usuario no se puede cambiar después de crear la cuenta.
+ */
 export function EmployeeFields({
   actorRole,
   profile,
@@ -39,19 +46,18 @@ export function EmployeeFields({
 
         {profile ? (
           <Field
-            label="Correo electrónico"
-            name="email_readonly"
-            defaultValue={profile.email}
-            hint="El correo no se puede cambiar desde aquí. Si necesita otro, crea una cuenta nueva."
+            label="Usuario"
+            name="username_readonly"
+            defaultValue={profile.username ?? profile.email}
+            hint="El usuario no se puede cambiar. Si necesita otro, crea una cuenta nueva."
           />
         ) : (
           <Field
-            label="Correo electrónico"
-            name="email"
-            type="email"
+            label="Usuario"
+            name="username"
             required
-            placeholder="nombre@gpiprofesionales.com"
-            hint="Con este correo iniciará sesión en Mi Cuenta."
+            placeholder="mgomez"
+            hint={`Con este usuario iniciará sesión en Mi Cuenta. ${AYUDA_USUARIO}`}
           />
         )}
 
@@ -61,6 +67,14 @@ export function EmployeeFields({
           defaultValue={profile?.role ?? "empleado"}
           options={opcionesDeRol(actorRole)}
           hint={ROLE_DESCRIPTIONS[profile?.role ?? "empleado"]}
+        />
+
+        <Field
+          label="Cédula (opcional)"
+          name="cedula"
+          defaultValue={profile?.cedula}
+          placeholder="1.144.123.456"
+          hint="Documento de identidad, para la nómina."
         />
 
         <Field
@@ -75,6 +89,16 @@ export function EmployeeFields({
           name="phone"
           defaultValue={profile?.phone}
           placeholder="318 434 1249"
+        />
+
+        <Field
+          label="Correo de contacto (opcional)"
+          name="email_contacto"
+          type="email"
+          defaultValue={profile?.email_contacto}
+          placeholder="maria@gmail.com"
+          hint="Su correo real, solo para contactarla. No se usa para iniciar sesión."
+          className="sm:col-span-2"
         />
 
         {profile && (

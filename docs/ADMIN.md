@@ -12,12 +12,13 @@ la gestión de cuentas y el registro de jornadas (horas extra).
 
 ## 1. Aplicar las migraciones en Supabase
 
-Hay **dos** migraciones y se aplican **en orden**:
+Hay **tres** migraciones y se aplican **en orden**:
 
 | Archivo | Qué añade |
 | --- | --- |
 | `supabase/migrations/0001_site_content.sql` | Contenido del sitio, `profiles`, RLS, bucket de imágenes y usuario administrador inicial |
 | `supabase/migrations/0002_empleados_jornadas.sql` | Roles ampliados, visibilidad del contenido, tabla `jornadas` y ajustes de cálculo |
+| `supabase/migrations/0003_horarios_mensuales.sql` | Horario laboral mes a mes (`horarios_mensuales`), cuentas por **usuario** (`username`, `cedula`, `email_contacto`) y ajuste del horario por defecto |
 
 Para cada una:
 
@@ -55,6 +56,21 @@ verás exactamente lo mismo que ahora, pero ya editable.
 | Tabla `jornadas` | Registro de jornadas y horas extra, con flujo de aprobación |
 | Ajuste `visibility` | Interruptores de secciones completas del sitio |
 | Ajuste `jornada_config` | Parámetros de cálculo de horas y recargos |
+
+### ¿Qué añade la 0003?
+
+| Objeto | Para qué sirve |
+| --- | --- |
+| Tabla `horarios_mensuales` | El horario laboral de GPI **mes a mes**. De aquí sale la jornada ordinaria de cada día |
+| Seed de julio y agosto de 2026 | El horario base confirmado por GPI (42 h semanales netas) |
+| Columnas `username`, `cedula`, `email_contacto` en `profiles` | Las cuentas se identifican por **usuario**, no por correo |
+| Índice único de `username` | Dos personas no pueden tener el mismo usuario |
+| Trigger `handle_new_user` actualizado | Guarda usuario, cédula y correo de contacto al crear la cuenta |
+| `jornada_config.horarioSemanal` | Horario **por defecto** para crear meses nuevos |
+
+> Mientras la 0003 no esté aplicada, el sitio **no se rompe**: el cálculo usa el
+> horario predeterminado de GPI, `/admin/horarios` avisa de que el mes no se
+> pudo guardar y las cuentas siguen identificándose por su correo.
 
 ### Si el bloque del usuario admin de la 0001 falla
 
@@ -117,11 +133,28 @@ Después de crear o cambiar el archivo, reinicia `npm run dev`.
 
 ---
 
-## 3. Credenciales iniciales del administrador
+## 3. Cómo se ingresa: usuario y contraseña
+
+El equipo de GPI **no tiene correo corporativo**, así que el portal se usa con
+un **usuario** (por ejemplo `mgomez`), no con un correo electrónico.
+
+Por debajo, Supabase Auth sí exige un correo: el sistema crea uno **sintético
+interno** que nadie necesita conocer —
+`mgomez@cuentas.gpiprofesionales.com`— y que **no recibe correo**. El correo
+real de la persona, si lo tiene, se guarda aparte como *correo de contacto* y es
+solo informativo.
+
+En el formulario de ingreso:
+
+- Si escribes algo **sin `@`** → se toma como usuario del portal.
+- Si escribes algo **con `@`** → se usa tal cual (así siguen entrando las
+  cuentas antiguas creadas con un correo real).
+
+### Credenciales iniciales del administrador
 
 | | |
 | --- | --- |
-| **Correo** | `admin@gpiprofesionales.com` |
+| **Usuario** | `admin@gpiprofesionales.com` (cuenta antigua: se escribe el correo completo) |
 | **Contraseña** | `Kt7#mQx4-Rv9zBp2` |
 
 Se entra por **`/mi-cuenta`** ("Mi Cuenta" en la barra de navegación).
@@ -129,27 +162,41 @@ Se entra por **`/mi-cuenta`** ("Mi Cuenta" en la barra de navegación).
 Cambia la contraseña después del primer ingreso: desde el propio portal o desde
 el Dashboard (Authentication → Users → **Reset password**).
 
+### Contraseñas generadas
+
+Las contraseñas que genera el panel tienen formato **`Palabra-Palabra##`**
+(`Sol-Andes42`, `Rio-Cumbre07`): son fáciles de **dictar por teléfono** o pegar
+en un mensaje, que es como se entregan al personal de campo. Son temporales: la
+persona debería cambiarlas al entrar.
+
 ---
 
 ## 4. Roles y permisos
 
 Cada usuario tiene un rol en `profiles`. Esto es lo que puede hacer cada uno:
 
-| | admin | coordinador | marketing | empleado |
+| | Administrador | Coordinador | Community Manager | Empleado |
 | --- | :---: | :---: | :---: | :---: |
 | Entrar a `/admin` | ✅ | ✅ | ✅ | ❌ |
 | Contenido del sitio (servicios, proyectos, clientes, FAQ, valores, ajustes) | ✅ | ✅ | ✅ | ❌ |
 | Subir imágenes al bucket | ✅ | ✅ | ✅ | ❌ |
 | Equipo y cuentas (`/admin/empleados`) | ✅ | ✅ ¹ | ❌ | ❌ |
-| Aprobar/rechazar jornadas (`/admin/jornadas`) | ✅ | ✅ | ❌ | ❌ |
-| Portal de jornadas en `/mi-cuenta` | — ² | — ² | — ² | ✅ |
+| Horario del mes (`/admin/horarios`) | ✅ | ✅ | ❌ | ❌ |
+| Aprobar/rechazar jornadas y métricas (`/admin/jornadas`) | ✅ | ✅ | ❌ | ❌ |
+| Registrar **sus propias** jornadas en `/mi-cuenta` | ✅ ² | ✅ ² | ✅ ² | ✅ |
 
-¹ Un **coordinador** puede gestionar cuentas de coordinador, marketing y
+> **Community Manager** es el nombre visible del rol que en la base de datos se
+> llama `marketing` (el valor interno no cambió). Edita todo el contenido del
+> sitio; **no** gestiona empleados ni las jornadas de otros.
+
+¹ Un **coordinador** puede gestionar cuentas de coordinador, Community Manager y
 empleado, pero **no** puede crear administradores ni editar, restablecer la
 contraseña o eliminar la cuenta de un administrador. Eso solo lo hace un admin.
 
-² Los roles con acceso al panel ven en `/mi-cuenta` un botón para ir a `/admin`
-en lugar del portal de jornadas.
+² Desde julio de 2026, **cualquier cuenta activa** ve su portal de jornadas en
+`/mi-cuenta` (registrar jornada + mis jornadas). Quien además tiene acceso al
+panel ve arriba un botón **"Ir al panel"**. El Community Manager también es
+empleado de GPI, así que registra sus horas como cualquier otra persona.
 
 Reglas adicionales que aplica el servidor:
 
@@ -169,10 +216,18 @@ Solo para **admin** y **coordinador**.
 
 ### Crear una cuenta
 
-1. **Nueva cuenta** → nombre completo, correo, rol, cargo y teléfono.
-2. Al guardar, el sistema **genera una contraseña fuerte** y la muestra
-   **una sola vez**, con un botón de copiar.
-3. Compártela con la persona. Podrá cambiarla desde **Mi Cuenta** cuando entre.
+1. **Nueva cuenta** → nombre completo, **usuario**, rol, cédula, cargo,
+   teléfono y correo de contacto. Solo el nombre, el usuario y el rol son
+   obligatorios.
+2. El **usuario** debe ir en minúsculas, sin espacios ni tildes (3 a 32
+   caracteres; se permiten números, punto, guion y guion bajo). Es único: si ya
+   existe, el panel lo avisa.
+3. Al guardar, el sistema **genera una contraseña fácil de dictar** y muestra
+   **una sola vez** las credenciales completas, con un botón de copiar:
+
+   > **Usuario:** mgomez · **Contraseña:** Sol-Andes42
+
+4. Compártelas con la persona. Podrá cambiar la contraseña desde **Mi Cuenta**.
 
 > La contraseña no se puede volver a consultar (Supabase guarda solo su hash).
 > Si se pierde, se restablece desde la ficha de la persona.
@@ -181,21 +236,68 @@ Solo para **admin** y **coordinador**.
 
 En la ficha de cada persona puedes:
 
-- **Editar** nombre, rol, cargo y teléfono.
+- **Editar** nombre, rol, cédula, cargo, teléfono y correo de contacto. El
+  **usuario no se puede cambiar** (es la identidad de la cuenta): si hace falta
+  otro, se crea una cuenta nueva.
 - **Activar / desactivar** el acceso. Desactivar es lo recomendado cuando
   alguien deja de trabajar en GPI: no puede entrar, pero se conserva su
   historial de jornadas.
 - **Restablecer la contraseña**: genera una nueva y la muestra una sola vez.
 - **Eliminar la cuenta** (zona de peligro): borra también **todas sus
-  jornadas**. Exige escribir el correo exacto y confirmar en el navegador.
+  jornadas**. Exige escribir el usuario exacto y confirmar en el navegador.
 
 ---
 
-## 6. Jornadas y horas extra
+## 6. Horario laboral del mes — `/admin/horarios`
+
+Solo para **admin** y **coordinador**.
+
+GPI define su jornada **mes a mes** (a veces cambia). Esta sección es la fuente
+de verdad de **qué cuenta como jornada ordinaria**: todo lo que se trabaje por
+encima del horario del mes se calcula como hora extra.
+
+### Horario predeterminado (confirmado por GPI)
+
+| Días | Horario | Almuerzo | Jornada neta |
+| --- | --- | :---: | :---: |
+| Lunes a jueves | 8:00 a. m. – 5:30 p. m. | 1 h | 8,5 h |
+| Viernes | 8:00 a. m. – 5:00 p. m. | 1 h | 8 h |
+| Sábado y domingo | No laborales | — | — |
+| **Total semanal** | | | **42 h** |
+
+El almuerzo **no cuenta como trabajo**: la jornada de cada día es
+*salida − entrada − almuerzo*.
+
+### Cómo se usa la pantalla
+
+- **Selector de mes** con flechas ← → arriba (el mes viaja en la URL, así que
+  el enlace se puede compartir).
+- Si el mes **no existe todavía**, se crea al entrar: clonando el **mes
+  anterior** si está cargado o, si no, con el **horario predeterminado**. La
+  pantalla lo avisa: *"Se creó el horario de agosto de 2026 a partir de julio de
+  2026; ajústalo si cambió"*.
+- Tabla de lunes a domingo con, por cada día: interruptor **laboral / no
+  laboral**, hora de entrada, hora de salida y horas de almuerzo (se puede poner
+  media hora).
+- Las celdas **"Horas de jornada"** y **"Total de horas semanales"** se
+  recalculan solas mientras editas (son las celdas amarillas del Excel que usaba
+  GPI).
+- **Guardar** aplica el horario al cálculo de las horas de ese mes.
+  **Restablecer al horario predeterminado** vuelve a cargar el horario base en
+  la tabla; hay que pulsar Guardar para aplicarlo.
+- **Nota del mes** (opcional): para recordar por qué cambió el horario.
+
+Si un mes no está cargado en la base de datos, el cálculo usa el horario
+predeterminado: el portal nunca se rompe.
+
+---
+
+## 7. Jornadas y horas extra
 
 ### El empleado — portal en `/mi-cuenta`
 
-Al iniciar sesión, un usuario con rol `empleado` ve su portal:
+Al iniciar sesión, cualquier cuenta activa ve su portal de jornadas (las cuentas
+con acceso al panel lo ven debajo del botón **"Ir al panel"**):
 
 - **Registrar una jornada**: fecha del día laboral (por defecto hoy), número de
   orden de trabajo, hora de inicio, hora de finalización, descripción de la
@@ -222,28 +324,69 @@ Solo para **admin** y **coordinador**.
   motivo, que el empleado verá en su portal).
 - **Volver a pendiente**: reabre una jornada ya revisada para corregir un error.
 
-El tablero de métricas y gráficas llega en una iteración posterior.
+La pestaña **Métricas** (`?vista=metricas`) añade los KPIs, las gráficas, el
+control semanal de horas extra y la exportación a CSV para nómina.
 
 ### Cómo se calculan las horas
 
 La lógica vive en `src/lib/jornada.ts` (función pura `calcularJornada`) y se usa
-en los tres sitios: vista previa del empleado, aprobaciones y —en el futuro— el
-tablero. Trabaja siempre con la **hora de Colombia** (UTC-5 fijo), así que el
+en los tres sitios: vista previa del empleado, aprobaciones y tablero de
+métricas. Trabaja siempre con la **hora de Colombia** (UTC-5 fijo), así que el
 resultado es idéntico en el navegador, en el servidor y en la base de datos.
 
-Clasifica el turno **minuto a minuto** en ocho categorías, según tres
-condiciones: si supera la jornada ordinaria (extra), si cae en la franja
-nocturna, y si es domingo o festivo nacional.
+El procedimiento, paso a paso:
 
-Los parámetros están en el ajuste `jornada_config` de `site_settings`:
+1. **Se busca el horario del mes** en que se trabajó (`/admin/horarios`) y se
+   toma el día de la semana. La **jornada ordinaria neta** de ese día es
+   *salida − entrada − almuerzo*.
+2. **Se descuenta el almuerzo** del turno registrado (ver la regla de abajo).
+3. Lo trabajado **hasta** la jornada ordinaria son horas ordinarias; **el
+   exceso** son horas extra.
+4. Cada minuto se clasifica además según si cae en la **franja nocturna** y si
+   es **domingo, festivo nacional o día marcado como no laboral** — en total,
+   las mismas ocho categorías de siempre.
+
+> **Días no laborales y festivos.** Si el día está apagado en el horario del mes
+> (sábado y domingo, por defecto) o es festivo nacional, la jornada ordinaria de
+> ese día es **cero**: todo el turno se paga como extra con el recargo
+> dominical/festivo.
+
+#### ⚠️ Regla del almuerzo — pendiente de confirmar con GPI
+
+El horario del mes dice cuántas horas de almuerzo tiene cada día, pero el
+empleado solo registra su **hora de entrada** y su **hora de salida**. Para
+saber si dentro de ese rango hubo almuerzo se aplica esta regla pragmática:
+
+- En un **día laboral**, si el turno dura **más de 6 horas** se descuenta el
+  almuerzo de ese día (normalmente 1 hora).
+- En turnos de **6 horas o menos**, no se descuenta nada.
+- En **días no laborales o festivos**, tampoco: todo el tiempo es trabajo con
+  recargo.
+
+El almuerzo se ubica en el centro del tramo ordinario del turno (empezando a las
+8:00 a. m. cae alrededor del mediodía), lo que solo afecta a si esos minutos se
+consideran diurnos o nocturnos, no a cuántos son.
+
+**GPI debe confirmar o ajustar esta regla.** La alternativa sería pedirle al
+empleado que registre la hora exacta de su almuerzo, lo que complica el
+formulario; se optó por la regla automática.
+
+Ejemplo con el horario base: un lunes de **8:00 a. m. a 7:00 p. m.** son 11
+horas de presencia − 1 hora de almuerzo = **10 horas trabajadas**, de las cuales
+**8,5 son ordinarias** y **1,5 son extra diurnas** (el reloj de las extras
+empieza a las 5:30 p. m.).
+
+#### Parámetros ajustables
+
+Los recargos y los topes están en el ajuste `jornada_config` de `site_settings`:
 
 ```json
 {
-  "jornadaOrdinariaInicio": "07:00",
-  "jornadaOrdinariaFin": "17:00",
-  "horasOrdinariasDia": 8,
+  "horarioSemanal": { "lun": { "inicio": "08:00", "fin": "17:30", "almuerzoHoras": 1 }, "...": "..." },
   "inicioNocturno": "19:00",
   "finNocturno": "06:00",
+  "limiteExtrasDia": 2,
+  "limiteExtrasSemana": 12,
   "recargos": {
     "extraDiurna": 0.25,
     "extraNocturna": 0.75,
@@ -255,11 +398,16 @@ Los parámetros están en el ajuste `jornada_config` de `site_settings`:
 }
 ```
 
-> ⚠️ Son valores **por defecto**, tomados de la normativa laboral colombiana
-> vigente en 2026. **GPI debe confirmar sus propias reglas** (topes, tratamiento
-> de festivos, horario base). Para cambiarlos, edita esa fila en el SQL Editor
-> de Supabase; el código cae en los mismos valores por defecto si la clave no
-> existe, así que el portal nunca se rompe.
+- `horarioSemanal` es el horario **por defecto**: se usa para crear meses nuevos
+  y como red de seguridad si un mes no está cargado. El horario que manda en el
+  cálculo es el de `horarios_mensuales` (sección **Horarios** del panel).
+- `jornadaOrdinariaInicio`, `jornadaOrdinariaFin` y `horasOrdinariasDia` quedan
+  como **legado informativo**: ya no intervienen en el cálculo.
+
+> ⚠️ Los porcentajes de recargo son los de la normativa laboral colombiana
+> vigente en 2026. **GPI debe confirmar sus propias reglas.** Para cambiarlos,
+> edita esa fila en el SQL Editor de Supabase; el código cae en los mismos
+> valores por defecto si la clave no existe, así que el portal nunca se rompe.
 
 **Festivos**: la lista de festivos nacionales de **2026** está en
 `FESTIVOS_COLOMBIA` dentro de `src/lib/jornada.ts` y hay que **ampliarla cada
@@ -268,7 +416,7 @@ los domingos cuentan como día de recargo dominical.
 
 ---
 
-## 7. Visibilidad del contenido
+## 8. Visibilidad del contenido
 
 Dos niveles, ambos disponibles para admin, coordinador y marketing:
 
@@ -296,7 +444,7 @@ defecto: el sitio se ve completo salvo que alguien apague algo a propósito.
 
 ---
 
-## 8. Cómo funciona el fallback estático
+## 9. Cómo funciona el fallback estático
 
 Toda página pública pide sus datos a `src/lib/content.ts`:
 
@@ -319,7 +467,7 @@ además, cada vez que guardas en `/admin` se llama a
 
 ---
 
-## 9. Qué se puede editar desde `/admin`
+## 10. Qué se puede editar desde `/admin`
 
 | Sección | Quién | Qué permite |
 | --- | --- | --- |
@@ -330,9 +478,11 @@ además, cada vez que guardas en `/admin` se llama a
 | **Valores** | contenido | CRUD de valores corporativos + visibilidad |
 | **Contacto y ajustes** | contenido | Visibilidad de secciones, dirección, coordenadas, teléfonos/WhatsApp, correos, redes, horario, mapa, hero, banda EXCELENCIA y video de YouTube |
 | **Equipo** | managers | Cuentas del portal: crear, editar, roles, activar/desactivar, contraseñas y eliminación |
-| **Jornadas** | managers | Revisión y aprobación de jornadas con desglose de horas |
+| **Horarios** | managers | Horario laboral de cada mes (base de la jornada ordinaria y de las horas extra) |
+| **Jornadas** | managers | Revisión y aprobación de jornadas con desglose de horas + tablero de métricas |
 
-*"contenido" = admin, coordinador y marketing · "managers" = admin y coordinador*
+*"contenido" = admin, coordinador y Community Manager · "managers" = admin y
+coordinador*
 
 ### Imágenes
 
@@ -351,14 +501,14 @@ Siempre se muestra una vista previa.
 - Barra superior siempre visible con el rol de la sesión, **Ver sitio** y
   **Cerrar sesión**.
 - Menú lateral en escritorio y tabs desplazables en móvil, con la sección activa
-  resaltada. Las secciones internas (Equipo, Jornadas) solo aparecen para
-  managers.
+  resaltada. Las secciones internas (Equipo, Horarios, Jornadas) solo aparecen
+  para managers.
 - Cada sección tiene breadcrumb y botón **← Volver al dashboard**; los
   formularios de crear/editar añaden **← Volver a [sección]**.
 
 ---
 
-## 10. Despliegue en Vercel
+## 11. Despliegue en Vercel
 
 1. Vercel → proyecto → **Settings** → **Environment Variables**.
 2. Añade `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` con los
@@ -374,7 +524,7 @@ el contenido estático; `/mi-cuenta` mostrará el aviso de "próximamente" y
 
 ---
 
-## 11. Notas técnicas
+## 12. Notas técnicas
 
 - `src/proxy.ts` (el `middleware` de Next.js 16) refresca la sesión de Supabase
   y hace una redirección optimista de `/admin` a `/mi-cuenta`. Solo corre sobre
@@ -384,10 +534,15 @@ el contenido estático; `/mi-cuenta` mostrará el aviso de "próximamente" y
   (`getContentEditorOrNull` / `getManagerOrNull` / `getActiveSession`).
 - Módulos clave:
   - `src/lib/roles.ts` — roles, etiquetas y helpers (módulo puro).
+  - `src/lib/usuarios.ts` — usuario ↔ correo sintético del portal (módulo puro).
+  - `src/lib/horarios.ts` — horarios mensuales, jornada neta por día y totales
+    semanales (módulo puro).
   - `src/lib/supabase/auth.ts` — sesión, perfil y guardas de servidor.
   - `src/lib/supabase/admin.ts` — cliente service-role y generador de contraseñas
     (**solo servidor**).
   - `src/lib/jornada.ts` — cálculo de horas, festivos y formateo (módulo puro).
+  - `src/lib/admin.ts` — lecturas del panel, incluido `getMapaHorarios()` y el
+    autocreado de meses (`asegurarHorarioMensual`).
 - `/mi-cuenta` y `/admin` llevan `robots: noindex` y están fuera del
   `sitemap.xml`, además de estar en `Disallow` dentro de `robots.txt`.
 - Si subes imágenes a Supabase, `next.config.ts` ya permite optimizar imágenes

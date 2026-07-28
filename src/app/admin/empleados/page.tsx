@@ -16,6 +16,7 @@ import {
   PrimaryLink,
   inputClass,
 } from "@/components/admin/ui";
+import { identificadorCuenta } from "@/lib/usuarios";
 import { formatearFechaCorta } from "@/lib/jornada";
 import { Info, Pencil, Plus, User } from "@/lib/icons";
 
@@ -33,7 +34,14 @@ export default async function AdminEmpleadosPage({
 
   const cuentas = busqueda
     ? todos.filter((p) =>
-        [p.full_name, p.email, p.cargo ?? "", ROLE_LABELS[p.role]]
+        [
+          p.full_name,
+          identificadorCuenta(p),
+          p.cedula ?? "",
+          p.email_contacto ?? "",
+          p.cargo ?? "",
+          ROLE_LABELS[p.role],
+        ]
           .join(" ")
           .toLowerCase()
           .includes(busqueda.toLowerCase()),
@@ -62,7 +70,7 @@ export default async function AdminEmpleadosPage({
           type="search"
           name="q"
           defaultValue={busqueda}
-          placeholder="Buscar por nombre, correo o cargo…"
+          placeholder="Buscar por nombre, usuario, cédula o cargo…"
           aria-label="Buscar cuentas"
           className={`${inputClass} max-w-sm`}
         />
@@ -132,7 +140,10 @@ export default async function AdminEmpleadosPage({
                   )}
                 </div>
                 <p className="mt-1 truncate text-sm text-graphite">
-                  {cuenta.email}
+                  Usuario:{" "}
+                  <span className="font-semibold text-ink-soft">
+                    {identificadorCuenta(cuenta)}
+                  </span>
                   {cuenta.cargo && ` · ${cuenta.cargo}`}
                 </p>
                 {cuenta.created_at && (

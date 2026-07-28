@@ -1,6 +1,6 @@
 # Plan del proyecto — Sitio web GPI
 
-Estado al **27 de julio de 2026**. Este documento existe para que cualquier
+Estado al **28 de julio de 2026**. Este documento existe para que cualquier
 sesión futura (humana o de Claude) arranque con contexto completo sin tener
 que reconstruir el historial desde los commits.
 
@@ -13,6 +13,7 @@ que reconstruir el historial desde los commits.
 | 3 | Conexión a DB real y prueba end-to-end en local | ⏳ Pendiente | Depende de las fases 2 y 4: una vez aplicadas las migraciones y configuradas las env vars, probar login, CRUD completo, creación de cuentas, registro y aprobación de jornadas, y que el fallback estático siga funcionando si se apagan las variables. |
 | 4 | Fase 2 del proyecto — Núcleo de horas extra | ✅ Completa | Roles ampliados, CRUD de empleados con cuentas, portal del empleado con registro de jornadas, aprobaciones y visibilidad del contenido. Migraciones 0001 y 0002 **ya aplicadas** en el GPI Project (27 jul 2026); `SUPABASE_SERVICE_ROLE_KEY` configurada en `.env.local`. |
 | 4b | Fase 2 — Tablero de métricas de horas extra | ✅ Completa | `/admin/jornadas?vista=metricas`: 4 KPIs, gráficas Recharts (por día, por empleado, extras, Gantt de turnos), filtros client-side, control semanal contra topes legales, glosario amable y export CSV para nómina. |
+| 4c | Fase 2 — Iteración post-feedback de GPI | ✅ Código listo | Horarios laborales **mes a mes** (`/admin/horarios`), cuentas por **usuario** en vez de correo, y el rol *marketing* pasa a llamarse **Community Manager** (y también registra jornadas). **Falta**: aplicar `supabase/migrations/0003_horarios_mensuales.sql` en el GPI Project. |
 | 5 | Deploy en Vercel desde el repo de GitHub + variables de entorno | ⏳ Pendiente | Repo: `GOCAS-Automations/website_GPI`. Cuenta Vercel: GOCAS Automations (plan gratis). Recordar añadir `SUPABASE_SERVICE_ROLE_KEY` **sin** prefijo `NEXT_PUBLIC_`. |
 | 6 | Apuntar dominio `gpiprofesionales.com` de GoDaddy → Vercel | ⏳ Pendiente | Al final, cuando el sitio esté aprobado por GPI y desplegado en Vercel. |
 | 7 | Extra cotizable aparte: chatbot IA | 💡 Planeado | Claude Haiku 4.5 vía `/api/chat`, con conocimiento del contenido del sitio (servicios, proyectos, contacto) y captura de leads hacia Supabase. No incluido en la cotización actual. |
@@ -29,6 +30,8 @@ que reconstruir el historial desde los commits.
 | Portal del empleado (registro + historial + contraseña) | `/mi-cuenta` |
 | Cálculo de horas ordinarias, extra, nocturnas y dominicales | `src/lib/jornada.ts` (función pura `calcularJornada`) |
 | Visibilidad por ítem (`published`) y por sección (`visibility`) | Formularios de `/admin/*` y `/admin/ajustes` |
+| Horario laboral mes a mes | `supabase/migrations/0003…`, `src/lib/horarios.ts`, `/admin/horarios` |
+| Cuentas por usuario (correo sintético interno) | `src/lib/usuarios.ts`, `/mi-cuenta` (login) y `/admin/empleados` |
 
 Flujo completo: **el empleado registra su jornada** en `/mi-cuenta` (con vista
 previa del desglose) → queda **pendiente** → un **coordinador o admin** la ve en
@@ -36,6 +39,53 @@ previa del desglose) → queda **pendiente** → un **coordinador o admin** la v
 una nota obligatoria** → el empleado ve el resultado y la nota en su portal.
 Mientras esté pendiente puede editarla o eliminarla; después queda congelada
 (un manager puede devolverla a pendiente).
+
+## Iteración post-feedback (28 de julio de 2026)
+
+Tres cambios grandes pedidos por GPI tras ver el sistema funcionando:
+
+### 1. Horarios laborales mensuales
+
+GPI define su jornada **mes a mes** y a veces cambia. Antes, la jornada
+ordinaria era un número fijo (`horasOrdinariasDia`); ahora sale de la tabla
+`horarios_mensuales`, editable en **`/admin/horarios`** (admin y coordinador):
+
+- Un registro por mes con el horario de cada día (`lun`…`dom`), o `null` si el
+  día no es laboral. Horario base confirmado: **L–J 8:00 a. m.–5:30 p. m.,
+  V 8:00 a. m.–5:00 p. m., 1 h de almuerzo, sábado y domingo no laborales →
+  42 h semanales netas** (el almuerzo no cuenta como trabajo).
+- Editor tipo tabla con **celdas calculadas en vivo** ("Horas de jornada" por
+  día y "Total de horas semanales"), como el Excel que usaba GPI.
+- El mes se **autocrea al entrar**, clonando el mes anterior o el horario
+  predeterminado, con un aviso explicando de dónde salió.
+- `calcularJornada` recibe ahora el mapa de horarios: para la fecha trabajada
+  busca el mes, toma el día de la semana y usa *(fin − inicio) − almuerzo* como
+  jornada ordinaria. Sábado, domingo, festivo o día apagado → jornada ordinaria
+  cero y todo el turno con recargo dominical/festivo.
+- **Regla del almuerzo (a confirmar con GPI)**: como el empleado solo registra
+  entrada y salida, el almuerzo del día se descuenta cuando el turno dura más de
+  6 horas en un día laboral. Documentada en `docs/ADMIN.md` y en el código.
+
+### 2. Cuentas por usuario
+
+El equipo no tiene correo corporativo, así que ingresa con un **usuario**
+(`mgomez`). Supabase Auth exige correo → se usa el sintético interno
+`mgomez@cuentas.gpiprofesionales.com` (dominio que no recibe correo). Si lo
+escrito en el login lleva `@` se usa tal cual, así siguen entrando las cuentas
+antiguas. `profiles` gana `username` (único), `cedula` y `email_contacto`; los
+perfiles previos quedan con `username` nulo y se identifican por su correo.
+Las contraseñas generadas pasan a formato **`Sol-Andes42`**: fáciles de dictar
+por teléfono, que es como se entregan al personal de campo.
+
+### 3. Rol Community Manager
+
+El rol `marketing` (valor interno intacto en la base de datos) se muestra como
+**Community Manager**: edita todo el contenido del sitio, no gestiona empleados
+ni jornadas de otros. Además, **cualquier cuenta activa** ve su portal de
+jornadas en `/mi-cuenta` —el Community Manager también es empleado de GPI, y un
+admin o coordinador puede registrar sus horas si lo necesita—; quien tiene
+acceso al panel ve arriba el botón "Ir al panel". Aprobaciones y métricas siguen
+siendo solo de managers.
 
 ## Decisiones técnicas
 
@@ -63,7 +113,15 @@ Mientras esté pendiente puede editarla o eliminarla; después queda congelada
 - **Cálculo de horas parametrizado**: los recargos viven en
   `site_settings.jornada_config`, no en el código, para poder ajustarlos cuando
   GPI confirme sus reglas. `src/lib/jornada.ts` cae en valores por defecto de la
-  ley colombiana 2026 si la clave no existe.
+  ley colombiana 2026 si la clave no existe. Desde la migración 0003 el
+  **horario ordinario** ya no vive ahí: sale de `horarios_mensuales`, y los
+  campos de horario de `jornada_config` quedan como plantilla para crear meses
+  nuevos.
+- **Tolerancia a migraciones sin aplicar**: igual que el contenido cae en
+  `src/data/*`, el sistema de jornadas funciona sin la 0003. Sin la tabla
+  `horarios_mensuales` el cálculo usa el horario predeterminado de GPI; sin las
+  columnas nuevas de `profiles` las cuentas se identifican por su correo y las
+  escrituras reintentan sin esos campos. El build no depende de la base de datos.
 - **ISR + revalidación explícita**: las páginas públicas usan
   `revalidate = 300` (5 minutos) y, además, cada server action de `/admin`
   llama a `revalidatePath("/", "layout")` para que los cambios se vean de
@@ -73,16 +131,22 @@ Mientras esté pendiente puede editarla o eliminarla; después queda congelada
 
 - **Imágenes**: confirmar/actualizar fotografías de servicios y proyectos si
   GPI quiere reemplazar las heredadas del sitio viejo.
-- **Lista de empleados** (Fase 2): nombres, correos, cargos y teléfonos para
-  crear las cuentas desde `/admin/empleados`. El sistema ya está listo: solo
-  falta cargarlos.
-- **Reglas de cálculo de horas extra** (Fase 2): confirmar horario base, horas
-  ordinarias por día, franja nocturna, porcentajes de recargo y tratamiento de
-  festivos. Los valores actuales (`site_settings.jornada_config`) son los de la
-  ley colombiana 2026 y sirven de punto de partida; se ajustan sin tocar código.
+- **Lista de empleados** (Fase 2): nombres, **usuarios**, cédulas, cargos,
+  teléfonos y correos de contacto para crear las cuentas desde
+  `/admin/empleados`. El sistema ya está listo: solo falta cargarlos.
+- **Regla del almuerzo** ⚠️: confirmar que descontar el almuerzo del día cuando
+  el turno dura más de 6 horas en un día laboral es lo correcto. La alternativa
+  sería pedirle al empleado que registre la hora exacta de su almuerzo, lo que
+  complica el formulario.
+- **Reglas de cálculo de horas extra** (Fase 2): el horario base ya está
+  confirmado y cargado (42 h semanales). Falta confirmar franja nocturna,
+  porcentajes de recargo y tratamiento de festivos. Los valores actuales
+  (`site_settings.jornada_config`) son los de la ley colombiana 2026 y sirven de
+  punto de partida; se ajustan sin tocar código.
 - **Quién aprueba las jornadas**: definir qué personas llevan el rol
-  `coordinador` (pueden aprobar y gestionar cuentas) frente a `marketing` (solo
-  contenido del sitio).
+  `coordinador` (aprueban jornadas, gestionan cuentas y editan los horarios del
+  mes) frente a **Community Manager** (solo contenido del sitio + sus propias
+  jornadas).
 
 ## Referencias
 

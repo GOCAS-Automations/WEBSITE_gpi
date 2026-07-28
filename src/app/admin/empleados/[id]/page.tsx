@@ -20,6 +20,7 @@ import {
   resetEmployeePassword,
   updateEmployee,
 } from "../actions";
+import { identificadorCuenta } from "@/lib/usuarios";
 import { formatearFechaCorta } from "@/lib/jornada";
 import { ArrowRight, Info } from "@/lib/icons";
 
@@ -46,7 +47,9 @@ export default async function EditarCuentaPage({
     <>
       <AdminPageHeader
         title={cuenta.full_name}
-        description={cuenta.email}
+        description={`Usuario: ${identificadorCuenta(cuenta)}${
+          cuenta.email_contacto ? ` · ${cuenta.email_contacto}` : ""
+        }`}
         backHref="/admin/empleados"
         backLabel="Volver al equipo"
         breadcrumb={[
@@ -102,7 +105,7 @@ export default async function EditarCuentaPage({
         <Card>
           <CardTitle
             title="Datos de la cuenta"
-            description="Nombre, rol, cargo, teléfono y si puede o no iniciar sesión."
+            description="Nombre, rol, cédula, cargo, teléfono, correo de contacto y si puede o no iniciar sesión. El usuario no se puede cambiar."
           />
           {puedeGestionar ? (
             <CredentialForm
@@ -183,7 +186,7 @@ export default async function EditarCuentaPage({
                 <DeleteAccountForm
                   action={deleteEmployee}
                   id={cuenta.id}
-                  email={cuenta.email}
+                  usuario={identificadorCuenta(cuenta)}
                 />
               ) : (
                 <p className="text-sm text-graphite">

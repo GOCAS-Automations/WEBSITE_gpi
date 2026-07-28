@@ -13,6 +13,7 @@ import type {
   YouTubeSettings,
 } from "@/data/site";
 import type { UserRole } from "@/lib/roles";
+import type { HorarioDias } from "@/lib/horarios";
 
 export type ActionStatus = "idle" | "success" | "error";
 
@@ -29,7 +30,8 @@ export const idleState: ActionState = { status: "idle" };
  */
 export interface CredentialState extends ActionState {
   credential?: {
-    email: string;
+    /** Con lo que la persona inicia sesión: su USUARIO (o el correo, en cuentas antiguas). */
+    usuario: string;
     password: string;
     kind: "created" | "reset";
   };
@@ -118,13 +120,34 @@ export interface AdminSettings {
 
 export interface ProfileRecord {
   id: string;
+  /** Correo con el que Supabase Auth identifica la cuenta (puede ser sintético). */
   email: string;
+  /** Usuario del portal. `null` en las cuentas creadas antes de la migración 0003. */
+  username: string | null;
   full_name: string;
   role: UserRole;
   cargo: string | null;
   phone: string | null;
+  /** Documento de identidad (informativo). */
+  cedula: string | null;
+  /** Correo REAL de contacto (informativo; no sirve para iniciar sesión). */
+  email_contacto: string | null;
   active: boolean;
   created_at: string | null;
+}
+
+/* ------------------------------------------------------------------ */
+/* Horarios laborales mensuales                                        */
+/* ------------------------------------------------------------------ */
+
+export interface HorarioMensualRecord {
+  /** `null` cuando el mes todavía no está guardado en la base de datos. */
+  id: string | null;
+  anio: number;
+  mes: number;
+  dias: HorarioDias;
+  notas: string | null;
+  updated_at: string | null;
 }
 
 /* ------------------------------------------------------------------ */

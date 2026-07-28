@@ -54,41 +54,91 @@ export function getServiceRoleSupabase(): SupabaseClient | null {
 /* Generación de contraseñas                                           */
 /* ------------------------------------------------------------------ */
 
-// Alfabeto sin caracteres ambiguos (0/O, 1/l/I) para que dictarla por teléfono
-// o copiarla a mano no se preste a confusiones.
-const MAYUSCULAS = "ABCDEFGHJKLMNPQRSTUVWXYZ";
-const MINUSCULAS = "abcdefghijkmnopqrstuvwxyz";
-const NUMEROS = "23456789";
-const SIMBOLOS = "!@#$%*-_+=?";
-const ALFABETO = MAYUSCULAS + MINUSCULAS + NUMEROS + SIMBOLOS;
+/**
+ * CONTRASEÑAS "NATURALES"
+ * -----------------------
+ * Las cuentas del portal las entrega un coordinador, muchas veces DICTÁNDOLAS
+ * por teléfono o por WhatsApp a personal de campo. Una cadena como
+ * `k7#mQx4-Rv9zBp2` es imposible de dictar sin errores, así que se generan con
+ * el formato `Palabra-Palabra##`:
+ *
+ *     Sol-Andes42 · Rio-Cumbre07 · Faro-Bosque93
+ *
+ * Siguen siendo seguras: dos palabras de una lista de 40 (1 600 combinaciones)
+ * × 2 números (100) × el orden = suficiente para una contraseña TEMPORAL que la
+ * persona cambia al entrar, y siempre tienen mayúsculas, minúsculas, un símbolo
+ * y números, así que cumplen cualquier política razonable.
+ *
+ * Palabras cortas, sin tildes y sin eñes: se dictan y se escriben sin dudar.
+ */
+const PALABRAS = [
+  "Sol",
+  "Luna",
+  "Rio",
+  "Mar",
+  "Andes",
+  "Cumbre",
+  "Valle",
+  "Selva",
+  "Bosque",
+  "Campo",
+  "Faro",
+  "Puerto",
+  "Cielo",
+  "Nube",
+  "Lluvia",
+  "Viento",
+  "Fuego",
+  "Tierra",
+  "Piedra",
+  "Arena",
+  "Palma",
+  "Ceiba",
+  "Cedro",
+  "Roble",
+  "Guadua",
+  "Cafe",
+  "Cacao",
+  "Maiz",
+  "Mango",
+  "Guayaba",
+  "Colibri",
+  "Condor",
+  "Delfin",
+  "Tucan",
+  "Jaguar",
+  "Pardo",
+  "Verde",
+  "Turbina",
+  "Motor",
+  "Puente",
+] as const;
 
-function elegir(alfabeto: string, cantidad: number): string[] {
+/** Enteros aleatorios criptográficos en el rango [0, tope). */
+function aleatorios(tope: number, cantidad: number): number[] {
   const bytes = new Uint32Array(cantidad);
   crypto.getRandomValues(bytes);
-  return Array.from(bytes, (b) => alfabeto[b % alfabeto.length]);
+  return Array.from(bytes, (b) => b % tope);
 }
 
 /**
- * Genera una contraseña fuerte (16 caracteres) garantizando al menos una
- * mayúscula, una minúscula, un número y un símbolo.
+ * Genera una contraseña temporal fácil de dictar: dos palabras en español
+ * separadas por guion y dos dígitos al final (`Sol-Andes42`). Siempre tiene 10
+ * caracteres o más; si hiciera falta, se rellena con dígitos.
  */
-export function generarPassword(longitud = 16): string {
-  const obligatorios = [
-    ...elegir(MAYUSCULAS, 1),
-    ...elegir(MINUSCULAS, 1),
-    ...elegir(NUMEROS, 1),
-    ...elegir(SIMBOLOS, 1),
-  ];
-  const resto = elegir(ALFABETO, Math.max(4, longitud) - obligatorios.length);
-  const todos = [...obligatorios, ...resto];
+export function generarPassword(longitudMinima = 10): string {
+  const [i, j] = aleatorios(PALABRAS.length, 2);
+  // Dos palabras DISTINTAS (si salen iguales, se toma la siguiente).
+  const primera = PALABRAS[i];
+  const segunda = PALABRAS[j === i ? (j + 1) % PALABRAS.length : j];
 
-  // Mezcla Fisher-Yates con aleatoriedad criptográfica.
-  const orden = new Uint32Array(todos.length);
-  crypto.getRandomValues(orden);
-  for (let i = todos.length - 1; i > 0; i -= 1) {
-    const j = orden[i] % (i + 1);
-    [todos[i], todos[j]] = [todos[j], todos[i]];
+  const [numero] = aleatorios(100, 1);
+  let password = `${primera}-${segunda}${String(numero).padStart(2, "0")}`;
+
+  while (password.length < Math.max(10, longitudMinima)) {
+    const [extra] = aleatorios(10, 1);
+    password += String(extra);
   }
 
-  return todos.join("");
+  return password;
 }

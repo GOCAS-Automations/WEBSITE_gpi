@@ -9,6 +9,7 @@ import {
   type ActionState,
   type CredentialState,
 } from "@/lib/admin-types";
+import { textoCredenciales } from "@/lib/usuarios";
 import { Check, Lock, Trash } from "@/lib/icons";
 import { inputClass } from "./ui";
 
@@ -17,9 +18,9 @@ import { inputClass } from "./ui";
 /* ------------------------------------------------------------------ */
 
 /**
- * Muestra UNA sola vez la contraseña recién generada.
- * No se puede volver a consultar (Supabase solo guarda su hash): si se pierde,
- * hay que restablecerla otra vez desde la ficha del empleado.
+ * Muestra UNA sola vez las credenciales recién generadas (usuario + contraseña).
+ * La contraseña no se puede volver a consultar (Supabase solo guarda su hash):
+ * si se pierde, hay que restablecerla otra vez desde la ficha del empleado.
  */
 export function CredentialPanel({
   credential,
@@ -30,7 +31,9 @@ export function CredentialPanel({
 
   async function copiar() {
     try {
-      await navigator.clipboard.writeText(credential.password);
+      await navigator.clipboard.writeText(
+        textoCredenciales(credential.usuario, credential.password),
+      );
       setCopiado("ok");
       setTimeout(() => setCopiado("idle"), 2500);
     } catch {
@@ -51,10 +54,11 @@ export function CredentialPanel({
               : "Contraseña restablecida"}
           </p>
           <p className="mt-1 text-sm leading-relaxed text-graphite">
-            Esta contraseña se muestra <strong>una sola vez</strong>. Cópiala y
-            compártela con la persona; podrá cambiarla cuando quiera desde{" "}
-            <strong>Mi Cuenta</strong>. Si la pierdes, vuelve a restablecerla
-            desde esta misma pantalla.
+            Estos datos se muestran <strong>una sola vez</strong>. Cópialos y
+            compártelos con la persona: entra a <strong>Mi Cuenta</strong> con su{" "}
+            <strong>usuario</strong> (no con un correo) y podrá cambiar la
+            contraseña cuando quiera. Si se pierde, vuelve a restablecerla desde
+            esta misma pantalla.
           </p>
         </div>
       </div>
@@ -62,10 +66,10 @@ export function CredentialPanel({
       <dl className="mt-4 space-y-2">
         <div className="flex flex-wrap items-center gap-2">
           <dt className="w-24 text-xs font-semibold uppercase tracking-wide text-graphite">
-            Correo
+            Usuario
           </dt>
-          <dd className="min-w-0 flex-1 break-all rounded-lg bg-white px-3 py-2 font-mono text-sm text-ink">
-            {credential.email}
+          <dd className="min-w-0 flex-1 break-all rounded-lg bg-white px-3 py-2 font-mono text-sm font-bold text-ink">
+            {credential.usuario}
           </dd>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -78,6 +82,13 @@ export function CredentialPanel({
         </div>
       </dl>
 
+      <p className="mt-3 rounded-lg bg-white/70 px-3 py-2 text-sm text-graphite">
+        Para dictar o pegar en un mensaje:{" "}
+        <span className="font-semibold text-ink">
+          {textoCredenciales(credential.usuario, credential.password)}
+        </span>
+      </p>
+
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <button
           type="button"
@@ -85,11 +96,11 @@ export function CredentialPanel({
           className="inline-flex items-center gap-2 rounded-full bg-ink px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-ink-soft"
         >
           <Check className="h-4 w-4" />
-          {copiado === "ok" ? "¡Copiada!" : "Copiar contraseña"}
+          {copiado === "ok" ? "¡Copiado!" : "Copiar usuario y contraseña"}
         </button>
         {copiado === "error" && (
           <span className="text-xs text-red-600">
-            Tu navegador no permitió copiar. Selecciónala y cópiala a mano.
+            Tu navegador no permitió copiar. Selecciona el texto y cópialo a mano.
           </span>
         )}
       </div>
@@ -185,23 +196,24 @@ export function CredentialForm({
 
 /**
  * Doble barrera para no borrar una cuenta por accidente:
- *  1. Hay que escribir el correo exacto de la persona.
+ *  1. Hay que escribir el usuario exacto de la persona.
  *  2. El navegador pide confirmación al enviar.
- * El servidor vuelve a verificar el correo escrito antes de eliminar nada.
+ * El servidor vuelve a verificar lo escrito antes de eliminar nada.
  */
 export function DeleteAccountForm({
   action,
   id,
-  email,
+  usuario,
 }: {
   action: (state: ActionState, formData: FormData) => Promise<ActionState>;
   id: string;
-  email: string;
+  /** Usuario del portal (o el correo, en las cuentas antiguas). */
+  usuario: string;
 }) {
   const [state, formAction, pending] = useActionState(action, idleState);
   const [confirmacion, setConfirmacion] = useState("");
 
-  const coincide = confirmacion.trim().toLowerCase() === email.toLowerCase();
+  const coincide = confirmacion.trim().toLowerCase() === usuario.toLowerCase();
 
   return (
     <form
@@ -209,7 +221,7 @@ export function DeleteAccountForm({
       onSubmit={(event) => {
         if (
           !window.confirm(
-            `Vas a eliminar definitivamente la cuenta de ${email}.\n\nSe borrarán también sus jornadas registradas y no podrá volver a ingresar. Esta acción NO se puede deshacer.\n\n¿Continuar?`,
+            `Vas a eliminar definitivamente la cuenta ${usuario}.\n\nSe borrarán también sus jornadas registradas y no podrá volver a ingresar. Esta acción NO se puede deshacer.\n\n¿Continuar?`,
           )
         ) {
           event.preventDefault();
@@ -221,15 +233,15 @@ export function DeleteAccountForm({
 
       <label className="block">
         <span className="mb-1.5 block text-sm font-semibold text-ink">
-          Escribe <span className="font-mono">{email}</span> para confirmar
+          Escribe <span className="font-mono">{usuario}</span> para confirmar
         </span>
         <input
-          name="confirm_email"
+          name="confirm_usuario"
           type="text"
           autoComplete="off"
           value={confirmacion}
           onChange={(e) => setConfirmacion(e.target.value)}
-          placeholder={email}
+          placeholder={usuario}
           className={inputClass}
         />
       </label>

@@ -102,7 +102,9 @@ function descargarCSV(
     "Orden de trabajo",
     "Inicio",
     "Fin",
-    "Duración",
+    "Duración del turno",
+    "Almuerzo descontado",
+    "Horas trabajadas",
     "Horas (decimal)",
     "Horas ordinarias",
     "Horas extra",
@@ -123,6 +125,8 @@ function descargarCSV(
       j.ordenTrabajo,
       j.inicio,
       j.fin,
+      formatearHoras(j.duracionMin),
+      formatearHoras(j.almuerzoMin),
       formatearHoras(j.totalMinutos),
       horasDecimal(j.totalMinutos),
       formatearHoras(j.ordinariasMin),
@@ -382,11 +386,11 @@ export function JornadasDashboard({
             },
             {
               label: "Total de horas",
-              desc: "Suma de todo el tiempo trabajado, contando tanto la jornada ordinaria como las horas extra.",
+              desc: "Suma de todo el tiempo trabajado (jornada ordinaria + horas extra). El almuerzo no se cuenta.",
             },
             {
               label: "Horas extra",
-              desc: `Tiempo trabajado por fuera de la jornada ordinaria configurada (${config.horasOrdinariasDia} horas al día). Es lo que se paga con recargo.`,
+              desc: "Tiempo trabajado por fuera de la jornada ordinaria del día, según el horario del mes (sección Horarios). Es lo que se paga con recargo.",
             },
             {
               label: "Pendientes de aprobación",
@@ -570,7 +574,7 @@ export function JornadasDashboard({
             },
             {
               label: "H. extra",
-              desc: `Parte de ese turno que quedó por fuera de la jornada ordinaria (${config.horasOrdinariasDia} horas). Aparece resaltada cuando es mayor que cero.`,
+              desc: "Parte de ese turno que quedó por fuera de la jornada ordinaria del día (según el horario del mes). Aparece resaltada cuando es mayor que cero.",
             },
             {
               label: "Estado",

@@ -22,6 +22,7 @@ import {
   jornadaConfigDefaults,
   type JornadaConfig,
 } from "@/lib/jornada";
+import type { MapaHorarios } from "@/lib/horarios";
 
 /* ------------------------------------------------------------------ */
 /* Fila del tablero                                                    */
@@ -41,7 +42,12 @@ export interface JornadaMetrica {
   inicioDecimal: number;
   finDecimal: number;
 
+  /** Minutos efectivamente trabajados (sin el almuerzo). */
   totalMinutos: number;
+  /** Duración del turno de entrada a salida, incluido el almuerzo. */
+  duracionMin: number;
+  /** Almuerzo descontado según el horario del mes. */
+  almuerzoMin: number;
   ordinariasMin: number;
   extrasMin: number;
   extraDiurnaMin: number;
@@ -74,12 +80,14 @@ export function horaADecimal(hora: string): number {
 export function construirMetrica(
   jornada: JornadaRecord,
   config: JornadaConfig = jornadaConfigDefaults,
+  horarios?: MapaHorarios | null,
 ): JornadaMetrica {
   const desglose = calcularJornada(
     jornada.start_at,
     jornada.end_at,
     jornada.work_date,
     config,
+    horarios,
   );
 
   const inicio = horaColombia(jornada.start_at);
@@ -99,7 +107,10 @@ export function construirMetrica(
     // inicio: para la barra del Gantt se prolonga más allá de las 24.
     finDecimal: inicioDecimal + desglose.totalMinutos / 60,
 
-    totalMinutos: desglose.totalMinutos,
+    // Las métricas de nómina cuentan tiempo TRABAJADO: el almuerzo va aparte.
+    totalMinutos: desglose.minutosTrabajados,
+    duracionMin: desglose.totalMinutos,
+    almuerzoMin: desglose.almuerzoMinutos,
     ordinariasMin: desglose.ordinarias,
     extrasMin: desglose.extras,
     extraDiurnaMin: desglose.extraDiurna,

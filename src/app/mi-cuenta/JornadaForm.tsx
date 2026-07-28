@@ -9,6 +9,7 @@ import {
   instanteColombia,
   type JornadaConfig,
 } from "@/lib/jornada";
+import type { MapaHorarios } from "@/lib/horarios";
 import { JornadaBreakdown } from "@/components/jornadas/JornadaBreakdown";
 import { Check, Info } from "@/lib/icons";
 
@@ -26,6 +27,7 @@ export function JornadaForm({
   action,
   config,
   hoy,
+  horarios,
   jornada,
   onCancel,
   submitLabel,
@@ -34,6 +36,11 @@ export function JornadaForm({
   config: JornadaConfig;
   /** Fecha de hoy en Colombia (`YYYY-MM-DD`), calculada en el servidor. */
   hoy: string;
+  /**
+   * Horarios laborales por mes (`"YYYY-MM"`). Define la jornada ordinaria de
+   * cada día: la vista previa se recalcula al cambiar la fecha del turno.
+   */
+  horarios?: MapaHorarios;
   /** Si viene, el formulario edita esa jornada en lugar de crear una nueva. */
   jornada?: JornadaRecord;
   onCancel?: () => void;
@@ -77,8 +84,8 @@ export function JornadaForm({
     const startAt = instanteColombia(workDate, start);
     const endAt = instanteColombia(workDate, end, cruzaMedianoche ? 1 : 0);
     if (!startAt || !endAt) return null;
-    return calcularJornada(startAt, endAt, workDate, config);
-  }, [workDate, start, end, cruzaMedianoche, config]);
+    return calcularJornada(startAt, endAt, workDate, config, horarios);
+  }, [workDate, start, end, cruzaMedianoche, config, horarios]);
 
   const exito = state.status === "success";
 

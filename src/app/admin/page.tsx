@@ -12,6 +12,7 @@ import {
   Sliders,
   User,
   Clock,
+  Calendar,
   ArrowRight,
 } from "@/lib/icons";
 
@@ -86,6 +87,15 @@ export default async function AdminDashboardPage() {
       unit: "cuentas",
       description:
         "Crea cuentas para el equipo, asigna roles y cargos, restablece contraseñas y activa o desactiva accesos.",
+    },
+    {
+      href: "/admin/horarios",
+      label: "Horario laboral del mes",
+      icon: Calendar,
+      count: null,
+      unit: "",
+      description:
+        "El horario que trabaja el equipo cada mes. De aquí sale la jornada ordinaria: lo que se trabaje por encima cuenta como hora extra.",
     },
     {
       href: "/admin/jornadas",

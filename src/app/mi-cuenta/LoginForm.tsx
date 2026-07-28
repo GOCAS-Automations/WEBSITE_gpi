@@ -1,11 +1,25 @@
 "use client";
 
+/**
+ * INGRESO AL PORTAL — se entra con USUARIO, no con correo.
+ *
+ * El equipo de GPI no tiene correo corporativo: cada persona recibe un usuario
+ * (p. ej. `mgomez`). Supabase Auth exige un correo, así que aquí se traduce lo
+ * escrito con `credencialDeAcceso()`:
+ *   · si contiene "@" se envía tal cual (cuentas antiguas con correo real);
+ *   · si no, se convierte al correo sintético interno del portal.
+ *
+ * Tras un ingreso correcto solo se refresca el árbol de servidor: la propia
+ * página `/mi-cuenta` decide qué mostrar (portal de jornadas y, para quien
+ * tenga permisos, también el acceso al panel).
+ */
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { getBrowserSupabase } from "@/lib/supabase/client";
-import { isContentEditorRole, normalizeRole } from "@/lib/roles";
-import { Lock, Mail, ArrowRight, LogOut } from "@/lib/icons";
+import { credencialDeAcceso } from "@/lib/usuarios";
+import { Lock, User, ArrowRight } from "@/lib/icons";
 
 const inputClass =
   "w-full rounded-xl border border-line bg-white px-4 py-3 text-sm text-ink placeholder:text-graphite/60 transition-colors focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30";
@@ -14,12 +28,11 @@ type Status =
   | { kind: "idle" }
   | { kind: "loading" }
   | { kind: "error"; message: string }
-  | { kind: "panel"; email: string }
   | { kind: "inactive" };
 
 export function LoginForm() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [usuario, setUsuario] = useState("");
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState<Status>({ kind: "idle" });
 
@@ -37,7 +50,7 @@ export function LoginForm() {
     }
 
     const { data, error } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
+      email: credencialDeAcceso(usuario),
       password,
     });
 
@@ -46,7 +59,7 @@ export function LoginForm() {
         kind: "error",
         message:
           error?.message === "Invalid login credentials"
-            ? "Correo o contraseña incorrectos."
+            ? "Usuario o contraseña incorrectos."
             : (error?.message ?? "No fue posible iniciar sesión."),
       });
       return;
@@ -67,50 +80,8 @@ export function LoginForm() {
       return;
     }
 
-    // Refresca el árbol de servidor para que las cookies de sesión queden
-    // disponibles antes de pintar el portal o el panel.
+    // El servidor decide qué portal mostrar en esta misma ruta.
     router.refresh();
-
-    if (isContentEditorRole(normalizeRole(profile?.role))) {
-      setStatus({ kind: "panel", email: data.user.email ?? email.trim() });
-      return;
-    }
-
-    // Empleado: el portal de jornadas se renderiza en esta misma ruta cuando el
-    // servidor detecta la sesión, así que basta con recargar.
-    router.refresh();
-  }
-
-  /* ---------------- Sesión con acceso al panel ---------------- */
-  if (status.kind === "panel") {
-    return (
-      <div className="text-center">
-        <p className="text-base font-bold text-ink">¡Bienvenido de nuevo!</p>
-        <p className="mt-1.5 text-sm text-graphite">
-          Sesión iniciada como{" "}
-          <span className="font-semibold text-ink">{status.email}</span>
-        </p>
-        <Link
-          href="/admin"
-          className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-brand px-6 py-3.5 text-base font-semibold text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-dark"
-        >
-          Ir al panel de administración
-          <ArrowRight className="h-5 w-5" />
-        </Link>
-        <button
-          type="button"
-          onClick={async () => {
-            await getBrowserSupabase()?.auth.signOut();
-            router.refresh();
-            setStatus({ kind: "idle" });
-          }}
-          className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full border border-line bg-white px-6 py-3 text-sm font-semibold text-ink-soft transition-colors hover:border-brand hover:text-brand-dark"
-        >
-          <LogOut className="h-4 w-4" />
-          Cerrar sesión
-        </button>
-      </div>
-    );
   }
 
   /* ---------------- Cuenta desactivada ---------------- */
@@ -148,23 +119,32 @@ export function LoginForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label htmlFor="email" className="mb-1.5 block text-sm font-semibold text-ink">
-          Correo electrónico
+        <label
+          htmlFor="usuario"
+          className="mb-1.5 block text-sm font-semibold text-ink"
+        >
+          Usuario
         </label>
         <div className="relative">
-          <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-graphite/70" />
+          <User className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-graphite/70" />
           <input
-            id="email"
-            name="email"
-            type="email"
+            id="usuario"
+            name="usuario"
+            type="text"
             required
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="username"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            value={usuario}
+            onChange={(e) => setUsuario(e.target.value)}
             className={`${inputClass} pl-10`}
-            placeholder="tucorreo@gpiprofesionales.com"
+            placeholder="mgomez"
           />
         </div>
+        <p className="mt-1.5 text-xs leading-relaxed text-graphite">
+          Es el usuario que te asignó GPI (no un correo electrónico).
+        </p>
       </div>
 
       <div>

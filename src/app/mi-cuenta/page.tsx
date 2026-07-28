@@ -3,9 +3,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { Container } from "@/components/ui/Container";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { getSessionProfile } from "@/lib/supabase/auth";
+import { getSessionProfile, type SessionProfile } from "@/lib/supabase/auth";
 import { signOutAction } from "@/lib/session-actions";
-import { getJornadaConfig, listJornadas } from "@/lib/admin";
+import { getJornadaConfig, getMapaHorarios, listJornadas } from "@/lib/admin";
 import { isContentEditorRole, ROLE_LABELS } from "@/lib/roles";
 import { hoyEnColombia } from "@/lib/jornada";
 import { LoginForm } from "./LoginForm";
@@ -28,8 +28,11 @@ export default async function MiCuentaPage() {
   const configured = isSupabaseConfigured();
   const session = configured ? await getSessionProfile() : null;
 
-  // Portal completo del empleado: registro de jornadas + historial.
-  if (session && session.profile.active && !isContentEditorRole(session.profile.role)) {
+  // Portal de jornadas: lo ve CUALQUIER cuenta activa, sin importar el rol (el
+  // Community Manager también es empleado de GPI, y un admin o un coordinador
+  // puede registrar sus horas si lo necesita). Quien además tiene permisos de
+  // contenido ve arriba el acceso al panel; el resto solo su portal.
+  if (session && session.profile.active) {
     return <PortalEmpleado profile={session.profile} />;
   }
 
@@ -82,14 +85,7 @@ export default async function MiCuentaPage() {
               {!configured && <NotConfigured />}
 
               {configured && session && !session.profile.active && (
-                <CuentaDesactivada email={session.profile.email} />
-              )}
-
-              {configured && session && session.profile.active && (
-                <SesionDeEquipo
-                  email={session.profile.email}
-                  rol={ROLE_LABELS[session.profile.role]}
-                />
+                <CuentaDesactivada identificador={session.profile.identificador} />
               )}
 
               {configured && !session && <LoginForm />}
@@ -113,17 +109,15 @@ export default async function MiCuentaPage() {
 /* Portal del empleado                                                 */
 /* ------------------------------------------------------------------ */
 
-async function PortalEmpleado({
-  profile,
-}: {
-  profile: { id: string; fullName: string; email: string; cargo: string | null };
-}) {
-  const [jornadas, config] = await Promise.all([
+async function PortalEmpleado({ profile }: { profile: SessionProfile }) {
+  const [jornadas, config, horarios] = await Promise.all([
     listJornadas({ employeeId: profile.id, limit: 100 }),
     getJornadaConfig(),
+    getMapaHorarios(),
   ]);
 
   const hoy = hoyEnColombia();
+  const conPanel = isContentEditorRole(profile.role);
   const pendientes = jornadas.filter((j) => j.status === "pendiente").length;
   const aprobadas = jornadas.filter((j) => j.status === "aprobada").length;
   const rechazadas = jornadas.filter((j) => j.status === "rechazada").length;
@@ -165,6 +159,30 @@ async function PortalEmpleado({
       </div>
 
       <Container className="py-8 sm:py-10">
+        {/* Acceso al panel: admin, coordinador y Community Manager */}
+        {conPanel && (
+          <div className="mb-7 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-brand/30 bg-brand-tint px-5 py-4 sm:px-6">
+            <div className="min-w-0">
+              <p className="text-base font-bold text-ink">
+                Tienes acceso al panel de administración
+              </p>
+              <p className="mt-1 text-sm leading-relaxed text-graphite">
+                Entraste como{" "}
+                <strong>{ROLE_LABELS[profile.role]}</strong>. Desde el panel
+                editas el contenido del sitio; aquí abajo registras tus propias
+                jornadas.
+              </p>
+            </div>
+            <Link
+              href="/admin"
+              className="inline-flex shrink-0 items-center gap-2 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-dark"
+            >
+              Ir al panel
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+        )}
+
         {/* Resumen */}
         <div className="mb-7 grid gap-3 sm:grid-cols-3">
           <Resumen
@@ -198,7 +216,12 @@ async function PortalEmpleado({
             </p>
           </header>
 
-          <JornadaForm action={saveJornada} config={config} hoy={hoy} />
+          <JornadaForm
+            action={saveJornada}
+            config={config}
+            hoy={hoy}
+            horarios={horarios}
+          />
         </section>
 
         {/* Historial */}
@@ -212,6 +235,7 @@ async function PortalEmpleado({
             jornadas={jornadas}
             config={config}
             hoy={hoy}
+            horarios={horarios}
             saveAction={saveJornada}
             deleteAction={deleteJornada}
           />
@@ -297,37 +321,7 @@ function NotConfigured() {
   );
 }
 
-/** Sesión de alguien del equipo con acceso al panel (admin/coordinador/marketing). */
-function SesionDeEquipo({ email, rol }: { email: string; rol: string }) {
-  return (
-    <div className="text-center">
-      <p className="text-base font-bold text-ink">Tu sesión sigue activa</p>
-      <p className="mt-1.5 text-sm text-graphite">
-        Ingresaste como <span className="font-semibold text-ink">{email}</span>
-        <br />
-        Rol: <span className="font-semibold text-ink">{rol}</span>
-      </p>
-      <Link
-        href="/admin"
-        className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-brand px-6 py-3.5 text-base font-semibold text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-dark"
-      >
-        Ir al panel de administración
-        <ArrowRight className="h-5 w-5" />
-      </Link>
-      <form action={signOutAction} className="mt-3">
-        <button
-          type="submit"
-          className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-line bg-white px-6 py-3 text-sm font-semibold text-ink-soft transition-colors hover:border-brand hover:text-brand-dark"
-        >
-          <LogOut className="h-4 w-4" />
-          Cerrar sesión
-        </button>
-      </form>
-    </div>
-  );
-}
-
-function CuentaDesactivada({ email }: { email: string }) {
+function CuentaDesactivada({ identificador }: { identificador: string }) {
   return (
     <div className="text-center">
       <span className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
@@ -335,9 +329,9 @@ function CuentaDesactivada({ email }: { email: string }) {
       </span>
       <p className="mt-5 text-lg font-bold text-ink">Tu cuenta está desactivada</p>
       <p className="mt-2 text-sm leading-relaxed text-graphite">
-        La cuenta <span className="font-semibold text-ink">{email}</span> existe,
-        pero un administrador desactivó su acceso. Comunícate con tu coordinador
-        para reactivarla.
+        El usuario <span className="font-semibold text-ink">{identificador}</span>{" "}
+        existe, pero un administrador desactivó su acceso. Comunícate con tu
+        coordinador para reactivarla.
       </p>
       <form action={signOutAction} className="mt-6">
         <button

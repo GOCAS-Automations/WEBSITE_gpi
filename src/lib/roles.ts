@@ -17,21 +17,28 @@ export const USER_ROLES = [
 
 export type UserRole = (typeof USER_ROLES)[number];
 
-/** Nombre visible del rol en la interfaz. */
+/**
+ * Nombre visible del rol en la interfaz.
+ *
+ * OJO: el valor interno del rol `marketing` NO cambia en la base de datos (el
+ * `check` de `profiles.role` sigue aceptando 'marketing'); lo que cambió es la
+ * ETIQUETA que ve el equipo: "Community Manager".
+ */
 export const ROLE_LABELS: Record<UserRole, string> = {
   admin: "Administrador",
   coordinador: "Coordinador",
-  marketing: "Marketing",
+  marketing: "Community Manager",
   empleado: "Empleado",
 };
 
 /** Explicación en lenguaje sencillo de lo que puede hacer cada rol. */
 export const ROLE_DESCRIPTIONS: Record<UserRole, string> = {
   admin:
-    "Control total: contenido del sitio, cuentas del equipo y aprobación de jornadas.",
+    "Control total: contenido del sitio, horarios, cuentas del equipo y aprobación de jornadas.",
   coordinador:
-    "Contenido del sitio, cuentas de empleados (no administradores) y aprobación de jornadas.",
-  marketing: "Solo el contenido público del sitio (textos, imágenes y ajustes).",
+    "Contenido del sitio, horarios del mes, cuentas de empleados (no administradores) y aprobación de jornadas.",
+  marketing:
+    "Edita todo el contenido del sitio (textos, imágenes y ajustes) y registra sus propias jornadas. No gestiona empleados ni las jornadas de otros.",
   empleado: "Solo su portal en Mi Cuenta, para registrar sus jornadas.",
 };
 
@@ -64,7 +71,14 @@ export function isManagerRole(role: UserRole): boolean {
   return role === "admin" || role === "coordinador";
 }
 
-/** Registra jornadas en su portal de Mi Cuenta. */
+/**
+ * Personal de campo: rol EXACTAMENTE 'empleado'.
+ *
+ * OJO: registrar jornadas propias en Mi Cuenta ya NO depende de esto. Desde
+ * julio de 2026 lo hace **cualquier cuenta activa**: el Community Manager
+ * también es empleado de GPI, y un admin o un coordinador puede registrar sus
+ * horas si lo necesita. Aprobar las de los demás sigue siendo de managers.
+ */
 export function isEmployeeRole(role: UserRole): boolean {
   return role === "empleado";
 }

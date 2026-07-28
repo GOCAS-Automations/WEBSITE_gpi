@@ -16,6 +16,7 @@ import {
   horaColombia,
   type JornadaConfig,
 } from "@/lib/jornada";
+import type { MapaHorarios } from "@/lib/horarios";
 import { JornadaBreakdown } from "@/components/jornadas/JornadaBreakdown";
 import { JornadaForm } from "./JornadaForm";
 import { Pencil, Trash } from "@/lib/icons";
@@ -27,12 +28,15 @@ export function MisJornadas({
   jornadas,
   config,
   hoy,
+  horarios,
   saveAction,
   deleteAction,
 }: {
   jornadas: JornadaRecord[];
   config: JornadaConfig;
   hoy: string;
+  /** Horarios laborales por mes: definen la jornada ordinaria de cada día. */
+  horarios?: MapaHorarios;
   saveAction: Accion;
   deleteAction: Accion;
 }) {
@@ -58,6 +62,7 @@ export function MisJornadas({
             jornada={jornada}
             config={config}
             hoy={hoy}
+            horarios={horarios}
             saveAction={saveAction}
             deleteAction={deleteAction}
           />
@@ -73,12 +78,14 @@ function JornadaItem({
   jornada,
   config,
   hoy,
+  horarios,
   saveAction,
   deleteAction,
 }: {
   jornada: JornadaRecord;
   config: JornadaConfig;
   hoy: string;
+  horarios?: MapaHorarios;
   saveAction: Accion;
   deleteAction: Accion;
 }) {
@@ -88,6 +95,7 @@ function JornadaItem({
     jornada.end_at,
     jornada.work_date,
     config,
+    horarios,
   );
   const editable = jornada.status === "pendiente";
 
@@ -146,6 +154,7 @@ function JornadaItem({
             action={saveAction}
             config={config}
             hoy={hoy}
+            horarios={horarios}
             jornada={jornada}
             onCancel={() => setEditando(false)}
           />

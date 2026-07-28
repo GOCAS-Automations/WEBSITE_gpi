@@ -10,7 +10,12 @@
  */
 
 import Link from "next/link";
-import { getJornadaConfig, listJornadas, listProfiles } from "@/lib/admin";
+import {
+  getJornadaConfig,
+  getMapaHorarios,
+  listJornadas,
+  listProfiles,
+} from "@/lib/admin";
 import {
   JORNADA_STATUS_CLASSES,
   JORNADA_STATUS_LABELS,
@@ -51,7 +56,7 @@ export async function AprobacionesView({
     ? (estadoRaw as JornadaStatus | "todas")
     : "pendiente";
 
-  const [jornadas, empleados, config] = await Promise.all([
+  const [jornadas, empleados, config, horarios] = await Promise.all([
     listJornadas({
       status: estado,
       employeeId: empleadoId || undefined,
@@ -60,6 +65,7 @@ export async function AprobacionesView({
     }),
     listProfiles(),
     getJornadaConfig(),
+    getMapaHorarios(),
   ]);
 
   return (
@@ -163,6 +169,7 @@ export async function AprobacionesView({
               jornada.end_at,
               jornada.work_date,
               config,
+              horarios,
             );
             const empleado = jornada.employee_name ?? "Empleado";
 
@@ -255,22 +262,30 @@ export async function AprobacionesView({
           Cómo se calculan las horas
         </h2>
         <p className="mt-2 text-sm leading-relaxed text-graphite">
-          Se toman las horas reales de inicio y fin (hora de Colombia). Las
-          primeras <strong>{config.horasOrdinariasDia} horas</strong> del turno
-          son ordinarias y el resto cuenta como extra. Se considera{" "}
-          <strong>nocturno</strong> lo trabajado entre las{" "}
+          Se toman las horas reales de inicio y fin (hora de Colombia). La{" "}
+          <strong>jornada ordinaria</strong> de cada día sale del{" "}
+          <Link
+            href="/admin/horarios"
+            className="font-semibold text-brand-dark hover:text-brand"
+          >
+            horario del mes
+          </Link>{" "}
+          (salida − entrada − almuerzo); lo que exceda cuenta como extra. Se
+          considera <strong>nocturno</strong> lo trabajado entre las{" "}
           {formatearHora12(config.inicioNocturno)} y las{" "}
           {formatearHora12(config.finNocturno)}, y{" "}
-          <strong>dominical o festivo</strong> lo trabajado en domingo o en un
-          festivo nacional.
+          <strong>dominical o festivo</strong> lo trabajado en domingo, en un
+          festivo nacional o en un día marcado como no laboral.
         </p>
         <p className="mt-2 text-sm leading-relaxed text-graphite">
-          Estos parámetros y los porcentajes de recargo son ajustables: viven en
-          el ajuste{" "}
+          El <strong>almuerzo</strong> no cuenta como trabajo: se descuenta
+          cuando el turno dura más de 6 horas en un día laboral (regla pendiente
+          de confirmar con GPI). Los porcentajes de recargo y los topes de horas
+          extra son ajustables: viven en el ajuste{" "}
           <code className="rounded bg-mist px-1.5 py-0.5 font-mono text-xs">
             jornada_config
           </code>{" "}
-          de la base de datos y se pueden adaptar a las reglas que confirme GPI.
+          de la base de datos.
         </p>
       </Card>
     </>

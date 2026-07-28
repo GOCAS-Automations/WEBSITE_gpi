@@ -20,15 +20,24 @@ import {
   type YouTubeSettings,
 } from "@/data/site";
 import { normalizeRole } from "@/lib/roles";
+import { usuarioDesdeEmail } from "@/lib/usuarios";
 import {
   normalizarJornadaConfig,
   jornadaConfigDefaults,
   type JornadaConfig,
 } from "@/lib/jornada";
+import {
+  claveMes,
+  clonarHorario,
+  normalizarHorarioDias,
+  type HorarioDias,
+  type MapaHorarios,
+} from "@/lib/horarios";
 import type {
   AdminSettings,
   ClientRecord,
   FaqRecord,
+  HorarioMensualRecord,
   JornadaRecord,
   JornadaStatus,
   ProfileRecord,
@@ -295,18 +304,175 @@ export async function getJornadaConfig(): Promise<JornadaConfig> {
 }
 
 /* ------------------------------------------------------------------ */
+/* Horarios laborales mensuales (`horarios_mensuales`)                 */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Todos los horarios cargados, indexados por `"YYYY-MM"`.
+ *
+ * Es la entrada de `calcularJornada`: con este mapa cada jornada sabe cuál era
+ * la jornada ordinaria del mes en que se trabajó. Si la tabla todavía no existe
+ * (migración 0003 sin aplicar) o la consulta falla, devuelve `{}` y el cálculo
+ * cae en el horario predeterminado de GPI.
+ */
+export async function getMapaHorarios(): Promise<MapaHorarios> {
+  const supabase = await getServerSupabase();
+  if (!supabase) return {};
+
+  try {
+    const { data, error } = await supabase
+      .from("horarios_mensuales")
+      .select("anio, mes, dias");
+
+    if (error || !data) return {};
+
+    const mapa: MapaHorarios = {};
+    for (const fila of data) {
+      const anio = Number(fila.anio);
+      const mes = Number(fila.mes);
+      if (!Number.isInteger(anio) || !Number.isInteger(mes)) continue;
+      mapa[claveMes(anio, mes)] = normalizarHorarioDias(fila.dias);
+    }
+    return mapa;
+  } catch {
+    return {};
+  }
+}
+
+function rowToHorario(row: Record<string, unknown>): HorarioMensualRecord {
+  return {
+    id: typeof row.id === "string" ? row.id : null,
+    anio: Number(row.anio),
+    mes: Number(row.mes),
+    dias: normalizarHorarioDias(row.dias),
+    notas: typeof row.notas === "string" && row.notas.trim() !== "" ? row.notas : null,
+    updated_at: typeof row.updated_at === "string" ? row.updated_at : null,
+  };
+}
+
+/** Horario de un mes concreto, o `null` si no está guardado. */
+export async function getHorarioMensual(
+  anio: number,
+  mes: number,
+): Promise<HorarioMensualRecord | null> {
+  const supabase = await getServerSupabase();
+  if (!supabase) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from("horarios_mensuales")
+      .select("*")
+      .eq("anio", anio)
+      .eq("mes", mes)
+      .maybeSingle();
+
+    if (error || !data) return null;
+    return rowToHorario(data);
+  } catch {
+    return null;
+  }
+}
+
+/** De dónde salió el horario que se acaba de crear (para el aviso del panel). */
+export type OrigenHorario = "existente" | "mes-anterior" | "predeterminado" | "sin-guardar";
+
+export interface HorarioResuelto {
+  horario: HorarioMensualRecord;
+  origen: OrigenHorario;
+  /** Mes del que se clonó, cuando `origen === "mes-anterior"`. */
+  clonadoDe?: { anio: number; mes: number };
+}
+
+/**
+ * Devuelve el horario del mes y, si no existe, LO CREA:
+ *   1. clonando el mes anterior si está cargado;
+ *   2. o, si no, con el horario semanal por defecto de `jornada_config`.
+ *
+ * Se llama al entrar a `/admin/horarios` para que el mes en curso siempre esté
+ * listo para editar. Si la tabla no existe todavía (migración 0003 sin aplicar)
+ * o el usuario no tiene permiso de escritura, devuelve el horario propuesto con
+ * `origen: "sin-guardar"` y la pantalla lo explica en vez de romperse.
+ */
+export async function asegurarHorarioMensual(
+  anio: number,
+  mes: number,
+): Promise<HorarioResuelto> {
+  const config = await getJornadaConfig();
+
+  const existente = await getHorarioMensual(anio, mes);
+  if (existente) return { horario: existente, origen: "existente" };
+
+  // Mes anterior como plantilla.
+  const anterior = mes === 1 ? { anio: anio - 1, mes: 12 } : { anio, mes: mes - 1 };
+  const plantilla = await getHorarioMensual(anterior.anio, anterior.mes);
+
+  const dias: HorarioDias = plantilla
+    ? clonarHorario(plantilla.dias)
+    : clonarHorario(config.horarioSemanal);
+
+  const propuesta: HorarioMensualRecord = {
+    id: null,
+    anio,
+    mes,
+    dias,
+    notas: null,
+    updated_at: null,
+  };
+
+  const supabase = await getServerSupabase();
+  if (!supabase) return { horario: propuesta, origen: "sin-guardar" };
+
+  try {
+    const { data, error } = await supabase
+      .from("horarios_mensuales")
+      .insert({ anio, mes, dias, notas: null })
+      .select("*")
+      .maybeSingle();
+
+    if (error || !data) {
+      // Puede que otro manager lo haya creado en el mismo instante: se vuelve a
+      // leer antes de dar el mes por no guardado.
+      const recien = await getHorarioMensual(anio, mes);
+      if (recien) return { horario: recien, origen: "existente" };
+      return { horario: propuesta, origen: "sin-guardar" };
+    }
+
+    return plantilla
+      ? {
+          horario: rowToHorario(data),
+          origen: "mes-anterior",
+          clonadoDe: anterior,
+        }
+      : { horario: rowToHorario(data), origen: "predeterminado" };
+  } catch {
+    return { horario: propuesta, origen: "sin-guardar" };
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /* Cuentas del equipo (`profiles`)                                     */
 /* ------------------------------------------------------------------ */
 
+/** Texto no vacío o `null` (las columnas nuevas pueden no existir todavía). */
+function textoOrNull(value: unknown): string | null {
+  return typeof value === "string" && value.trim() !== "" ? value.trim() : null;
+}
+
 function rowToProfile(row: Record<string, unknown>): ProfileRecord {
   const email = typeof row.email === "string" ? row.email : "";
+  // `username`, `cedula` y `email_contacto` llegan `undefined` mientras la
+  // migración 0003 no esté aplicada: la cuenta se identifica entonces por su
+  // correo, como antes.
   return {
     id: String(row.id),
     email,
+    username: textoOrNull(row.username) ?? usuarioDesdeEmail(email),
     full_name: typeof row.full_name === "string" && row.full_name ? row.full_name : email,
     role: normalizeRole(row.role),
-    cargo: typeof row.cargo === "string" && row.cargo ? row.cargo : null,
-    phone: typeof row.phone === "string" && row.phone ? row.phone : null,
+    cargo: textoOrNull(row.cargo),
+    phone: textoOrNull(row.phone),
+    cedula: textoOrNull(row.cedula),
+    email_contacto: textoOrNull(row.email_contacto),
     active: row.active !== false,
     created_at: typeof row.created_at === "string" ? row.created_at : null,
   };
