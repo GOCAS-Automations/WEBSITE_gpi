@@ -213,6 +213,20 @@ contraseña o eliminar la cuenta de un administrador. Eso solo lo hace un admin.
 panel ve arriba un botón **"Ir al panel"**. El Community Manager también es
 empleado de GPI, así que registra sus horas como cualquier otra persona.
 
+### A dónde aterriza cada rol al iniciar sesión
+
+| Rol | Pantalla que ve al ingresar | Cómo llega a la otra |
+| --- | --- | --- |
+| **Administrador** y **Coordinador** | **`/admin`** — el panel es su pantalla principal de trabajo | Botón **"Registrar mi jornada"** en la barra superior del panel (y un enlace igual en el dashboard) |
+| **Community Manager** | `/mi-cuenta` — su portal de jornadas | Banda **"Ir al panel"** arriba del portal |
+| **Empleado** | `/mi-cuenta` — su portal de jornadas | No tiene panel |
+
+El aterrizaje lo decide el **formulario de ingreso** (`src/app/mi-cuenta/LoginForm.tsx`)
+según el rol; **no** es un redirect del servidor. Es decir: `/mi-cuenta` visitado
+directamente **sigue mostrando el portal de jornadas a todos los roles**, incluidos
+admin y coordinador, que es donde cambian su contraseña y registran sus propias
+horas. Nadie queda encerrado en una sola pantalla.
+
 Reglas adicionales que aplica el servidor:
 
 - Nadie puede **desactivarse**, **cambiarse el rol** ni **eliminarse** a sí mismo.
@@ -311,8 +325,11 @@ predeterminado: el portal nunca se rompe.
 
 ### El empleado — portal en `/mi-cuenta`
 
-Al iniciar sesión, cualquier cuenta activa ve su portal de jornadas (las cuentas
-con acceso al panel lo ven debajo del botón **"Ir al panel"**):
+Cualquier cuenta activa tiene su portal de jornadas en `/mi-cuenta`. Empleados y
+Community Manager aterrizan ahí al ingresar; admin y coordinador entran al panel
+y llegan al portal con **"Registrar mi jornada"** (ver *A dónde aterriza cada rol
+al iniciar sesión*, en el apartado 4). Las cuentas con acceso al panel ven el
+portal debajo del botón **"Ir al panel"**:
 
 - **Registrar una jornada**: fecha del día laboral (por defecto hoy), número de
   orden de trabajo, hora de inicio, hora de finalización, descripción de la
@@ -333,15 +350,47 @@ Solo para **admin** y **coordinador**.
 
 - Lista ordenada por fecha (más reciente primero) con filtros de **estado**,
   **empleado** y **rango de fechas**. Por defecto muestra las pendientes.
+- **Los filtros se aplican al cambiarlos: ya no hay botón "Filtrar"**. Cada
+  control reescribe los parámetros de la URL (`router.replace`) y el Server
+  Component vuelve a consultar con ellos, así que el enlace sigue siendo
+  compartible, el botón atrás funciona y la pestaña `?vista=aprobaciones` no se
+  pierde. **"Limpiar"** sigue ahí: deja pendientes, todos los empleados y sin
+  rango de fechas. La barra vive en
+  `src/app/admin/jornadas/FiltrosAprobaciones.tsx` (el único trozo de cliente:
+  la consulta se sigue haciendo en el servidor).
 - Cada jornada muestra empleado, fecha, orden de trabajo, horario, duración,
   descripción, observaciones y el **desglose de horas** calculado.
 - **Aprobar** (un clic, con confirmación) o **Rechazar** (exige escribir el
   motivo, que el empleado verá en su portal).
 - **Volver a pendiente**: reabre una jornada ya revisada para corregir un error
   y, además, es la forma de **recalcular** una jornada aprobada.
+- **Eliminar** (solo managers, en cualquier estado): borra la jornada de la base
+  de datos. Ver abajo.
 
 La pestaña **Métricas** (`?vista=metricas`) añade los KPIs, las gráficas, el
 control semanal de horas extra y la exportación a CSV para nómina.
+
+### Rechazar vs. eliminar una jornada
+
+Son cosas distintas y la interfaz lo avisa antes de confirmar:
+
+| | **Rechazar** | **Eliminar** |
+| --- | --- | --- |
+| Qué pasa con el registro | Se conserva, en estado *rechazada* | Desaparece de la base de datos |
+| Qué ve el empleado | La jornada con **tu nota**, para corregirla | Nada: deja de verla en su historial |
+| ¿Se puede deshacer? | Sí (*Volver a pendiente*) | **No** |
+| Cuándo usarlo | Las horas o los datos están mal y el empleado debe corregirlos | Limpiar registros de **prueba, duplicados o creados por error** |
+
+- Está disponible en **cualquier estado** (pendiente, aprobada o rechazada): es
+  la herramienta del administrador para dejar la bandeja limpia.
+- **Doble confirmación**, igual que al eliminar una cuenta: el botón *Eliminar*
+  despliega un aviso rojo que explica la diferencia con *Rechazar*, y el botón
+  *Sí, eliminar definitivamente* pide además la confirmación del navegador.
+- Permisos: server action `deleteJornadaAsManager` en
+  `src/app/admin/jornadas/actions.ts`, con `getManagerOrNull()` en el servidor,
+  y la política RLS `jornadas_delete_manager` de la migración 0002 en la base de
+  datos. Un empleado solo puede eliminar **sus** jornadas **pendientes**
+  (`jornadas_delete_own`), como siempre.
 
 ### Congelar el desglose al aprobar
 
@@ -545,7 +594,7 @@ además, cada vez que guardas en `/admin` se llama a
 | **Contacto y ajustes** | contenido | Visibilidad de secciones, dirección, coordenadas, teléfonos/WhatsApp, correos, redes, horario, mapa, hero, banda EXCELENCIA y video de YouTube |
 | **Equipo** | managers | Cuentas del portal: crear, editar, roles, activar/desactivar, contraseñas y eliminación |
 | **Horarios** | managers | Horario laboral de cada mes (base de la jornada ordinaria y de las horas extra) |
-| **Jornadas** | managers | Revisión y aprobación de jornadas con desglose de horas + tablero de métricas |
+| **Jornadas** | managers | Revisión de jornadas con desglose de horas: aprobar, rechazar, volver a pendiente y **eliminar** + tablero de métricas |
 
 *"contenido" = admin, coordinador y Community Manager · "managers" = admin y
 coordinador*
@@ -564,8 +613,8 @@ Siempre se muestra una vista previa.
 
 ### Navegación del panel
 
-- Barra superior siempre visible con el rol de la sesión, **Ver sitio** y
-  **Cerrar sesión**.
+- Barra superior siempre visible con el rol de la sesión, **Registrar mi
+  jornada** (lleva a `/mi-cuenta`), **Ver sitio** y **Cerrar sesión**.
 - Menú lateral en escritorio y tabs desplazables en móvil, con la sección activa
   resaltada. Las secciones internas (Equipo, Horarios, Jornadas) solo aparecen
   para managers.
@@ -598,6 +647,11 @@ el contenido estático; `/mi-cuenta` mostrará el aviso de "próximamente" y
 - La verificación **autoritativa** de rol vive en `src/app/admin/layout.tsx`, en
   cada página de sección (`requireManager`) y en **cada server action**
   (`getContentEditorOrNull` / `getManagerOrNull` / `getActiveSession`).
+- El **aterrizaje por rol tras el ingreso** (admin y coordinador → `/admin`) lo
+  hace el cliente en `src/app/mi-cuenta/LoginForm.tsx` con `router.replace`. A
+  propósito **no** es un redirect de servidor: `/mi-cuenta` debe seguir siendo
+  accesible para todos los roles, y un redirect en esa ruta crearía un bucle con
+  la redirección optimista de `/admin` del proxy.
 - Módulos clave:
   - `src/lib/roles.ts` — roles, etiquetas y helpers (módulo puro).
   - `src/lib/usuarios.ts` — usuario ↔ correo sintético del portal (módulo puro).

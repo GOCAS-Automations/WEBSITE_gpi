@@ -15,6 +15,7 @@ import {
   ArrowRight,
   User,
   Clock,
+  ClockPlus,
   Calendar,
 } from "@/lib/icons";
 
@@ -60,7 +61,12 @@ function useIsActive() {
 
 /**
  * Estructura del panel: sidebar persistente en escritorio, tabs desplazables en
- * móvil, y acciones siempre visibles ("Ver sitio" y "Cerrar sesión").
+ * móvil, y acciones siempre visibles ("Registrar mi jornada", "Ver sitio" y
+ * "Cerrar sesión").
+ *
+ * "Registrar mi jornada" lleva a `/mi-cuenta`: desde julio de 2026 el panel es
+ * la pantalla principal de admins y coordinadores, así que necesitan un camino
+ * corto —y sin scroll— hacia su propio portal de horas.
  */
 export function AdminShell({
   identificador,
@@ -96,6 +102,15 @@ export function AdminShell({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            {/* Quien entra al panel también es empleado de GPI: este es su
+                camino de vuelta al portal para registrar sus propias horas. */}
+            <Link
+              href="/mi-cuenta"
+              className="inline-flex items-center gap-1.5 rounded-full border border-brand/40 bg-brand-tint px-4 py-2 text-sm font-semibold text-brand-deep transition-colors hover:border-brand hover:bg-brand/15"
+            >
+              <ClockPlus className="h-4 w-4" />
+              Registrar mi jornada
+            </Link>
             <a
               href="/"
               target="_blank"

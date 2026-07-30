@@ -1,12 +1,17 @@
 /**
  * VISTA "APROBACIONES" de /admin/jornadas
  * =======================================
- * Es la pantalla de siempre: filtros por estado/empleado/fechas (formulario GET,
- * funciona sin JavaScript) y una ficha por jornada con su desglose y los botones
- * de aprobar / rechazar / reabrir.
+ * Filtros por estado/empleado/fechas y una ficha por jornada con su desglose y
+ * los botones de aprobar / rechazar / reabrir / eliminar.
  *
- * Se extrajo de `page.tsx` cuando la pantalla se dividió en dos pestañas
- * (Aprobaciones y Métricas); el comportamiento no cambió.
+ * Los filtros siguen viviendo en la URL y consultándose AQUÍ, en el servidor;
+ * lo único que es cliente es la barra que los reescribe (`FiltrosAprobaciones`),
+ * para que se apliquen al cambiar en vez de con un botón "Filtrar".
+ *
+ * ELIMINAR ≠ RECHAZAR: rechazar conserva el registro con una nota que el
+ * empleado lee para corregir; eliminar lo borra de la base de datos y el
+ * empleado deja de verlo. Eliminar existe para limpiar registros de prueba o
+ * equivocados y está disponible en cualquier estado (solo managers).
  */
 
 import Link from "next/link";
@@ -17,19 +22,19 @@ import {
   listProfiles,
 } from "@/lib/admin";
 import {
+  JORNADA_FILTRO_ESTADOS,
+  JORNADA_FILTRO_ESTADO_DEFECTO,
   JORNADA_STATUS_CLASSES,
   JORNADA_STATUS_LABELS,
   type JornadaStatus,
 } from "@/lib/admin-types";
-import {
-  AyudaSeccion,
-  Badge,
-  Card,
-  EmptyState,
-  inputClass,
-} from "@/components/admin/ui";
+import { AyudaSeccion, Badge, Card, EmptyState } from "@/components/admin/ui";
 import { JornadaBreakdown } from "@/components/jornadas/JornadaBreakdown";
-import { ReopenAction, ReviewActions } from "@/components/jornadas/ReviewActions";
+import {
+  DeleteJornadaAction,
+  ReopenAction,
+  ReviewActions,
+} from "@/components/jornadas/ReviewActions";
 import {
   formatearDuracion,
   formatearFechaLarga,
@@ -37,15 +42,14 @@ import {
   horaColombia,
   obtenerDesglose,
 } from "@/lib/jornada";
-import { approveJornada, rejectJornada, reopenJornada } from "./actions";
+import {
+  approveJornada,
+  deleteJornadaAsManager,
+  rejectJornada,
+  reopenJornada,
+} from "./actions";
+import { FiltrosAprobaciones } from "./FiltrosAprobaciones";
 import { Info } from "@/lib/icons";
-
-export const ESTADOS: { value: string; label: string }[] = [
-  { value: "pendiente", label: "Pendientes" },
-  { value: "aprobada", label: "Aprobadas" },
-  { value: "rechazada", label: "Rechazadas" },
-  { value: "todas", label: "Todas" },
-];
 
 export async function AprobacionesView({
   estado: estadoRaw,
@@ -58,9 +62,9 @@ export async function AprobacionesView({
   desde: string;
   hasta: string;
 }) {
-  const estado = ESTADOS.some((e) => e.value === estadoRaw)
+  const estado = JORNADA_FILTRO_ESTADOS.some((e) => e.value === estadoRaw)
     ? (estadoRaw as JornadaStatus | "todas")
-    : "pendiente";
+    : JORNADA_FILTRO_ESTADO_DEFECTO;
 
   const [jornadas, empleados, config, horarios] = await Promise.all([
     listJornadas({
@@ -105,85 +109,23 @@ export async function AprobacionesView({
             </Link>
             , la devuelves a pendiente y la vuelves a aprobar.
           </li>
+          <li>
+            <strong>Rechazar no es eliminar:</strong> al{" "}
+            <strong>rechazar</strong>, la jornada se queda en el sistema y el
+            empleado ve tu nota para corregirla. Al <strong>eliminar</strong>,
+            la jornada desaparece para siempre y él deja de verla en su
+            historial: úsalo solo para limpiar registros de prueba o
+            equivocados.
+          </li>
         </ul>
       </AyudaSeccion>
 
-      {/* ---------------- Filtros (formulario GET, sin JavaScript) ------- */}
+      {/* ------ Filtros: se aplican al cambiar, sin botón "Filtrar" ------ */}
       <Card className="mb-6">
-        <form method="get" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          {/* Mantiene la pestaña actual al enviar el formulario. */}
-          <input type="hidden" name="vista" value="aprobaciones" />
-
-          <label className="block">
-            <span className="mb-1.5 block text-sm font-semibold text-ink">
-              Estado
-            </span>
-            <select name="estado" defaultValue={estado} className={inputClass}>
-              {ESTADOS.map((e) => (
-                <option key={e.value} value={e.value}>
-                  {e.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="block">
-            <span className="mb-1.5 block text-sm font-semibold text-ink">
-              Empleado
-            </span>
-            <select
-              name="empleado"
-              defaultValue={empleadoId}
-              className={inputClass}
-            >
-              <option value="">Todos</option>
-              {empleados.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.full_name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="block">
-            <span className="mb-1.5 block text-sm font-semibold text-ink">
-              Desde
-            </span>
-            <input
-              type="date"
-              name="desde"
-              defaultValue={desde}
-              className={inputClass}
-            />
-          </label>
-
-          <label className="block">
-            <span className="mb-1.5 block text-sm font-semibold text-ink">
-              Hasta
-            </span>
-            <input
-              type="date"
-              name="hasta"
-              defaultValue={hasta}
-              className={inputClass}
-            />
-          </label>
-
-          <div className="flex items-end gap-2">
-            <button
-              type="submit"
-              className="inline-flex items-center gap-1.5 rounded-full bg-brand-dark px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-deep"
-            >
-              Filtrar
-            </button>
-            <Link
-              href="/admin/jornadas"
-              className="inline-flex items-center rounded-full border border-line bg-white px-4 py-2.5 text-sm font-semibold text-ink-soft transition-colors hover:border-brand hover:text-brand-dark"
-            >
-              Limpiar
-            </Link>
-          </div>
-        </form>
+        <FiltrosAprobaciones
+          valores={{ estado, empleado: empleadoId, desde, hasta }}
+          empleados={empleados.map((p) => ({ id: p.id, nombre: p.full_name }))}
+        />
       </Card>
 
       {jornadas.length === 0 ? (
@@ -269,7 +211,10 @@ export async function AprobacionesView({
                       </div>
                     )}
 
-                    <div className="pt-1">
+                    {/* Revisión según el estado y, aparte, la eliminación
+                        definitiva: va bajo una línea para que no se confunda
+                        con rechazar. */}
+                    <div className="space-y-3 pt-1">
                       {jornada.status === "pendiente" ? (
                         <ReviewActions
                           id={jornada.id}
@@ -280,6 +225,14 @@ export async function AprobacionesView({
                       ) : (
                         <ReopenAction id={jornada.id} action={reopenJornada} />
                       )}
+                      <div className="border-t border-line pt-3">
+                        <DeleteJornadaAction
+                          id={jornada.id}
+                          empleado={empleado}
+                          fecha={formatearFechaLarga(jornada.work_date)}
+                          action={deleteJornadaAsManager}
+                        />
+                      </div>
                     </div>
                   </div>
 

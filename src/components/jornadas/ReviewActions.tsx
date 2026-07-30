@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { idleState, type ActionState } from "@/lib/admin-types";
-import { Check, Close, Info } from "@/lib/icons";
+import { AlertTriangle, Check, Close, Info, Trash } from "@/lib/icons";
 import { inputClass } from "@/components/admin/ui";
 
 type Accion = (state: ActionState, formData: FormData) => Promise<ActionState>;
@@ -158,5 +158,90 @@ export function ReopenAction({
         <span className="mt-1 text-xs text-red-600">{state.message}</span>
       )}
     </form>
+  );
+}
+
+/**
+ * Eliminar una jornada definitivamente (solo managers, cualquier estado).
+ *
+ * DOBLE BARRERA, igual que al eliminar una cuenta del equipo:
+ *  1. El botón "Eliminar" no borra: despliega un aviso rojo que explica la
+ *     diferencia con "Rechazar" (ahí el registro se conserva con una nota).
+ *  2. El botón de confirmación pide además la confirmación del navegador.
+ * El servidor vuelve a comprobar el rol antes de borrar nada.
+ */
+export function DeleteJornadaAction({
+  id,
+  empleado,
+  fecha,
+  action,
+}: {
+  id: string;
+  empleado: string;
+  /** Fecha legible del turno, para que el aviso diga cuál se va a borrar. */
+  fecha: string;
+  action: Accion;
+}) {
+  const [state, formAction, pending] = useActionState(action, idleState);
+  const [abierto, setAbierto] = useState(false);
+
+  return (
+    <div className="inline-flex flex-col items-start gap-2">
+      <button
+        type="button"
+        onClick={() => setAbierto((v) => !v)}
+        disabled={pending}
+        className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3.5 py-2 text-xs font-semibold text-graphite transition-colors hover:border-red-300 hover:bg-red-50 hover:text-red-600 disabled:opacity-60"
+      >
+        <Trash className="h-3.5 w-3.5" />
+        {abierto ? "Cancelar eliminación" : "Eliminar"}
+      </button>
+
+      {abierto && (
+        <form
+          action={formAction}
+          onSubmit={(event) => {
+            if (
+              !window.confirm(
+                `Vas a eliminar definitivamente la jornada de ${empleado} del ${fecha}.\n\nDesaparece del sistema y el empleado dejará de verla en su historial. Esta acción NO se puede deshacer.\n\n¿Continuar?`,
+              )
+            ) {
+              event.preventDefault();
+            }
+          }}
+          className="max-w-md space-y-2 rounded-2xl border border-red-200 bg-red-50/70 p-4"
+        >
+          <input type="hidden" name="id" value={id} />
+          <p className="flex items-start gap-1.5 text-sm font-bold text-red-700">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            Se elimina para siempre
+          </p>
+          <p className="text-xs leading-relaxed text-graphite">
+            La jornada de <strong>{empleado}</strong> del {fecha} desaparece del
+            sistema y <strong>el empleado dejará de verla en su historial</strong>
+            . Úsalo solo para limpiar registros de prueba o equivocados.
+          </p>
+          <p className="text-xs leading-relaxed text-graphite">
+            Si lo que pasa es que la jornada <strong>no es válida</strong>, usa{" "}
+            <strong>Rechazar</strong> con una nota: así el registro queda y el
+            empleado lee qué debe corregir.
+          </p>
+          <button
+            type="submit"
+            disabled={pending}
+            className="inline-flex items-center gap-1.5 rounded-full bg-red-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-red-700 disabled:pointer-events-none disabled:opacity-60"
+          >
+            <Trash className="h-3.5 w-3.5" />
+            {pending ? "Eliminando…" : "Sí, eliminar definitivamente"}
+          </button>
+        </form>
+      )}
+
+      {state.status === "error" && state.message && (
+        <span role="alert" className="text-xs text-red-600">
+          {state.message}
+        </span>
+      )}
+    </div>
   );
 }

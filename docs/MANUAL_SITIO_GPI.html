@@ -846,8 +846,20 @@
       <em>Sol-Andes42</em>.</li>
     <li>Pulse <span class="ui">Ingresar</span>. Mientras verifica, el botón dice
       <span class="ui">Verificando…</span>.</li>
-    <li>Si los datos son correctos entrará directamente a su portal de jornadas.</li>
+    <li>Si los datos son correctos, el sistema lo lleva a la pantalla que le corresponde
+      según su rol: los <strong>administradores y coordinadores</strong> entran
+      directamente al <strong>panel de administración</strong>; el
+      <strong>Community Manager</strong> y los <strong>empleados</strong> entran a su
+      <strong>portal de jornadas</strong>.</li>
   </ol>
+  <div class="caja nota">
+    <span class="titulo">Para tener en cuenta</span>
+    <p>Que un administrador entre al panel <strong>no</strong> quiere decir que pierda su
+    portal de jornadas: en la barra superior del panel tiene el botón
+    <span class="ui">Registrar mi jornada</span>, que lo lleva a registrar sus propias
+    horas y a cambiar su contraseña. Y al revés: desde el portal siempre puede volver con
+    <span class="ui">Ir al panel</span>.</p>
+  </div>
   <div class="caja nota">
     <span class="titulo">Para tener en cuenta</span>
     <p>El equipo de GPI no tiene correo corporativo, así que el sistema crea internamente
@@ -939,6 +951,23 @@
     quién <em>aprueba</em> las jornadas de los demás y quién puede editar el contenido.</p>
   </div>
 
+  <h3>Qué ve cada rol al ingresar</h3>
+  <div class="tabla-wrap">
+    <table class="keep">
+      <thead>
+        <tr><th style="width:30%">Rol</th><th style="width:35%">Pantalla al entrar</th><th>Cómo llega a la otra</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Administrador y Coordinador</td><td>El <strong>panel de administración</strong>: es su pantalla principal de trabajo</td><td>Botón <span class="ui">Registrar mi jornada</span>, arriba en el panel</td></tr>
+        <tr><td>Community Manager</td><td>Su <strong>portal de jornadas</strong></td><td>Botón <span class="ui">Ir al panel</span>, arriba en el portal</td></tr>
+        <tr><td>Empleado</td><td>Su <strong>portal de jornadas</strong></td><td>No tiene panel</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Nadie queda encerrado en una sola pantalla: los administradores y coordinadores
+  conservan íntegro su portal de jornadas —registrar horas, ver su historial y cambiar su
+  contraseña— y solo cambia por dónde empiezan.</p>
+
   <h2 id="s4-3"><span class="num">4.3</span> Tabla de permisos</h2>
   <div class="tabla-wrap">
     <table>
@@ -992,7 +1021,10 @@
   una jornada toma menos de un minuto y reemplaza el formulario que GPI llenaba antes.</p>
 
   <h2 id="s5-1"><span class="num">5.1</span> Qué verá al entrar</h2>
-  <p>Nada más ingresar verá, de arriba abajo:</p>
+  <p>Los empleados y el Community Manager llegan a esta pantalla nada más ingresar; los
+  administradores y coordinadores entran al panel y llegan aquí con el botón
+  <span class="ui-wrap">Registrar mi jornada</span>. En cualquiera de los dos casos verá,
+  de arriba abajo:</p>
   <ol class="steps">
     <li>Una <strong>barra blanca</strong> con el saludo «Hola, <em>su nombre</em>» y, si lo
       tiene registrado, su cargo. A la derecha, los botones
@@ -1090,6 +1122,14 @@
   <p>Si una jornada aprobada o rechazada tiene un error, pídale a su coordinador que la
   <strong>devuelva a pendiente</strong>: podrá corregirla y volver a enviarla. El propio
   portal lo recuerda al final de la página.</p>
+  <div class="caja nota">
+    <span class="titulo">Para tener en cuenta</span>
+    <p>Un administrador o coordinador también puede <strong>eliminar</strong> una jornada
+    por completo, en cualquier estado. Se usa para limpiar registros de prueba o creados por
+    error: si eso pasa, la jornada desaparece de <span class="ui">Mis jornadas</span>. Un
+    rechazo, en cambio, nunca borra nada: la jornada sigue ahí con la nota de su
+    coordinador.</p>
+  </div>
 
   <h2 id="s5-6"><span class="num">5.6</span> Mis jornadas: el historial</h2>
   <p>Bajo el formulario está <span class="ui">Mis jornadas</span>, con una tarjeta por
@@ -1157,14 +1197,17 @@
   que le corresponden.</p>
 
   <h2 id="s6-1"><span class="num">6.1</span> Vista general y navegación</h2>
-  <p>Se llega al panel desde el botón <span class="ui">Ir al panel</span> que aparece
-  arriba en Mi Cuenta, después de ingresar.</p>
+  <p>Los <strong>administradores y coordinadores</strong> llegan al panel directamente al
+  ingresar. El <strong>Community Manager</strong> llega desde el botón
+  <span class="ui">Ir al panel</span> que aparece arriba en Mi Cuenta.</p>
 
   <h3>La barra superior</h3>
   <p>Siempre visible, indica <span class="ui-wrap">Panel de administración</span>, con qué
   usuario está la sesión iniciada y su rol. A la derecha:
-  <span class="ui">Ver sitio</span> (abre la web pública en una pestaña nueva, para
-  comprobar los cambios sin perder el panel) y <span class="ui">Cerrar sesión</span>.</p>
+  <span class="ui-wrap">Registrar mi jornada</span> (lleva a Mi Cuenta, para anotar sus
+  propias horas o cambiar su contraseña), <span class="ui">Ver sitio</span> (abre la web
+  pública en una pestaña nueva, para comprobar los cambios sin perder el panel) y
+  <span class="ui">Cerrar sesión</span>.</p>
 
   <h3>El menú de secciones</h3>
   <p>En computador aparece como una <strong>columna a la izquierda</strong> que acompaña
@@ -1192,9 +1235,10 @@
 
   <h3>El Dashboard</h3>
   <p>Es la primera pantalla. Saluda por el nombre, recuerda con qué rol entró y qué puede
-  hacer, y presenta una tarjeta por cada sección con un contador («11 servicios»,
-  «3 pendientes»…) y el enlace <span class="ui">Administrar</span>. Abajo hay dos tarjetas
-  de ayuda permanente sobre la visibilidad y sobre cómo funcionan las imágenes.</p>
+  hacer, ofrece el enlace <span class="ui-wrap">Registrar mi jornada</span> y presenta una
+  tarjeta por cada sección con un contador («11 servicios», «3 pendientes»…) y el enlace
+  <span class="ui">Administrar</span>. Abajo hay dos tarjetas de ayuda permanente sobre la
+  visibilidad y sobre cómo funcionan las imágenes.</p>
 
   <h3>Cómo volver atrás</h3>
   <p>Cada sección tiene arriba una ruta de migas (<em>Panel / Servicios / Editar</em>) y el
@@ -1606,17 +1650,24 @@
   defecto) y <span class="ui">Métricas</span>. Se cambia de una a otra con un clic.</p>
 
   <h3>Filtrar lo que quiere revisar</h3>
-  <p>Arriba hay cuatro filtros y dos botones:</p>
+  <p>Arriba hay cuatro filtros. <strong>Se aplican solos, en cuanto los cambia</strong>: no
+  hay botón «Filtrar» que pulsar.</p>
   <ul class="check">
     <li><span class="ui">Estado</span>: Pendientes (viene puesto por defecto), Aprobadas,
       Rechazadas o Todas.</li>
     <li><span class="ui">Empleado</span>: Todos, o una persona concreta.</li>
     <li><span class="ui">Desde</span> y <span class="ui">Hasta</span>: el rango de fechas.</li>
-    <li><span class="ui">Filtrar</span> aplica los filtros; <span class="ui">Limpiar</span>
-      los borra todos.</li>
+    <li><span class="ui">Limpiar</span> los borra todos y vuelve a la vista inicial:
+      pendientes, de todos los empleados y sin rango de fechas.</li>
   </ul>
-  <p>Bajo los filtros se indica cuántas jornadas se encontraron. Vienen ordenadas de la más
-  reciente a la más antigua.</p>
+  <p>Mientras la lista se actualiza aparece un breve <em>Actualizando…</em> junto al botón
+  Limpiar. Bajo los filtros se indica cuántas jornadas se encontraron. Vienen ordenadas de
+  la más reciente a la más antigua.</p>
+  <div class="caja tip">
+    <span class="titulo">Consejo</span>
+    <p>La dirección de la página guarda los filtros que puso, así que puede copiarla y
+    enviársela a alguien: verá exactamente la misma lista.</p>
+  </div>
 
   <h3>Revisar una jornada</h3>
   <p>Cada jornada es una tarjeta con dos mitades. A la izquierda, los datos que escribió el
@@ -1654,10 +1705,31 @@
   </ol>
 
   <h3>Devolver una jornada a pendiente</h3>
-  <p>En una jornada ya aprobada o rechazada aparece un único botón:
+  <p>En una jornada ya aprobada o rechazada aparece el botón
   <span class="ui-wrap">Volver a pendiente</span>. Se usa cuando hay que corregir un error
   después de haber revisado. Al confirmar, <strong>se borra la nota de revisión</strong> y
   el empleado vuelve a poder editar su jornada.</p>
+
+  <h3>Eliminar una jornada</h3>
+  <p>Bajo los botones de revisión, separado por una línea, está
+  <span class="ui">Eliminar</span>. Está disponible en cualquier estado —pendiente,
+  aprobada o rechazada— y solo lo ven el administrador y el coordinador.</p>
+  <div class="caja warn">
+    <span class="titulo">Atención — no confunda rechazar con eliminar</span>
+    <p><strong>Rechazar</strong> conserva la jornada: queda en el sistema marcada como
+    rechazada y el empleado lee su nota para corregirla. <strong>Eliminar</strong> la borra
+    para siempre y <strong>el empleado deja de verla en su historial</strong>. Si la jornada
+    simplemente no es válida, use <em>Rechazar</em> con una nota; deje
+    <em>Eliminar</em> para limpiar registros de prueba, duplicados o creados por error.</p>
+  </div>
+  <ol class="steps">
+    <li>Pulse <span class="ui">Eliminar</span>. No borra nada todavía: se despliega un aviso
+      rojo que recuerda la diferencia con rechazar. El botón cambia a
+      <span class="ui-wrap">Cancelar eliminación</span>, por si se equivocó.</li>
+    <li>Pulse <span class="ui-wrap">Sí, eliminar definitivamente</span>.</li>
+    <li>Confirme una segunda vez en el aviso del navegador. Esta acción
+      <strong>no se puede deshacer</strong>.</li>
+  </ol>
   <div class="caja tip">
     <span class="titulo">Consejo</span>
     <p>Revise las jornadas al menos una vez a la semana, antes del cierre de nómina. El

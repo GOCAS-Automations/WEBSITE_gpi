@@ -9,9 +9,17 @@
  *   · si contiene "@" se envía tal cual (cuentas antiguas con correo real);
  *   · si no, se convierte al correo sintético interno del portal.
  *
- * Tras un ingreso correcto solo se refresca el árbol de servidor: la propia
- * página `/mi-cuenta` decide qué mostrar (portal de jornadas y, para quien
- * tenga permisos, también el acceso al panel).
+ * A DÓNDE SE ATERRIZA TRAS INGRESAR
+ * ---------------------------------
+ * · **Administrador y coordinador** → directo a `/admin`: el panel es su
+ *   pantalla principal de trabajo (ahí aprueban jornadas, editan horarios y
+ *   contenido). Desde el panel siempre pueden volver con "Registrar mi jornada".
+ * · **Community Manager y empleado** → se quedan en `/mi-cuenta`, su portal de
+ *   jornadas; quien tiene permisos de contenido ve arriba "Ir al panel".
+ *
+ * OJO: esto es solo el aterrizaje del ingreso. `/mi-cuenta` visitado
+ * directamente SIGUE mostrando el portal de jornadas para cualquier rol —ahí
+ * cambian su contraseña y registran sus horas—, así que nadie queda encerrado.
  */
 
 import Link from "next/link";
@@ -19,6 +27,7 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 import { credencialDeAcceso } from "@/lib/usuarios";
+import { isManagerRole, normalizeRole } from "@/lib/roles";
 import { Lock, User, ArrowRight } from "@/lib/icons";
 
 const inputClass =
@@ -77,6 +86,14 @@ export function LoginForm() {
     if (profile?.active === false) {
       await supabase.auth.signOut();
       setStatus({ kind: "inactive" });
+      return;
+    }
+
+    // Managers (admin y coordinador): el panel es su pantalla principal.
+    // El resto se queda aquí, en su portal de jornadas.
+    if (isManagerRole(normalizeRole(profile?.role))) {
+      router.replace("/admin");
+      router.refresh();
       return;
     }
 

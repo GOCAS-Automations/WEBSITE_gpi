@@ -3,9 +3,10 @@
 /**
  * SERVER ACTIONS — Aprobación de jornadas (/admin/jornadas)
  * =========================================================
- * Solo managers (admin | coordinador) con la cuenta activa pueden aprobar o
- * rechazar. La comprobación se hace aquí, en el servidor, además de las
- * políticas RLS `jornadas_update_manager` de la migración 0002.
+ * Solo managers (admin | coordinador) con la cuenta activa pueden aprobar,
+ * rechazar o eliminar. La comprobación se hace aquí, en el servidor, además de
+ * las políticas RLS `jornadas_update_manager` y `jornadas_delete_manager` de la
+ * migración 0002.
  *
  * DESGLOSE CONGELADO (migración 0004)
  * -----------------------------------
@@ -240,5 +241,48 @@ export async function reopenJornada(
     status: "success",
     message:
       "La jornada volvió a quedar pendiente de revisión y sus horas se recalculan con el horario del mes vigente.",
+  };
+}
+
+/**
+ * ELIMINA una jornada definitivamente, en cualquier estado.
+ *
+ * Es la herramienta del manager para limpiar registros de prueba o duplicados:
+ * la fila desaparece de la base de datos y el empleado deja de verla en su
+ * historial. NO es lo mismo que **rechazar** —ahí el registro se conserva con
+ * una nota que el empleado lee para corregir—, así que la interfaz avisa de la
+ * diferencia antes de confirmar.
+ *
+ * A nivel de datos lo permite la política RLS `jornadas_delete_manager`
+ * (migración 0002); aquí se vuelve a exigir el rol, que es la barrera real.
+ */
+export async function deleteJornadaAsManager(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await getManagerOrNull();
+  if (!session) return SIN_PERMISO;
+
+  const id = text(formData, "id");
+  if (!id) return fail("Falta el identificador de la jornada.");
+
+  // `select("id")` permite distinguir "no existe / no tengo permiso" de un
+  // borrado real: sin él, eliminar cero filas se vería como un éxito.
+  const { data, error } = await session.supabase
+    .from("jornadas")
+    .delete()
+    .eq("id", id)
+    .select("id");
+
+  if (error) return fail(error.message);
+  if (!data || data.length === 0)
+    return fail(
+      "No se pudo eliminar: esa jornada ya no existe o tu cuenta no tiene permiso. Recarga la página.",
+    );
+
+  revalidar();
+  return {
+    status: "success",
+    message: "Jornada eliminada definitivamente.",
   };
 }

@@ -12,6 +12,7 @@ import {
   Sliders,
   User,
   Clock,
+  ClockPlus,
   Calendar,
   ArrowRight,
 } from "@/lib/icons";
@@ -126,6 +127,18 @@ export default async function AdminDashboardPage() {
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-graphite">
           Entraste como <strong>{ROLE_LABELS[profile.role]}</strong>.{" "}
           {ROLE_DESCRIPTIONS[profile.role]}
+        </p>
+        {/* El panel es la pantalla principal de quien administra, pero también
+            es empleado de GPI: este es el atajo a su propio portal de horas. */}
+        <p className="mt-3 text-sm text-graphite">
+          ¿Vas a registrar tus propias horas?{" "}
+          <Link
+            href="/mi-cuenta"
+            className="inline-flex items-center gap-1 font-semibold text-brand-dark transition-colors hover:text-brand-deep"
+          >
+            <ClockPlus className="h-4 w-4" />
+            Registrar mi jornada
+          </Link>
         </p>
       </header>
 

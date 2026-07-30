@@ -1,6 +1,6 @@
 # Plan del proyecto — Sitio web GPI
 
-Estado al **28 de julio de 2026**. Este documento existe para que cualquier
+Estado al **30 de julio de 2026**. Este documento existe para que cualquier
 sesión futura (humana o de Claude) arranque con contexto completo sin tener
 que reconstruir el historial desde los commits.
 
@@ -9,13 +9,14 @@ que reconstruir el historial desde los commits.
 | # | Fase | Estado | Notas |
 | - | --- | --- | --- |
 | 1 | Sitio base: 16 páginas + SEO | ✅ Hecho | App Router, Tailwind v4, metadata por página, JSON-LD `Organization`/`LocalBusiness`/`FAQPage`, `sitemap.ts`, `robots.ts`, breadcrumbs y navegación anterior/siguiente entre servicios. |
-| 2 | Mi Cuenta GPI + panel admin CRUD | ✅ Código listo | `/mi-cuenta` (login) y `/admin` (servicios, proyectos, clientes, FAQ, valores, contacto/ajustes) construidos sobre Supabase. **Falta**: aplicar `supabase/migrations/0001_site_content.sql` en el proyecto **"GPI Project"** de Supabase y configurar `.env.local` (ver `docs/ADMIN.md`). |
-| 3 | Conexión a DB real y prueba end-to-end en local | ⏳ Pendiente | Depende de las fases 2 y 4: una vez aplicadas las migraciones y configuradas las env vars, probar login, CRUD completo, creación de cuentas, registro y aprobación de jornadas, y que el fallback estático siga funcionando si se apagan las variables. |
+| 2 | Mi Cuenta GPI + panel admin CRUD | ✅ Completa | `/mi-cuenta` (login) y `/admin` (servicios, proyectos, clientes, FAQ, valores, contacto/ajustes) sobre Supabase. Migración 0001 aplicada y `.env.local` configurado. |
+| 3 | Conexión a DB real y prueba end-to-end | ✅ Completa | Migraciones 0001–0004 aplicadas en el GPI Project; 8 cuentas del equipo creadas; testing completo del cliente ejecutado el 30 jul (plan en `docs/PLAN_PRUEBAS.md`). |
 | 4 | Fase 2 del proyecto — Núcleo de horas extra | ✅ Completa | Roles ampliados, CRUD de empleados con cuentas, portal del empleado con registro de jornadas, aprobaciones y visibilidad del contenido. Migraciones 0001 y 0002 **ya aplicadas** en el GPI Project (27 jul 2026); `SUPABASE_SERVICE_ROLE_KEY` configurada en `.env.local`. |
 | 4b | Fase 2 — Tablero de métricas de horas extra | ✅ Completa | `/admin/jornadas?vista=metricas`: 4 KPIs, gráficas Recharts (por día, por empleado, extras, Gantt de turnos), filtros client-side, control semanal contra topes legales, glosario amable y export CSV para nómina. |
-| 4c | Fase 2 — Iteración post-feedback de GPI | ✅ Código listo | Horarios laborales **mes a mes** (`/admin/horarios`), cuentas por **usuario** en vez de correo, y el rol *marketing* pasa a llamarse **Community Manager** (y también registra jornadas). **Falta**: aplicar `supabase/migrations/0003_horarios_mensuales.sql` en el GPI Project. |
-| 4d | Fase 2 — Desglose congelado + ayudas del panel | ✅ Código listo | Al **aprobar** una jornada su desglose de horas se guarda tal cual, con el horario y los recargos que se usaron: los reportes de nómina ya cerrados no cambian si después se corrige un horario. Además, textos de ayuda en todo el panel para usuarios no técnicos. **Falta**: aplicar `supabase/migrations/0004_congelar_desglose.sql` en el GPI Project (el código funciona igual sin ella: calcula en vivo). |
-| 5 | Deploy en Vercel desde el repo de GitHub + variables de entorno | ⏳ Pendiente | Repo: `GOCAS-Automations/website_GPI`. Cuenta Vercel: GOCAS Automations (plan gratis). Recordar añadir `SUPABASE_SERVICE_ROLE_KEY` **sin** prefijo `NEXT_PUBLIC_`. |
+| 4c | Fase 2 — Iteración post-feedback de GPI | ✅ Código listo | Horarios laborales **mes a mes** (`/admin/horarios`), cuentas por **usuario** en vez de correo, y el rol *marketing* pasa a llamarse **Community Manager** (y también registra jornadas). Migración 0003 aplicada. |
+| 4d | Fase 2 — Desglose congelado + ayudas del panel | ✅ Código listo | Al **aprobar** una jornada su desglose de horas se guarda tal cual, con el horario y los recargos que se usaron: los reportes de nómina ya cerrados no cambian si después se corrige un horario. Además, textos de ayuda en todo el panel para usuarios no técnicos. Migración 0004 aplicada. |
+| 4e | Fase 2 — Ajustes del testing del cliente (30 jul) | ✅ Hecho | El panel pasa a ser la pantalla principal de admin y coordinador, los managers pueden **eliminar** jornadas y los filtros de aprobaciones se aplican al cambiar. **Sin migración nueva.** |
+| 5 | Deploy en Vercel desde el repo de GitHub + variables de entorno | ✅ Completa | **https://website-gpi.vercel.app** — despliega solo con cada push a `main`; las 3 env vars configuradas (incl. `SUPABASE_SERVICE_ROLE_KEY` sin prefijo). Verificado en vivo: 7 cabeceras de seguridad, 9 rutas 200, `/admin` protegido. |
 | 6 | Apuntar dominio `gpiprofesionales.com` de GoDaddy → Vercel | ⏳ Pendiente | Al final, cuando el sitio esté aprobado por GPI y desplegado en Vercel. |
 | 7 | Extra cotizable aparte: chatbot IA | 💡 Planeado | Claude Haiku 4.5 vía `/api/chat`, con conocimiento del contenido del sitio (servicios, proyectos, contacto) y captura de leads hacia Supabase. No incluido en la cotización actual. |
 
@@ -27,7 +28,7 @@ que reconstruir el historial desde los commits.
 | Roles `admin` / `coordinador` / `marketing` / `empleado` | `src/lib/roles.ts` + guardas en `src/lib/supabase/auth.ts` |
 | Cliente service-role (Auth Admin API) | `src/lib/supabase/admin.ts` — **solo servidor** |
 | CRUD de cuentas del equipo | `/admin/empleados` (+ `nuevo`, `[id]`) |
-| Aprobación de jornadas | `/admin/jornadas` |
+| Aprobación (y eliminación) de jornadas | `/admin/jornadas` |
 | Portal del empleado (registro + historial + contraseña) | `/mi-cuenta` |
 | Cálculo de horas ordinarias, extra, nocturnas y dominicales | `src/lib/jornada.ts` (función pura `calcularJornada`) |
 | Visibilidad por ítem (`published`) y por sección (`visibility`) | Formularios de `/admin/*` y `/admin/ajustes` |
@@ -41,7 +42,9 @@ previa del desglose) → queda **pendiente** → un **coordinador o admin** la v
 `/admin/jornadas` con el desglose calculado y la **aprueba** o la **rechaza con
 una nota obligatoria** → el empleado ve el resultado y la nota en su portal.
 Mientras esté pendiente puede editarla o eliminarla; después queda congelada
-(un manager puede devolverla a pendiente).
+(un manager puede devolverla a pendiente). Un manager puede además **eliminarla
+definitivamente** en cualquier estado, para limpiar registros de prueba o
+equivocados.
 
 Al aprobar, además, el **desglose de horas se persiste** junto con el horario y
 los recargos que se usaron: esa jornada muestra siempre las mismas cifras aunque
@@ -94,6 +97,57 @@ jornadas en `/mi-cuenta` —el Community Manager también es empleado de GPI, y 
 admin o coordinador puede registrar sus horas si lo necesita—; quien tiene
 acceso al panel ve arriba el botón "Ir al panel". Aprobaciones y métricas siguen
 siendo solo de managers.
+
+## Iteración del 30 de julio de 2026 — ajustes del testing del cliente
+
+Tres ajustes de experiencia que salieron de probar el sistema con GPI. **No
+necesitan migración**: la política RLS `jornadas_delete_manager` ya existía desde
+la 0002.
+
+### 1. Para los managers, la pantalla principal es el panel
+
+Antes, todos los roles aterrizaban en el portal de jornadas de `/mi-cuenta` con
+una banda "Ir al panel", incluidos los administradores, que entran al sistema
+sobre todo a administrar.
+
+- **Admin y coordinador**: al ingresar van **directo a `/admin`**. La decisión la
+  toma el formulario de ingreso (`LoginForm`) según el rol; **no** hay redirect de
+  servidor, así que `/mi-cuenta` visitado a mano **sigue mostrando el portal de
+  jornadas a todos los roles** (ahí cambian su contraseña y registran sus horas) y
+  no se crea ningún bucle con la redirección optimista del proxy.
+- **Community Manager y empleado**: sin cambios, aterrizan en su portal.
+- En el panel hay un botón **"Registrar mi jornada"** → `/mi-cuenta` en la barra
+  superior del `AdminShell` (visible sin scroll, junto a "Ver sitio") y repetido
+  como enlace en la cabecera del dashboard.
+
+### 2. Los managers pueden eliminar una jornada
+
+Nueva acción **Eliminar** en la bandeja de aprobaciones, para admin y
+coordinador, disponible en **cualquier estado**: es la herramienta para limpiar
+registros de prueba, duplicados o creados por error.
+
+- Server action `deleteJornadaAsManager` con `getManagerOrNull()` en el servidor
+  y `revalidatePath` de `/admin/jornadas`, `/admin` y `/mi-cuenta`.
+- **Doble confirmación**, como al eliminar una cuenta: el botón despliega un
+  aviso rojo y el botón de confirmar pide además la confirmación del navegador.
+- **Rechazar ≠ eliminar**, y la interfaz lo dice en los dos sitios (el aviso y la
+  ayuda "Cómo funciona esta bandeja"): rechazar conserva el registro y el empleado
+  lee la nota para corregir; eliminar lo borra y el empleado deja de verlo.
+
+### 3. Los filtros de aprobaciones se aplican al cambiar
+
+Fuera el botón "Filtrar": estado, empleado y fechas navegan en cuanto cambian.
+La barra pasó a ser un Client Component pequeño
+(`src/app/admin/jornadas/FiltrosAprobaciones.tsx`) que reescribe los parámetros
+con `router.replace(..., { scroll: false })`; **el Server Component sigue siendo
+quien consulta**, así que el enlace sigue compartible, el botón atrás funciona y
+`?vista=aprobaciones` no se pierde. "Limpiar" se queda y deja pendientes, todos
+los empleados y sin rango de fechas.
+
+> Detalle que costó un intento: `ESTADOS` no puede exportarse desde el módulo
+> `"use client"` y leerse en el servidor —llega como referencia de cliente, no
+> como arreglo—. Vive en `src/lib/admin-types.ts` como
+> `JORNADA_FILTRO_ESTADOS` / `JORNADA_FILTRO_ESTADO_DEFECTO`.
 
 ## Decisiones técnicas
 

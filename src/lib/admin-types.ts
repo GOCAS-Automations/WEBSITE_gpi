@@ -205,3 +205,23 @@ export const JORNADA_STATUS_CLASSES: Record<JornadaStatus, string> = {
   aprobada: "bg-brand-tint text-brand-dark",
   rechazada: "bg-red-100 text-red-700",
 };
+
+/**
+ * Opciones del filtro de estado de la bandeja de aprobaciones.
+ * `todas` no es un estado real: significa "sin filtrar por estado".
+ *
+ * Vive aquí, en un módulo puro, porque lo comparten el Server Component que
+ * consulta (`aprobaciones.tsx`) y el Client Component de la barra de filtros:
+ * un valor exportado desde un módulo `"use client"` no se puede leer en el
+ * servidor (llega como referencia de cliente, no como el arreglo).
+ */
+export const JORNADA_FILTRO_ESTADOS: { value: JornadaStatus | "todas"; label: string }[] =
+  [
+    { value: "pendiente", label: "Pendientes" },
+    { value: "aprobada", label: "Aprobadas" },
+    { value: "rechazada", label: "Rechazadas" },
+    { value: "todas", label: "Todas" },
+  ];
+
+/** Estado con el que arranca la bandeja si la URL no dice otra cosa. */
+export const JORNADA_FILTRO_ESTADO_DEFECTO: JornadaStatus | "todas" = "pendiente";
