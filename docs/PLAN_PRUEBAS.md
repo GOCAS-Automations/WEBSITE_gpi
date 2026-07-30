@@ -17,16 +17,15 @@ viernes con el community manager).
 parecido a lo que verá el CM, y es la base sobre la que se hizo la auditoría
 del 28 de julio (build de producción).
 
-- Confirma la URL exacta en el dashboard de Vercel (proyecto del equipo
-  **GOCAS Automations** → `website_GPI` → pestaña *Deployments* → dominio de
-  producción o el preview más reciente) — **(confirmar)**, no la doy por
-  supuesta acá.
-- **Antes de dar por buena esa URL, verifica que Supabase esté conectado**:
-  entra a `/mi-cuenta` y confirma que aparece el formulario de login (no el
-  aviso "El portal estará disponible próximamente"). Al 28 de julio,
-  `docs/PLAN.md` marcaba el despliegue en Vercel con variables de entorno como
-  **pendiente** — puede que ya se haya hecho, pero si no, los Bloques 4 a 9
-  (todo lo que depende de login) no van a funcionar ahí.
+- **URL de producción: <https://website-gpi.vercel.app/>**
+- Las variables de entorno de Supabase **ya están configuradas en Vercel**
+  (confirmado el 29 de julio), así que los Bloques 4 a 9 —todo lo que depende
+  del login— funcionan ahí. Si algún día `/mi-cuenta` mostrara el aviso "El
+  portal estará disponible próximamente", significa que se perdieron esas
+  variables.
+- Verificación en producción del 29 de julio: las **7 cabeceras de seguridad**
+  llegan, `x-powered-by` no aparece, las 9 rutas públicas responden **200** y
+  `/admin` redirige (307) a `/mi-cuenta` sin sesión.
 - Si Vercel no tiene Supabase conectado todavía, usa un **build de
   producción en local** en vez de modo desarrollo:
 

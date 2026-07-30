@@ -22,10 +22,9 @@ poder avalarlo internamente en GPI.
 objeciones de fondo en los 8 frentes) y **luz verde para conectar el dominio**
 `gpiprofesionales.com` — hoy sigue apuntando al hosting viejo de GoDaddy.
 
-**Cómo llegar:** el sitio vive hoy en un entorno de prueba (no en el dominio
-final). Antes de la reunión, confirma con Vercel cuál es la URL exacta que le
-vas a mostrar al CM — no la des por hecha de memoria **(confirmar)**. Lleva
-abierto en el navegador: el sitio en esa URL, `/admin` con sesión iniciada, y
+**Cómo llegar:** el sitio vive hoy en **<https://website-gpi.vercel.app/>**
+(entorno de prueba, todavía no en el dominio final). Lleva abierto en el
+navegador: esa URL, `/admin` con sesión iniciada, y
 `docs/INFORME_SITIO_GPI.html` para señalar tablas si el CM pide una cifra
 puntual.
 
