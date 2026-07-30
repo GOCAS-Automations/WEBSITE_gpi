@@ -89,6 +89,15 @@
     white-space:nowrap;
   }
   .ui-wrap{ font-weight:600; color:var(--verde-oscuro); }
+  code{
+    font-family:"Consolas","SFMono-Regular",Menlo,Monaco,monospace;
+    background:var(--gris-claro);
+    border:1px solid var(--gris-borde);
+    border-radius:3px;
+    padding:.05em .4em;
+    font-size:.93em;
+    color:var(--tinta);
+  }
 
   /* ---------- Listas ---------- */
   ul,ol{ margin:0 0 .8em; padding-left:1.35em; }
@@ -406,6 +415,7 @@
     .lead,em,dl.gloss dd,.mapa,.kpi,.flujo .paso,caption{ color:#b9c0c1; }
     strong{ color:#f2f5f4; }
     a,.ui,.ui-wrap{ color:var(--verde-claro); }
+    code{ background:#1a1f21; border-color:#333a3d; color:#e6e9e8; }
     th,td{ border-color:#333a3d; }
     thead th{ background:#1e2f1b; color:var(--verde-claro); border-color:#39512f; }
     tbody tr:nth-child(even){ background:#1a1f21; }
@@ -535,6 +545,7 @@
     <li><a href="#c8"><span class="n">8.</span> Preguntas frecuentes y solución de problemas</a></li>
     <li><a href="#c9"><span class="n">9.</span> Glosario</a></li>
     <li><a href="#c10"><span class="n">10.</span> Contacto de soporte</a></li>
+    <li><a href="#cA"><span class="n">Anexo</span> — Cuentas creadas para GPI</a></li>
   </ol>
 </div>
 
@@ -822,6 +833,8 @@
     El usuario es algo corto como <em>mgomez</em> o <em>jperez</em>, y lo asigna GPI al
     crear la cuenta. Escribir un correo no funcionará, salvo en las cuentas más antiguas
     que se crearon así.</p>
+    <p>Las cuentas creadas hasta hoy están en el <strong>Anexo — Cuentas creadas para
+    GPI</strong>, al final de este manual.</p>
   </div>
   <ol class="steps">
     <li>Pulse <span class="ui">Mi Cuenta</span>. Verá una tarjeta con el logo de GPI y el
@@ -2242,6 +2255,88 @@
       </tbody>
     </table>
   </div>
+
+</section>
+
+<!-- ==================== ANEXO. CUENTAS CREADAS ==================== -->
+<section id="cA">
+  <h1 class="cap"><span class="num">Anexo</span> — Cuentas creadas para GPI</h1>
+
+  <p class="lead">Este anexo reúne las cuentas que ya existen en el sistema para el
+  equipo de GPI: con qué usuario y contraseña entra cada persona, qué rol tiene y qué
+  cuentas faltan por crear.</p>
+
+  <h2>Aviso de confidencialidad</h2>
+  <div class="caja warn">
+    <span class="titulo">Atención — información confidencial</span>
+    <p>Este anexo contiene las contraseñas iniciales del equipo. Guarde este documento
+    en un lugar seguro y entregue a cada persona únicamente su propia contraseña. Cada
+    quien debe cambiarla la primera vez que ingrese, desde <em>Mi Cuenta → Cambiar
+    contraseña</em>.</p>
+  </div>
+
+  <h2>Cómo se ingresa</h2>
+  <p>El acceso está en <strong>https://website-gpi.vercel.app/mi-cuenta</strong>.</p>
+  <p>Se entra con <strong>usuario y contraseña</strong> —el usuario, nunca un correo
+  electrónico—, tal como se explica en el capítulo 3.</p>
+
+  <h2>Cuentas del equipo</h2>
+  <div class="tabla-wrap">
+    <table class="keep">
+      <thead>
+        <tr><th style="width:14%">Usuario</th><th style="width:19%">Contraseña</th><th style="width:27%">Nombre</th><th style="width:14%">Rol</th><th>Cargo</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>xperea</code></td><td><code>Bambu-Palma92</code></td><td>Xiomara Perea Escobar</td><td>Administrador</td><td>Jefe comercial y gestión ambiental</td></tr>
+        <tr><td><code>ycamacho</code></td><td><code>Cumbre-Brisa75</code></td><td>Yeison Camacho Rojas</td><td>Administrador</td><td>Jefe de proyectos y mantenimiento</td></tr>
+        <tr><td><code>llopez</code></td><td><code>Cumbre-Gaviota54</code></td><td>Lincy Jhojany López Prada</td><td>Empleado</td><td>Coordinadora SST</td></tr>
+        <tr><td><code>clopez</code></td><td><code>Andes-Cedro89</code></td><td>Carlos Andrés López Rojas</td><td>Empleado</td><td>Auxiliar Técnico</td></tr>
+        <tr><td><code>dgomez</code></td><td><code>Selva-Faro50</code></td><td>Daniel Andrés Gómez Hernández</td><td>Empleado</td><td>Dibujante y Operador de mantenimiento</td></tr>
+        <tr><td><code>javendano</code></td><td><code>Cumbre-Horizonte54</code></td><td>Jesús Ariel Avendaño</td><td>Empleado</td><td>Auxiliar Técnico</td></tr>
+        <tr><td><code>scordoba</code></td><td><code>Rio-Lago87</code></td><td>Santiago Córdoba Tovar</td><td>Empleado</td><td>Ingeniero electrónico</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Cuenta técnica de administración</h2>
+  <div class="tabla-wrap">
+    <table class="keep">
+      <thead><tr><th style="width:22%">Usuario</th><th style="width:32%">Contraseña</th><th>Rol</th></tr></thead>
+      <tbody>
+        <tr><td><code>admin</code></td><td><code>Kt7#mQx4-Rv9zBp2</code></td><td>Administrador</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Es la cuenta que se creó al instalar el sistema; sirve como respaldo de acceso si
+  alguien queda por fuera. Se recomienda cambiarle la contraseña una vez que el equipo
+  esté usando sus cuentas con normalidad.</p>
+
+  <h2>Datos registrados por cuenta</h2>
+  <p>Cada cuenta tiene guardados el <strong>nombre completo</strong>, la
+  <strong>cédula</strong>, el <strong>correo de contacto</strong>, el
+  <strong>teléfono</strong> y el <strong>cargo</strong>; el administrador puede
+  consultarlos o corregirlos desde <em>Panel → Equipo</em> (ver 6.10).</p>
+
+  <h2>Cuentas por crear</h2>
+  <div class="caja nota">
+    <span class="titulo">Para tener en cuenta</span>
+    <p>Estas cuentas todavía no se han creado. Se crean desde <em>Panel → Equipo →
+    Nueva cuenta</em> (ver 6.10):</p>
+    <ul class="check">
+      <li>La cuenta del <strong>Community Manager</strong> de GPI (rol <em>Community
+        Manager</em>): falta su nombre completo, cédula, correo y teléfono.</li>
+      <li><strong>Henry Daniel Arboleda Correa</strong> (técnico electricista): aparecía
+        en el archivo de personal, pero sin correo registrado.</li>
+      <li>Actualmente <strong>ninguna cuenta tiene el rol Coordinador</strong>. Si GPI
+        quiere que alguien apruebe jornadas sin ser administrador, basta con cambiarle
+        el rol a esa persona desde el panel.</li>
+    </ul>
+  </div>
+
+  <h2>Recordatorio de roles</h2>
+  <p>Los cuatro roles del sistema —Administrador, Coordinador, Community Manager y
+  Empleado— y lo que puede hacer cada uno están explicados en el <strong>capítulo
+  4</strong> («Los cuatro roles y qué puede hacer cada uno», secciones 4.2 y 4.3).</p>
 
   <div class="pie-doc">
     Manual de uso del sitio web de GPI — Grupo de Profesionales en Ingeniería GPI S.A.S<br>
