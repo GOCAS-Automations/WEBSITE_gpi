@@ -73,7 +73,7 @@ export function ImageField({
     <div>
       <span className="mb-1.5 block text-sm font-semibold text-ink">
         {label}
-        {required && <span className="text-brand"> *</span>}
+        {required && <span className="text-brand-dark"> *</span>}
       </span>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start">

@@ -45,7 +45,7 @@ export const ROLE_DESCRIPTIONS: Record<UserRole, string> = {
 /** Clases de color del badge de rol (mismo lenguaje visual del panel). */
 export const ROLE_BADGE_CLASSES: Record<UserRole, string> = {
   admin: "bg-ink text-white",
-  coordinador: "bg-brand text-white",
+  coordinador: "bg-brand-dark text-white",
   marketing: "bg-brand-tint text-brand-dark",
   empleado: "bg-mist text-graphite",
 };

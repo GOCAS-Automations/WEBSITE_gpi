@@ -5,10 +5,38 @@
    Marca: engranaje gris + hoja verde
    ============================================================ */
 @theme {
-  /* Marca */
+  /* ------------------------------------------------------------
+     Marca — con los ratios de contraste MEDIDOS (WCAG 2.1:
+     texto normal 4.5:1, texto grande e iconos/controles 3:1)
+
+     Sobre BLANCO, como color de texto o de icono:
+       brand        #3dae2b  →  2.88:1  ✗ ni texto ni icono. Solo
+                                          rellenos decorativos, bordes,
+                                          degradados y tintes.
+       brand-light  #8cc63f  →  2.05:1  ✗ solo sobre fondos oscuros
+                                          (sobre ink #15181b: 8.71:1 ✓).
+       brand-dark   #2c8420  →  4.74:1  ✓ éste es el verde de TEXTO.
+                                          Sobre ink: 3.76:1 ✓ (anillo de foco).
+       brand-deep   #1f6a16  →  6.71:1  ✓ hover y arranque de degradados.
+
+     OJO: el blanco no es el único fondo claro. Sobre `mist` (#f4f6f4), que
+     es el fondo de media web, los ratios BAJAN y `brand-dark` deja de
+     cumplir para texto pequeño:
+       brand-dark   #2c8420  sobre mist →  4.37:1  ✗ (por eso los rótulos
+                                          `eyebrow` de SectionHeading usan
+                                          brand-deep, no brand-dark).
+       brand-deep   #1f6a16  sobre mist →  6.17:1  ✓
+       graphite     #6d6e71  →  5.10:1  ✓ texto secundario.
+
+     Como FONDO con texto blanco encima (botones, badges, chips):
+       brand        #3dae2b  →  2.88:1  ✗ NO usar con `text-white`.
+       brand-dark   #2c8420  →  4.74:1  ✓ fondo por defecto de los botones.
+       brand-deep   #1f6a16  →  6.70:1  ✓ estado hover de esos botones.
+     ------------------------------------------------------------ */
   --color-brand: #3dae2b;
   --color-brand-light: #8cc63f;
   --color-brand-dark: #2c8420;
+  --color-brand-deep: #1f6a16;
   --color-brand-tint: #eef7ea;
 
   /* Grises corporativos */
@@ -96,15 +124,83 @@ h4 {
   letter-spacing: -0.02em;
 }
 
-/* Foco accesible con color de marca */
-a:focus-visible,
-button:focus-visible,
-input:focus-visible,
-textarea:focus-visible,
-[tabindex]:focus-visible {
-  outline: 2px solid var(--color-brand);
+/* ============================================================
+   Foco visible unificado (WCAG 2.1 — 2.4.7 Foco visible,
+   1.4.11 Contraste de elementos no textuales)
+
+   · Un solo anillo para TODOS los interactivos, incluidos select,
+     summary y los que llevan `role`.
+   · Verde `brand-dark`: 4.74:1 sobre blanco y 3.76:1 sobre el gris
+     oscuro de los heroes, así se ve en fondo claro y oscuro.
+   · `!important` a propósito: por el sitio hay utilidades
+     `focus:outline-none` (inputs, botones del panel) que si no
+     borrarían el anillo también para quien navega con teclado.
+     Solo afecta a `:focus-visible`, nunca al clic con ratón.
+   · NO se fija `border-radius`: el navegador dibuja el anillo
+     siguiendo el radio real del elemento, así los botones tipo
+     píldora no se cuadran al enfocarlos.
+   ============================================================ */
+:where(
+  a[href],
+  area,
+  button,
+  input,
+  select,
+  textarea,
+  summary,
+  details,
+  iframe,
+  [tabindex],
+  [contenteditable="true"],
+  [role="button"],
+  [role="link"],
+  [role="tab"],
+  [role="checkbox"],
+  [role="menuitem"]
+):focus-visible {
+  outline: 2px solid var(--color-brand-dark) !important;
   outline-offset: 2px;
-  border-radius: 4px;
+}
+
+/* Sobre fondos oscuros (heroes, footer, banda de excelencia) el anillo
+   pasa a blanco: 21:1 contra el gris oscuro de marca. */
+.on-dark :where(a[href], button, [tabindex], [role="button"]):focus-visible {
+  outline-color: #ffffff !important;
+}
+
+/* ============================================================
+   Enlace «Saltar al contenido» (WCAG 2.4.1 Evitar bloques)
+   Oculto visualmente hasta que recibe el foco con el tabulador.
+   ============================================================ */
+.skip-link {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 100;
+  transform: translateY(-150%);
+  display: inline-block;
+  border-radius: 9999px;
+  background: var(--color-brand-dark);
+  padding: 0.625rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #ffffff;
+  box-shadow: var(--shadow-card);
+  transition: transform 0.18s ease;
+}
+
+.skip-link:focus,
+.skip-link:focus-visible {
+  transform: translateY(0);
+  outline: 2px solid #ffffff !important;
+  outline-offset: -4px;
+}
+
+/* El <main> recibe el foco por programa al usar el enlace: sin anillo,
+   porque no es un control y el anillo confundiría. */
+main:focus,
+main:focus-visible {
+  outline: none !important;
 }
 
 /* ============================================================
@@ -124,18 +220,46 @@ textarea:focus-visible,
   transform: none;
 }
 
+/* ============================================================
+   prefers-reduced-motion (WCAG 2.3.3 — Animación por interacción)
+
+   Se neutralizan TODAS las transiciones y animaciones del sitio, no
+   solo las del Reveal. A propósito NO se toca `transform`: varias
+   piezas lo usan para posicionarse (p. ej. el mega-menú centrado con
+   `-translate-x-1/2`) y anularlo rompería el diseño.
+   ============================================================ */
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
   }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* El contenido animado al hacer scroll queda visible desde el inicio. */
   [data-reveal] {
     opacity: 1 !important;
     transform: none !important;
-    transition: none !important;
   }
+
   .animate-fade-up,
   .animate-fade-in {
     animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  /* El enlace de salto sí debe poder aparecer al enfocarse. */
+  .skip-link:focus,
+  .skip-link:focus-visible {
+    transform: translateY(0) !important;
   }
 }
 

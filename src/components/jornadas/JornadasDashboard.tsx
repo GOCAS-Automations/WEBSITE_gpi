@@ -318,7 +318,7 @@ export function JornadasDashboard({
             </p>
           </div>
           {ultima && (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-tint px-3.5 py-1.5 text-xs font-semibold text-brand-dark">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-tint px-3.5 py-1.5 text-xs font-semibold text-brand-deep">
               <Calendar className="h-3.5 w-3.5" />
               Última jornada registrada: {formatearFechaNumerica(ultima.fecha)} ·{" "}
               {ultima.empleadoNombre}
@@ -361,7 +361,7 @@ export function JornadasDashboard({
         </div>
 
         <p className="mt-3 flex items-start gap-1.5 text-xs leading-relaxed text-graphite">
-          <CheckCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand" />
+          <CheckCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand-dark" />
           <span>
             Las cifras oficiales son las de las jornadas <strong>aprobadas</strong>.
             Por defecto también se incluyen las pendientes, para que puedas
@@ -505,6 +505,11 @@ export function JornadasDashboard({
         ) : (
           <div className="overflow-x-auto rounded-2xl border border-line bg-white shadow-soft">
             <table className="w-full min-w-[38rem] text-sm">
+              <caption className="sr-only">
+                Semanas en las que alguien superó los topes legales de horas
+                extra, con el empleado, la semana, las horas extra acumuladas y
+                el estado de la alerta.
+              </caption>
               <thead>
                 <tr className="border-b border-line bg-mist/60">
                   <Th>Empleado</Th>
@@ -561,7 +566,7 @@ export function JornadasDashboard({
               type="button"
               onClick={() => descargarCSV(ordenadas, desde || rangoDesde, hasta || hoy)}
               disabled={ordenadas.length === 0}
-              className="inline-flex items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-dark disabled:pointer-events-none disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-full bg-brand-dark px-4 py-2 text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-deep disabled:pointer-events-none disabled:opacity-50"
             >
               <Download className="h-4 w-4" />
               Exportar CSV
@@ -596,6 +601,11 @@ export function JornadasDashboard({
           <div className="rounded-2xl border border-line bg-white p-2 shadow-soft sm:p-3">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[52rem] text-sm">
+                <caption className="sr-only">
+                  Detalle de las jornadas registradas con los filtros actuales:
+                  empleado, fecha, orden de trabajo, hora de inicio y fin,
+                  duración, horas extra y estado de aprobación.
+                </caption>
                 <thead>
                   <tr className="border-b border-line bg-mist/60">
                     <Th>Empleado</Th>

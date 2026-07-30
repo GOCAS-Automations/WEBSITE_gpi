@@ -19,6 +19,7 @@ export const metadata: Metadata = {
   title: "Mi Cuenta GPI",
   description: "Acceso al portal privado de GPI.",
   robots: { index: false, follow: false },
+  alternates: { canonical: "/mi-cuenta" },
 };
 
 /** Depende de la sesión: nunca se cachea. */
@@ -175,7 +176,7 @@ async function PortalEmpleado({ profile }: { profile: SessionProfile }) {
             </div>
             <Link
               href="/admin"
-              className="inline-flex shrink-0 items-center gap-2 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-dark"
+              className="inline-flex shrink-0 items-center gap-2 rounded-full bg-brand-dark px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-deep"
             >
               Ir al panel
               <ArrowRight className="h-4 w-4" />
@@ -193,7 +194,7 @@ async function PortalEmpleado({ profile }: { profile: SessionProfile }) {
           <Resumen
             label="Aprobadas"
             valor={aprobadas}
-            className="bg-brand-tint text-brand-dark"
+            className="bg-brand-tint text-brand-deep"
           />
           <Resumen
             label="Rechazadas"
@@ -206,7 +207,7 @@ async function PortalEmpleado({ profile }: { profile: SessionProfile }) {
         <section className="rounded-2xl border border-line bg-white p-5 shadow-soft sm:p-7">
           <header className="mb-5">
             <h1 className="flex items-center gap-2 text-xl font-extrabold text-ink sm:text-2xl">
-              <Clock className="h-6 w-6 text-brand" />
+              <Clock className="h-6 w-6 text-brand-dark" />
               Registrar una jornada
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-graphite">
@@ -244,7 +245,7 @@ async function PortalEmpleado({ profile }: { profile: SessionProfile }) {
         {/* Contraseña */}
         <section className="mt-8 rounded-2xl border border-line bg-white p-5 shadow-soft sm:p-7">
           <h2 className="flex items-center gap-2 text-lg font-bold text-ink">
-            <Lock className="h-5 w-5 text-brand" />
+            <Lock className="h-5 w-5 text-brand-dark" />
             Mi contraseña
           </h2>
           <p className="mb-4 mt-1 max-w-2xl text-sm leading-relaxed text-graphite">
@@ -291,7 +292,7 @@ function Resumen({
 function NotConfigured() {
   return (
     <div className="text-center">
-      <span className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-tint text-brand-dark">
+      <span className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-tint text-brand-deep">
         <Lock className="h-7 w-7" />
       </span>
       <p className="mt-5 text-lg font-bold text-ink">
@@ -312,7 +313,7 @@ function NotConfigured() {
         </Link>
         <Link
           href="/contacto"
-          className="inline-flex items-center justify-center gap-2 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-dark"
+          className="inline-flex items-center justify-center gap-2 rounded-full bg-brand-dark px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-deep"
         >
           Contactar a GPI
         </Link>

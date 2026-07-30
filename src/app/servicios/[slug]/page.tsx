@@ -9,7 +9,9 @@ import { CtaBand } from "@/components/sections/CtaBand";
 import { services as staticServices, getCategory } from "@/data/services";
 import { whatsappLink } from "@/data/contact";
 import { getService, getServices, getSettings } from "@/lib/content";
+import { JsonLd, ORGANIZATION_ID, SITE_URL } from "@/components/seo/JsonLd";
 import { iconMap, Check, ArrowLeft, ArrowRight, WhatsApp } from "@/lib/icons";
+import type { Service } from "@/data/services";
 
 type Params = { slug: string };
 
@@ -46,6 +48,57 @@ export async function generateMetadata({
   };
 }
 
+/**
+ * Datos estructurados `Service` de cada servicio.
+ *
+ * El proveedor no se repite: se referencia por `@id` a la Organization que ya
+ * declara el layout raíz, así Google une los dos nodos en un mismo grafo.
+ * `hasOfferCatalog` expone los ítems del servicio, que es el contenido real de
+ * la página («¿Qué incluye este servicio?»).
+ */
+function ServiceJsonLd({
+  service,
+  categoryName,
+}: {
+  service: Service;
+  categoryName: string;
+}) {
+  return (
+    <JsonLd
+      data={{
+        "@context": "https://schema.org",
+        "@type": "Service",
+        "@id": `${SITE_URL}/servicios/${service.slug}#service`,
+        name: service.title,
+        description: service.metaDescription,
+        serviceType: categoryName,
+        category: categoryName,
+        url: `${SITE_URL}/servicios/${service.slug}`,
+        image: `${SITE_URL}${service.cover}`,
+        provider: { "@id": ORGANIZATION_ID },
+        areaServed: [
+          { "@type": "City", name: "Cali" },
+          { "@type": "AdministrativeArea", name: "Valle del Cauca" },
+          { "@type": "Country", name: "Colombia" },
+        ],
+        availableChannel: {
+          "@type": "ServiceChannel",
+          serviceUrl: `${SITE_URL}/contacto`,
+          servicePhone: "+573184341249",
+        },
+        hasOfferCatalog: {
+          "@type": "OfferCatalog",
+          name: `Alcance de ${service.title}`,
+          itemListElement: service.items.map((item) => ({
+            "@type": "Offer",
+            itemOffered: { "@type": "Service", name: item },
+          })),
+        },
+      }}
+    />
+  );
+}
+
 export default async function ServiceDetailPage({
   params,
 }: {
@@ -70,6 +123,7 @@ export default async function ServiceDetailPage({
 
   return (
     <>
+      <ServiceJsonLd service={service} categoryName={category.name} />
       <PageHero
         eyebrow={category.name}
         title={service.title}
@@ -89,7 +143,7 @@ export default async function ServiceDetailPage({
             {/* Contenido principal */}
             <div>
               <div className="flex items-center gap-3">
-                <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-brand-tint text-brand-dark">
+                <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-brand-tint text-brand-deep">
                   <CatIcon className="h-6 w-6" />
                 </span>
                 <h2 className="text-2xl font-extrabold text-ink">
@@ -103,7 +157,7 @@ export default async function ServiceDetailPage({
                     key={item}
                     className="flex gap-3 rounded-2xl border border-line bg-white p-5 shadow-soft"
                   >
-                    <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand text-white">
+                    <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-dark text-white">
                       <Check className="h-4 w-4" />
                     </span>
                     <span className="text-sm leading-relaxed text-ink-soft">{item}</span>
@@ -156,8 +210,10 @@ export default async function ServiceDetailPage({
               </div>
             </div>
 
-            {/* Sidebar */}
-            <aside className="lg:sticky lg:top-24 lg:self-start">
+            {/* Sidebar. Va como <div> y no como <aside>: al estar dentro de
+                <main> era un landmark "complementary" anidado, que es justo lo
+                que marcaba axe (landmark-complementary-is-top-level). */}
+            <div className="lg:sticky lg:top-24 lg:self-start">
               <div className="rounded-2xl border border-line bg-white p-6 shadow-soft">
                 <h2 className="text-sm font-bold uppercase tracking-wider text-brand-dark">
                   Todos los servicios
@@ -173,7 +229,7 @@ export default async function ServiceDetailPage({
                           aria-current={active ? "page" : undefined}
                           className={`flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-colors ${
                             active
-                              ? "bg-brand-tint font-semibold text-brand-dark"
+                              ? "bg-brand-tint font-semibold text-brand-deep"
                               : "text-ink-soft hover:bg-mist"
                           }`}
                         >
@@ -200,7 +256,7 @@ export default async function ServiceDetailPage({
                   <ArrowRight className="h-4 w-4" />
                 </ButtonLink>
               </div>
-            </aside>
+            </div>
           </div>
         </Container>
       </section>

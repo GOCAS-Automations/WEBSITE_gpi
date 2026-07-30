@@ -88,7 +88,7 @@ export const services: Service[] = [
     ],
     metaTitle: "Automatización y Control Industrial",
     metaDescription:
-      "Automatización industrial en Cali: diseño, programación y puesta en marcha de PLC, HMI y redes de control para mejorar la eficiencia y rentabilidad de sus procesos.",
+      "Automatización industrial en Cali: diseño, programación y puesta en marcha de PLC, HMI y redes de control para mejorar la eficiencia de sus procesos.",
   },
   {
     slug: "sistemas-electricos",
@@ -116,7 +116,7 @@ export const services: Service[] = [
     ],
     metaTitle: "Sistemas Eléctricos Industriales",
     metaDescription:
-      "Instalaciones eléctricas industriales en Cali: montaje de acometidas, cableado de maquinaria, corrección de energía reactiva y mantenimiento eléctrico preventivo y correctivo.",
+      "Instalaciones eléctricas industriales en Cali: acometidas, cableado de maquinaria, corrección de energía reactiva y mantenimiento preventivo y correctivo.",
   },
   {
     slug: "seguridad-de-maquinaria",
@@ -144,7 +144,7 @@ export const services: Service[] = [
     ],
     metaTitle: "Seguridad de Maquinaria (LOTO)",
     metaDescription:
-      "Seguridad de maquinaria en Cali: análisis de riesgo, auditorías y procedimientos LOTO, guardas y circuitos de seguridad para proteger a su personal y sus activos.",
+      "Seguridad de maquinaria en Cali: análisis de riesgo, auditorías y procedimientos LOTO, guardas y circuitos de seguridad para proteger a su personal.",
   },
   {
     slug: "analisis-energetico",
@@ -170,7 +170,7 @@ export const services: Service[] = [
     ],
     metaTitle: "Análisis Energético Industrial",
     metaDescription:
-      "Análisis energético en Cali: estudio de consumos de agua, energía, vapor y gas frente a la producción para lograr ahorros demostrables y reducir el costo del producto final.",
+      "Análisis energético en Cali: estudio de consumos de agua, energía, vapor y gas frente a la producción para lograr ahorros demostrables en su planta.",
   },
   {
     slug: "medicion-de-variables",
@@ -223,7 +223,7 @@ export const services: Service[] = [
     ],
     metaTitle: "Gestión del Mantenimiento y Proyectos",
     metaDescription:
-      "Gestión del mantenimiento industrial en Cali: estructuración de planes preventivos y correctivos e intervención de líneas de producción mecánicas, eléctricas y electrónicas.",
+      "Gestión del mantenimiento industrial en Cali: planes preventivos y correctivos e intervención de líneas de producción mecánicas y eléctricas.",
   },
 
   /* ---------------- AMBIENTALES ---------------- */
@@ -250,7 +250,7 @@ export const services: Service[] = [
     ],
     metaTitle: "Gestión Ambiental Empresarial",
     metaDescription:
-      "Gestión ambiental empresarial en Cali: estrategias para reducir, mitigar y compensar los impactos ambientales de su operación y fortalecer la responsabilidad ambiental corporativa.",
+      "Gestión ambiental empresarial en Cali: estrategias para reducir, mitigar y compensar los impactos ambientales de su operación de forma responsable.",
   },
   {
     slug: "cumplimiento-legal-ambiental",
@@ -280,7 +280,7 @@ export const services: Service[] = [
     ],
     metaTitle: "Cumplimiento Legal Ambiental",
     metaDescription:
-      "Cumplimiento legal ambiental en Cali: permisos de vertimientos y concesión de agua, respuesta a la autoridad ambiental, RUA, RESPEL, estudios de impacto y procesos sancionatorios.",
+      "Cumplimiento legal ambiental en Cali: permisos de vertimientos y concesión de agua, RUA, RESPEL, estudios de impacto y procesos sancionatorios.",
   },
   {
     slug: "gestion-urbanistica",
@@ -303,7 +303,7 @@ export const services: Service[] = [
     ],
     metaTitle: "Gestión Urbanística Ambiental",
     metaDescription:
-      "Gestión urbanística ambiental en Cali: Planes de Medidas de Manejo Ambiental y concepto ambiental para licencias de construcción en proyectos de infraestructura.",
+      "Gestión urbanística ambiental en Cali: Planes de Medidas de Manejo Ambiental y concepto ambiental para licencias de construcción e infraestructura.",
   },
   {
     slug: "recurso-hidrico",
@@ -327,7 +327,7 @@ export const services: Service[] = [
     ],
     metaTitle: "Recurso Hídrico",
     metaDescription:
-      "Recurso hídrico en Cali: formulación de proyectos y diseño u optimización de sistemas de tratamiento de agua en sus componentes estructural, operativo y documental.",
+      "Recurso hídrico en Cali: formulación de proyectos y diseño u optimización de sistemas de tratamiento de agua en su componente estructural y operativo.",
   },
   {
     slug: "iso-14001",
@@ -353,7 +353,7 @@ export const services: Service[] = [
     ],
     metaTitle: "Certificación ISO 14001:2015",
     metaDescription:
-      "ISO 14001:2015 en Cali: acompañamiento a la certificación y auditorías internas integrales de su sistema de gestión ambiental como preparación ante los entes certificadores.",
+      "ISO 14001:2015 en Cali: acompañamiento a la certificación y auditorías internas de su sistema de gestión ambiental ante los entes certificadores.",
   },
 ];
 

@@ -36,7 +36,7 @@ export function Footer({
   const featured = services.slice(0, 6);
 
   return (
-    <footer className="bg-ink text-white/70">
+    <footer className="on-dark bg-ink text-white/70">
       <div className="mx-auto max-w-7xl px-5 py-16 sm:px-6 lg:px-8">
         <div className="grid gap-12 lg:grid-cols-12">
           {/* Marca */}
@@ -186,7 +186,7 @@ function SocialLink({
       target="_blank"
       rel="noopener noreferrer"
       aria-label={label}
-      className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/8 text-white/80 transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand hover:text-white"
+      className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/8 text-white/80 transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-deep hover:text-white"
     >
       {children}
     </a>

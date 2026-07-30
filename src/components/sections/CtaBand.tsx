@@ -18,9 +18,18 @@ export function CtaBand({
   whatsappMessage = "Hola GPI, me gustaría solicitar una cotización.",
 }: CtaBandProps) {
   return (
-    <section className="bg-ink py-16 sm:py-20">
+    <section className="on-dark bg-ink py-16 sm:py-20">
       <Container>
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-dark via-brand to-brand-light px-6 py-12 sm:px-12 sm:py-14">
+        {/*
+          CONTRASTE: el degradado iba `brand-dark → brand → brand-light`, y el
+          titular blanco quedaba sobre tramos de 2.88:1 (#3dae2b) y 2.05:1
+          (#8cc63f) — por debajo del 3:1 que WCAG pide incluso para texto
+          grande. Ahora arranca dos pasos más oscuro: donde vive el texto el
+          fondo es `brand-deep` (6.70:1) / `brand-dark` (4.74:1), y el verde
+          vivo de marca se reserva para el extremo donde solo hay botones de
+          fondo claro.
+        */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-deep via-brand-dark to-brand px-6 py-12 sm:px-12 sm:py-14">
           <div className="bg-dot-grid absolute inset-0 opacity-70" aria-hidden="true" />
           <div className="relative flex flex-col items-start gap-8 lg:flex-row lg:items-center lg:justify-between">
             <div className="max-w-2xl">

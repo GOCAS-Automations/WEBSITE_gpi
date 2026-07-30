@@ -11,8 +11,20 @@ import { iconMap } from "@/lib/icons";
 export const metadata: Metadata = {
   title: "Servicios industriales y ambientales",
   description:
-    "Conoce los servicios de GPI en Cali: automatización y control, sistemas eléctricos, seguridad de maquinaria, análisis energético, gestión ambiental, cumplimiento legal, recurso hídrico e ISO 14001.",
+    "Servicios de GPI en Cali: automatización y control, sistemas eléctricos, seguridad de maquinaria, análisis energético, gestión ambiental e ISO 14001.",
   alternates: { canonical: "/servicios" },
+  openGraph: {
+    title: "Servicios industriales y ambientales | GPI",
+    description:
+      "Automatización y control, sistemas eléctricos, análisis energético, gestión ambiental e ISO 14001 en Cali.",
+    url: "/servicios",
+    images: [
+      {
+        url: "/images/servicios/s1.jpg",
+        alt: "Planta industrial con estructuras metálicas y tuberías",
+      },
+    ],
+  },
 };
 
 export const revalidate = 300;
@@ -44,7 +56,7 @@ export default async function ServiciosPage() {
             <Container>
               <Reveal>
                 <div className="flex items-start gap-4">
-                  <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-tint text-brand-dark">
+                  <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-tint text-brand-deep">
                     <CatIcon className="h-6 w-6" />
                   </span>
                   <SectionHeading title={cat.name} description={cat.description} />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -21,6 +21,9 @@ export function Header({ services }: { services: Service[] }) {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileServices, setMobileServices] = useState(false);
+  /** Mega-menú de escritorio: abierto por ratón (hover) o por teclado (foco). */
+  const [servicesOpen, setServicesOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -42,8 +45,34 @@ export function Header({ services }: { services: Service[] }) {
     };
   }, [mobileOpen]);
 
+  /**
+   * Accesibilidad por teclado (WCAG 2.1.1 / 2.1.2):
+   * Escape cierra el mega-menú y el menú móvil. Al cerrar el menú móvil el foco
+   * vuelve al botón que lo abrió, para no perder el sitio en la página.
+   */
+  useEffect(() => {
+    if (!mobileOpen && !servicesOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (servicesOpen) {
+        setServicesOpen(false);
+        (document.activeElement as HTMLElement | null)?.blur();
+      }
+      if (mobileOpen) {
+        closeMobile();
+        menuButtonRef.current?.focus();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [mobileOpen, servicesOpen]);
+
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
+
+  /** `aria-current="page"` para que el lector de pantalla anuncie dónde estamos. */
+  const ariaCurrent = (href: string) =>
+    isActive(href) ? ("page" as const) : undefined;
 
   const byCategory = (id: Service["category"]) =>
     services.filter((s) => s.category === id);
@@ -57,11 +86,20 @@ export function Header({ services }: { services: Service[] }) {
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 sm:px-6 lg:px-8 lg:h-24">
         {/* Logo */}
         <Link href="/" className="flex shrink-0 items-center" aria-label="GPI — Inicio">
+          {/*
+            RENDIMIENTO: el archivo original es de 3300×1875 px (685 KB). Sin
+            `sizes`, el navegador asume `100vw` y descarga el candidato del
+            srcset para el ancho completo de la pantalla… para pintar un logo de
+            ~113 px. `sizes` le dice el tamaño real de maquetación y `width`/
+            `height` solo fijan la relación de aspecto (1.76:1), así que ahora
+            baja el candidato pequeño.
+          */}
           <Image
             src="/images/logo.png"
             alt="GPI — Optimización de Procesos Industriales y Ambientales"
-            width={3300}
-            height={1875}
+            width={352}
+            height={200}
+            sizes="(min-width: 1024px) 113px, (min-width: 640px) 85px, 78px"
             priority
             className="h-11 w-auto sm:h-12 lg:h-16"
           />
@@ -71,9 +109,28 @@ export function Header({ services }: { services: Service[] }) {
         <nav className="hidden items-center gap-1 lg:flex" aria-label="Principal">
           {mainNav.map((item) =>
             item.hasDropdown ? (
-              <div key={item.href} className="group relative">
+              /**
+               * Disclosure híbrido: se abre con el ratón (onMouseEnter) y con el
+               * teclado (onFocus, porque `focus` burbujea como `focusin` en
+               * React). `aria-expanded`/`aria-controls` describen el estado real.
+               */
+              <div
+                key={item.href}
+                className="relative"
+                onMouseEnter={() => setServicesOpen(true)}
+                onMouseLeave={() => setServicesOpen(false)}
+                onFocus={() => setServicesOpen(true)}
+                onBlur={(event) => {
+                  if (!event.currentTarget.contains(event.relatedTarget as Node)) {
+                    setServicesOpen(false);
+                  }
+                }}
+              >
                 <Link
                   href={item.href}
+                  aria-current={ariaCurrent(item.href)}
+                  aria-expanded={servicesOpen}
+                  aria-controls="mega-menu-servicios"
                   className={`flex items-center gap-1 rounded-full px-3.5 py-2 text-sm font-semibold transition-colors ${
                     isActive(item.href)
                       ? "text-brand-dark"
@@ -81,14 +138,19 @@ export function Header({ services }: { services: Service[] }) {
                   }`}
                 >
                   {item.label}
-                  <ChevronDown className="h-4 w-4 transition-transform duration-200 group-hover:rotate-180" />
+                  <ChevronDown
+                    className={`h-4 w-4 transition-transform duration-200 ${
+                      servicesOpen ? "rotate-180" : ""
+                    }`}
+                  />
                 </Link>
-                <MegaMenu services={services} />
+                <MegaMenu services={services} open={servicesOpen} />
               </div>
             ) : (
               <Link
                 key={item.href}
                 href={item.href}
+                aria-current={ariaCurrent(item.href)}
                 className={`rounded-full px-3.5 py-2 text-sm font-semibold transition-colors ${
                   isActive(item.href)
                     ? "text-brand-dark"
@@ -105,6 +167,9 @@ export function Header({ services }: { services: Service[] }) {
           {/* Acceso discreto al portal */}
           <Link
             href="/mi-cuenta"
+            aria-current={
+              isActive("/mi-cuenta") || isActive("/admin") ? "page" : undefined
+            }
             className={`hidden items-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium transition-colors lg:inline-flex ${
               isActive("/mi-cuenta") || isActive("/admin")
                 ? "text-brand-dark"
@@ -117,18 +182,20 @@ export function Header({ services }: { services: Service[] }) {
 
           <Link
             href="/contacto"
-            className="hidden rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-dark hover:shadow-card lg:inline-flex"
+            className="hidden rounded-full bg-brand-dark px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-deep hover:shadow-card lg:inline-flex"
           >
             Contáctanos
           </Link>
 
           {/* Botón menú móvil */}
           <button
+            ref={menuButtonRef}
             type="button"
             onClick={() => setMobileOpen((v) => !v)}
             className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-ink transition-colors hover:bg-mist lg:hidden"
             aria-label={mobileOpen ? "Cerrar menú" : "Abrir menú"}
             aria-expanded={mobileOpen}
+            aria-controls="menu-movil"
           >
             {mobileOpen ? <Close className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
@@ -137,7 +204,7 @@ export function Header({ services }: { services: Service[] }) {
 
       {/* Menú móvil */}
       {mobileOpen && (
-        <div className="lg:hidden">
+        <div id="menu-movil" className="lg:hidden">
           <div className="max-h-[calc(100dvh-5rem)] overflow-y-auto border-t border-line bg-white px-5 pb-8 pt-2">
             <nav className="flex flex-col" aria-label="Móvil">
               {mainNav.map((item) =>
@@ -147,6 +214,7 @@ export function Header({ services }: { services: Service[] }) {
                       <Link
                         href={item.href}
                         onClick={closeMobile}
+                        aria-current={ariaCurrent(item.href)}
                         className="flex-1 py-3.5 text-base font-semibold text-ink"
                       >
                         {item.label}
@@ -154,8 +222,13 @@ export function Header({ services }: { services: Service[] }) {
                       <button
                         type="button"
                         onClick={() => setMobileServices((v) => !v)}
-                        aria-label="Mostrar servicios"
+                        aria-label={
+                          mobileServices
+                            ? "Ocultar lista de servicios"
+                            : "Mostrar lista de servicios"
+                        }
                         aria-expanded={mobileServices}
+                        aria-controls="menu-movil-servicios"
                         className="p-2 text-graphite"
                       >
                         <ChevronDown
@@ -166,7 +239,7 @@ export function Header({ services }: { services: Service[] }) {
                       </button>
                     </div>
                     {mobileServices && (
-                      <div className="pb-3">
+                      <div id="menu-movil-servicios" className="pb-3">
                         {serviceCategories.map((cat) => (
                           <div key={cat.id} className="mb-2">
                             <p className="px-1 py-1.5 text-xs font-bold uppercase tracking-wider text-brand-dark">
@@ -192,6 +265,7 @@ export function Header({ services }: { services: Service[] }) {
                     key={item.href}
                     href={item.href}
                     onClick={closeMobile}
+                    aria-current={ariaCurrent(item.href)}
                     className="border-b border-line/70 py-3.5 text-base font-semibold text-ink"
                   >
                     {item.label}
@@ -201,6 +275,9 @@ export function Header({ services }: { services: Service[] }) {
               <Link
                 href="/mi-cuenta"
                 onClick={closeMobile}
+                aria-current={
+                  isActive("/mi-cuenta") || isActive("/admin") ? "page" : undefined
+                }
                 className="flex items-center gap-2 border-b border-line/70 py-3.5 text-base font-semibold text-graphite"
               >
                 <User className="h-5 w-5" />
@@ -210,7 +287,7 @@ export function Header({ services }: { services: Service[] }) {
             <Link
               href="/contacto"
               onClick={closeMobile}
-              className="mt-5 flex items-center justify-center gap-2 rounded-full bg-brand px-6 py-3.5 text-base font-semibold text-white shadow-soft"
+              className="mt-5 flex items-center justify-center gap-2 rounded-full bg-brand-dark px-6 py-3.5 text-base font-semibold text-white shadow-soft"
             >
               Contáctanos
               <ArrowRight className="h-5 w-5" />
@@ -222,10 +299,20 @@ export function Header({ services }: { services: Service[] }) {
   );
 }
 
-/** Mega-menú de servicios (escritorio) */
-function MegaMenu({ services }: { services: Service[] }) {
+/**
+ * Mega-menú de servicios (escritorio).
+ * La visibilidad la controla el estado del Header (ratón o teclado), no `:hover`
+ * de CSS, para que `aria-expanded` y lo que se ve digan siempre lo mismo.
+ */
+function MegaMenu({ services, open }: { services: Service[]; open: boolean }) {
   return (
-    <div className="invisible absolute left-1/2 top-full z-50 w-[640px] -translate-x-1/2 pt-3 opacity-0 transition-all duration-200 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
+    <div
+      id="mega-menu-servicios"
+      aria-label="Servicios de GPI"
+      className={`absolute left-1/2 top-full z-50 w-[640px] -translate-x-1/2 pt-3 transition-all duration-200 ${
+        open ? "visible opacity-100" : "invisible opacity-0"
+      }`}
+    >
       <div className="overflow-hidden rounded-2xl border border-line bg-white shadow-card">
         <div className="grid grid-cols-2 gap-1 p-3">
           {serviceCategories.map((cat) => {
@@ -233,7 +320,7 @@ function MegaMenu({ services }: { services: Service[] }) {
             return (
               <div key={cat.id} className="p-2">
                 <div className="mb-1 flex items-center gap-2 px-2">
-                  <CatIcon className="h-4 w-4 text-brand" />
+                  <CatIcon className="h-4 w-4 text-brand-dark" />
                   <span className="text-xs font-bold uppercase tracking-wider text-brand-dark">
                     {cat.name}
                   </span>
@@ -264,7 +351,7 @@ function MegaMenu({ services }: { services: Service[] }) {
         </div>
         <Link
           href="/servicios"
-          className="flex items-center justify-between border-t border-line bg-mist px-5 py-3 text-sm font-semibold text-brand-dark transition-colors hover:bg-brand-tint"
+          className="flex items-center justify-between border-t border-line bg-mist px-5 py-3 text-sm font-semibold text-brand-deep transition-colors hover:bg-brand-tint"
         >
           Ver todos los servicios
           <ArrowRight className="h-4 w-4" />

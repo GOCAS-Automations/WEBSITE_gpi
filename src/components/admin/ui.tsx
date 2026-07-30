@@ -20,6 +20,15 @@ interface FieldProps {
   className?: string;
 }
 
+/**
+ * Los campos usan `htmlFor`/`id` explícitos (no solo el `<label>` envolvente) y
+ * enlazan la ayuda con `aria-describedby`: así el lector de pantalla lee primero
+ * la etiqueta y después la ayuda, en vez de mezclarlo todo en el nombre del
+ * campo. El `id` se deriva del `name`, que ya es único dentro de cada formulario.
+ */
+const fieldId = (name: string) => `campo-${name}`;
+const hintId = (name: string) => `campo-${name}-ayuda`;
+
 export function Field({
   label,
   name,
@@ -31,21 +40,31 @@ export function Field({
   className = "",
 }: FieldProps) {
   return (
-    <label className={`block ${className}`}>
-      <span className="mb-1.5 block text-sm font-semibold text-ink">
+    <div className={`block ${className}`}>
+      <label
+        htmlFor={fieldId(name)}
+        className="mb-1.5 block text-sm font-semibold text-ink"
+      >
         {label}
-        {required && <span className="text-brand"> *</span>}
-      </span>
+        {required && <span className="text-brand-dark"> *</span>}
+      </label>
       <input
+        id={fieldId(name)}
         name={name}
         type={type}
         required={required}
+        aria-required={required ? true : undefined}
+        aria-describedby={hint ? hintId(name) : undefined}
         defaultValue={defaultValue ?? ""}
         placeholder={placeholder}
         className={inputClass}
       />
-      {hint && <span className="mt-1 block text-xs text-graphite">{hint}</span>}
-    </label>
+      {hint && (
+        <span id={hintId(name)} className="mt-1 block text-xs text-graphite">
+          {hint}
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -64,21 +83,31 @@ export function TextArea({
   className = "",
 }: TextAreaProps) {
   return (
-    <label className={`block ${className}`}>
-      <span className="mb-1.5 block text-sm font-semibold text-ink">
+    <div className={`block ${className}`}>
+      <label
+        htmlFor={fieldId(name)}
+        className="mb-1.5 block text-sm font-semibold text-ink"
+      >
         {label}
-        {required && <span className="text-brand"> *</span>}
-      </span>
+        {required && <span className="text-brand-dark"> *</span>}
+      </label>
       <textarea
+        id={fieldId(name)}
         name={name}
         rows={rows}
         required={required}
+        aria-required={required ? true : undefined}
+        aria-describedby={hint ? hintId(name) : undefined}
         defaultValue={defaultValue ?? ""}
         placeholder={placeholder}
         className={`${inputClass} resize-y`}
       />
-      {hint && <span className="mt-1 block text-xs text-graphite">{hint}</span>}
-    </label>
+      {hint && (
+        <span id={hintId(name)} className="mt-1 block text-xs text-graphite">
+          {hint}
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -98,17 +127,32 @@ export function Select({
   className?: string;
 }) {
   return (
-    <label className={`block ${className}`}>
-      <span className="mb-1.5 block text-sm font-semibold text-ink">{label}</span>
-      <select name={name} defaultValue={defaultValue} className={inputClass}>
+    <div className={`block ${className}`}>
+      <label
+        htmlFor={fieldId(name)}
+        className="mb-1.5 block text-sm font-semibold text-ink"
+      >
+        {label}
+      </label>
+      <select
+        id={fieldId(name)}
+        name={name}
+        defaultValue={defaultValue}
+        aria-describedby={hint ? hintId(name) : undefined}
+        className={inputClass}
+      >
         {options.map((o) => (
           <option key={o.value} value={o.value}>
             {o.label}
           </option>
         ))}
       </select>
-      {hint && <span className="mt-1 block text-xs text-graphite">{hint}</span>}
-    </label>
+      {hint && (
+        <span id={hintId(name)} className="mt-1 block text-xs text-graphite">
+          {hint}
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -184,7 +228,7 @@ export function PublishedBadge({ published }: { published: boolean }) {
   return (
     <Badge
       className={
-        published ? "bg-brand-tint text-brand-dark" : "bg-amber-100 text-amber-800"
+        published ? "bg-brand-tint text-brand-deep" : "bg-amber-100 text-amber-800"
       }
     >
       {published ? "Visible" : "Oculto"}
@@ -271,7 +315,7 @@ export function PrimaryLink({
   return (
     <Link
       href={href}
-      className={`inline-flex items-center gap-2 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-dark ${className}`}
+      className={`inline-flex items-center gap-2 rounded-full bg-brand-dark px-4 py-2 text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-deep ${className}`}
     >
       {children}
     </Link>
@@ -363,7 +407,7 @@ export function NextStepLink({ href, label }: { href: string; label: string }) {
   return (
     <Link
       href={href}
-      className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-dark transition-colors hover:text-brand"
+      className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-dark transition-colors hover:text-brand-dark"
     >
       {label}
       <ArrowRight className="h-4 w-4" />

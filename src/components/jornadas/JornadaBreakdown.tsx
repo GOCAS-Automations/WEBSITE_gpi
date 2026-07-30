@@ -33,7 +33,7 @@ const FILAS: Fila[] = [
     key: "extraDiurna",
     label: "Extra diurnas",
     hint: "Pasada la jornada ordinaria, en horario diurno.",
-    className: "bg-brand-tint text-brand-dark",
+    className: "bg-brand-tint text-brand-deep",
   },
   {
     key: "extraNocturna",
@@ -165,7 +165,7 @@ export function JornadaBreakdown({
         <Resumen
           label="Horas extra"
           minutos={desglose.extras}
-          className="bg-brand-tint text-brand-dark"
+          className="bg-brand-tint text-brand-deep"
         />
       </div>
 

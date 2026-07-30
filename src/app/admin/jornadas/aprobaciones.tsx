@@ -134,7 +134,7 @@ export async function AprobacionesView({
           <div className="flex items-end gap-2">
             <button
               type="submit"
-              className="inline-flex items-center gap-1.5 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-dark"
+              className="inline-flex items-center gap-1.5 rounded-full bg-brand-dark px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-deep"
             >
               Filtrar
             </button>
@@ -258,7 +258,7 @@ export async function AprobacionesView({
 
       <Card className="mt-6">
         <h2 className="flex items-center gap-2 text-base font-bold text-ink">
-          <Info className="h-4 w-4 text-brand" />
+          <Info className="h-4 w-4 text-brand-dark" />
           Cómo se calculan las horas
         </h2>
         <p className="mt-2 text-sm leading-relaxed text-graphite">
@@ -266,7 +266,7 @@ export async function AprobacionesView({
           <strong>jornada ordinaria</strong> de cada día sale del{" "}
           <Link
             href="/admin/horarios"
-            className="font-semibold text-brand-dark hover:text-brand"
+            className="font-semibold text-brand-dark hover:text-brand-dark"
           >
             horario del mes
           </Link>{" "}

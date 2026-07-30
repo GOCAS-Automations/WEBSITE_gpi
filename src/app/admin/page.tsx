@@ -206,7 +206,7 @@ function SectionCard({
       }`}
     >
       <div className="flex items-start justify-between gap-3">
-        <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-brand-tint text-brand-dark transition-colors group-hover:bg-brand group-hover:text-white">
+        <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-brand-tint text-brand-deep transition-colors group-hover:bg-brand-deep group-hover:text-white">
           <Icon className="h-5 w-5" />
         </span>
         {count !== null && (

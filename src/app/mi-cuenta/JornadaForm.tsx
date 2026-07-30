@@ -96,12 +96,13 @@ export function JornadaForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block">
           <span className="mb-1.5 block text-sm font-semibold text-ink">
-            Fecha del día laboral <span className="text-brand">*</span>
+            Fecha del día laboral <span className="text-brand-dark">*</span>
           </span>
           <input
             type="date"
             name="work_date"
             required
+            aria-required="true"
             value={workDate}
             onChange={(e) => setWorkDate(e.target.value)}
             className={campoClase}
@@ -113,12 +114,13 @@ export function JornadaForm({
 
         <label className="block">
           <span className="mb-1.5 block text-sm font-semibold text-ink">
-            Número de orden de trabajo <span className="text-brand">*</span>
+            Número de orden de trabajo <span className="text-brand-dark">*</span>
           </span>
           <input
             type="text"
             name="work_order"
             required
+            aria-required="true"
             defaultValue={inicial.workOrder}
             placeholder="Ej.: OT-1042"
             className={campoClase}
@@ -130,12 +132,13 @@ export function JornadaForm({
 
         <label className="block">
           <span className="mb-1.5 block text-sm font-semibold text-ink">
-            Hora de inicio <span className="text-brand">*</span>
+            Hora de inicio <span className="text-brand-dark">*</span>
           </span>
           <input
             type="time"
             name="start_time"
             required
+            aria-required="true"
             value={start}
             onChange={(e) => setStart(e.target.value)}
             className={campoClase}
@@ -144,12 +147,13 @@ export function JornadaForm({
 
         <label className="block">
           <span className="mb-1.5 block text-sm font-semibold text-ink">
-            Hora de finalización <span className="text-brand">*</span>
+            Hora de finalización <span className="text-brand-dark">*</span>
           </span>
           <input
             type="time"
             name="end_time"
             required
+            aria-required="true"
             value={end}
             onChange={(e) => setEnd(e.target.value)}
             className={campoClase}
@@ -167,7 +171,7 @@ export function JornadaForm({
             value="true"
             checked={nextDay}
             onChange={(e) => setNextDay(e.target.checked)}
-            className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer rounded border-line text-brand accent-[#3dae2b]"
+            className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer rounded border-line text-brand-dark accent-[#2c8420]"
           />
           <span className="min-w-0">
             <span className="block text-sm font-semibold text-ink">
@@ -194,12 +198,13 @@ export function JornadaForm({
 
       <label className="block">
         <span className="mb-1.5 block text-sm font-semibold text-ink">
-          Descripción de la labor <span className="text-brand">*</span>
+          Descripción de la labor <span className="text-brand-dark">*</span>
         </span>
         <textarea
           name="description"
           rows={3}
           required
+          aria-required="true"
           defaultValue={inicial.description}
           placeholder="Ej.: mantenimiento preventivo del tablero de control de la línea 2."
           className={`${campoClase} resize-y`}
@@ -226,7 +231,7 @@ export function JornadaForm({
       {desglose && (
         <div>
           <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-ink">
-            <Info className="h-4 w-4 text-brand" />
+            <Info className="h-4 w-4 text-brand-dark" />
             Así quedarían tus horas
           </p>
           <JornadaBreakdown desglose={desglose} />
@@ -234,11 +239,14 @@ export function JornadaForm({
       )}
 
       {state.status !== "idle" && state.message && (
+        /* Un error se anuncia con `role="alert"` (interrumpe al lector de
+           pantalla); una confirmación con `role="status"` (espera su turno). */
         <p
-          role="status"
+          role={exito ? "status" : "alert"}
+          aria-live={exito ? "polite" : "assertive"}
           className={`rounded-xl border px-4 py-3 text-sm leading-relaxed ${
             exito
-              ? "border-brand/30 bg-brand-tint text-brand-dark"
+              ? "border-brand/30 bg-brand-tint text-brand-deep"
               : "border-red-200 bg-red-50 text-red-700"
           }`}
         >
@@ -250,7 +258,7 @@ export function JornadaForm({
         <button
           type="submit"
           disabled={pending}
-          className="inline-flex items-center gap-2 rounded-full bg-brand px-6 py-2.5 text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-dark disabled:pointer-events-none disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-full bg-brand-dark px-6 py-2.5 text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-deep disabled:pointer-events-none disabled:opacity-60"
         >
           {pending ? (
             "Guardando…"

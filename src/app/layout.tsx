@@ -26,9 +26,9 @@ export const revalidate = 300;
 
 const siteUrl = "https://www.gpiprofesionales.com";
 const homeTitle =
-  "GPI — Optimización de Procesos Industriales y Ambientales | Cali";
+  "Optimización de Procesos Industriales y Ambientales | GPI";
 const homeDescription =
-  "GPI optimiza procesos industriales y ambientales en Cali: automatización y control, sistemas eléctricos, análisis energético, gestión ambiental, cumplimiento legal e ISO 14001. Más de 5 años buscando la excelencia.";
+  "GPI optimiza procesos industriales y ambientales en Cali: automatización y control, sistemas eléctricos, gestión ambiental, cumplimiento legal e ISO 14001.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -179,8 +179,15 @@ export default async function RootLayout({
         </noscript>
       </head>
       <body className="flex min-h-full flex-col bg-white font-sans text-ink antialiased">
+        {/* Primer elemento enfocable de la página: salta el header y va al
+            contenido. Invisible hasta que recibe el foco con el tabulador. */}
+        <a href="#contenido" className="skip-link">
+          Saltar al contenido
+        </a>
         <Header services={services} />
-        <main className="flex-1">{children}</main>
+        <main id="contenido" tabIndex={-1} className="flex-1">
+          {children}
+        </main>
         <Footer settings={settings} services={services} />
         <WhatsAppFloat contact={settings.contact} />
       </body>

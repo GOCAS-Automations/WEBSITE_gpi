@@ -91,6 +91,11 @@ export function HorarioEditor({
       {/* ---------------- Tabla semanal ---------------- */}
       <div className="overflow-x-auto rounded-2xl border border-line bg-white shadow-soft">
         <table className="w-full min-w-[46rem] border-collapse text-sm">
+          <caption className="sr-only">
+            Horario laboral del mes: para cada día de la semana, si se trabaja,
+            la hora de entrada y de salida, las horas de almuerzo y el total de
+            horas de jornada.
+          </caption>
           <thead>
             <tr className="border-b border-line bg-mist/70 text-left">
               <th scope="col" className="px-4 py-3 font-bold text-ink">
@@ -246,7 +251,7 @@ export function HorarioEditor({
       </div>
 
       <p className="flex items-start gap-2 text-xs leading-relaxed text-graphite">
-        <Clock className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
+        <Clock className="mt-0.5 h-4 w-4 shrink-0 text-brand-dark" />
         <span>
           Las <strong>horas de jornada</strong> de cada día se calculan solas:
           hora de salida menos hora de entrada, menos el almuerzo (el almuerzo{" "}
@@ -287,7 +292,7 @@ export function HorarioEditor({
           role="status"
           className={`rounded-xl border px-4 py-3 text-sm leading-relaxed ${
             exito
-              ? "border-brand/30 bg-brand-tint text-brand-dark"
+              ? "border-brand/30 bg-brand-tint text-brand-deep"
               : "border-red-200 bg-red-50 text-red-700"
           }`}
         >
@@ -299,7 +304,7 @@ export function HorarioEditor({
         <button
           type="submit"
           disabled={pending}
-          className="inline-flex items-center gap-2 rounded-full bg-brand px-6 py-2.5 text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-dark disabled:pointer-events-none disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-full bg-brand-dark px-6 py-2.5 text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-deep disabled:pointer-events-none disabled:opacity-60"
         >
           {pending ? (
             "Guardando…"

@@ -1,0 +1,2253 @@
+<!DOCTYPE html>
+<html lang="es-CO">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manual de uso del sitio web — GPI</title>
+<meta name="author" content="GOCAS Automations">
+<meta name="description" content="Manual de uso del sitio web de GPI — Grupo de Profesionales en Ingeniería GPI S.A.S. Sitio público, Mi Cuenta y panel de administración. Julio de 2026.">
+<style>
+  :root{
+    --verde:#3dae2b;
+    --verde-claro:#8cc63f;
+    --verde-oscuro:#2b7d1e;
+    --verde-tinte:#f1f9ee;
+    --verde-borde:#cbe7c2;
+    --gris:#6d6e71;
+    --gris-claro:#f5f6f5;
+    --gris-borde:#dcdedd;
+    --tinta:#23282b;
+    --tinta-suave:#4b5155;
+    --ambar:#b4741a;
+    --ambar-tinte:#fdf6e8;
+    --ambar-borde:#f0dcae;
+    --azul-tinte:#eef4f8;
+    --azul-borde:#cfdfe9;
+  }
+
+  html{ -webkit-text-size-adjust:100%; }
+
+  body{
+    font-family:"Segoe UI", "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+    color:var(--tinta);
+    background:#fff;
+    font-size:10.6pt;
+    line-height:1.55;
+    margin:0 auto;
+    max-width:190mm;
+    padding:10mm 6mm 16mm;
+    hyphens:auto;
+  }
+
+  /* ---------- Tipografía ---------- */
+  h1,h2,h3,h4{ line-height:1.2; margin:0; font-weight:700; }
+
+  h1.cap{
+    font-size:21pt;
+    color:var(--verde-oscuro);
+    padding-bottom:.28em;
+    border-bottom:3px solid var(--verde);
+    margin:0 0 .5em;
+    letter-spacing:-.2px;
+  }
+  h2{
+    font-size:14pt;
+    color:var(--tinta);
+    margin:1.5em 0 .45em;
+    padding-left:.55em;
+    border-left:4px solid var(--verde-claro);
+  }
+  h3{
+    font-size:11.6pt;
+    color:var(--verde-oscuro);
+    margin:1.15em 0 .35em;
+  }
+  h4{
+    font-size:10.6pt;
+    color:var(--tinta-suave);
+    margin:1em 0 .25em;
+    text-transform:uppercase;
+    letter-spacing:.6px;
+    font-size:8.8pt;
+  }
+  p{ margin:0 0 .6em; }
+  strong{ color:var(--tinta); }
+  em{ color:var(--tinta-suave); }
+  a{ color:var(--verde-oscuro); text-decoration:none; }
+
+  .num{ color:var(--verde); font-weight:700; }
+  h2 .num, h3 .num{ color:var(--verde); }
+
+  .lead{
+    font-size:11.4pt;
+    color:var(--tinta-suave);
+    margin:0 0 1em;
+  }
+  .ui{
+    font-weight:600;
+    color:var(--verde-oscuro);
+    white-space:nowrap;
+  }
+  .ui-wrap{ font-weight:600; color:var(--verde-oscuro); }
+
+  /* ---------- Listas ---------- */
+  ul,ol{ margin:0 0 .8em; padding-left:1.35em; }
+  li{ margin-bottom:.32em; }
+  ol.steps{ padding-left:1.5em; }
+  ol.steps > li{
+    margin-bottom:.5em;
+    break-inside:avoid;
+    page-break-inside:avoid;
+  }
+  ol.steps > li::marker{ color:var(--verde); font-weight:700; }
+  ul.check{ list-style:none; padding-left:1.25em; }
+  ul.check > li{ position:relative; }
+  ul.check > li::before{
+    content:"›";
+    position:absolute;
+    left:-1em;
+    color:var(--verde);
+    font-weight:700;
+  }
+  dl{ margin:0 0 .8em; }
+  dl.gloss dt{
+    font-weight:700;
+    color:var(--verde-oscuro);
+    margin-top:.55em;
+  }
+  dl.gloss dd{ margin:0 0 .1em; padding-left:0; color:var(--tinta-suave); }
+
+  /* ---------- Tablas ---------- */
+  .tabla-wrap{ overflow-x:auto; margin:.7em 0 1em; }
+  table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:9.4pt;
+  }
+  thead{ display:table-header-group; }
+  th,td{
+    border:1px solid var(--gris-borde);
+    padding:.4em .55em;
+    text-align:left;
+    vertical-align:top;
+  }
+  thead th{
+    background:var(--verde-tinte);
+    color:var(--verde-oscuro);
+    border-color:var(--verde-borde);
+    font-size:8.9pt;
+    text-transform:uppercase;
+    letter-spacing:.4px;
+  }
+  tbody tr:nth-child(even){ background:var(--gris-claro); }
+  tbody tr{ break-inside:avoid; page-break-inside:avoid; }
+  td.c, th.c{ text-align:center; }
+  .si{ color:var(--verde); font-weight:700; }
+  .no{ color:#b23a3a; font-weight:700; }
+  table.keep{ break-inside:avoid; page-break-inside:avoid; }
+  caption{
+    caption-side:bottom;
+    font-size:8.6pt;
+    color:var(--gris);
+    text-align:left;
+    padding-top:.35em;
+  }
+
+  /* ---------- Cajas ---------- */
+  .caja{
+    border:1px solid var(--gris-borde);
+    border-left-width:4px;
+    border-radius:5px;
+    padding:.6em .8em;
+    margin:.8em 0 1em;
+    break-inside:avoid;
+    page-break-inside:avoid;
+    font-size:10pt;
+  }
+  .caja p:last-child{ margin-bottom:0; }
+  .caja .titulo{
+    display:block;
+    font-weight:700;
+    font-size:8.8pt;
+    text-transform:uppercase;
+    letter-spacing:.7px;
+    margin-bottom:.25em;
+  }
+  .tip{
+    background:var(--verde-tinte);
+    border-color:var(--verde-borde);
+    border-left-color:var(--verde);
+  }
+  .tip .titulo{ color:var(--verde-oscuro); }
+  .warn{
+    background:var(--ambar-tinte);
+    border-color:var(--ambar-borde);
+    border-left-color:#e0a52e;
+  }
+  .warn .titulo{ color:var(--ambar); }
+  .nota{
+    background:var(--azul-tinte);
+    border-color:var(--azul-borde);
+    border-left-color:#6f9cba;
+  }
+  .nota .titulo{ color:#3d6d8c; }
+
+  /* ---------- Portada ---------- */
+  .portada{
+    min-height:250mm;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    text-align:center;
+    break-after:page;
+    page-break-after:always;
+  }
+  .portada .logo{
+    width:120mm;
+    max-width:78%;
+    height:auto;
+    margin:0 auto 14mm;
+    display:block;
+  }
+  .portada .kicker{
+    font-size:9.5pt;
+    text-transform:uppercase;
+    letter-spacing:3px;
+    color:var(--gris);
+    margin-bottom:6mm;
+  }
+  .portada h1{
+    font-size:30pt;
+    color:var(--tinta);
+    letter-spacing:-.6px;
+    margin-bottom:4mm;
+  }
+  .portada h1 span{ color:var(--verde); }
+  .portada .sub{
+    font-size:13pt;
+    color:var(--tinta-suave);
+    margin-bottom:10mm;
+  }
+  .portada .regla{
+    width:40mm;
+    height:3px;
+    background:linear-gradient(90deg,var(--verde),var(--verde-claro));
+    margin:0 auto 10mm;
+    border-radius:2px;
+  }
+  .portada .pie{
+    font-size:10.5pt;
+    color:var(--gris);
+    line-height:1.9;
+  }
+  .portada .pie strong{ color:var(--tinta); }
+
+  /* ---------- Índice ---------- */
+  .indice{ break-after:page; page-break-after:always; }
+  .indice ol{ list-style:none; padding:0; margin:0; }
+  .indice > ol > li{
+    margin:0;
+    padding:.2em 0;
+    border-bottom:1px dotted var(--gris-borde);
+  }
+  .indice > ol > li > a{
+    font-weight:700;
+    color:var(--tinta);
+    font-size:10.6pt;
+  }
+  .indice > ol > li > a .n{
+    color:var(--verde);
+    display:inline-block;
+    min-width:1.6em;
+  }
+  .indice ol ol{
+    margin:.2em 0 0 .3em;
+    columns:2;
+    column-gap:8mm;
+    font-size:9pt;
+    line-height:1.45;
+  }
+  .indice ol ol li{
+    margin:0 0 .12em;
+    border:0;
+    padding:0;
+    break-inside:avoid;
+  }
+  .indice ol ol a{ color:var(--tinta-suave); }
+  .indice ol ol a .n{
+    color:var(--verde-claro);
+    font-weight:700;
+    display:inline-block;
+    min-width:2.4em;
+  }
+
+  /* ---------- Capítulos ---------- */
+  .cap{ break-before:page; page-break-before:always; }
+  section > h2:first-of-type{ margin-top:.9em; }
+
+  /* ---------- Diagrama de flujo ---------- */
+  .flujo{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:stretch;
+    gap:0;
+    margin:1em 0 1.2em;
+    break-inside:avoid;
+    page-break-inside:avoid;
+  }
+  .flujo .paso{
+    flex:1 1 0;
+    min-width:30mm;
+    border:1px solid var(--verde-borde);
+    background:var(--verde-tinte);
+    border-radius:5px;
+    padding:.55em .6em;
+    text-align:center;
+    font-size:8.9pt;
+    color:var(--tinta-suave);
+  }
+  .flujo .paso b{
+    display:block;
+    color:var(--verde-oscuro);
+    font-size:9.6pt;
+    margin-bottom:.15em;
+  }
+  .flujo .paso.alt{
+    background:var(--ambar-tinte);
+    border-color:var(--ambar-borde);
+  }
+  .flujo .paso.alt b{ color:var(--ambar); }
+  .flujo .flecha{
+    flex:0 0 7mm;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:var(--verde);
+    font-size:13pt;
+    font-weight:700;
+  }
+
+  .mapa{
+    border:1px solid var(--gris-borde);
+    border-radius:5px;
+    padding:.7em .9em;
+    margin:.8em 0 1em;
+    background:var(--gris-claro);
+    font-size:9.4pt;
+    break-inside:avoid;
+    page-break-inside:avoid;
+  }
+  .mapa ul{ margin:0; padding-left:1.1em; }
+  .mapa > b{ color:var(--verde-oscuro); }
+
+  .kpi-grid{
+    display:flex;
+    flex-wrap:wrap;
+    gap:3mm;
+    margin:.8em 0 1em;
+  }
+  .kpi{
+    flex:1 1 40%;
+    min-width:60mm;
+    border:1px solid var(--gris-borde);
+    border-top:3px solid var(--verde-claro);
+    border-radius:5px;
+    padding:.55em .7em;
+    font-size:9.3pt;
+    color:var(--tinta-suave);
+    break-inside:avoid;
+    page-break-inside:avoid;
+  }
+  .kpi b{ display:block; color:var(--verde-oscuro); font-size:10.2pt; margin-bottom:.15em; }
+
+  .sep{
+    border:0;
+    border-top:1px solid var(--gris-borde);
+    margin:1.4em 0;
+  }
+
+  .pie-doc{
+    margin-top:2em;
+    padding-top:.8em;
+    border-top:2px solid var(--verde);
+    font-size:9pt;
+    color:var(--gris);
+    text-align:center;
+  }
+
+  /* ---------- Impresión ---------- */
+  @page{ size:A4; margin:18mm 16mm; }
+
+  @media print{
+    body{
+      max-width:none;
+      padding:0;
+      margin:0;
+      font-size:10pt;
+    }
+    a{ color:var(--tinta); text-decoration:none; }
+    .indice > ol > li > a{ color:var(--tinta); }
+    .tabla-wrap{ overflow:visible; }
+    h2,h3{ break-after:avoid; page-break-after:avoid; }
+    .caja,.flujo,.mapa,.kpi,table.keep,tbody tr,ol.steps > li{
+      break-inside:avoid;
+      page-break-inside:avoid;
+    }
+    .portada{ min-height:0; height:240mm; }
+  }
+
+  /* ---------- Modo oscuro (solo pantalla) ---------- */
+  @media screen and (prefers-color-scheme: dark){
+    body{ background:#14181a; color:#e6e9e8; }
+    h1.cap{ color:var(--verde-claro); }
+    h2{ color:#f0f3f2; }
+    h3{ color:var(--verde-claro); }
+    h4{ color:#a9b1b3; }
+    .lead,em,dl.gloss dd,.mapa,.kpi,.flujo .paso,caption{ color:#b9c0c1; }
+    strong{ color:#f2f5f4; }
+    a,.ui,.ui-wrap{ color:var(--verde-claro); }
+    th,td{ border-color:#333a3d; }
+    thead th{ background:#1e2f1b; color:var(--verde-claro); border-color:#39512f; }
+    tbody tr:nth-child(even){ background:#1a1f21; }
+    .tip{ background:#182619; border-color:#2f4a2b; }
+    .warn{ background:#2a2113; border-color:#4d3d1c; }
+    .nota{ background:#161f26; border-color:#2b3f4c; }
+    .tip .titulo{ color:var(--verde-claro); }
+    .warn .titulo{ color:#e5b563; }
+    .nota .titulo{ color:#8fbcd8; }
+    .mapa{ background:#1a1f21; border-color:#333a3d; }
+    .kpi{ background:#1a1f21; border-color:#333a3d; }
+    .flujo .paso{ background:#182619; border-color:#2f4a2b; }
+    .flujo .paso.alt{ background:#2a2113; border-color:#4d3d1c; }
+    .flujo .paso.alt b{ color:#e5b563; }
+    .portada h1{ color:#f2f5f4; }
+    .portada .sub,.portada .pie{ color:#b9c0c1; }
+    .portada .pie strong{ color:#f2f5f4; }
+    .indice > ol > li{ border-color:#333a3d; }
+    .indice > ol > li > a{ color:#f0f3f2; }
+    .indice ol ol a{ color:#b9c0c1; }
+    .sep{ border-color:#333a3d; }
+    .pie-doc{ color:#9aa2a3; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ==================== PORTADA ==================== -->
+<div class="portada">
+  <img class="logo" src="../public/images/logo.png" alt="GPI — Optimización de Procesos Industriales y Ambientales">
+  <div class="kicker">Grupo de Profesionales en Ingeniería GPI S.A.S</div>
+  <h1>Manual de uso<br><span>del sitio web</span></h1>
+  <div class="regla"></div>
+  <p class="sub">gpiprofesionales.com<br>Sitio público · Mi Cuenta · Panel de administración</p>
+  <p class="pie">
+    Julio de 2026<br>
+    Elaborado por <strong>GOCAS Automations</strong>
+  </p>
+</div>
+
+<!-- ==================== ÍNDICE ==================== -->
+<div class="indice">
+  <h1 class="cap" style="break-before:auto;page-break-before:auto">Índice</h1>
+  <ol>
+    <li><a href="#c1"><span class="n">1.</span> Bienvenida y qué es este manual</a>
+      <ol>
+        <li><a href="#s1-1"><span class="n">1.1</span> Para qué sirve</a></li>
+        <li><a href="#s1-2"><span class="n">1.2</span> A quién va dirigido</a></li>
+        <li><a href="#s1-3"><span class="n">1.3</span> Cómo está organizado</a></li>
+        <li><a href="#s1-4"><span class="n">1.4</span> Cómo leer los recuadros</a></li>
+      </ol>
+    </li>
+    <li><a href="#c2"><span class="n">2.</span> Recorrido por el sitio público</a>
+      <ol>
+        <li><a href="#s2-1"><span class="n">2.1</span> La barra de navegación</a></li>
+        <li><a href="#s2-2"><span class="n">2.2</span> El menú en el celular</a></li>
+        <li><a href="#s2-3"><span class="n">2.3</span> Inicio</a></li>
+        <li><a href="#s2-4"><span class="n">2.4</span> Nosotros</a></li>
+        <li><a href="#s2-5"><span class="n">2.5</span> Servicios</a></li>
+        <li><a href="#s2-6"><span class="n">2.6</span> La página de un servicio</a></li>
+        <li><a href="#s2-7"><span class="n">2.7</span> Proyectos</a></li>
+        <li><a href="#s2-8"><span class="n">2.8</span> Contacto</a></li>
+        <li><a href="#s2-9"><span class="n">2.9</span> El formulario de contacto</a></li>
+        <li><a href="#s2-10"><span class="n">2.10</span> El botón flotante de WhatsApp</a></li>
+        <li><a href="#s2-11"><span class="n">2.11</span> El pie de página</a></li>
+        <li><a href="#s2-12"><span class="n">2.12</span> Si una dirección no existe</a></li>
+      </ol>
+    </li>
+    <li><a href="#c3"><span class="n">3.</span> Cómo ingresar a Mi Cuenta</a>
+      <ol>
+        <li><a href="#s3-1"><span class="n">3.1</span> Dónde está el acceso</a></li>
+        <li><a href="#s3-2"><span class="n">3.2</span> Ingresar con usuario y contraseña</a></li>
+        <li><a href="#s3-3"><span class="n">3.3</span> Si olvidó la contraseña</a></li>
+        <li><a href="#s3-4"><span class="n">3.4</span> Cambiar su propia contraseña</a></li>
+        <li><a href="#s3-5"><span class="n">3.5</span> Cerrar sesión</a></li>
+        <li><a href="#s3-6"><span class="n">3.6</span> Mensajes que puede ver</a></li>
+      </ol>
+    </li>
+    <li><a href="#c4"><span class="n">4.</span> Los cuatro roles y qué puede hacer cada uno</a>
+      <ol>
+        <li><a href="#s4-1"><span class="n">4.1</span> Qué es un rol</a></li>
+        <li><a href="#s4-2"><span class="n">4.2</span> Los cuatro roles</a></li>
+        <li><a href="#s4-3"><span class="n">4.3</span> Tabla de permisos</a></li>
+        <li><a href="#s4-4"><span class="n">4.4</span> Reglas que el sistema siempre aplica</a></li>
+      </ol>
+    </li>
+    <li><a href="#c5"><span class="n">5.</span> Para empleados: registrar una jornada</a>
+      <ol>
+        <li><a href="#s5-1"><span class="n">5.1</span> Qué verá al entrar</a></li>
+        <li><a href="#s5-2"><span class="n">5.2</span> Registrar una jornada, paso a paso</a></li>
+        <li><a href="#s5-3"><span class="n">5.3</span> Turnos que cruzan la medianoche</a></li>
+        <li><a href="#s5-4"><span class="n">5.4</span> «Así quedarían tus horas»</a></li>
+        <li><a href="#s5-5"><span class="n">5.5</span> Los tres estados</a></li>
+        <li><a href="#s5-6"><span class="n">5.6</span> Mis jornadas: el historial</a></li>
+        <li><a href="#s5-7"><span class="n">5.7</span> Corregir o eliminar</a></li>
+        <li><a href="#s5-8"><span class="n">5.8</span> El recorrido completo</a></li>
+      </ol>
+    </li>
+    <li><a href="#c6"><span class="n">6.</span> El panel de administración</a>
+      <ol>
+        <li><a href="#s6-1"><span class="n">6.1</span> Vista general y navegación</a></li>
+        <li><a href="#s6-2"><span class="n">6.2</span> Servicios</a></li>
+        <li><a href="#s6-3"><span class="n">6.3</span> Proyectos</a></li>
+        <li><a href="#s6-4"><span class="n">6.4</span> Clientes</a></li>
+        <li><a href="#s6-5"><span class="n">6.5</span> Preguntas frecuentes</a></li>
+        <li><a href="#s6-6"><span class="n">6.6</span> Valores corporativos</a></li>
+        <li><a href="#s6-7"><span class="n">6.7</span> Contacto y ajustes</a></li>
+        <li><a href="#s6-8"><span class="n">6.8</span> Imágenes</a></li>
+        <li><a href="#s6-9"><span class="n">6.9</span> Visibilidad</a></li>
+        <li><a href="#s6-10"><span class="n">6.10</span> Equipo y cuentas</a></li>
+        <li><a href="#s6-11"><span class="n">6.11</span> Horario laboral del mes</a></li>
+        <li><a href="#s6-12"><span class="n">6.12</span> Aprobar o rechazar jornadas</a></li>
+        <li><a href="#s6-13"><span class="n">6.13</span> Tablero de métricas</a></li>
+      </ol>
+    </li>
+    <li><a href="#c7"><span class="n">7.</span> Cómo se calculan las horas extra</a>
+      <ol>
+        <li><a href="#s7-1"><span class="n">7.1</span> La idea en una frase</a></li>
+        <li><a href="#s7-2"><span class="n">7.2</span> Los cinco pasos del cálculo</a></li>
+        <li><a href="#s7-3"><span class="n">7.3</span> Las ocho categorías de horas</a></li>
+        <li><a href="#s7-4"><span class="n">7.4</span> Porcentajes configurados</a></li>
+        <li><a href="#s7-5"><span class="n">7.5</span> El almuerzo (pendiente)</a></li>
+        <li><a href="#s7-6"><span class="n">7.6</span> Festivos y domingos</a></li>
+        <li><a href="#s7-7"><span class="n">7.7</span> Tres ejemplos resueltos</a></li>
+      </ol>
+    </li>
+    <li><a href="#c8"><span class="n">8.</span> Preguntas frecuentes y solución de problemas</a></li>
+    <li><a href="#c9"><span class="n">9.</span> Glosario</a></li>
+    <li><a href="#c10"><span class="n">10.</span> Contacto de soporte</a></li>
+  </ol>
+</div>
+
+<!-- ==================== 1. BIENVENIDA ==================== -->
+<section id="c1">
+  <h1 class="cap"><span class="num">1.</span> Bienvenida y qué es este manual</h1>
+
+  <p class="lead">GPI tiene un sitio web nuevo. Además de mostrar la empresa y sus servicios,
+  el sitio incluye ahora una zona privada donde el equipo registra sus jornadas y donde
+  se administra todo el contenido que ve el público. Este manual explica ambas cosas.</p>
+
+  <h2 id="s1-1"><span class="num">1.1</span> Para qué sirve este manual</h2>
+  <p>Este documento es la guía práctica del sitio web de GPI. Está escrito para que
+  cualquier persona del equipo pueda:</p>
+  <ul class="check">
+    <li>Entender qué muestra cada página del sitio público y cómo se navega.</li>
+    <li>Ingresar a su cuenta personal y registrar las jornadas que trabaja.</li>
+    <li>Revisar, aprobar o rechazar las jornadas que registra el equipo.</li>
+    <li>Editar los textos, las imágenes y los datos de contacto del sitio sin ayuda técnica.</li>
+    <li>Definir el horario laboral de cada mes y entender cómo se calculan las horas extra.</li>
+  </ul>
+  <p>No hace falta saber nada de programación. Todo lo que se describe aquí se hace
+  desde un navegador de internet, en un computador o en un celular.</p>
+
+  <h2 id="s1-2"><span class="num">1.2</span> A quién va dirigido</h2>
+  <div class="tabla-wrap">
+    <table class="keep">
+      <thead>
+        <tr><th style="width:32%">Si usted es…</th><th>Qué leer primero</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Técnico o profesional de campo</td><td>Los capítulos 3, 5 y 7: cómo entrar, cómo registrar sus jornadas y cómo se cuentan sus horas extra.</td></tr>
+        <tr><td>Coordinador</td><td>Todo. En especial 6.10, 6.11, 6.12 y 6.13: cuentas del equipo, horario del mes, aprobaciones y métricas.</td></tr>
+        <tr><td>Community Manager</td><td>Los capítulos 2 y 6.2 a 6.9: el sitio público y la edición de contenido e imágenes.</td></tr>
+        <tr><td>Gerencia / administrador</td><td>Todo, con énfasis en el capítulo 4 (roles), el 6.13 (métricas) y el 7 (cálculo de horas).</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 id="s1-3"><span class="num">1.3</span> Cómo está organizado</h2>
+  <p>El manual va de lo público a lo privado:</p>
+  <ol class="steps">
+    <li><strong>Capítulo 2</strong> — recorrido por el sitio que ve cualquier visitante.</li>
+    <li><strong>Capítulos 3 y 4</strong> — cómo se entra a la zona privada y qué puede hacer cada persona según su rol.</li>
+    <li><strong>Capítulo 5</strong> — el día a día de un empleado: registrar jornadas.</li>
+    <li><strong>Capítulo 6</strong> — el panel de administración, módulo por módulo.</li>
+    <li><strong>Capítulo 7</strong> — el cálculo de las horas extra explicado en lenguaje llano.</li>
+    <li><strong>Capítulos 8 a 10</strong> — problemas frecuentes, glosario y soporte.</li>
+  </ol>
+  <p>Como no hay capturas de pantalla, los botones y campos se nombran con su texto exacto
+  (así: <span class="ui">Registrar jornada</span>) y se indica dónde encontrarlos con
+  palabras: «en la barra de la izquierda», «abajo del formulario», «arriba a la derecha».</p>
+
+  <h2 id="s1-4"><span class="num">1.4</span> Cómo leer los recuadros</h2>
+  <div class="caja tip">
+    <span class="titulo">Consejo</span>
+    <p>Los recuadros verdes traen atajos, buenas prácticas y recomendaciones que
+    facilitan el trabajo. No son obligatorios, pero ayudan.</p>
+  </div>
+  <div class="caja warn">
+    <span class="titulo">Atención</span>
+    <p>Los recuadros ámbar avisan de algo que conviene no hacer a la ligera:
+    acciones que no se pueden deshacer, datos que solo se ven una vez o reglas
+    que aún debe confirmar GPI.</p>
+  </div>
+  <div class="caja nota">
+    <span class="titulo">Para tener en cuenta</span>
+    <p>Los recuadros azules aclaran cómo funciona algo por detrás, sin entrar en
+    detalles técnicos.</p>
+  </div>
+</section>
+
+<!-- ==================== 2. SITIO PÚBLICO ==================== -->
+<section id="c2">
+  <h1 class="cap"><span class="num">2.</span> Recorrido por el sitio público</h1>
+
+  <p class="lead">El sitio público tiene cinco páginas principales más una página propia
+  por cada servicio: en total dieciséis páginas. La dirección es
+  <strong>gpiprofesionales.com</strong> y funciona igual en computador, tableta y celular.</p>
+
+  <h2 id="s2-1"><span class="num">2.1</span> La barra de navegación</h2>
+  <p>La barra superior acompaña al visitante en todo momento: se queda fija arriba
+  aunque baje por la página. De izquierda a derecha contiene:</p>
+  <ol class="steps">
+    <li>El <strong>logo de GPI</strong>. Al hacer clic siempre lleva al inicio.</li>
+    <li>Cinco enlaces, en este orden: <span class="ui">Inicio</span>,
+      <span class="ui">Nosotros</span>, <span class="ui">Servicios</span>,
+      <span class="ui">Proyectos</span> y <span class="ui">Contacto</span>.
+      El enlace de la página en la que se está se ve resaltado en verde.</li>
+    <li>Un enlace discreto con un icono de persona: <span class="ui">Mi Cuenta</span>.
+      Es la puerta de entrada de la zona privada (capítulo 3).</li>
+    <li>Un botón verde de llamado a la acción: <span class="ui">Contáctanos</span>.</li>
+  </ol>
+  <p>Al pasar el cursor sobre <span class="ui">Servicios</span> se despliega un menú
+  amplio de dos columnas: <span class="ui">Servicios Industriales</span> a la izquierda y
+  <span class="ui">Servicios Ambientales</span> a la derecha, cada una con la lista completa
+  de sus servicios. Abajo del menú hay una franja con el enlace
+  <span class="ui">Ver todos los servicios</span>.</p>
+
+  <h2 id="s2-2"><span class="num">2.2</span> El menú en el celular</h2>
+  <ol class="steps">
+    <li>En pantallas pequeñas los enlaces se reemplazan por un <strong>botón de tres
+      líneas</strong> (el clásico icono de menú) arriba a la derecha.</li>
+    <li>Al pulsarlo se abre un panel con los mismos cinco enlaces. El icono cambia a
+      una equis para cerrarlo.</li>
+    <li>Junto a <span class="ui">Servicios</span> hay una flechita aparte: al pulsarla
+      se despliega la lista de los once servicios agrupados por área, sin salir del menú.
+      El texto <span class="ui">Servicios</span> sigue siendo un enlace a la página general.</li>
+    <li>Al final del panel están <span class="ui">Mi Cuenta</span> y el botón
+      <span class="ui">Contáctanos</span>.</li>
+  </ol>
+
+  <h2 id="s2-3"><span class="num">2.3</span> Inicio</h2>
+  <p>La página principal se recorre de arriba abajo en siete bloques:</p>
+  <div class="tabla-wrap">
+    <table>
+      <thead><tr><th style="width:26%">Bloque</th><th>Qué muestra</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Portada</strong></td><td>Fotografía a pantalla completa, la etiqueta «+5 años en el sector industrial-ambiental», el titular «Optimización de procesos», un párrafo de presentación y dos botones: <span class="ui">Ver servicios</span> y <span class="ui">Contáctanos</span>. Todos estos textos y la imagen son editables desde el panel.</td></tr>
+        <tr><td><strong>Quiénes somos</strong></td><td>Presentación breve de la empresa, tres puntos destacados con visto verde, el botón <span class="ui">Conócenos</span> y cuatro cifras: años de experiencia, objetivo de desempeño, número de servicios y número de áreas.</td></tr>
+        <tr><td><strong>Dos áreas</strong></td><td>Bajo el título «Dos áreas, una misma excelencia», dos tarjetas grandes —Industriales y Ambientales— con su descripción y la lista de servicios de cada una.</td></tr>
+        <tr><td><strong>Nuestros valores</strong></td><td>Los seis valores corporativos en tarjetas con icono. Se puede apagar por completo desde el panel.</td></tr>
+        <tr><td><strong>Banda EXCELENCIA</strong></td><td>Franja oscura con el mensaje de compromiso de GPI y el botón <span class="ui">Ver proyectos realizados</span>.</td></tr>
+        <tr><td><strong>Clientes</strong></td><td>Franja con los logos de las empresas que han trabajado con GPI. También se puede apagar desde el panel.</td></tr>
+        <tr><td><strong>Cierre</strong></td><td>Banda verde con la invitación «¿Listo para optimizar sus procesos?» y dos botones: <span class="ui">Contáctanos</span> y <span class="ui">WhatsApp</span>.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 id="s2-4"><span class="num">2.4</span> Nosotros</h2>
+  <p>Cuenta la historia y la forma de trabajar de GPI. Contiene, en orden:</p>
+  <ul class="check">
+    <li><strong>Portada</strong> con el titular «Optimizamos procesos, generamos rentabilidad».</li>
+    <li><strong>Quiénes somos</strong>: una fotografía con el sello «+5 años de experiencia» y tres puntos clave.</li>
+    <li><strong>Lo que nos define</strong>: los seis valores corporativos.</li>
+    <li><strong>Video corporativo</strong>: el video de YouTube de inspección con drones. Para que la página cargue rápido, el video no se descarga hasta que alguien pulsa <span class="ui">Reproducir video</span>.</li>
+    <li><strong>Resolvemos tus dudas</strong>: las preguntas frecuentes en forma de acordeón. La primera aparece abierta; al abrir otra, la anterior se cierra.</li>
+    <li><strong>Cierre</strong> con la banda verde de contacto.</li>
+  </ul>
+  <div class="caja nota">
+    <span class="titulo">Para tener en cuenta</span>
+    <p>Los valores, el video y las preguntas frecuentes se pueden apagar y volver a
+    encender desde el panel sin perder el contenido (ver 6.9).</p>
+  </div>
+
+  <h2 id="s2-5"><span class="num">2.5</span> Servicios</h2>
+  <p>La página general de servicios los agrupa en dos secciones —primero
+  <strong>Servicios Industriales</strong> y luego <strong>Servicios Ambientales</strong>—,
+  cada una con su descripción y sus tarjetas. Cada tarjeta muestra una fotografía, el
+  nombre del servicio, un resumen de una línea y el enlace
+  <span class="ui">Ver servicio</span>. Toda la tarjeta es clicable.</p>
+
+  <div class="tabla-wrap">
+    <table>
+      <thead><tr><th class="c" style="width:6%">#</th><th style="width:46%">Servicio</th><th>Nombre corto en el menú</th></tr></thead>
+      <tbody>
+        <tr><td class="c">1</td><td>Automatización y Control</td><td>Igual</td></tr>
+        <tr><td class="c">2</td><td>Sistemas Eléctricos</td><td>Igual</td></tr>
+        <tr><td class="c">3</td><td>Seguridad de Maquinaria</td><td>Igual</td></tr>
+        <tr><td class="c">4</td><td>Análisis Energético</td><td>Igual</td></tr>
+        <tr><td class="c">5</td><td>Sistemas de Medición para Variables de Proceso</td><td>Medición de Variables</td></tr>
+        <tr><td class="c">6</td><td>Gestión del Mantenimiento y Proyectos</td><td>Gestión del Mantenimiento</td></tr>
+        <tr><td class="c">7</td><td>Gestión Ambiental Empresarial</td><td>Igual</td></tr>
+        <tr><td class="c">8</td><td>Cumplimiento Legal Ambiental</td><td>Igual</td></tr>
+        <tr><td class="c">9</td><td>Gestión Urbanística</td><td>Igual</td></tr>
+        <tr><td class="c">10</td><td>Recurso Hídrico</td><td>Igual</td></tr>
+        <tr><td class="c">11</td><td>ISO 14001:2015</td><td>Igual</td></tr>
+      </tbody>
+      <caption>Los servicios 1 a 6 son industriales; los 7 a 11, ambientales. El nombre corto
+      es el que aparece en el menú y en el pie de página cuando el nombre completo es muy largo.</caption>
+    </table>
+  </div>
+
+  <h2 id="s2-6"><span class="num">2.6</span> La página de un servicio</h2>
+  <p>Cada uno de los once servicios tiene su propia página, con la misma estructura:</p>
+  <ol class="steps">
+    <li><strong>Ruta de migas</strong> arriba de todo: <em>Inicio › Servicios › nombre del servicio</em>.
+      Los dos primeros son enlaces; el último indica dónde está usted.</li>
+    <li><strong>Portada</strong> con la fotografía del servicio, el área a la que pertenece,
+      el nombre del servicio y un párrafo de introducción.</li>
+    <li><strong>¿Qué incluye este servicio?</strong> — la lista de actividades y alcances,
+      cada una en una tarjeta con visto verde.</li>
+    <li><strong>Galería</strong> — fotografías adicionales, cuando el servicio las tiene.</li>
+    <li><strong>¿Le interesa este servicio?</strong> — un recuadro verde con el botón
+      <span class="ui">Cotiza este servicio</span>, que abre WhatsApp con el mensaje ya escrito
+      («Hola GPI, quiero cotizar el servicio de…»).</li>
+    <li><strong>Todos los servicios</strong> — en la columna de la derecha, la lista completa
+      de los once servicios para saltar de uno a otro; el que se está leyendo queda resaltado.</li>
+    <li><strong>Anterior y siguiente</strong> — al final, una franja gris con tres accesos:
+      <span class="ui">Servicio anterior</span> a la izquierda,
+      <span class="ui">Todos los servicios</span> en el centro y
+      <span class="ui">Siguiente servicio</span> a la derecha. En el primer servicio no hay
+      «anterior» y en el último no hay «siguiente».</li>
+  </ol>
+
+  <h2 id="s2-7"><span class="num">2.7</span> Proyectos</h2>
+  <p>Muestra los proyectos ejecutados en una cuadrícula de fotografías. Sobre cada
+  imagen aparece el nombre del cliente en una etiqueta pequeña (si el proyecto lo tiene)
+  y el título del proyecto. Las tarjetas son informativas: no abren otra página.
+  Al final está la banda «¿Quiere ser nuestro próximo caso de éxito?».</p>
+
+  <h2 id="s2-8"><span class="num">2.8</span> Contacto</h2>
+  <p>Es la página que más se usa. Tiene tres partes:</p>
+  <ul class="check">
+    <li><strong>Información de contacto</strong> (columna izquierda): cuatro tarjetas con
+      la <strong>dirección</strong>, los <strong>teléfonos / WhatsApp</strong> (pulsables para
+      llamar desde el celular), los <strong>correos electrónicos</strong> (pulsables para
+      escribir) y el <strong>horario de atención</strong>. Debajo, dos botones verdes para
+      escribir directo por WhatsApp a cada número y los enlaces a Facebook, Instagram y YouTube.</li>
+    <li><strong>Formulario</strong> (columna derecha): ver 2.9.</li>
+    <li><strong>Mapa</strong>: al final de la página, un mapa de Google con la ubicación de
+      la oficina en Cali, a todo el ancho.</li>
+  </ul>
+
+  <h2 id="s2-9"><span class="num">2.9</span> El formulario de contacto</h2>
+  <p>El formulario <strong>no envía un correo</strong>: abre WhatsApp con el mensaje ya
+  redactado, para que el visitante solo tenga que pulsar «enviar». Así la conversación
+  llega al celular de GPI de inmediato.</p>
+  <div class="tabla-wrap">
+    <table class="keep">
+      <thead><tr><th style="width:34%">Campo</th><th class="c" style="width:20%">¿Obligatorio?</th><th>Qué se escribe</th></tr></thead>
+      <tbody>
+        <tr><td><span class="ui">Nombre</span></td><td class="c si">Sí</td><td>El nombre de quien escribe.</td></tr>
+        <tr><td><span class="ui">Empresa</span></td><td class="c">No</td><td>La empresa a la que pertenece.</td></tr>
+        <tr><td><span class="ui-wrap">Correo electrónico</span></td><td class="c si">Sí</td><td>Su correo, para poder responderle.</td></tr>
+        <tr><td><span class="ui">Mensaje</span></td><td class="c si">Sí</td><td>La necesidad o el proyecto que quiere consultar.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Al pulsar <span class="ui">Enviar por WhatsApp</span> se abre una pestaña nueva con
+  WhatsApp y un mensaje armado así: «Hola GPI, soy <em>Nombre</em> de <em>Empresa</em>.
+  Mi correo es <em>correo</em>.» y, a continuación, el texto del mensaje. Bajo el botón
+  hay un aviso permanente que se lo explica al visitante y aclara que el sitio no guarda
+  sus datos.</p>
+  <div class="caja tip">
+    <span class="titulo">Consejo</span>
+    <p>Como los mensajes llegan por WhatsApp, conviene que la persona encargada de
+    responder tenga ese número siempre a mano. El número que recibe los mensajes del
+    formulario y del botón flotante es el <strong>WhatsApp principal</strong>, y se puede
+    cambiar desde el panel (ver 6.7).</p>
+  </div>
+
+  <h2 id="s2-10"><span class="num">2.10</span> El botón flotante de WhatsApp</h2>
+  <p>En la esquina inferior derecha de todas las páginas públicas hay un círculo verde
+  con el icono de WhatsApp que late suavemente para llamar la atención. Al pulsarlo se
+  abre una conversación con el mensaje «Hola GPI, quiero más información sobre sus
+  servicios.» ya escrito. Este botón <strong>no aparece</strong> en la zona privada
+  (Mi Cuenta ni el panel).</p>
+
+  <h2 id="s2-11"><span class="num">2.11</span> El pie de página</h2>
+  <p>La franja oscura del final acompaña a todas las páginas y tiene cuatro columnas:
+  el logo con una presentación breve y los iconos de Facebook, Instagram, YouTube y
+  WhatsApp; la lista de <strong>Servicios</strong> con el enlace
+  <span class="ui">Ver todos →</span>; la <strong>Navegación</strong> completa, incluida
+  <span class="ui">Mi Cuenta</span>; y los datos de <strong>Contacto</strong>.
+  Abajo, el aviso de derechos de GPI y el crédito de GOCAS Automations.</p>
+
+  <h2 id="s2-12"><span class="num">2.12</span> Si una dirección no existe</h2>
+  <p>Cuando alguien escribe mal una dirección o llega desde un enlace viejo, el sitio
+  no muestra un error técnico: muestra una página amable que dice «Página no encontrada»
+  y ofrece dos botones, <span class="ui">Ir al inicio</span> y
+  <span class="ui">Ver servicios</span>, para que el visitante no se quede varado.</p>
+</section>
+
+<!-- ==================== 3. MI CUENTA ==================== -->
+<section id="c3">
+  <h1 class="cap"><span class="num">3.</span> Cómo ingresar a Mi Cuenta</h1>
+
+  <p class="lead">«Mi Cuenta GPI» es la zona privada del sitio. Solo entra el personal
+  autorizado y cada persona ve únicamente lo que le corresponde según su rol.</p>
+
+  <h2 id="s3-1"><span class="num">3.1</span> Dónde está el acceso</h2>
+  <p>Hay dos caminos, ambos disponibles en cualquier página del sitio:</p>
+  <ol class="steps">
+    <li>En la <strong>barra superior</strong>, el enlace <span class="ui">Mi Cuenta</span>
+      con un icono de persona (en el celular está al final del menú desplegable).</li>
+    <li>En el <strong>pie de página</strong>, dentro de la columna «Navegación», el último
+      enlace: <span class="ui">Mi Cuenta</span>.</li>
+  </ol>
+
+  <h2 id="s3-2"><span class="num">3.2</span> Ingresar con usuario y contraseña</h2>
+  <div class="caja warn">
+    <span class="titulo">Atención</span>
+    <p>Al portal <strong>se entra con un usuario, no con un correo electrónico</strong>.
+    El usuario es algo corto como <em>mgomez</em> o <em>jperez</em>, y lo asigna GPI al
+    crear la cuenta. Escribir un correo no funcionará, salvo en las cuentas más antiguas
+    que se crearon así.</p>
+  </div>
+  <ol class="steps">
+    <li>Pulse <span class="ui">Mi Cuenta</span>. Verá una tarjeta con el logo de GPI y el
+      título <span class="ui">Mi Cuenta GPI</span>.</li>
+    <li>En el campo <span class="ui">Usuario</span> escriba el usuario que le entregó GPI.
+      Va todo en minúsculas, sin espacios ni tildes.</li>
+    <li>En el campo <span class="ui">Contraseña</span> escriba su contraseña. Si le
+      entregaron una generada por el sistema, tendrá una forma fácil de dictar, como
+      <em>Sol-Andes42</em>.</li>
+    <li>Pulse <span class="ui">Ingresar</span>. Mientras verifica, el botón dice
+      <span class="ui">Verificando…</span>.</li>
+    <li>Si los datos son correctos entrará directamente a su portal de jornadas.</li>
+  </ol>
+  <div class="caja nota">
+    <span class="titulo">Para tener en cuenta</span>
+    <p>El equipo de GPI no tiene correo corporativo, así que el sistema crea internamente
+    un correo «de mentiras» a partir del usuario para poder identificar la cuenta. Ese
+    correo no existe y nunca recibe mensajes: nadie necesita conocerlo. El correo real de
+    la persona, si lo tiene, se guarda aparte como <strong>correo de contacto</strong> y es
+    solo informativo.</p>
+  </div>
+
+  <h2 id="s3-3"><span class="num">3.3</span> Si olvidó la contraseña</h2>
+  <p>No hay un botón de «olvidé mi contraseña» que envíe un correo, precisamente porque
+  las cuentas no están asociadas a un correo real. El procedimiento es más simple:</p>
+  <ol class="steps">
+    <li>Avísele a su <strong>coordinador o al administrador</strong>.</li>
+    <li>Esa persona entra al panel, abre su ficha en la sección Equipo y pulsa
+      <span class="ui">Restablecer contraseña</span>.</li>
+    <li>El sistema genera una contraseña nueva y se la muestra <strong>una sola vez</strong>.
+      Se la entregará por teléfono o por mensaje.</li>
+    <li>Ingrese con esa contraseña y cámbiela de inmediato por una que recuerde (ver 3.4).</li>
+  </ol>
+  <p>La misma pantalla de ingreso lo recuerda al pie: «¿Olvidaste tu contraseña? Pídele a
+  tu coordinador que la restablezca desde el panel».</p>
+
+  <h2 id="s3-4"><span class="num">3.4</span> Cambiar su propia contraseña</h2>
+  <ol class="steps">
+    <li>Ingrese al portal y baje hasta la sección <span class="ui">Mi contraseña</span>,
+      la última de la página, identificada con un candado.</li>
+    <li>Escriba la nueva clave en <span class="ui">Nueva contraseña</span>. Debe tener
+      <strong>al menos 8 caracteres</strong>.</li>
+    <li>Repítala exactamente igual en <span class="ui">Repite la nueva contraseña</span>.</li>
+    <li>Pulse <span class="ui">Cambiar mi contraseña</span>. Aparecerá un mensaje verde
+      confirmando el cambio.</li>
+  </ol>
+  <div class="caja tip">
+    <span class="titulo">Consejo</span>
+    <p>Use una frase fácil de recordar y difícil de adivinar, por ejemplo tres palabras
+    con un número: <em>ChirimoyaCali2026</em>. Es más segura que una palabra corta con
+    símbolos y no se olvida.</p>
+  </div>
+
+  <h2 id="s3-5"><span class="num">3.5</span> Cerrar sesión</h2>
+  <p>El botón <span class="ui">Cerrar sesión</span> está arriba a la derecha, tanto en
+  el portal de jornadas como en el panel de administración. Cierre siempre la sesión si
+  usa un computador compartido. Junto a él está <span class="ui">← Ir al sitio</span>
+  (o <span class="ui">Ver sitio</span> en el panel), que lleva de vuelta a la web pública
+  sin cerrar la sesión.</p>
+
+  <h2 id="s3-6"><span class="num">3.6</span> Mensajes que puede ver al ingresar</h2>
+  <div class="tabla-wrap">
+    <table>
+      <thead><tr><th style="width:42%">Mensaje</th><th>Qué significa y qué hacer</th></tr></thead>
+      <tbody>
+        <tr><td>«Usuario o contraseña incorrectos.»</td><td>Revise que el usuario esté completo y en minúsculas y que no haya quedado activada la tecla de mayúsculas. Si insiste, pida que le restablezcan la contraseña.</td></tr>
+        <tr><td>«Tu cuenta está desactivada»</td><td>Sus datos son correctos, pero un administrador quitó el acceso de esa cuenta. Hable con su coordinador para que la reactive. Su historial de jornadas sigue guardado.</td></tr>
+        <tr><td>«El portal estará disponible próximamente»</td><td>El acceso privado todavía no está conectado en ese momento. No es un error de su cuenta: avise al soporte.</td></tr>
+        <tr><td>«El portal aún no está conectado. Intenta más tarde.»</td><td>Problema momentáneo de conexión con el sistema. Espere unos minutos y vuelva a intentar.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ==================== 4. ROLES ==================== -->
+<section id="c4">
+  <h1 class="cap"><span class="num">4.</span> Los cuatro roles y qué puede hacer cada uno</h1>
+
+  <h2 id="s4-1"><span class="num">4.1</span> Qué es un rol</h2>
+  <p>Un <strong>rol</strong> es el «cargo» que la cuenta tiene dentro del sistema. No es
+  el cargo real en la empresa: es el conjunto de permisos que determina qué pantallas ve
+  la persona y qué puede modificar. Cada cuenta tiene exactamente un rol, y solo un
+  administrador o un coordinador puede cambiarlo.</p>
+
+  <h2 id="s4-2"><span class="num">4.2</span> Los cuatro roles</h2>
+  <div class="kpi-grid">
+    <div class="kpi"><b>Administrador</b>Control total: contenido del sitio, horarios,
+      cuentas del equipo y aprobación de jornadas.</div>
+    <div class="kpi"><b>Coordinador</b>Contenido del sitio, horarios del mes, cuentas de
+      empleados (no de administradores) y aprobación de jornadas.</div>
+    <div class="kpi"><b>Community Manager</b>Edita todo el contenido del sitio —textos,
+      imágenes y ajustes— y registra sus propias jornadas. No gestiona empleados ni las
+      jornadas de otros.</div>
+    <div class="kpi"><b>Empleado</b>Solo su portal en Mi Cuenta, para registrar sus
+      jornadas y consultar su historial.</div>
+  </div>
+  <div class="caja nota">
+    <span class="titulo">Para tener en cuenta</span>
+    <p><strong>Todas las cuentas activas registran sus propias jornadas</strong>, sin importar
+    el rol. El Community Manager también es empleado de GPI, y un administrador o un
+    coordinador puede registrar sus horas si lo necesita. Lo que distingue a los roles es
+    quién <em>aprueba</em> las jornadas de los demás y quién puede editar el contenido.</p>
+  </div>
+
+  <h2 id="s4-3"><span class="num">4.3</span> Tabla de permisos</h2>
+  <div class="tabla-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:38%">Puede…</th>
+          <th class="c">Administrador</th>
+          <th class="c">Coordinador</th>
+          <th class="c">Community<br>Manager</th>
+          <th class="c">Empleado</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Entrar al panel de administración</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c no">No</td></tr>
+        <tr><td>Editar servicios, proyectos, clientes, preguntas frecuentes y valores</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c no">No</td></tr>
+        <tr><td>Editar datos de contacto, redes, video y textos del inicio</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c no">No</td></tr>
+        <tr><td>Subir imágenes al sitio</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c no">No</td></tr>
+        <tr><td>Apagar y encender secciones del sitio</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c no">No</td></tr>
+        <tr><td>Crear y gestionar cuentas del equipo</td><td class="c si">Sí</td><td class="c si">Sí <sup>1</sup></td><td class="c no">No</td><td class="c no">No</td></tr>
+        <tr><td>Definir el horario laboral del mes</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c no">No</td><td class="c no">No</td></tr>
+        <tr><td>Aprobar o rechazar jornadas de otros</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c no">No</td><td class="c no">No</td></tr>
+        <tr><td>Ver el tablero de métricas y exportar a Excel</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c no">No</td><td class="c no">No</td></tr>
+        <tr><td>Registrar <strong>sus propias</strong> jornadas</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c si">Sí</td></tr>
+        <tr><td>Cambiar su propia contraseña</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c si">Sí</td></tr>
+      </tbody>
+      <caption><sup>1</sup> Un coordinador gestiona cuentas de coordinador, Community Manager
+      y empleado. <strong>No</strong> puede crear administradores ni editar, restablecer la
+      contraseña o eliminar la cuenta de un administrador: eso solo lo hace otro administrador.</caption>
+    </table>
+  </div>
+
+  <h2 id="s4-4"><span class="num">4.4</span> Reglas que el sistema siempre aplica</h2>
+  <ul class="check">
+    <li>Nadie puede <strong>desactivarse a sí mismo</strong>, cambiarse su propio rol ni
+      eliminar su propia cuenta. Siempre debe hacerlo otra persona.</li>
+    <li>Una cuenta <strong>desactivada no puede ingresar</strong>, pero conserva intacto su
+      historial de jornadas.</li>
+    <li>El menú del panel solo <em>oculta</em> las secciones que no le corresponden a la
+      persona. La verificación real la hace el sistema en cada guardado, así que no se puede
+      burlar escribiendo una dirección a mano.</li>
+    <li>El empleado solo puede editar o borrar sus jornadas <strong>mientras estén
+      pendientes</strong>. Una vez revisadas quedan congeladas.</li>
+  </ul>
+</section>
+
+<!-- ==================== 5. EMPLEADOS ==================== -->
+<section id="c5">
+  <h1 class="cap"><span class="num">5.</span> Para empleados: registrar una jornada</h1>
+
+  <p class="lead">Este capítulo es el más importante para el personal de campo. Registrar
+  una jornada toma menos de un minuto y reemplaza el formulario que GPI llenaba antes.</p>
+
+  <h2 id="s5-1"><span class="num">5.1</span> Qué verá al entrar</h2>
+  <p>Nada más ingresar verá, de arriba abajo:</p>
+  <ol class="steps">
+    <li>Una <strong>barra blanca</strong> con el saludo «Hola, <em>su nombre</em>» y, si lo
+      tiene registrado, su cargo. A la derecha, los botones
+      <span class="ui">← Ir al sitio</span> y <span class="ui">Cerrar sesión</span>.</li>
+    <li>Si su rol le da acceso al panel, un recuadro verde con el botón
+      <span class="ui">Ir al panel</span>.</li>
+    <li>Tres <strong>contadores</strong> grandes con su situación actual:
+      <span class="ui">Pendientes de aprobación</span> (ámbar),
+      <span class="ui">Aprobadas</span> (verde) y
+      <span class="ui">Rechazadas</span> (rojo).</li>
+    <li>La sección <span class="ui">Registrar una jornada</span>.</li>
+    <li>La sección <span class="ui">Mis jornadas</span> con todo su historial.</li>
+    <li>La sección <span class="ui">Mi contraseña</span>.</li>
+  </ol>
+
+  <h2 id="s5-2"><span class="num">5.2</span> Registrar una jornada, paso a paso</h2>
+  <ol class="steps">
+    <li><strong>Fecha del día laboral.</strong> Viene puesta con la fecha de hoy. Es el día
+      en que <strong>empezó</strong> el turno; si trabajó ayer y lo está registrando hoy,
+      cámbiela a ayer.</li>
+    <li><strong>Número de orden de trabajo.</strong> Escriba la orden tal como aparece en el
+      documento que le asignaron, por ejemplo <em>OT-1042</em>. Este dato es el que permite
+      después saber cuántas horas se fueron en cada trabajo.</li>
+    <li><strong>Hora de inicio.</strong> La hora real en que empezó a trabajar. Viene
+      propuesta como las 7:00 a. m.</li>
+    <li><strong>Hora de finalización.</strong> La hora real en que terminó. Viene propuesta
+      como las 5:00 p. m.</li>
+    <li><strong>Terminé al día siguiente.</strong> Marque esta casilla solo si el turno pasó
+      de la medianoche (ver 5.3).</li>
+    <li><strong>Descripción de la labor.</strong> Una o dos frases claras sobre lo que hizo,
+      por ejemplo «mantenimiento preventivo del tablero de control de la línea 2».</li>
+    <li><strong>Observaciones</strong> (opcional). Novedades, materiales usados o cualquier
+      cosa que su coordinador deba saber.</li>
+    <li>Revise la <strong>vista previa</strong> de horas que aparece debajo (ver 5.4) y pulse
+      <span class="ui">Registrar jornada</span>.</li>
+  </ol>
+  <p>Al guardar aparece un mensaje verde: «Tu jornada quedó registrada y está pendiente de
+  aprobación». Los cinco campos marcados con asterisco verde son obligatorios; si falta
+  alguno, el sistema se lo dirá con un mensaje concreto en lugar de guardar a medias.</p>
+
+  <div class="caja tip">
+    <span class="titulo">Consejo</span>
+    <p>Registre la jornada el mismo día, cuando todavía recuerda las horas exactas.
+    Es más rápido que reconstruir la semana el viernes y evita correcciones.</p>
+  </div>
+
+  <h2 id="s5-3"><span class="num">5.3</span> Turnos que cruzan la medianoche</h2>
+  <p>Si empezó a las 10:00 p. m. y terminó a las 2:00 a. m., el turno abarca dos días
+  del calendario. En ese caso:</p>
+  <ul class="check">
+    <li>Ponga en <strong>fecha</strong> el día en que <strong>empezó</strong>.</li>
+    <li>Marque la casilla <span class="ui-wrap">Terminé al día siguiente</span>. La hora de
+      fin quedará registrada en el día siguiente a esa fecha.</li>
+    <li>Si olvida marcarla, el sistema lo detecta solo: cuando la hora de fin es anterior a
+      la de inicio, aparece un aviso ámbar que dice que entenderá que el turno terminó al día
+      siguiente y así lo registrará.</li>
+  </ul>
+  <p>Esto importa porque el cálculo es minuto a minuto con la fecha real: si el turno entra
+  a un domingo o a un festivo a las 12:00 a. m., esos minutos cambian de tratamiento
+  automáticamente. Una jornada no puede durar más de 24 horas.</p>
+
+  <h2 id="s5-4"><span class="num">5.4</span> «Así quedarían tus horas»</h2>
+  <p>Mientras llena el formulario, debajo aparece un recuadro titulado
+  <span class="ui-wrap">Así quedarían tus horas</span> que se recalcula solo cada vez que
+  cambia una hora o la fecha. Es una <strong>vista previa</strong>: sirve para confirmar
+  que registró bien antes de guardar. Muestra:</p>
+  <ul class="check">
+    <li><strong>Duración total</strong> del turno, arriba a la derecha.</li>
+    <li>Una línea explicativa: cuál es la jornada ordinaria de ese día según el horario del
+      mes, cuánto almuerzo se descontó y cuánto tiempo se contó como trabajado. Si el día no
+      es laboral o es festivo, dice que todo el turno se calcula con recargo.</li>
+    <li>Dos cifras grandes: <span class="ui">Horas ordinarias</span> y
+      <span class="ui">Horas extra</span>.</li>
+    <li>El detalle por categoría (solo las que tienen minutos), y etiquetas como
+      «El turno cruzó la medianoche» o el nombre del festivo cuando corresponde.</li>
+  </ul>
+  <div class="caja nota">
+    <span class="titulo">Para tener en cuenta</span>
+    <p>El propio recuadro lo aclara: es un cálculo informativo con los parámetros
+    configurados en el panel. <strong>La liquidación final la confirma el área
+    administrativa de GPI.</strong></p>
+  </div>
+
+  <h2 id="s5-5"><span class="num">5.5</span> Los tres estados</h2>
+  <div class="tabla-wrap">
+    <table class="keep">
+      <thead><tr><th style="width:20%">Estado</th><th>Qué significa</th><th style="width:26%">¿Puede editarla?</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Pendiente</strong></td><td>Ya quedó registrada, pero nadie la ha revisado todavía. Es el estado con el que nace toda jornada.</td><td class="si">Sí: editar o eliminar.</td></tr>
+        <tr><td><strong>Aprobada</strong></td><td>Un coordinador o administrador la revisó y la confirmó. Es la cifra que cuenta para nómina.</td><td class="no">No.</td></tr>
+        <tr><td><strong>Rechazada</strong></td><td>Se revisó y no quedó bien. Siempre viene con una nota que explica por qué.</td><td class="no">No, hasta que se reabra.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Si una jornada aprobada o rechazada tiene un error, pídale a su coordinador que la
+  <strong>devuelva a pendiente</strong>: podrá corregirla y volver a enviarla. El propio
+  portal lo recuerda al final de la página.</p>
+
+  <h2 id="s5-6"><span class="num">5.6</span> Mis jornadas: el historial</h2>
+  <p>Bajo el formulario está <span class="ui">Mis jornadas</span>, con una tarjeta por
+  jornada, de la más reciente a la más antigua. Cada tarjeta muestra:</p>
+  <ul class="check">
+    <li>La <strong>fecha completa</strong> («lunes, 27 de julio de 2026») y la etiqueta de
+      color con el estado.</li>
+    <li>Una línea con la orden de trabajo, la hora de entrada, la de salida y la duración.</li>
+    <li>La descripción de la labor y, si las escribió, las observaciones.</li>
+    <li>La <strong>nota de quien revisó</strong>, cuando existe. En las rechazadas aparece en
+      un recuadro rojo: ahí está la razón y qué corregir.</li>
+    <li>Un resumen del desglose de horas en etiquetas pequeñas.</li>
+  </ul>
+  <p>Si todavía no ha registrado nada, verá un recuadro que se lo dice y lo invita a usar
+  el formulario de arriba.</p>
+
+  <h2 id="s5-7"><span class="num">5.7</span> Corregir o eliminar una jornada pendiente</h2>
+  <ol class="steps">
+    <li>Busque la jornada en <span class="ui">Mis jornadas</span>. Solo las
+      <strong>pendientes</strong> muestran botones.</li>
+    <li>Para corregirla, pulse <span class="ui">Editar</span>. El formulario se abre ahí
+      mismo, ya lleno con sus datos.</li>
+    <li>Cambie lo que necesite y pulse <span class="ui">Guardar cambios</span>. La jornada
+      seguirá pendiente de aprobación. Si se arrepiente, pulse
+      <span class="ui">Cancelar</span>.</li>
+    <li>Para borrarla, pulse <span class="ui">Eliminar</span>. El navegador pedirá
+      confirmación indicando la fecha, y advierte que la acción no se puede deshacer.</li>
+  </ol>
+  <div class="caja warn">
+    <span class="titulo">Atención</span>
+    <p>Eliminar una jornada la borra definitivamente: no hay papelera de reciclaje.
+    Si solo hay un dato mal, es mejor <strong>editarla</strong> que borrarla y volver a
+    crearla.</p>
+  </div>
+
+  <h2 id="s5-8"><span class="num">5.8</span> El recorrido completo</h2>
+  <div class="flujo">
+    <div class="paso"><b>1. El empleado</b>registra su jornada en Mi Cuenta y ve la vista previa de horas</div>
+    <div class="flecha">→</div>
+    <div class="paso alt"><b>2. Pendiente</b>queda a la espera; el empleado aún puede editarla o eliminarla</div>
+    <div class="flecha">→</div>
+    <div class="paso"><b>3. El coordinador</b>la revisa con el desglose calculado en la sección Jornadas</div>
+    <div class="flecha">→</div>
+    <div class="paso"><b>4a. Aprobada</b>queda firme y suma al tablero de métricas y a nómina</div>
+  </div>
+  <div class="flujo">
+    <div class="paso" style="visibility:hidden">.</div>
+    <div class="flecha" style="visibility:hidden">→</div>
+    <div class="paso" style="visibility:hidden">.</div>
+    <div class="flecha" style="visibility:hidden">→</div>
+    <div class="paso" style="visibility:hidden">.</div>
+    <div class="flecha">↳</div>
+    <div class="paso alt"><b>4b. Rechazada</b>con nota obligatoria; el empleado la ve en su portal y corrige</div>
+  </div>
+  <p>Una jornada aprobada o rechazada puede volver al paso 2 si el coordinador pulsa
+  <span class="ui">Volver a pendiente</span>.</p>
+</section>
+
+<!-- ==================== 6. PANEL ==================== -->
+<section id="c6">
+  <h1 class="cap"><span class="num">6.</span> El panel de administración</h1>
+
+  <p class="lead">El panel es donde se administra el sitio y el equipo. Entran el
+  administrador, el coordinador y el Community Manager; cada uno ve solo las secciones
+  que le corresponden.</p>
+
+  <h2 id="s6-1"><span class="num">6.1</span> Vista general y navegación</h2>
+  <p>Se llega al panel desde el botón <span class="ui">Ir al panel</span> que aparece
+  arriba en Mi Cuenta, después de ingresar.</p>
+
+  <h3>La barra superior</h3>
+  <p>Siempre visible, indica <span class="ui-wrap">Panel de administración</span>, con qué
+  usuario está la sesión iniciada y su rol. A la derecha:
+  <span class="ui">Ver sitio</span> (abre la web pública en una pestaña nueva, para
+  comprobar los cambios sin perder el panel) y <span class="ui">Cerrar sesión</span>.</p>
+
+  <h3>El menú de secciones</h3>
+  <p>En computador aparece como una <strong>columna a la izquierda</strong> que acompaña
+  el desplazamiento; en celular, como una <strong>fila de pestañas</strong> que se desliza
+  con el dedo, justo debajo de la barra superior. La sección activa se ve en verde. El
+  orden es siempre el mismo:</p>
+  <div class="mapa">
+    <b>Contenido del sitio</b> — visible para administrador, coordinador y Community Manager
+    <ul>
+      <li><strong>Dashboard</strong> · la pantalla de bienvenida con accesos a todo</li>
+      <li><strong>Servicios</strong> · los once servicios</li>
+      <li><strong>Proyectos</strong> · los proyectos ejecutados</li>
+      <li><strong>Clientes</strong> · los logos de la portada</li>
+      <li><strong>FAQ</strong> · las preguntas frecuentes</li>
+      <li><strong>Valores</strong> · los valores corporativos</li>
+      <li><strong>Contacto y ajustes</strong> · datos de contacto, redes, hero, video y visibilidad</li>
+    </ul>
+    <b style="display:block;margin-top:.5em">Gestión interna</b> — solo administrador y coordinador
+    <ul>
+      <li><strong>Equipo</strong> · las cuentas del personal</li>
+      <li><strong>Horarios</strong> · el horario laboral de cada mes</li>
+      <li><strong>Jornadas</strong> · aprobaciones y tablero de métricas</li>
+    </ul>
+  </div>
+
+  <h3>El Dashboard</h3>
+  <p>Es la primera pantalla. Saluda por el nombre, recuerda con qué rol entró y qué puede
+  hacer, y presenta una tarjeta por cada sección con un contador («11 servicios»,
+  «3 pendientes»…) y el enlace <span class="ui">Administrar</span>. Abajo hay dos tarjetas
+  de ayuda permanente sobre la visibilidad y sobre cómo funcionan las imágenes.</p>
+
+  <h3>Cómo volver atrás</h3>
+  <p>Cada sección tiene arriba una ruta de migas (<em>Panel / Servicios / Editar</em>) y el
+  botón <span class="ui-wrap">← Volver al dashboard</span>. Dentro de los formularios de
+  crear o editar aparece además <span class="ui-wrap">← Volver a Servicios</span>. En la
+  columna izquierda hay un recordatorio: <em>«Los cambios se publican en el sitio
+  inmediatamente después de guardar.»</em></p>
+
+  <h2 id="s6-2"><span class="num">6.2</span> Servicios</h2>
+  <p>Es la sección más rica del panel: cada servicio tiene su propia página de edición.</p>
+
+  <h3>La lista</h3>
+  <p>Cada fila muestra el icono, el nombre, el área (industrial o ambiental), la etiqueta
+  <span class="ui">Visible</span> u <span class="ui">Oculto</span>, el número de orden y la
+  dirección de su página. A la derecha, tres botones:
+  <span class="ui">Ver</span> (abre la página pública en otra pestaña),
+  <span class="ui">Editar</span> y <span class="ui">Eliminar</span>. Arriba a la derecha,
+  el botón verde <span class="ui">Nuevo servicio</span>.</p>
+
+  <h3>Crear o editar un servicio</h3>
+  <p>El formulario está dividido en cuatro tarjetas. Se rellenan de arriba abajo y se
+  guarda una sola vez al final.</p>
+  <ol class="steps">
+    <li><strong>Información principal.</strong>
+      <ul>
+        <li><span class="ui">Título</span> — obligatorio. El nombre completo del servicio.</li>
+        <li><span class="ui-wrap">Título corto (menú)</span> — opcional. Úselo cuando el
+          nombre completo sea largo y quede feo en el menú. Si lo deja vacío, se usa el título.</li>
+        <li><span class="ui-wrap">Slug (URL)</span> — la parte final de la dirección de la
+          página. Se genera solo a partir del título. <strong>Cambiarlo cambia la dirección
+          pública</strong>, así que solo hágalo en servicios nuevos.</li>
+        <li><span class="ui">Categoría</span> — Servicios Industriales o Servicios Ambientales.
+          Define en qué grupo aparece.</li>
+        <li><span class="ui">Icono</span> — el dibujo de línea que acompaña al servicio.</li>
+        <li><span class="ui">Orden</span> — un número. <strong>Menor número, aparece antes.</strong>
+          Deje huecos (10, 20, 30) para poder insertar después sin renumerar todo.</li>
+        <li><span class="ui-wrap">Visibilidad en el sitio</span> — el interruptor
+          Visible / Oculto (ver 6.9).</li>
+        <li><span class="ui-wrap">Resumen (tarjetas)</span> — la frase corta que se lee en la
+          tarjeta del servicio.</li>
+        <li><span class="ui-wrap">Descripción (página de detalle)</span> — el párrafo de
+          introducción de su página.</li>
+      </ul>
+    </li>
+    <li><strong>¿Qué incluye este servicio?</strong> — la lista de actividades que se
+      muestran con visto verde. Cada línea es un ítem numerado. Pulse
+      <span class="ui">Añadir ítem</span> para agregar otro y el botón de papelera de la
+      derecha para quitar uno. El contador de la esquina indica cuántos hay.
+      <em>El orden es el de las filas: para reordenar hay que reescribir los textos.</em></li>
+    <li><strong>Imágenes.</strong> La <span class="ui-wrap">imagen principal (portada)</span>
+      se usa en la tarjeta y en la cabecera de la página. Junto a ella, el
+      <span class="ui-wrap">texto alternativo</span>: una descripción breve de la foto para
+      quienes usan lectores de pantalla y para los buscadores. Más abajo, la
+      <span class="ui">Galería</span>, con las fotos adicionales del final de la página
+      (ver 6.8).</li>
+    <li><strong>SEO.</strong> El <span class="ui">Título SEO</span> y la
+      <span class="ui-wrap">Descripción SEO</span> son los textos que muestra Google en sus
+      resultados. La descripción funciona mejor con 150 a 160 caracteres.</li>
+    <li>Pulse <span class="ui">Crear servicio</span> o
+      <span class="ui">Guardar cambios</span>.</li>
+  </ol>
+  <div class="caja warn">
+    <span class="titulo">Atención</span>
+    <p>Al final de la página de edición hay una <strong>zona de peligro</strong> roja con el
+    botón <span class="ui">Eliminar servicio</span>. Borrar un servicio quita también su
+    página pública. Si solo quiere dejar de ofrecerlo por un tiempo,
+    <strong>oculte</strong> el servicio en lugar de eliminarlo.</p>
+  </div>
+
+  <h2 id="s6-3"><span class="num">6.3</span> Proyectos</h2>
+  <p>Proyectos, Clientes, Preguntas frecuentes y Valores funcionan todos igual y son más
+  simples que Servicios: <strong>se editan en la misma pantalla</strong>. Cada elemento
+  existente tiene su tarjeta con todos sus campos ya desplegados y su propio botón de
+  guardar, y al final de la lista hay una tarjeta con borde punteado para crear uno nuevo.</p>
+  <ol class="steps">
+    <li>Entre a <span class="ui">Proyectos</span> en el menú de la izquierda.</li>
+    <li>Para modificar uno, cambie lo que necesite en su tarjeta y pulse
+      <span class="ui">Guardar proyecto</span>.</li>
+    <li>Para agregar uno, baje hasta la tarjeta <span class="ui">Añadir proyecto</span>,
+      llene los campos y pulse <span class="ui">Crear proyecto</span>. Aparecerá en la lista
+      al guardar.</li>
+  </ol>
+  <p>Campos: <span class="ui">Título</span> (obligatorio),
+  <span class="ui-wrap">Cliente (opcional)</span> —se muestra como etiqueta sobre la foto—,
+  <span class="ui">Categoría</span> (Industrial o Ambiental),
+  <span class="ui">Orden</span>, <span class="ui-wrap">Visibilidad en el sitio</span>,
+  <span class="ui-wrap">Descripción (opcional)</span> —notas internas, no se publica en la
+  tarjeta—, la <span class="ui-wrap">imagen del proyecto</span> y su
+  <span class="ui-wrap">texto alternativo</span>.</p>
+
+  <h2 id="s6-4"><span class="num">6.4</span> Clientes</h2>
+  <p>Controla la franja de logos de la portada. Por cada cliente:
+  <span class="ui-wrap">Nombre del cliente</span> (obligatorio; se usa también como
+  descripción del logo), <span class="ui">Orden</span>, el <span class="ui">Logo</span>,
+  el <span class="ui-wrap">Sitio web (opcional)</span> y la visibilidad.
+  Botones: <span class="ui">Guardar cliente</span> y
+  <span class="ui">Crear cliente</span>.</p>
+  <div class="caja tip">
+    <span class="titulo">Consejo</span>
+    <p>Los logos se ven mejor con <strong>fondo blanco o transparente</strong> y con el
+    dibujo bien recortado, sin márgenes grandes alrededor. Si un logo llega con fondo de
+    otro color, se notará como un rectángulo en la franja.</p>
+  </div>
+
+  <h2 id="s6-5"><span class="num">6.5</span> Preguntas frecuentes</h2>
+  <p>Alimentan el acordeón de la página Nosotros y, además, ayudan a que Google muestre
+  las preguntas directamente en sus resultados. Por cada una:
+  <span class="ui">Pregunta</span> y <span class="ui">Respuesta</span> (ambas obligatorias),
+  <span class="ui">Orden</span> y visibilidad. Botones:
+  <span class="ui">Guardar pregunta</span> y <span class="ui">Crear pregunta</span>.</p>
+  <div class="caja tip">
+    <span class="titulo">Consejo</span>
+    <p>Escriba las preguntas tal como las hace un cliente («¿Cómo solicito una
+    cotización?») y responda en dos o tres frases. Las respuestas largas se leen menos y
+    Google las corta.</p>
+  </div>
+
+  <h2 id="s6-6"><span class="num">6.6</span> Valores corporativos</h2>
+  <p>Se muestran en el inicio y en Nosotros. Por cada valor:
+  <span class="ui">Título</span> (obligatorio), <span class="ui">Icono</span>,
+  <span class="ui">Orden</span>, <span class="ui">Descripción</span> y visibilidad.
+  Botones: <span class="ui">Guardar valor</span> y <span class="ui">Crear valor</span>.
+  La propia pantalla recomienda <strong>mantener seis valores</strong> para que la
+  cuadrícula quede pareja en pantalla.</p>
+
+  <h2 id="s6-7"><span class="num">6.7</span> Contacto y ajustes</h2>
+  <p>Reúne todo lo que no es una lista. Son <strong>cinco tarjetas independientes, cada
+  una con su propio botón de guardar</strong>: si cambia algo en una, guarde esa tarjeta
+  antes de pasar a otra.</p>
+  <div class="tabla-wrap">
+    <table>
+      <thead><tr><th style="width:30%">Tarjeta</th><th>Qué contiene</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Visibilidad de secciones</strong><br><span class="ui-wrap">Guardar visibilidad</span></td><td>Los cuatro interruptores que apagan bloques completos del sitio: <span class="ui-wrap">Valores corporativos</span>, <span class="ui">Clientes</span>, <span class="ui-wrap">Video corporativo</span> y <span class="ui-wrap">Preguntas frecuentes</span> (ver 6.9).</td></tr>
+        <tr><td><strong>Datos de contacto</strong><br><span class="ui-wrap">Guardar contacto</span></td><td>Nombre corto, razón social, tagline, dirección completa (calle, barrio, ciudad, departamento, país), coordenadas del mapa, la lista de <strong>teléfonos / WhatsApp</strong>, el <strong>WhatsApp principal</strong>, la lista de <strong>correos</strong>, Facebook, Instagram, canal de YouTube, horario de atención, el mapa de Google y la dirección del sitio.</td></tr>
+        <tr><td><strong>Hero del inicio</strong><br><span class="ui-wrap">Guardar hero</span></td><td>La primera pantalla de la página principal: etiqueta superior, título en dos partes (la segunda se ve en verde degradado), descripción, imagen de fondo con su texto alternativo y el texto y destino de los dos botones.</td></tr>
+        <tr><td><strong>Estadísticas y banda EXCELENCIA</strong><br><span class="ui-wrap">Guardar sección</span></td><td>Las cuatro cifras del bloque «Quiénes somos» y la franja oscura del inicio: texto superior, mensaje, palabra destacada y el botón.</td></tr>
+        <tr><td><strong>Video corporativo</strong><br><span class="ui-wrap">Guardar video</span></td><td>El video de la página Nosotros: se puede pegar la dirección completa de YouTube y el sistema extrae el identificador solo. También el título del video y los textos que lo presentan.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <ul class="check">
+    <li>Para <strong>agregar un teléfono</strong>, pulse <span class="ui">Añadir teléfono</span>
+      y llene las dos columnas: la primera es el número <em>como se ve</em>
+      (318 434 1249) y la segunda es el número <em>internacional sin espacios</em>
+      (573184341249), que es el que usan los enlaces de WhatsApp y de llamada.</li>
+    <li>Igual con <span class="ui">Añadir correo</span> (correo y nombre de la persona) y
+      <span class="ui">Añadir estadística</span> (cifra y descripción).</li>
+    <li>Debe quedar <strong>al menos un teléfono y un correo</strong>; el sistema no deja
+      guardar la lista vacía.</li>
+    <li>Para el mapa: en Google Maps use <em>Compartir → Insertar un mapa</em> y copie la
+      dirección que aparece dentro del código, pegándola en el campo del mapa.</li>
+  </ul>
+
+  <h2 id="s6-8"><span class="num">6.8</span> Imágenes</h2>
+  <p>Todos los campos de imagen del panel funcionan igual y ofrecen dos caminos:</p>
+  <ol class="steps">
+    <li><strong>Subir un archivo.</strong> Pulse <span class="ui">Subir imagen</span>,
+      elija la foto de su computador o celular y espere: el botón dirá
+      <span class="ui">Subiendo…</span> y, al terminar, la vista previa a la izquierda
+      mostrará la imagen. La foto queda guardada en el almacenamiento del sitio.</li>
+    <li><strong>Pegar un enlace.</strong> Si la imagen ya está publicada en internet, pegue
+      su dirección completa (empieza por <em>https://</em>) en el campo de texto.</li>
+  </ol>
+  <p>El campo también acepta las <strong>rutas de las imágenes que ya vienen con el
+  sitio</strong>: son las que empiezan por <em>/images/</em> y sirven para reutilizar
+  fotografías existentes sin volver a subirlas. El botón <span class="ui">Quitar</span>
+  vacía el campo.</p>
+  <div class="caja tip">
+    <span class="titulo">Consejo — cómo elegir buenas imágenes</span>
+    <ul style="margin-bottom:0">
+      <li><strong>Formato:</strong> JPG para fotografías, PNG para logos con fondo transparente.</li>
+      <li><strong>Peso:</strong> apunte a menos de 500 kB por imagen. Una foto de celular sin
+        comprimir puede pesar 5 MB y hace que el sitio cargue lento, algo que Google penaliza.</li>
+      <li><strong>Forma:</strong> las fotos <strong>horizontales</strong> funcionan mucho
+        mejor. Las verticales se recortan por arriba y por abajo para llenar el espacio, y a
+        veces se pierde justo lo importante.</li>
+      <li><strong>Tamaño:</strong> con 1600 píxeles de ancho es más que suficiente para las
+        portadas; los logos de clientes se ven bien con 400 a 600 píxeles.</li>
+      <li><strong>Texto alternativo:</strong> llénelo siempre. Describa qué se ve
+        («Ingeniero midiendo con un multímetro en un tablero eléctrico»), no repita el nombre
+        del servicio. Sirve para personas con discapacidad visual y también para el
+        posicionamiento en buscadores.</li>
+    </ul>
+  </div>
+
+  <h2 id="s6-9"><span class="num">6.9</span> Visibilidad: ocultar sin borrar</h2>
+  <p>Hay dos niveles y ninguno pierde información.</p>
+
+  <h3>Por elemento: el interruptor Visible / Oculto</h3>
+  <p>Cada servicio, proyecto, cliente, pregunta y valor tiene un interruptor
+  <span class="ui-wrap">Visibilidad en el sitio</span> que muestra la palabra
+  <span class="ui">Visible</span> cuando está encendido y <span class="ui">Oculto</span>
+  cuando está apagado. Al apagarlo el elemento desaparece del sitio público de inmediato,
+  pero sigue en el panel para editarlo y volver a encenderlo cuando quiera. La lista de
+  cada sección muestra esa etiqueta, así que de un vistazo se sabe qué está publicado.</p>
+
+  <h3>Por sección: los interruptores del inicio y de Nosotros</h3>
+  <p>En <span class="ui-wrap">Contacto y ajustes</span>, la primera tarjeta apaga bloques
+  completos:</p>
+  <div class="tabla-wrap">
+    <table class="keep">
+      <thead><tr><th style="width:36%">Interruptor</th><th>Qué desaparece</th></tr></thead>
+      <tbody>
+        <tr><td><span class="ui-wrap">Valores corporativos</span></td><td>El bloque «Nuestros valores» del inicio y de la página Nosotros.</td></tr>
+        <tr><td><span class="ui">Clientes</span></td><td>La franja de logos de clientes del inicio.</td></tr>
+        <tr><td><span class="ui-wrap">Video corporativo</span></td><td>El video de YouTube de la página Nosotros.</td></tr>
+        <tr><td><span class="ui-wrap">Preguntas frecuentes</span></td><td>El acordeón de preguntas de Nosotros, junto con la información que Google usa para mostrarlas.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="caja warn">
+    <span class="titulo">Atención — ocultar sí, borrar no</span>
+    <p>Ocultar y eliminar no son lo mismo. Si <strong>oculta</strong> los elementos uno a
+    uno, desaparecen del sitio y punto: el sistema respeta esa decisión.
+    Pero si <strong>elimina todos</strong> los elementos de una lista (por ejemplo, los once
+    servicios), el sitio interpreta que la lista está vacía por error y vuelve a mostrar
+    <strong>el contenido original de fábrica</strong> como red de seguridad, para que la web
+    nunca aparezca incompleta. Conclusión: para dejar de mostrar algo, use el interruptor,
+    no la papelera.</p>
+  </div>
+
+  <h2 id="s6-10"><span class="num">6.10</span> Equipo y cuentas</h2>
+  <p>Sección <span class="ui">Equipo</span> del menú. Solo para administrador y
+  coordinador. Aquí se crean las cuentas con las que el personal ingresa al portal.</p>
+
+  <h3>La lista del equipo</h3>
+  <p>Cada fila muestra el nombre completo, la etiqueta del rol, el usuario y el cargo, y
+  la fecha de creación. Las cuentas desactivadas se ven con fondo ámbar y la etiqueta
+  <span class="ui">Inactiva</span>; su propia cuenta lleva la etiqueta
+  <span class="ui">Tú</span>. A la derecha, el botón <span class="ui">Gestionar</span>.
+  Arriba hay un buscador que filtra por nombre, usuario, cédula o cargo, y el botón verde
+  <span class="ui">Nueva cuenta</span>.</p>
+  <p>Al final de la pantalla, la tarjeta <span class="ui-wrap">¿Qué puede hacer cada
+  rol?</span> recuerda los permisos de los cuatro roles.</p>
+
+  <h3>Crear una cuenta</h3>
+  <ol class="steps">
+    <li>Pulse <span class="ui">Nueva cuenta</span>, arriba a la derecha.</li>
+    <li><span class="ui-wrap">Nombre completo</span> — <strong>obligatorio</strong>. Es el
+      nombre que verá el equipo en las jornadas registradas.</li>
+    <li><span class="ui">Usuario</span> — <strong>obligatorio</strong>. Con este dato la
+      persona inicia sesión. Reglas: entre 3 y 32 caracteres, solo
+      <strong>letras minúsculas, números, punto, guion o guion bajo</strong>; sin espacios ni
+      tildes. La convención habitual es la inicial del nombre más el apellido:
+      <em>mgomez</em>, <em>jperez</em>. Es único: si ya existe, el panel lo avisa y sugiere
+      añadir la inicial del segundo apellido.</li>
+    <li><span class="ui">Rol</span> — <strong>obligatorio</strong>. Viene puesto en
+      <em>Empleado</em>. Bajo el selector aparece la descripción de lo que puede hacer el rol
+      elegido, para no equivocarse. Un coordinador no verá la opción <em>Administrador</em>.</li>
+    <li><span class="ui-wrap">Cédula (opcional)</span> — el documento de identidad, útil
+      para nómina.</li>
+    <li><span class="ui-wrap">Cargo (opcional)</span> — por ejemplo «Técnico electricista».
+      Aparece junto al saludo en el portal de la persona.</li>
+    <li><span class="ui-wrap">Teléfono (opcional)</span>.</li>
+    <li><span class="ui-wrap">Correo de contacto (opcional)</span> — su correo real, solo
+      para poder escribirle. <strong>No se usa para iniciar sesión.</strong></li>
+    <li>Pulse <span class="ui-wrap">Crear cuenta y generar contraseña</span>.</li>
+  </ol>
+
+  <h3>La contraseña que se muestra una sola vez</h3>
+  <div class="caja warn">
+    <span class="titulo">Atención — no cierre esa pantalla sin copiar</span>
+    <p>Al crear la cuenta aparece arriba un recuadro verde
+    (<span class="ui-wrap">Cuenta creada correctamente</span>) con el
+    <strong>usuario</strong> y la <strong>contraseña generada</strong>. Esos datos
+    <strong>se muestran una sola vez</strong>: el sistema no guarda la contraseña en texto
+    legible, así que no hay forma de volver a consultarla. Si la pierde, no se rompe nada,
+    pero tendrá que restablecerla y entregar una nueva.</p>
+  </div>
+  <ol class="steps">
+    <li>Pulse <span class="ui-wrap">Copiar usuario y contraseña</span>. El botón cambiará a
+      <span class="ui">¡Copiado!</span> durante unos segundos.</li>
+    <li>Pegue el texto en un mensaje de WhatsApp para la persona. Queda con el formato
+      «Usuario: mgomez · Contraseña: Sol-Andes42».</li>
+    <li>Si el navegador no permite copiar, seleccione el texto con el mouse y cópielo a mano;
+      la pantalla también se lo indica.</li>
+    <li>Dígale a la persona que <strong>cambie esa contraseña</strong> al entrar (ver 3.4).</li>
+  </ol>
+  <div class="caja nota">
+    <span class="titulo">Para tener en cuenta</span>
+    <p>Las contraseñas generadas tienen la forma <em>Palabra-Palabra##</em>
+    (<em>Sol-Andes42</em>, <em>Rio-Cumbre07</em>) justamente para poder
+    <strong>dictarlas por teléfono</strong> al personal de campo sin confusiones.</p>
+  </div>
+
+  <h3>Gestionar una cuenta existente</h3>
+  <p>Pulse <span class="ui">Gestionar</span> en la fila de la persona. La ficha tiene arriba
+  el rol, si la cuenta está activa, cuántas jornadas ha registrado y cuántas están
+  pendientes, más un acceso directo a <span class="ui-wrap">Ver sus jornadas</span>.
+  Debajo, tres bloques:</p>
+  <ol class="steps">
+    <li><strong>Datos de la cuenta.</strong> Se puede cambiar el nombre, el rol, la cédula,
+      el cargo, el teléfono y el correo de contacto. El <strong>usuario no se puede
+      cambiar</strong>: es la identidad de la cuenta. Si hace falta otro, se crea una cuenta
+      nueva. Pulse <span class="ui">Guardar cambios</span>.</li>
+    <li><strong>Activar o desactivar.</strong> El interruptor
+      <span class="ui-wrap">Estado de la cuenta</span> pasa de <span class="ui">Activa</span>
+      a <span class="ui">Inactiva</span>. Una cuenta inactiva no puede iniciar sesión pero
+      conserva todo su historial. <em>Nadie puede desactivar su propia cuenta.</em></li>
+    <li><strong>Contraseña.</strong> El botón
+      <span class="ui-wrap">Restablecer contraseña</span> genera una nueva y la muestra una
+      sola vez, igual que al crear la cuenta. La anterior deja de funcionar de inmediato.</li>
+    <li><strong>Zona de peligro.</strong> Para eliminar la cuenta hay que escribir el usuario
+      exacto en el campo de confirmación (hasta entonces el botón está bloqueado), pulsar
+      <span class="ui-wrap">Eliminar cuenta definitivamente</span> y confirmar en el aviso
+      del navegador.</li>
+  </ol>
+  <div class="caja warn">
+    <span class="titulo">Atención — desactivar, no eliminar</span>
+    <p>Eliminar una cuenta borra también <strong>todas sus jornadas registradas</strong>, y
+    eso no se puede deshacer. Cuando alguien deja de trabajar en GPI lo correcto es
+    <strong>desactivar</strong> su cuenta: no podrá volver a entrar, pero el historial de
+    horas queda disponible para consultas de nómina, auditorías o liquidaciones.</p>
+  </div>
+
+  <h3>Quién puede gestionar a quién</h3>
+  <ul class="check">
+    <li>Un <strong>administrador</strong> gestiona todas las cuentas.</li>
+    <li>Un <strong>coordinador</strong> gestiona cuentas de coordinador, Community Manager y
+      empleado. No puede crear administradores, ni editar, restablecer la contraseña o
+      eliminar la cuenta de un administrador. Si abre la ficha de un administrador verá un
+      aviso ámbar explicándolo.</li>
+    <li><strong>Nadie</strong> puede desactivarse, cambiarse el rol ni eliminarse a sí mismo.
+      El sistema lo bloquea con un mensaje claro.</li>
+  </ul>
+
+  <h2 id="s6-11"><span class="num">6.11</span> Horario laboral del mes</h2>
+  <p>Sección <span class="ui">Horarios</span> del menú. Solo para administrador y
+  coordinador.</p>
+
+  <div class="caja nota">
+    <span class="titulo">Por qué esta pantalla es la más importante del módulo de horas</span>
+    <p>Esta sección es la <strong>fuente de verdad de qué se considera jornada
+    ordinaria</strong>. El sistema no tiene un número fijo de horas al día: lo lee de aquí.
+    Todo lo que el equipo trabaje <em>por encima</em> del horario de este mes se cuenta como
+    <strong>hora extra</strong>. Si el horario está mal cargado, las horas extra saldrán mal,
+    aunque los empleados registren perfecto.</p>
+  </div>
+
+  <h3>Navegar entre meses</h3>
+  <p>Arriba hay una barra con tres partes: a la izquierda una flecha con el nombre del mes
+  anterior («junio de 2026»), en el centro el mes que se está editando en grande, y a la
+  derecha una flecha con el mes siguiente. El mes viaja en la dirección de la página, así
+  que ese enlace se puede guardar o compartir.</p>
+  <p>Si un mes <strong>no existe todavía, se crea al entrar</strong>, copiando el mes
+  anterior si está cargado o, si no, el horario predeterminado de GPI. La pantalla lo avisa
+  con un recuadro verde del estilo: «Se creó el horario de agosto de 2026 a partir de julio
+  de 2026; ajústalo si cambió».</p>
+
+  <h3>Editar el horario, día por día</h3>
+  <p>La tabla tiene una fila por cada día de la semana, de lunes a domingo, y seis columnas:</p>
+  <div class="tabla-wrap">
+    <table class="keep">
+      <thead><tr><th style="width:26%">Columna</th><th>Qué se hace en ella</th></tr></thead>
+      <tbody>
+        <tr><td><span class="ui">Día</span></td><td>El nombre del día. No se edita.</td></tr>
+        <tr><td><span class="ui-wrap">¿Se trabaja?</span></td><td>Un interruptor entre <span class="ui">Laboral</span> y <span class="ui-wrap">No laboral</span>. Al apagarlo, el día deja de tener jornada ordinaria.</td></tr>
+        <tr><td><span class="ui">Entrada</span></td><td>La hora de inicio de la jornada de ese día.</td></tr>
+        <tr><td><span class="ui">Salida</span></td><td>La hora de salida. Debe ser posterior a la de entrada.</td></tr>
+        <tr><td><span class="ui-wrap">Almuerzo (horas)</span></td><td>Cuánto tiempo de almuerzo tiene ese día. Acepta medias horas (0,5). El almuerzo <strong>no cuenta como trabajo</strong>.</td></tr>
+        <tr><td><span class="ui-wrap">Horas de jornada</span></td><td><strong>Celda calculada</strong>, resaltada en ámbar. Es <em>salida − entrada − almuerzo</em>. No se escribe: se actualiza sola mientras usted edita. En los días no laborales muestra un guion.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Al pie de la tabla, la fila <span class="ui-wrap">Total de horas semanales</span>
+  suma las siete filas y muestra al lado cuántos días laborales tiene la semana. Es también
+  una celda calculada: son las mismas casillas amarillas del archivo de Excel que GPI usaba
+  antes, pero ahora se recalculan solas.</p>
+
+  <h3>Guardar y restablecer</h3>
+  <ol class="steps">
+    <li>Ajuste los días que cambiaron.</li>
+    <li>Si quiere, escriba una <span class="ui-wrap">Nota del mes (opcional)</span>
+      explicando por qué cambió el horario; por ejemplo «la última semana se sale a las
+      4:00 p. m. por inventario». Queda guardada junto al horario.</li>
+    <li>Pulse <span class="ui">Guardar horario</span>. Un mensaje verde confirmará que el
+      horario ya se aplica al cálculo de las horas de ese mes.</li>
+  </ol>
+  <p>El botón <span class="ui-wrap">Restablecer al horario predeterminado</span>
+  <strong>no guarda nada</strong>: solo vuelve a cargar en la tabla el horario base de GPI,
+  para que usted lo revise. Después hay que pulsar <span class="ui">Guardar horario</span>
+  para que tenga efecto. Es útil cuando se enredó editando y quiere empezar de cero.</p>
+
+  <h3>El horario predeterminado de GPI</h3>
+  <div class="tabla-wrap">
+    <table class="keep">
+      <thead><tr><th style="width:28%">Días</th><th>Horario</th><th class="c">Almuerzo</th><th class="c">Jornada neta</th></tr></thead>
+      <tbody>
+        <tr><td>Lunes a jueves</td><td>8:00 a. m. – 5:30 p. m.</td><td class="c">1 h</td><td class="c"><strong>8,5 h</strong></td></tr>
+        <tr><td>Viernes</td><td>8:00 a. m. – 5:00 p. m.</td><td class="c">1 h</td><td class="c"><strong>8 h</strong></td></tr>
+        <tr><td>Sábado y domingo</td><td>No laborales</td><td class="c">—</td><td class="c">—</td></tr>
+        <tr><td colspan="3"><strong>Total semanal neto</strong></td><td class="c"><strong>42 h</strong></td></tr>
+      </tbody>
+      <caption>Horario confirmado por GPI en julio de 2026. Se usa para crear meses nuevos y
+      como red de seguridad si un mes no está cargado.</caption>
+    </table>
+  </div>
+  <div class="caja warn">
+    <span class="titulo">Atención</span>
+    <p>Si por error deja los siete días como no laborales, la pantalla se lo advierte:
+    todas las horas que el equipo registre ese mes se calcularían con recargo dominical o
+    festivo. Revise y guarde de nuevo.</p>
+  </div>
+
+  <h2 id="s6-12"><span class="num">6.12</span> Aprobar o rechazar jornadas</h2>
+  <p>Sección <span class="ui">Jornadas</span> del menú. Solo para administrador y
+  coordinador. Tiene dos pestañas: <span class="ui">Aprobaciones</span> (la que se abre por
+  defecto) y <span class="ui">Métricas</span>. Se cambia de una a otra con un clic.</p>
+
+  <h3>Filtrar lo que quiere revisar</h3>
+  <p>Arriba hay cuatro filtros y dos botones:</p>
+  <ul class="check">
+    <li><span class="ui">Estado</span>: Pendientes (viene puesto por defecto), Aprobadas,
+      Rechazadas o Todas.</li>
+    <li><span class="ui">Empleado</span>: Todos, o una persona concreta.</li>
+    <li><span class="ui">Desde</span> y <span class="ui">Hasta</span>: el rango de fechas.</li>
+    <li><span class="ui">Filtrar</span> aplica los filtros; <span class="ui">Limpiar</span>
+      los borra todos.</li>
+  </ul>
+  <p>Bajo los filtros se indica cuántas jornadas se encontraron. Vienen ordenadas de la más
+  reciente a la más antigua.</p>
+
+  <h3>Revisar una jornada</h3>
+  <p>Cada jornada es una tarjeta con dos mitades. A la izquierda, los datos que escribió el
+  empleado: nombre, estado, fecha, horas de entrada y salida, duración, número de orden,
+  <span class="ui-wrap">Labor realizada</span> y <span class="ui">Observaciones</span>.
+  A la derecha, el <span class="ui-wrap">Desglose estimado</span> calculado por el sistema:</p>
+  <ol class="steps">
+    <li>Lea la <strong>línea explicativa</strong>: dice cuál era la jornada ordinaria de ese
+      día según el horario del mes, cuánto almuerzo se descontó y cuánto tiempo se contó como
+      trabajado. Si el día no era laboral o era festivo, lo indica expresamente.</li>
+    <li>Compare las dos cifras grandes: <span class="ui-wrap">Horas ordinarias</span> y
+      <span class="ui-wrap">Horas extra</span>.</li>
+    <li>Si necesita más detalle, revise la lista por categorías (solo aparecen las que
+      tienen minutos) y las etiquetas del pie, como «El turno cruzó la medianoche» o el
+      nombre del festivo.</li>
+  </ol>
+
+  <h3>Aprobar</h3>
+  <ol class="steps">
+    <li>Pulse <span class="ui">Aprobar</span>.</li>
+    <li>Confirme en el aviso del navegador. Le recordará que la jornada quedará registrada
+      como aprobada y que <strong>el empleado ya no podrá editarla</strong>.</li>
+  </ol>
+
+  <h3>Rechazar</h3>
+  <ol class="steps">
+    <li>Pulse <span class="ui">Rechazar</span>. Se despliega un recuadro rojo y el botón
+      cambia a <span class="ui-wrap">Cancelar rechazo</span>, por si se equivocó.</li>
+    <li>Escriba el <span class="ui-wrap">Motivo del rechazo</span>. <strong>Es
+      obligatorio</strong>: sin motivo, el sistema no deja rechazar. El empleado verá ese
+      texto en su portal, así que sea concreto y diga qué debe corregir. Por ejemplo: «la
+      hora de finalización no coincide con la orden de trabajo; por favor corrígela y vuelve
+      a registrarla».</li>
+    <li>Pulse <span class="ui-wrap">Confirmar rechazo</span>.</li>
+  </ol>
+
+  <h3>Devolver una jornada a pendiente</h3>
+  <p>En una jornada ya aprobada o rechazada aparece un único botón:
+  <span class="ui-wrap">Volver a pendiente</span>. Se usa cuando hay que corregir un error
+  después de haber revisado. Al confirmar, <strong>se borra la nota de revisión</strong> y
+  el empleado vuelve a poder editar su jornada.</p>
+  <div class="caja tip">
+    <span class="titulo">Consejo</span>
+    <p>Revise las jornadas al menos una vez a la semana, antes del cierre de nómina. El
+    Dashboard muestra permanentemente cuántas hay pendientes, así que basta con mirar la
+    tarjeta <span class="ui-wrap">Jornadas y horas extra</span> al entrar.</p>
+  </div>
+
+  <h2 id="s6-13"><span class="num">6.13</span> Tablero de métricas</h2>
+  <p>Pestaña <span class="ui">Métricas</span> dentro de la sección Jornadas. Responde de un
+  vistazo a «¿cómo se están repartiendo las horas del equipo?». Trae los últimos 90 días de
+  información y muestra por defecto los últimos 30.</p>
+
+  <h3>Los filtros</h3>
+  <ul class="check">
+    <li><span class="ui-wrap">Rango de fechas</span>: dos campos, desde y hasta.</li>
+    <li><span class="ui">Empleados</span>: se pueden elegir varios a la vez. Trae un buscador
+      y los atajos <span class="ui">Todos</span> y
+      <span class="ui-wrap">Seleccionar visibles</span>.</li>
+    <li><span class="ui">Estado</span>: <em>Aprobadas y pendientes</em> (por defecto),
+      <em>Solo aprobadas</em>, <em>Solo pendientes</em>, <em>Solo rechazadas</em> o
+      <em>Todas</em>.</li>
+  </ul>
+  <p>Todo lo demás del tablero se actualiza al instante al cambiar un filtro. El botón
+  <span class="ui">Limpiar</span> vuelve a la vista inicial.</p>
+  <div class="caja nota">
+    <span class="titulo">Para tener en cuenta</span>
+    <p>La cifra oficial es la de las jornadas <strong>aprobadas</strong>. Por defecto el
+    tablero incluye también las pendientes, para poder anticipar cómo va a cerrar el mes;
+    si quiere ver solo lo confirmado, elija <em>Solo aprobadas</em> en el filtro de estado.
+    En varias pantallas hay un botón <span class="ui">Ayuda</span> que abre una explicación
+    breve de cada dato.</p>
+  </div>
+
+  <h3>Los cuatro indicadores</h3>
+  <div class="tabla-wrap">
+    <table>
+      <thead><tr><th style="width:30%">Indicador</th><th>Qué le dice</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Jornadas registradas</strong></td><td>Cuántos turnos registró el equipo en el período elegido. Debajo indica cuántos siguen sin revisar, o «Todas revisadas» si está al día.</td></tr>
+        <tr><td><strong>Empleados con jornadas</strong></td><td>Cuántas personas distintas registraron al menos un turno, sobre el total de cuentas del equipo. Sirve para detectar a quien no está registrando.</td></tr>
+        <tr><td><strong>Total de horas</strong></td><td>Todo el tiempo efectivamente trabajado (jornada ordinaria más horas extra). <strong>El almuerzo no se cuenta.</strong> Debajo, el promedio por jornada.</td></tr>
+        <tr><td><strong>Horas extra</strong></td><td>El tiempo trabajado por fuera de la jornada ordinaria: es lo que se paga con recargo. Debajo, cuántas de esas horas están todavía pendientes de aprobación.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Las ocho gráficas</h3>
+  <div class="tabla-wrap">
+    <table>
+      <thead><tr><th class="c" style="width:5%">#</th><th style="width:30%">Gráfica</th><th>Cómo se lee</th></tr></thead>
+      <tbody>
+        <tr><td class="c">1</td><td><strong>Horas trabajadas por día</strong></td><td>Una barra por día. La parte verde es la jornada ordinaria y la ámbar de encima son las horas extra. Sirve para ver qué días se cargó de trabajo el equipo. Se recorre de siete en siete días.</td></tr>
+        <tr><td class="c">2</td><td><strong>Composición de horas</strong></td><td>Una dona que reparte el total del período en cinco pedazos: ordinarias, extra diurna, extra nocturna, recargo nocturno y dominical o festivo. En el centro va el total. Responde a «¿de qué está hecho el costo de estas horas?».</td></tr>
+        <tr><td class="c">3</td><td><strong>Tendencia semanal de horas extra</strong></td><td>Semana a semana (de lunes a domingo), <strong>la persona que más horas extra acumuló</strong>. La línea roja punteada es el <strong>tope legal por persona</strong>. Si la curva la supera, alguien se pasó: mírelo en el control semanal de abajo. No es la suma del equipo, porque el tope es individual.</td></tr>
+        <tr><td class="c">4</td><td><strong>Horas por empleado</strong></td><td>Barras horizontales con el total de horas de cada persona, de mayor a menor. Muestra el reparto de la carga.</td></tr>
+        <tr><td class="c">5</td><td><strong>Horas extra por empleado</strong></td><td>Igual que la anterior pero solo con las horas extra. Solo aparecen las personas que trabajaron por fuera de la jornada; si nadie hizo extras, la gráfica no se dibuja.</td></tr>
+        <tr><td class="c">6</td><td><strong>Turnos del día</strong></td><td>Un diagrama de barras horizontales donde cada barra va de la hora de entrada a la de salida, con un color por persona. Sirve para ver solapamientos y turnos nocturnos. Se recorre de tres en tres días y la leyenda de colores se despliega aparte.</td></tr>
+        <tr><td class="c">7</td><td><strong>Horas por orden de trabajo</strong></td><td>Las diez órdenes de trabajo que más horas consumieron en el período. Es la gráfica clave para saber si un trabajo se cotizó bien. Las jornadas sin orden se agrupan en «Sin orden asignada».</td></tr>
+        <tr><td class="c">8</td><td><strong>Estado de las jornadas</strong></td><td>Una dona con cuántas jornadas están pendientes, aprobadas o rechazadas. Si todas están aprobadas, en su lugar aparece «Todo revisado».</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Control de horas extra por semana</h3>
+  <p>Bajo las gráficas, esta tabla avisa cuando alguien pasa de <strong>2 horas extra en un
+  día</strong> o de <strong>12 horas extra en una semana</strong> (los topes son ajustables).
+  Tiene cinco columnas: <span class="ui">Empleado</span>, <span class="ui">Semana</span>
+  (de lunes a domingo), <span class="ui-wrap">Horas extra</span>,
+  <span class="ui-wrap">Días sobre el tope</span> y <span class="ui">Estado</span>.</p>
+  <ul class="check">
+    <li><strong>Solo aparecen las semanas con alerta.</strong> Si la tabla está vacía y dice
+      «Todo en orden con los filtros actuales», nadie se pasó.</li>
+    <li>Las horas extra se ven en <strong>rojo</strong> cuando superan el tope semanal y en
+      <strong>ámbar</strong> cuando el problema es un día puntual.</li>
+    <li>La columna Estado dice <span class="ui-wrap">Supera el tope semanal</span> o
+      <span class="ui-wrap">Revisar día</span>.</li>
+  </ul>
+  <div class="caja nota">
+    <span class="titulo">Para tener en cuenta</span>
+    <p>Es un <strong>recordatorio, no un bloqueo</strong>: el sistema nunca impide registrar
+    ni aprobar una jornada por superar el tope. La decisión es de GPI; el tablero solo se
+    encarga de que nadie se pase sin darse cuenta.</p>
+  </div>
+
+  <h3>Detalle y exportación para nómina</h3>
+  <p>Al final está la tabla <span class="ui-wrap">Detalle de jornadas</span>, con una fila
+  por turno: empleado, fecha, orden de trabajo, inicio, fin, duración, horas extra y estado.
+  Junto a la hora de fin aparece <em>+1d</em> cuando el turno terminó al día siguiente.
+  Muestra 50 filas por página, con los botones <span class="ui">Anterior</span> y
+  <span class="ui">Siguiente</span>.</p>
+  <ol class="steps">
+    <li>Ajuste los filtros hasta ver exactamente lo que necesita liquidar (por ejemplo, el
+      mes completo y <em>Solo aprobadas</em>).</li>
+    <li>Pulse <span class="ui">Exportar CSV</span>, arriba a la derecha de la tabla.</li>
+    <li>Se descargará un archivo con el nombre del período. Ábralo con Excel: viene
+      preparado para que las columnas queden separadas y las tildes se vean bien en español,
+      con las horas en decimales y coma decimal.</li>
+    <li>El archivo lleva <strong>19 columnas</strong>, más detalladas que la tabla en
+      pantalla: además de los datos del turno, incluye el almuerzo descontado, las horas
+      trabajadas, las horas en decimal, las ordinarias y el desglose completo de extras
+      (diurna, nocturna, dominical o festiva diurna y nocturna), las nocturnas, si fue
+      domingo o festivo y su nombre, si cruzó la medianoche y el estado.</li>
+  </ol>
+  <div class="caja tip">
+    <span class="titulo">Consejo</span>
+    <p>La exportación entrega <strong>exactamente lo que está viendo en pantalla</strong>,
+    con los filtros aplicados. Para el archivo que va a nómina, filtre siempre por
+    <em>Solo aprobadas</em>: así no se cuelan jornadas que todavía pueden cambiar.</p>
+  </div>
+</section>
+
+<!-- ==================== 7. HORAS EXTRA ==================== -->
+<section id="c7">
+  <h1 class="cap"><span class="num">7.</span> Cómo se calculan las horas extra</h1>
+
+  <p class="lead">Este capítulo explica, sin fórmulas, cómo pasa el sistema de «entré a
+  las 8 y salí a las 7» a un desglose de horas ordinarias y extra. Todos los cálculos usan
+  la hora de Colombia, así que dan el mismo resultado en el celular del empleado y en el
+  computador del coordinador.</p>
+
+  <h2 id="s7-1"><span class="num">7.1</span> La idea en una frase</h2>
+  <div class="caja tip">
+    <span class="titulo">La regla de oro</span>
+    <p>La <strong>jornada ordinaria de cada día</strong> sale del horario de ese mes
+    (sección Horarios del panel): es <em>hora de salida − hora de entrada − almuerzo</em>.
+    Todo lo que se trabaje por encima de esa cantidad es <strong>hora extra</strong>, y
+    cada minuto se clasifica además según si fue de día o de noche y si cayó en domingo o
+    festivo.</p>
+  </div>
+
+  <h2 id="s7-2"><span class="num">7.2</span> Los cinco pasos del cálculo</h2>
+  <ol class="steps">
+    <li><strong>Se busca el horario del mes.</strong> Con la fecha del turno, el sistema
+      averigua qué mes es, mira el horario cargado para ese mes y toma el día de la semana.
+      Esa es la jornada ordinaria de referencia. Si el mes no está cargado, usa el horario
+      predeterminado de GPI, así que el cálculo nunca se detiene.</li>
+    <li><strong>Se descuenta el almuerzo.</strong> El almuerzo no es tiempo de trabajo
+      (ver 7.5).</li>
+    <li><strong>Se separa lo ordinario de lo extra.</strong> Lo trabajado hasta completar la
+      jornada ordinaria del día son horas ordinarias; el exceso son horas extra.</li>
+    <li><strong>Se clasifica minuto a minuto.</strong> Cada minuto se mira por separado:
+      ¿cae en la franja nocturna? ¿es domingo, festivo nacional o un día marcado como no
+      laboral? De esa combinación salen las ocho categorías de 7.3.</li>
+    <li><strong>Se aplican los porcentajes.</strong> Con los recargos configurados
+      (tabla 7.4) el sistema calcula el equivalente en horas ordinarias, como referencia de
+      costo.</li>
+  </ol>
+  <p>La <strong>franja nocturna</strong> configurada va de las <strong>7:00 p. m. a las
+  6:00 a. m.</strong> Un mismo turno puede tener minutos diurnos y nocturnos, y el sistema
+  los separa correctamente.</p>
+
+  <h2 id="s7-3"><span class="num">7.3</span> Las ocho categorías de horas</h2>
+  <p>Son las mismas ocho que aparecen en el desglose del portal y de las aprobaciones,
+  en este orden:</p>
+  <div class="tabla-wrap">
+    <table>
+      <thead><tr><th style="width:36%">Categoría</th><th>Cuándo se usa</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Ordinarias diurnas</strong></td><td>Dentro de la jornada normal y en horario de día. Son la mayoría de las horas de un día corriente.</td></tr>
+        <tr><td><strong>Ordinarias con recargo nocturno</strong></td><td>Dentro de la jornada normal, pero en franja nocturna. No son extra, pero se pagan con recargo.</td></tr>
+        <tr><td><strong>Extra diurnas</strong></td><td>Pasada la jornada ordinaria, en horario de día.</td></tr>
+        <tr><td><strong>Extra nocturnas</strong></td><td>Pasada la jornada ordinaria, en franja nocturna.</td></tr>
+        <tr><td><strong>Dominical/festivo diurnas</strong></td><td>Horas dentro de la jornada trabajadas en domingo, festivo o día no laboral, de día.</td></tr>
+        <tr><td><strong>Dominical/festivo nocturnas</strong></td><td>Las mismas, pero en franja nocturna.</td></tr>
+        <tr><td><strong>Extra dominical diurnas</strong></td><td>Horas extra en domingo o festivo, de día.</td></tr>
+        <tr><td><strong>Extra dominical nocturnas</strong></td><td>Horas extra en domingo o festivo, en franja nocturna. Es la categoría con mayor recargo.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 id="s7-4"><span class="num">7.4</span> Porcentajes configurados</h2>
+  <div class="tabla-wrap">
+    <table>
+      <thead><tr><th style="width:44%">Concepto</th><th class="c">Recargo</th><th class="c">Se paga como</th></tr></thead>
+      <tbody>
+        <tr><td>Hora extra diurna</td><td class="c">+25 %</td><td class="c">125 %</td></tr>
+        <tr><td>Hora extra nocturna</td><td class="c">+75 %</td><td class="c">175 %</td></tr>
+        <tr><td>Recargo nocturno (hora ordinaria de noche)</td><td class="c">+35 %</td><td class="c">135 %</td></tr>
+        <tr><td>Dominical o festivo (hora ordinaria)</td><td class="c">+80 %</td><td class="c">180 %</td></tr>
+        <tr><td>Hora extra diurna en domingo o festivo</td><td class="c">+105 %</td><td class="c">205 %</td></tr>
+        <tr><td>Hora extra nocturna en domingo o festivo</td><td class="c">+155 %</td><td class="c">255 %</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="tabla-wrap">
+    <table class="keep">
+      <thead><tr><th style="width:44%">Otros parámetros</th><th>Valor configurado</th></tr></thead>
+      <tbody>
+        <tr><td>Franja nocturna</td><td>De 7:00 p. m. a 6:00 a. m.</td></tr>
+        <tr><td>Tope de horas extra por día</td><td>2 horas (solo genera aviso)</td></tr>
+        <tr><td>Tope de horas extra por semana</td><td>12 horas (solo genera aviso)</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="caja warn">
+    <span class="titulo">Atención — estos valores son configurables y GPI debe confirmarlos</span>
+    <p>Los porcentajes y los topes de la tabla anterior corresponden a la normativa laboral
+    colombiana vigente en 2026 y funcionan como <strong>punto de partida</strong>. No están
+    escritos en el programa: viven en la configuración del sistema y se pueden cambiar sin
+    tocar el sitio. <strong>GPI debe confirmar sus propias reglas</strong> —franja nocturna,
+    porcentajes y tratamiento de festivos— para dejarlas ajustadas de forma definitiva.</p>
+  </div>
+
+  <h2 id="s7-5"><span class="num">7.5</span> El almuerzo: la regla pendiente de confirmar</h2>
+  <p>El horario del mes dice cuántas horas de almuerzo tiene cada día, pero el empleado
+  solo registra <strong>a qué hora entró y a qué hora salió</strong>: no anota cuándo
+  almorzó. Para saber si dentro de ese rango hubo almuerzo, el sistema aplica una regla
+  práctica:</p>
+  <ul class="check">
+    <li>En un <strong>día laboral</strong>, si el turno dura <strong>más de 6 horas</strong>,
+      se descuenta el almuerzo de ese día (normalmente 1 hora).</li>
+    <li>En turnos de <strong>6 horas o menos</strong> no se descuenta nada: se entiende que
+      no hubo tiempo de almorzar dentro de la jornada.</li>
+    <li>En <strong>días no laborales o festivos</strong> tampoco se descuenta: todo el tiempo
+      es trabajo con recargo.</li>
+  </ul>
+  <p>El almuerzo se ubica en el centro de la parte ordinaria del turno, que es lo que ocurre
+  en la práctica: quien entra a las 8:00 a. m. almuerza alrededor del mediodía. Esa ubicación
+  solo influye en si esos minutos se cuentan como diurnos o nocturnos, nunca en cuántos son.</p>
+  <div class="caja warn">
+    <span class="titulo">Atención — decisión pendiente de GPI</span>
+    <p>Esta regla del almuerzo <strong>debe confirmarla GPI</strong>. La alternativa sería
+    pedirle al empleado que anote la hora exacta de su almuerzo en cada jornada, lo que
+    complica el formulario y aumenta los errores de digitación. Se optó por la regla
+    automática, pero se puede cambiar.</p>
+  </div>
+
+  <h2 id="s7-6"><span class="num">7.6</span> Festivos y domingos</h2>
+  <p>Cuando el día está apagado en el horario del mes (por defecto sábado y domingo) o es
+  <strong>festivo nacional</strong>, la jornada ordinaria de ese día es <strong>cero</strong>:
+  todo el turno se calcula con el tratamiento dominical o festivo. El sistema conoce los
+  festivos nacionales de Colombia de 2026:</p>
+  <div class="tabla-wrap">
+    <table>
+      <thead><tr><th style="width:25%">Fecha</th><th style="width:25%">Festivo</th><th style="width:25%">Fecha</th><th style="width:25%">Festivo</th></tr></thead>
+      <tbody>
+        <tr><td>1 de enero</td><td>Año Nuevo</td><td>29 de junio</td><td>San Pedro y San Pablo</td></tr>
+        <tr><td>12 de enero</td><td>Reyes Magos</td><td>20 de julio</td><td>Independencia</td></tr>
+        <tr><td>23 de marzo</td><td>San José</td><td>7 de agosto</td><td>Batalla de Boyacá</td></tr>
+        <tr><td>2 de abril</td><td>Jueves Santo</td><td>17 de agosto</td><td>Asunción de la Virgen</td></tr>
+        <tr><td>3 de abril</td><td>Viernes Santo</td><td>12 de octubre</td><td>Día de la Raza</td></tr>
+        <tr><td>1 de mayo</td><td>Día del Trabajo</td><td>2 de noviembre</td><td>Todos los Santos</td></tr>
+        <tr><td>18 de mayo</td><td>Ascensión del Señor</td><td>16 de noviembre</td><td>Independencia de Cartagena</td></tr>
+        <tr><td>8 de junio</td><td>Corpus Christi</td><td>8 de diciembre</td><td>Inmaculada Concepción</td></tr>
+        <tr><td>15 de junio</td><td>Sagrado Corazón</td><td>25 de diciembre</td><td>Navidad</td></tr>
+      </tbody>
+      <caption>Festivos nacionales de Colombia para 2026 reconocidos por el sistema.</caption>
+    </table>
+  </div>
+  <div class="caja warn">
+    <span class="titulo">Atención — hay que cargar los festivos cada año</span>
+    <p>La lista de festivos se carga año por año. Antes de terminar 2026 hay que pedir al
+    soporte que agregue los festivos de 2027. Si un año no está cargado, el sistema sigue
+    funcionando: solo los domingos se tratarían como día de recargo, y los festivos se
+    contarían como días normales.</p>
+  </div>
+
+  <h2 id="s7-7"><span class="num">7.7</span> Tres ejemplos resueltos</h2>
+  <p>Todos con el horario predeterminado de GPI (lunes a jueves 8:00 a. m. – 5:30 p. m.,
+  8,5 h netas).</p>
+  <div class="tabla-wrap">
+    <table class="keep">
+      <thead><tr><th style="width:24%">Situación</th><th>Cómo lo calcula el sistema</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Lunes normal</strong><br>8:00 a. m. a 5:30 p. m.</td>
+          <td>9 h 30 min de presencia − 1 h de almuerzo = <strong>8 h 30 min trabajadas</strong>.
+          Coincide justo con la jornada ordinaria del día: <strong>8,5 h ordinarias, 0 extra</strong>.</td>
+        </tr>
+        <tr>
+          <td><strong>Lunes largo</strong><br>8:00 a. m. a 7:00 p. m.</td>
+          <td>11 h de presencia − 1 h de almuerzo = <strong>10 h trabajadas</strong>.
+          Las primeras 8,5 h son ordinarias y las <strong>1,5 h restantes son extra
+          diurnas</strong> (el reloj de las extras arranca a las 5:30 p. m., y a las 7:00 p. m.
+          empieza la franja nocturna). Aparecería en el control semanal por pasar del tope
+          de 2 h solo si hubiera trabajado un poco más.</td>
+        </tr>
+        <tr>
+          <td><strong>Turno de noche</strong><br>Miércoles 10:00 p. m. a jueves 2:00 a. m.</td>
+          <td>4 h de presencia. Como el turno <strong>no pasa de 6 horas</strong>, no se
+          descuenta almuerzo: <strong>4 h trabajadas</strong>. Al ser menos que la jornada
+          ordinaria del día, son <strong>4 h ordinarias con recargo nocturno</strong>: todas
+          caen dentro de la franja de 7:00 p. m. a 6:00 a. m. El empleado debió marcar
+          «terminé al día siguiente».</td>
+        </tr>
+        <tr>
+          <td><strong>Domingo</strong><br>8:00 a. m. a 2:00 p. m.</td>
+          <td>El domingo está apagado en el horario, así que la jornada ordinaria de ese día
+          es cero y no se descuenta almuerzo: <strong>6 h, todas con tratamiento dominical
+          diurno</strong>. Con los porcentajes actuales, se pagarían al 180 %.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ==================== 8. FAQ ==================== -->
+<section id="c8">
+  <h1 class="cap"><span class="num">8.</span> Preguntas frecuentes y solución de problemas</h1>
+
+  <h2>Ingreso y contraseñas</h2>
+
+  <h3>No puedo entrar: dice «Usuario o contraseña incorrectos»</h3>
+  <ol class="steps">
+    <li>Confirme que está escribiendo su <strong>usuario</strong> (algo como <em>mgomez</em>)
+      y no un correo electrónico.</li>
+    <li>Revise que la tecla de mayúsculas no esté activada: las contraseñas distinguen
+      mayúsculas de minúsculas.</li>
+    <li>Si copió y pegó la contraseña, verifique que no se haya colado un espacio al final.</li>
+    <li>Si nada funciona, pídale a su coordinador que la restablezca.</li>
+  </ol>
+
+  <h3>Olvidé mi contraseña</h3>
+  <p>No hay recuperación por correo, porque las cuentas no usan correo. Pídale al
+  coordinador o al administrador que entre a la sección Equipo, abra su ficha y pulse
+  <span class="ui-wrap">Restablecer contraseña</span>. Le entregará una nueva que se
+  muestra una sola vez; cámbiela al ingresar.</p>
+
+  <h3>Anoté mal la contraseña que me generaron y la pantalla ya se cerró</h3>
+  <p>No se puede recuperar: el sistema guarda la contraseña cifrada, sin forma de leerla.
+  La solución es sencilla: se restablece otra vez y se genera una nueva.</p>
+
+  <h3>Dice que mi cuenta está desactivada</h3>
+  <p>Alguien quitó el acceso a esa cuenta. Puede ser intencional (la persona ya no trabaja
+  en GPI) o un error. Hable con su coordinador: reactivarla es cuestión de un interruptor y
+  su historial sigue intacto.</p>
+
+  <h2>Permisos y secciones</h2>
+
+  <h3>No veo la sección Equipo (ni Horarios, ni Jornadas)</h3>
+  <p>Esas tres secciones son solo para <strong>administrador y coordinador</strong>. Si su
+  rol es Community Manager, verá únicamente las secciones de contenido; si es Empleado, no
+  entra al panel en absoluto. Si cree que le corresponde otro rol, pídale a un administrador
+  que se lo cambie en su ficha.</p>
+
+  <h3>Entré al panel pero no me deja guardar</h3>
+  <p>Lo más probable es que la sesión haya caducado. Cierre sesión, vuelva a ingresar e
+  intente otra vez. El sistema comprueba su rol en cada guardado, por eso avisa en ese
+  momento y no antes.</p>
+
+  <h3>Quiero que alguien pueda aprobar jornadas</h3>
+  <p>Debe tener el rol <strong>Coordinador</strong> (o Administrador). Un administrador
+  entra a la sección Equipo, abre su ficha, cambia el campo <span class="ui">Rol</span> y
+  guarda. El cambio es inmediato.</p>
+
+  <h2>Contenido del sitio</h2>
+
+  <h3>Edité algo y no lo veo en el sitio</h3>
+  <ol class="steps">
+    <li>Confirme que pulsó el botón de <strong>guardar de esa tarjeta</strong>. En «Contacto
+      y ajustes» cada tarjeta guarda por separado.</li>
+    <li>Revise que el elemento esté en <span class="ui">Visible</span> y que la sección
+      correspondiente no esté apagada en «Visibilidad de secciones».</li>
+    <li><strong>Espere un momento y recargue la página.</strong> El sitio guarda una copia
+      de sus páginas para cargar rápido; los cambios se publican de inmediato, pero el
+      navegador puede seguir mostrando la versión que ya tenía descargada. Recargue con la
+      combinación de teclas <em>Control + F5</em> (o <em>Comando + R</em> en Mac).</li>
+    <li>Use el botón <span class="ui">Ver sitio</span> de la barra superior del panel: abre
+      una pestaña nueva y suele mostrar la versión actualizada.</li>
+  </ol>
+
+  <h3>Subí una imagen y se ve cortada</h3>
+  <p>Casi siempre es porque la fotografía es <strong>vertical</strong>. Las portadas del
+  sitio son franjas anchas: al encajar una foto vertical, el sistema la recorta por arriba y
+  por abajo. Soluciones:</p>
+  <ul class="check">
+    <li>Use fotos <strong>horizontales</strong> siempre que pueda.</li>
+    <li>Si solo tiene una vertical, recórtela antes de subirla dejando lo importante en el
+      centro de la franja.</li>
+    <li>Para logos de clientes, use imágenes con <strong>fondo transparente</strong> y sin
+      márgenes grandes.</li>
+  </ul>
+
+  <h3>Borré un servicio por error</h3>
+  <p>No hay papelera: hay que volver a crearlo con sus textos e imágenes. Por eso conviene
+  <strong>ocultar en lugar de borrar</strong> cuando solo se quiere dejar de mostrar algo.</p>
+
+  <h3>Borré todos los proyectos y volvieron a aparecer los antiguos</h3>
+  <p>Es el comportamiento previsto. Si una lista se queda completamente vacía, el sitio
+  interpreta que hubo un problema y vuelve a mostrar el contenido original de fábrica para
+  no dejar la página en blanco. Si de verdad quiere que no se vea nada de esa lista, deje los
+  elementos creados y <strong>oculte</strong> cada uno con su interruptor.</p>
+
+  <h2>Jornadas y horas</h2>
+
+  <h3>Un empleado ya no trabaja aquí</h3>
+  <p><strong>Desactive</strong> su cuenta en lugar de eliminarla: no podrá volver a entrar,
+  pero se conserva todo su historial de jornadas para nómina, auditorías y liquidaciones.
+  Eliminar la cuenta borra también todas sus jornadas, y eso no se puede deshacer.</p>
+
+  <h3>Un empleado registró mal una jornada y ya la aprobé</h3>
+  <p>Abra la sección Jornadas, cambie el filtro de estado a <em>Aprobadas</em>, busque la
+  jornada y pulse <span class="ui-wrap">Volver a pendiente</span>. El empleado podrá
+  corregirla y usted la revisa de nuevo. Tenga en cuenta que al reabrirla se borra la nota
+  de revisión anterior.</p>
+
+  <h3>Quiero cambiar el horario de un mes ya pasado</h3>
+  <p>Se puede: en la sección Horarios navegue con las flechas hasta ese mes, ajústelo y
+  guarde.</p>
+  <div class="caja warn">
+    <span class="titulo">Atención</span>
+    <p>Cambiar el horario de un mes pasado <strong>cambia el cálculo de todas las jornadas
+    de ese mes</strong>, incluidas las ya aprobadas: el desglose se recalcula cada vez que
+    se consulta. Si ya liquidó nómina con esas cifras, exporte primero el archivo de Excel
+    como respaldo y avise al área administrativa antes de guardar.</p>
+  </div>
+
+  <h3>Las horas extra no me cuadran</h3>
+  <ol class="steps">
+    <li>Verifique el <strong>horario de ese mes</strong> en la sección Horarios: es de ahí de
+      donde sale la jornada ordinaria. Un día con la hora de salida mal puesta desajusta todo
+      el mes.</li>
+    <li>Revise si el día era <strong>festivo</strong> o estaba marcado como no laboral: en
+      ese caso todo el turno se calcula con recargo.</li>
+    <li>Recuerde que se descuenta <strong>1 hora de almuerzo</strong> en los turnos de más de
+      6 horas en día laboral (ver 7.5).</li>
+    <li>Abra la jornada en la sección Jornadas y lea la línea explicativa del desglose: dice
+      exactamente qué jornada ordinaria se usó y cuánto almuerzo se descontó.</li>
+  </ol>
+
+  <h3>Un empleado no registró sus jornadas de la semana</h3>
+  <p>Puede registrarlas después: solo tiene que cambiar la fecha del formulario al día que
+  trabajó. El indicador <strong>Empleados con jornadas</strong> del tablero de métricas ayuda
+  a detectar rápidamente a quién le falta registrar.</p>
+
+  <h3>El archivo de Excel se ve todo en una sola columna</h3>
+  <p>Ocurre con algunas configuraciones regionales. El archivo está preparado para Excel en
+  español; si su Excel está configurado en inglés, use <em>Datos → Texto en columnas</em> y
+  elija el punto y coma como separador.</p>
+
+  <h2>Otros</h2>
+
+  <h3>¿Puedo usar el panel desde el celular?</h3>
+  <p>Sí. Todo el panel funciona en celular: el menú lateral se convierte en una fila de
+  pestañas deslizable. Para las tareas de mucho detalle —el horario del mes, el tablero de
+  métricas— se trabaja mucho más cómodo en un computador.</p>
+
+  <h3>¿Los cambios del panel afectan al sitio inmediatamente?</h3>
+  <p>Sí. Cada guardado publica el cambio de una vez. Lo único que puede retrasar la
+  visualización es la copia que su propio navegador tenga guardada; recargue la página.</p>
+
+  <h3>¿Se puede recuperar algo borrado?</h3>
+  <p>No desde el panel. Por eso el sistema insiste en <strong>ocultar en vez de borrar</strong>
+  y en <strong>desactivar en vez de eliminar</strong> cuentas. Si se borró algo importante,
+  escriba al soporte cuanto antes.</p>
+</section>
+
+<!-- ==================== 9. GLOSARIO ==================== -->
+<section id="c9">
+  <h1 class="cap"><span class="num">9.</span> Glosario</h1>
+
+  <p class="lead">Términos que aparecen en el sistema, explicados en el sentido con que se
+  usan en el sitio de GPI.</p>
+
+  <dl class="gloss">
+    <dt>Aprobada</dt>
+    <dd>Estado de una jornada que ya revisó y confirmó un coordinador o un administrador.
+    Es la cifra que cuenta para nómina y el empleado ya no puede modificarla.</dd>
+
+    <dt>Community Manager</dt>
+    <dd>Rol que edita todo el contenido del sitio (textos, imágenes, datos de contacto) y
+    registra sus propias jornadas, pero no gestiona cuentas ni aprueba jornadas de otros.</dd>
+
+    <dt>Correo de contacto</dt>
+    <dd>El correo real de una persona, guardado solo para poder escribirle. <strong>No</strong>
+    se usa para iniciar sesión.</dd>
+
+    <dt>Desglose</dt>
+    <dd>El detalle de una jornada repartido en horas ordinarias, extra y recargos. Aparece en
+    la vista previa del empleado, en las aprobaciones y en el archivo exportado.</dd>
+
+    <dt>Dirección de una página (o «slug»)</dt>
+    <dd>La parte final de la dirección web de un servicio. Cambiarla cambia el enlace público
+    de esa página, por lo que conviene no tocarla en servicios que ya están publicados.</dd>
+
+    <dt>Exportar CSV</dt>
+    <dd>Descargar la tabla de jornadas como archivo de hoja de cálculo, listo para abrir en
+    Excel y usar en la liquidación de nómina.</dd>
+
+    <dt>Franja nocturna</dt>
+    <dd>El horario que el sistema considera «noche» para efectos de recargo. Está configurado
+    de 7:00 p. m. a 6:00 a. m.</dd>
+
+    <dt>Hero</dt>
+    <dd>La primera pantalla de la página de inicio: la fotografía grande con el titular y los
+    dos botones. Se edita en «Contacto y ajustes».</dd>
+
+    <dt>Hora extra</dt>
+    <dd>Tiempo trabajado por encima de la jornada ordinaria del día, según el horario de ese
+    mes. Se paga con recargo.</dd>
+
+    <dt>Jornada</dt>
+    <dd>Un turno de trabajo registrado: una fecha, una orden de trabajo, una hora de entrada,
+    una de salida y la descripción de lo que se hizo.</dd>
+
+    <dt>Jornada ordinaria</dt>
+    <dd>Las horas que se consideran normales en un día, según el horario del mes. Se calcula
+    como hora de salida menos hora de entrada, menos el almuerzo.</dd>
+
+    <dt>Menú lateral</dt>
+    <dd>La columna de secciones que aparece a la izquierda en el panel de administración.
+    En celular se convierte en una fila de pestañas deslizable.</dd>
+
+    <dt>Orden de trabajo</dt>
+    <dd>El número con que GPI identifica un trabajo concreto. Se pide en cada jornada porque
+    permite después saber cuántas horas consumió cada trabajo.</dd>
+
+    <dt>Pendiente</dt>
+    <dd>Estado inicial de toda jornada registrada. Nadie la ha revisado todavía y el empleado
+    aún puede corregirla o eliminarla.</dd>
+
+    <dt>Recargo nocturno</dt>
+    <dd>Aumento que se paga por trabajar en franja nocturna, aunque esas horas estén dentro
+    de la jornada ordinaria (es decir, sin ser horas extra).</dd>
+
+    <dt>Rechazada</dt>
+    <dd>Estado de una jornada que se revisó y no quedó bien. Siempre trae una nota obligatoria
+    explicando qué corregir.</dd>
+
+    <dt>Rol</dt>
+    <dd>El nivel de permisos de una cuenta dentro del sistema: Administrador, Coordinador,
+    Community Manager o Empleado.</dd>
+
+    <dt>Ruta de migas</dt>
+    <dd>La línea de enlaces pequeños del estilo <em>Inicio › Servicios › Recurso Hídrico</em>
+    que indica en qué parte del sitio se encuentra y permite subir un nivel.</dd>
+
+    <dt>Texto alternativo</dt>
+    <dd>Descripción breve de una imagen. La leen los programas que usan las personas con
+    discapacidad visual y también los buscadores. Debe describir lo que se ve en la foto.</dd>
+
+    <dt>Tope de horas extra</dt>
+    <dd>El máximo de horas extra que se consideran razonables por día (2 h) y por semana
+    (12 h). El sistema solo avisa cuando se supera; nunca bloquea el registro.</dd>
+
+    <dt>Usuario</dt>
+    <dd>El nombre corto con que una persona ingresa al portal, por ejemplo <em>mgomez</em>.
+    No se puede cambiar después de creada la cuenta.</dd>
+
+    <dt>Visible / Oculto</dt>
+    <dd>El interruptor que decide si un elemento se muestra en el sitio público. Ocultar no
+    borra: el contenido se conserva en el panel.</dd>
+
+    <dt>Vista previa del desglose</dt>
+    <dd>El recuadro «Así quedarían tus horas» que el empleado ve mientras llena el formulario.
+    Es informativo: la liquidación final la confirma el área administrativa.</dd>
+  </dl>
+</section>
+
+<!-- ==================== 10. SOPORTE ==================== -->
+<section id="c10">
+  <h1 class="cap"><span class="num">10.</span> Contacto de soporte</h1>
+
+  <p class="lead">Si algo no funciona como dice este manual, si necesita un cambio que el
+  panel no permite hacer, o si hay que ajustar los porcentajes de recargo o cargar los
+  festivos de un año nuevo, escríbanos.</p>
+
+  <div class="caja tip">
+    <span class="titulo">Soporte técnico del sitio</span>
+    <p><strong>GOCAS Automations</strong><br>
+    César Castaño<br>
+    <strong>cesarxemiliox@gmail.com</strong></p>
+  </div>
+
+  <h2>Antes de escribir, tenga a mano</h2>
+  <ul class="check">
+    <li>Qué estaba intentando hacer y en qué sección del panel o del portal.</li>
+    <li>El usuario con el que estaba trabajando (nunca la contraseña).</li>
+    <li>El mensaje exacto que apareció en pantalla, si hubo uno.</li>
+    <li>Si es posible, una fotografía o captura de la pantalla.</li>
+    <li>Si le pasa siempre o solo pasó una vez, y desde qué equipo (computador o celular).</li>
+  </ul>
+
+  <h2>Cosas que necesitan al soporte, no al panel</h2>
+  <ul class="check">
+    <li><strong>Ajustar los porcentajes de recargo</strong> o los topes de horas extra, cuando
+      GPI confirme sus reglas definitivas (ver 7.4).</li>
+    <li><strong>Cambiar la regla del almuerzo</strong>, si GPI decide otra forma de contarlo
+      (ver 7.5).</li>
+    <li><strong>Cargar los festivos de un año nuevo</strong> antes de que termine 2026
+      (ver 7.6).</li>
+    <li>Añadir páginas o secciones nuevas al sitio, o cambiar su diseño.</li>
+    <li>Recuperar algo borrado por error, si hay copia de respaldo disponible.</li>
+  </ul>
+
+  <h2>Decisiones que aún esperan a GPI</h2>
+  <div class="tabla-wrap">
+    <table class="keep">
+      <thead><tr><th style="width:34%">Tema</th><th>Qué hay que definir</th></tr></thead>
+      <tbody>
+        <tr><td>Regla del almuerzo</td><td>Confirmar que descontar el almuerzo cuando el turno pasa de 6 horas en día laboral es lo correcto.</td></tr>
+        <tr><td>Porcentajes de recargo</td><td>Confirmar la franja nocturna, los porcentajes y el tratamiento de los festivos. Los valores actuales son los de la ley colombiana de 2026.</td></tr>
+        <tr><td>Quién aprueba las jornadas</td><td>Definir qué personas llevan el rol de Coordinador, frente a quienes solo editan contenido.</td></tr>
+        <tr><td>Fotografías</td><td>Confirmar o reemplazar las imágenes de servicios y proyectos heredadas del sitio anterior.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="pie-doc">
+    Manual de uso del sitio web de GPI — Grupo de Profesionales en Ingeniería GPI S.A.S<br>
+    Julio de 2026 · Elaborado por GOCAS Automations
+  </div>
+</section>
+
+</body>
+</html>

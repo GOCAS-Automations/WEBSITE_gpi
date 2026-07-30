@@ -41,7 +41,7 @@ export default async function HomePage() {
   return (
     <>
       {/* ---------------- HERO ---------------- */}
-      <section className="relative isolate flex min-h-[88vh] items-center overflow-hidden bg-ink">
+      <section className="on-dark relative isolate flex min-h-[88vh] items-center overflow-hidden bg-ink">
         <Image
           src={hero.image}
           alt={hero.imageAlt}
@@ -100,7 +100,7 @@ export default async function HomePage() {
                   "Metodología basada en la mejora continua.",
                 ].map((point) => (
                   <li key={point} className="flex items-start gap-3">
-                    <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-tint text-brand-dark">
+                    <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-tint text-brand-deep">
                       <Check className="h-4 w-4" />
                     </span>
                     <span className="text-sm leading-relaxed text-graphite">{point}</span>
@@ -158,7 +158,7 @@ export default async function HomePage() {
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-ink/70 to-transparent" />
                       <div className="absolute bottom-4 left-4 flex items-center gap-3">
-                        <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-white text-brand shadow-soft">
+                        <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-white text-brand-dark shadow-soft">
                           <CatIcon className="h-6 w-6" />
                         </span>
                         <h3 className="text-xl font-bold text-white">{cat.name}</h3>
@@ -219,7 +219,7 @@ export default async function HomePage() {
       )}
 
       {/* ---------------- BANDA EXCELENCIA ---------------- */}
-      <section className="relative isolate overflow-hidden bg-ink py-20 sm:py-24">
+      <section className="on-dark relative isolate overflow-hidden bg-ink py-20 sm:py-24">
         <div className="bg-dot-grid absolute inset-0 opacity-40" aria-hidden="true" />
         <div
           className="absolute -right-24 top-1/2 h-96 w-96 -translate-y-1/2 rounded-full bg-brand/20 blur-3xl"

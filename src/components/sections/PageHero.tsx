@@ -21,7 +21,7 @@ export function PageHero({
   breadcrumbs,
 }: PageHeroProps) {
   return (
-    <section className="relative isolate overflow-hidden bg-ink">
+    <section className="on-dark relative isolate overflow-hidden bg-ink">
       <Image
         src={image}
         alt={imageAlt}

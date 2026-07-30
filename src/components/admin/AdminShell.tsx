@@ -133,7 +133,7 @@ export function AdminShell({
                     aria-current={active ? "page" : undefined}
                     className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-semibold transition-colors ${
                       active
-                        ? "bg-brand text-white shadow-soft"
+                        ? "bg-brand-dark text-white shadow-soft"
                         : "text-ink-soft hover:bg-mist"
                     }`}
                   >
@@ -167,7 +167,7 @@ export function AdminShell({
                       }`}
                     >
                       <Icon
-                        className={`h-4 w-4 ${active ? "text-brand" : "text-graphite"}`}
+                        className={`h-4 w-4 ${active ? "text-brand-dark" : "text-graphite"}`}
                       />
                       {section.label}
                     </Link>

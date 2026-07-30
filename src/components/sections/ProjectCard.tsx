@@ -15,7 +15,7 @@ export function ProjectCard({ project }: { project: Project }) {
         <div className="absolute inset-0 bg-gradient-to-t from-ink/80 via-ink/25 to-transparent" />
         <div className="absolute inset-x-0 bottom-0 p-5">
           {project.client && (
-            <span className="inline-flex rounded-full bg-brand px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-white">
+            <span className="inline-flex rounded-full bg-brand-dark px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-white">
               {project.client}
             </span>
           )}

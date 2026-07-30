@@ -133,7 +133,7 @@ export default async function AdminHorariosPage({
       {/* ---------------- Ayuda ---------------- */}
       <Card className="mt-6">
         <h2 className="flex items-center gap-2 text-base font-bold text-ink">
-          <Info className="h-4 w-4 text-brand" />
+          <Info className="h-4 w-4 text-brand-dark" />
           Cómo se usa este horario
         </h2>
         <ul className="mt-3 space-y-2 text-sm leading-relaxed text-graphite">
@@ -197,7 +197,7 @@ function Aviso({
       role="status"
       className={`mb-6 flex items-start gap-2.5 rounded-2xl border px-5 py-4 text-sm leading-relaxed ${
         tono === "brand"
-          ? "border-brand/30 bg-brand-tint text-brand-dark"
+          ? "border-brand/30 bg-brand-tint text-brand-deep"
           : "border-amber-200 bg-amber-50 text-amber-900"
       }`}
     >

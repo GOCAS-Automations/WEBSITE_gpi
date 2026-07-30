@@ -74,7 +74,7 @@ export default async function AdminJornadasPage({
                   aria-current={activa ? "page" : undefined}
                   className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
                     activa
-                      ? "bg-brand text-white shadow-soft"
+                      ? "bg-brand-dark text-white shadow-soft"
                       : "text-ink-soft hover:bg-mist"
                   }`}
                 >

@@ -60,7 +60,7 @@ export function ReviewActions({
           <button
             type="submit"
             disabled={aprobando || rechazando}
-            className="inline-flex items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-dark disabled:pointer-events-none disabled:opacity-60"
+            className="inline-flex items-center gap-1.5 rounded-full bg-brand-dark px-4 py-2 text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-deep disabled:pointer-events-none disabled:opacity-60"
           >
             <Check className="h-4 w-4" />
             {aprobando ? "Aprobando…" : "Aprobar"}

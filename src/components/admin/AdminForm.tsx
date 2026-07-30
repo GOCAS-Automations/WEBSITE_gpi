@@ -37,7 +37,7 @@ export function AdminForm({
           role="status"
           className={`rounded-xl border px-4 py-3 text-sm ${
             state.status === "success"
-              ? "border-brand/30 bg-brand-tint text-brand-dark"
+              ? "border-brand/30 bg-brand-tint text-brand-deep"
               : "border-red-200 bg-red-50 text-red-700"
           }`}
         >
@@ -49,7 +49,7 @@ export function AdminForm({
         <button
           type="submit"
           disabled={pending}
-          className="inline-flex items-center gap-2 rounded-full bg-brand px-6 py-2.5 text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-dark disabled:pointer-events-none disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-full bg-brand-dark px-6 py-2.5 text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-deep disabled:pointer-events-none disabled:opacity-60"
         >
           {pending ? (
             "Guardando…"

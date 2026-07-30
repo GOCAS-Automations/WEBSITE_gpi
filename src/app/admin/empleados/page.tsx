@@ -118,7 +118,7 @@ export default async function AdminEmpleadosPage({
                 cuenta.active ? "border-line" : "border-amber-200 bg-amber-50/40"
               }`}
             >
-              <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-tint text-brand-dark">
+              <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-tint text-brand-deep">
                 <User className="h-5 w-5" />
               </span>
 

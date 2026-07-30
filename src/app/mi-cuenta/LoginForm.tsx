@@ -103,7 +103,7 @@ export function LoginForm() {
           </button>
           <Link
             href="/contacto"
-            className="inline-flex items-center justify-center gap-2 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-dark"
+            className="inline-flex items-center justify-center gap-2 rounded-full bg-brand-dark px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-deep"
           >
             Contactar a GPI
             <ArrowRight className="h-4 w-4" />
@@ -179,7 +179,7 @@ export function LoginForm() {
       <button
         type="submit"
         disabled={loading}
-        className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-brand px-6 py-3.5 text-base font-semibold text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-dark hover:shadow-card disabled:pointer-events-none disabled:opacity-60"
+        className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-brand-dark px-6 py-3.5 text-base font-semibold text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-deep hover:shadow-card disabled:pointer-events-none disabled:opacity-60"
       >
         {loading ? "Verificando…" : "Ingresar"}
         {!loading && <ArrowRight className="h-5 w-5" />}

@@ -72,7 +72,7 @@ export default async function EditarCuentaPage({
         <Badge
           className={
             cuenta.active
-              ? "bg-brand-tint text-brand-dark"
+              ? "bg-brand-tint text-brand-deep"
               : "bg-amber-100 text-amber-800"
           }
         >

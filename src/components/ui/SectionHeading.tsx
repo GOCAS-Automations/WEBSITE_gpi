@@ -26,9 +26,14 @@ export function SectionHeading({
       className={`${isCenter ? "mx-auto max-w-2xl text-center" : "max-w-2xl"} ${className}`}
     >
       {eyebrow && (
+        /* `brand-deep` y no `brand-dark`: este rótulo mide 12px, así que le
+           aplica el umbral de 4.5:1 y aparece tanto sobre blanco como sobre
+           secciones `bg-mist` (#f4f6f4). `brand-dark` da 4.74:1 sobre blanco
+           pero solo 4.37:1 sobre mist — se queda corto. `brand-deep` cumple en
+           ambos: 6.71:1 sobre blanco y 6.17:1 sobre mist. */
         <span
           className={`inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] ${
-            light ? "text-brand-light" : "text-brand-dark"
+            light ? "text-brand-light" : "text-brand-deep"
           }`}
         >
           <span className="h-px w-6 bg-current" aria-hidden="true" />

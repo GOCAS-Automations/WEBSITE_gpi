@@ -143,7 +143,7 @@ export function CredentialForm({
 
   const botonClase =
     variant === "primary"
-      ? "bg-brand text-white hover:bg-brand-dark"
+      ? "bg-brand-dark text-white hover:bg-brand-deep"
       : "border border-line bg-white text-ink-soft hover:border-brand hover:text-brand-dark";
 
   return (
@@ -158,7 +158,7 @@ export function CredentialForm({
             role="status"
             className={`rounded-xl border px-4 py-3 text-sm ${
               state.status === "success"
-                ? "border-brand/30 bg-brand-tint text-brand-dark"
+                ? "border-brand/30 bg-brand-tint text-brand-deep"
                 : "border-red-200 bg-red-50 text-red-700"
             }`}
           >

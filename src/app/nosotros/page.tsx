@@ -14,8 +14,20 @@ import { Check } from "@/lib/icons";
 export const metadata: Metadata = {
   title: "Nosotros",
   description:
-    "Conoce a GPI: empresa de gestión estratégica y ejecución con más de 5 años optimizando procesos industriales y ambientales en Cali. Nuestros valores, video corporativo y preguntas frecuentes.",
+    "Conoce a GPI: gestión estratégica y ejecución con más de 5 años optimizando procesos industriales y ambientales en Cali. Valores y preguntas frecuentes.",
   alternates: { canonical: "/nosotros" },
+  openGraph: {
+    title: "Nosotros | GPI",
+    description:
+      "Empresa de gestión estratégica y ejecución con más de 5 años optimizando procesos industriales y ambientales en Cali.",
+    url: "/nosotros",
+    images: [
+      {
+        url: "/images/slides/2.jpg",
+        alt: "Profesional de GPI realizando mediciones ambientales en campo",
+      },
+    ],
+  },
 };
 
 export const revalidate = 300;
@@ -81,9 +93,9 @@ export default async function NosotrosPage() {
                   className="object-cover"
                 />
               </div>
-              <div className="absolute -bottom-6 -right-4 hidden rounded-2xl bg-brand px-6 py-5 text-white shadow-card sm:block">
+              <div className="absolute -bottom-6 -right-4 hidden rounded-2xl bg-brand-dark px-6 py-5 text-white shadow-card sm:block">
                 <p className="text-3xl font-extrabold">+5</p>
-                <p className="text-xs font-medium uppercase tracking-wide text-white/85">
+                <p className="text-xs font-medium uppercase tracking-wide text-white">
                   años de experiencia
                 </p>
               </div>
@@ -102,7 +114,7 @@ export default async function NosotrosPage() {
                   "Siempre buscando la EXCELENCIA en cada propuesta y ejecución.",
                 ].map((point) => (
                   <li key={point} className="flex items-start gap-3">
-                    <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-tint text-brand-dark">
+                    <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-tint text-brand-deep">
                       <Check className="h-4 w-4" />
                     </span>
                     <span className="text-sm leading-relaxed text-graphite">{point}</span>

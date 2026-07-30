@@ -20,6 +20,18 @@ export const metadata: Metadata = {
   description:
     "Contacta a GPI en Cali: Cl. 33 #5-76, Comuna 4. WhatsApp 318 434 1249 y 311 649 9038. Escríbenos por el formulario o solicita tu cotización.",
   alternates: { canonical: "/contacto" },
+  openGraph: {
+    title: "Contacto | GPI",
+    description:
+      "Cl. 33 #5-76, Comuna 4, Cali. WhatsApp 318 434 1249 y 311 649 9038. Solicita tu cotización.",
+    url: "/contacto",
+    images: [
+      {
+        url: "/images/slides/1.jpg",
+        alt: "Equipo de GPI en trabajo de campo",
+      },
+    ],
+  },
 };
 
 export const revalidate = 300;
@@ -101,7 +113,7 @@ export default async function ContactoPage() {
                       )}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-[#25D366] px-5 py-3 text-sm font-semibold text-white shadow-soft transition-transform duration-200 hover:-translate-y-0.5"
+                      className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-[#0d8055] px-5 py-3 text-sm font-semibold text-white shadow-soft transition-transform duration-200 hover:-translate-y-0.5"
                     >
                       <WhatsApp className="h-5 w-5" />
                       {p.label}
@@ -118,7 +130,7 @@ export default async function ContactoPage() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="Facebook de GPI"
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-mist text-ink-soft transition-colors hover:bg-brand hover:text-white"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-mist text-ink-soft transition-colors hover:bg-brand-deep hover:text-white"
                 >
                   <Facebook className="h-5 w-5" />
                 </a>
@@ -127,7 +139,7 @@ export default async function ContactoPage() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="Instagram de GPI"
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-mist text-ink-soft transition-colors hover:bg-brand hover:text-white"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-mist text-ink-soft transition-colors hover:bg-brand-deep hover:text-white"
                 >
                   <Instagram className="h-5 w-5" />
                 </a>
@@ -136,7 +148,7 @@ export default async function ContactoPage() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="Canal de YouTube de GPI"
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-mist text-ink-soft transition-colors hover:bg-brand hover:text-white"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-mist text-ink-soft transition-colors hover:bg-brand-deep hover:text-white"
                 >
                   <YouTube className="h-5 w-5" />
                 </a>
@@ -191,7 +203,7 @@ function InfoCard({
 }) {
   return (
     <div className="flex gap-4 rounded-2xl border border-line bg-white p-5 shadow-soft">
-      <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-tint text-brand-dark">
+      <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-tint text-brand-deep">
         {icon}
       </span>
       <div>

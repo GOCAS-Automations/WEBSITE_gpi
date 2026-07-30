@@ -48,7 +48,7 @@ export default async function AdminServiciosPage() {
                 key={service.id}
                 className="flex flex-wrap items-center gap-4 rounded-2xl border border-line bg-white p-4 shadow-soft sm:p-5"
               >
-                <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-tint text-brand-dark">
+                <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-tint text-brand-deep">
                   <Icon className="h-5 w-5" />
                 </span>
 
@@ -58,7 +58,7 @@ export default async function AdminServiciosPage() {
                     <span
                       className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${
                         service.category === "ambiental"
-                          ? "bg-brand-tint text-brand-dark"
+                          ? "bg-brand-tint text-brand-deep"
                           : "bg-mist text-graphite"
                       }`}
                     >

@@ -53,7 +53,7 @@ export function PasswordForm({
           role="status"
           className={`rounded-xl border px-4 py-3 text-sm leading-relaxed ${
             state.status === "success"
-              ? "border-brand/30 bg-brand-tint text-brand-dark"
+              ? "border-brand/30 bg-brand-tint text-brand-deep"
               : "border-red-200 bg-red-50 text-red-700"
           }`}
         >

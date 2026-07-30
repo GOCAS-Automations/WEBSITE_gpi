@@ -9,8 +9,20 @@ import { getProjects, getSettings } from "@/lib/content";
 export const metadata: Metadata = {
   title: "Proyectos realizados",
   description:
-    "Algunos de los proyectos ejecutados por GPI en Cali: extracción de aire caliente, instalación de chiller, ampliación de bodega logística y montaje de planta piloto.",
+    "Proyectos ejecutados por GPI en Cali: extracción de aire caliente, instalación de chiller, ampliación de bodega logística y montaje de planta piloto.",
   alternates: { canonical: "/proyectos" },
+  openGraph: {
+    title: "Proyectos realizados | GPI",
+    description:
+      "Extracción de aire caliente, instalación de chiller, ampliación de bodega logística y montaje de planta piloto en Cali.",
+    url: "/proyectos",
+    images: [
+      {
+        url: "/images/proyectos/13a.jpg",
+        alt: "Planta piloto industrial con tanques y tuberías",
+      },
+    ],
+  },
 };
 
 export const revalidate = 300;
@@ -29,8 +41,15 @@ export default async function ProyectosPage() {
         breadcrumbs={[{ label: "Inicio", href: "/" }, { label: "Proyectos" }]}
       />
 
-      <section className="py-20 sm:py-24">
+      <section className="py-20 sm:py-24" aria-labelledby="titulo-proyectos">
         <Container>
+          {/* JERARQUÍA DE ENCABEZADOS: cada tarjeta usa <h3>, y sin un <h2>
+              antes se saltaba un nivel desde el <h1> del hero (axe:
+              heading-order). Este <h2> es invisible pero real: da nombre a la
+              sección y cierra el salto sin tocar el diseño. */}
+          <h2 id="titulo-proyectos" className="sr-only">
+            Proyectos ejecutados por GPI
+          </h2>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {projects.map((project, i) => (
               <Reveal key={`${project.title}-${i}`} delay={(i % 4) * 90}>

@@ -530,14 +530,31 @@ export function MultiSelect({
   const [open, setOpen] = useState(false);
   const [busqueda, setBusqueda] = useState("");
   const ref = useRef<HTMLDivElement>(null);
+  const disparadorRef = useRef<HTMLButtonElement>(null);
+  /** Ids estables derivados de la etiqueta, para `aria-labelledby`/`aria-controls`. */
+  const slug = label.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  const etiquetaId = `ms-${slug}-etiqueta`;
+  const panelId = `ms-${slug}-panel`;
+  const botonId = `ms-${slug}-boton`;
 
   useEffect(() => {
     if (!open) return;
     function fuera(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     }
+    // Escape cierra el panel y devuelve el foco al botón (WCAG 2.1.2).
+    function tecla(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setOpen(false);
+        disparadorRef.current?.focus();
+      }
+    }
     document.addEventListener("mousedown", fuera);
-    return () => document.removeEventListener("mousedown", fuera);
+    document.addEventListener("keydown", tecla);
+    return () => {
+      document.removeEventListener("mousedown", fuera);
+      document.removeEventListener("keydown", tecla);
+    };
   }, [open]);
 
   const filtradas = useMemo(() => {
@@ -559,11 +576,20 @@ export function MultiSelect({
 
   return (
     <div className="relative flex flex-col gap-1" ref={ref}>
-      <span className={filtroLabelClass}>{label}</span>
+      <span id={etiquetaId} className={filtroLabelClass}>
+        {label}
+      </span>
       <button
+        ref={disparadorRef}
+        id={botonId}
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
+        aria-controls={panelId}
+        aria-haspopup="true"
+        /* El nombre accesible es «Empleados, 3 seleccionados»: la etiqueta
+           visible más el resumen de la selección. */
+        aria-labelledby={`${etiquetaId} ${botonId}`}
         className={`${filtroControlClass} flex min-w-[11rem] items-center justify-between gap-2 hover:border-brand/60`}
       >
         <span className={`truncate ${todos ? "text-graphite" : "text-ink"}`}>
@@ -573,7 +599,12 @@ export function MultiSelect({
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 w-[17rem] rounded-2xl border border-line bg-white py-2 shadow-soft">
+        <div
+          id={panelId}
+          role="group"
+          aria-labelledby={etiquetaId}
+          className="absolute left-0 top-full z-50 mt-1 w-[17rem] rounded-2xl border border-line bg-white py-2 shadow-soft"
+        >
           <div className="relative border-b border-line px-2 pb-2">
             <Search className="absolute left-4 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-graphite" />
             <input
@@ -622,6 +653,10 @@ export function MultiSelect({
                 <button
                   type="button"
                   key={o.value}
+                  /* El recuadro visual es `aria-hidden`, así que el estado
+                     marcado/desmarcado se comunica con role+aria-checked. */
+                  role="checkbox"
+                  aria-checked={marcada}
                   onClick={() =>
                     marcada
                       ? onChange(values.filter((v) => v !== o.value))
@@ -633,7 +668,7 @@ export function MultiSelect({
                     aria-hidden="true"
                     className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
                       marcada
-                        ? "border-brand bg-brand text-white"
+                        ? "border-brand-dark bg-brand-dark text-white"
                         : "border-line bg-white"
                     }`}
                   >
