@@ -1,9 +1,109 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ArrowRight } from "@/lib/icons";
+import { ArrowRight, ChevronDown, Info } from "@/lib/icons";
 
 export const inputClass =
   "w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm text-ink placeholder:text-graphite/60 transition-colors focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/25";
+
+/* ------------------------------------------------------------------ */
+/* Ayuda para personas no técnicas                                     */
+/* ------------------------------------------------------------------ */
+
+/**
+ * TEXTOS DE AYUDA REUTILIZADOS
+ * ----------------------------
+ * Viven aquí (y no repetidos en cada pantalla) para que digan siempre lo mismo.
+ * Están escritos en español llano, sin jerga: quien usa el panel no es técnico.
+ */
+
+/** Cuánto tarda en verse un cambio en el sitio público. */
+export const AYUDA_PUBLICACION =
+  "Lo que guardes aquí se ve en el sitio en pocos minutos.";
+
+/** Qué hace el campo "Orden" (aparece en servicios, proyectos, clientes, FAQ y valores). */
+export const AYUDA_ORDEN =
+  "El número controla la posición: el más bajo aparece primero.";
+
+/** Diferencia entre ocultar y eliminar. */
+export const AYUDA_VISIBILIDAD =
+  "Ocultar es reversible y no borra nada: el contenido se conserva aquí y puedes volver a mostrarlo cuando quieras. Eliminar sí es permanente. Para retirar algo del sitio de forma temporal, oculta.";
+
+/** Qué es el texto alternativo de una imagen y por qué importa. */
+export const AYUDA_ALT =
+  "Describe en pocas palabras lo que se ve en la foto. Lo leen en voz alta los programas que usan las personas con discapacidad visual y le sirve a Google para entender la imagen.";
+
+/** Recomendación práctica para subir imágenes. */
+export const AYUDA_IMAGEN =
+  "Sube un archivo desde tu computador o pega el enlace de una imagen. Lo ideal son fotos horizontales (más anchas que altas) y de menos de 1 MB: si pesan mucho, el sitio carga lento.";
+
+/**
+ * Nota de ayuda del panel: un párrafo corto con icono, opcionalmente titulado.
+ *
+ * `tono="info"` (por defecto) para explicaciones y `tono="aviso"` para lo que
+ * conviene leer antes de tocar algo. Es un bloque estático, sin JavaScript:
+ * se puede usar en cualquier Server Component.
+ */
+export function AyudaSeccion({
+  children,
+  title,
+  tono = "info",
+  className = "",
+}: {
+  children: ReactNode;
+  title?: string;
+  tono?: "info" | "aviso";
+  className?: string;
+}) {
+  const info = tono === "info";
+  return (
+    <div
+      className={`flex items-start gap-2.5 rounded-2xl border px-4 py-3.5 text-sm leading-relaxed sm:px-5 ${
+        info
+          ? "border-line bg-mist/60 text-graphite"
+          : "border-amber-200 bg-amber-50 text-amber-900"
+      } ${className}`}
+    >
+      <Info
+        className={`mt-0.5 h-4 w-4 shrink-0 ${info ? "text-brand-dark" : ""}`}
+      />
+      <div className="min-w-0">
+        {title && (
+          <p className={`font-bold ${info ? "text-ink" : ""}`}>{title}</p>
+        )}
+        <div className={title ? "mt-1" : ""}>{children}</div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Ayuda desplegable para textos largos: se abre solo si la persona quiere.
+ * Usa `<details>`/`<summary>` nativos, así que funciona sin JavaScript y es
+ * accesible con teclado sin código extra.
+ */
+export function AyudaDesplegable({
+  label,
+  children,
+  className = "",
+}: {
+  /** Lo que se lee cuando está cerrado, p. ej. "¿Qué puede hacer cada rol?". */
+  label: string;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <details
+      className={`group rounded-2xl border border-line bg-mist/50 px-4 py-3 ${className}`}
+    >
+      <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-semibold text-ink-soft transition-colors hover:text-brand-dark [&::-webkit-details-marker]:hidden">
+        <Info className="h-4 w-4 shrink-0 text-brand-dark" />
+        {label}
+        <ChevronDown className="ml-auto h-4 w-4 shrink-0 transition-transform group-open:rotate-180" />
+      </summary>
+      <div className="mt-3 text-sm leading-relaxed text-graphite">{children}</div>
+    </details>
+  );
+}
 
 /* ------------------------------------------------------------------ */
 /* Campos de formulario                                                */

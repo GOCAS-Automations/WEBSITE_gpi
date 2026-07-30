@@ -18,7 +18,12 @@
 import Link from "next/link";
 import { asegurarHorarioMensual, getJornadaConfig } from "@/lib/admin";
 import { requireManager } from "@/lib/supabase/auth";
-import { AdminPageHeader, Card, EmptyState } from "@/components/admin/ui";
+import {
+  AdminPageHeader,
+  AyudaSeccion,
+  Card,
+  EmptyState,
+} from "@/components/admin/ui";
 import {
   etiquetaMes,
   hoyMesEnColombia,
@@ -89,6 +94,26 @@ export default async function AdminHorariosPage({
         </Link>
       </div>
 
+      {/* ---------------- Qué afecta cambiar el horario ---------------- */}
+      <AyudaSeccion
+        title="¿A qué jornadas afecta lo que cambies aquí?"
+        className="mb-6"
+      >
+        Lo que cambies en este horario afecta a las jornadas{" "}
+        <strong>pendientes</strong> de este mes: sus horas se vuelven a calcular
+        al instante. Las jornadas ya <strong>aprobadas</strong> conservan el
+        cálculo con el que se aprobaron, así que los reportes de nómina que ya
+        cerraste no se mueven. Si una jornada aprobada quedó mal porque el
+        horario estaba equivocado, corrige el horario y luego, en{" "}
+        <Link
+          href="/admin/jornadas"
+          className="font-semibold text-brand-dark hover:text-brand"
+        >
+          Jornadas
+        </Link>
+        , devuélvela a pendiente y apruébala de nuevo: así se recalcula.
+      </AyudaSeccion>
+
       {/* ---------------- Avisos ---------------- */}
       {origen === "mes-anterior" && clonadoDe && (
         <Aviso tono="brand">
@@ -152,6 +177,19 @@ export default async function AdminHorariosPage({
             <strong>Días no laborales y festivos.</strong> Si el día está marcado
             como no laboral (sábado y domingo, por defecto) o es festivo
             nacional, todo el turno se trata con el recargo dominical/festivo.
+          </li>
+          <li>
+            <strong>Celdas calculadas.</strong> Las columnas{" "}
+            <em>Horas de jornada</em> y <em>Total de horas semanales</em> (las
+            amarillas) no se escriben: el sistema las calcula solo mientras
+            editas las horas de entrada, salida y almuerzo. Son la comprobación
+            de que el mes cuadra con las horas que espera GPI.
+          </li>
+          <li>
+            <strong>Jornadas ya aprobadas.</strong> Conservan el cálculo con el
+            que se aprobaron: editar este horario no las cambia. Para recalcular
+            una, un coordinador debe devolverla a pendiente en{" "}
+            <em>Jornadas</em> y volver a aprobarla.
           </li>
           <li>
             <strong>Almuerzo.</strong> No cuenta como tiempo trabajado. Como el

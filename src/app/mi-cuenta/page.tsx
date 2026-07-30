@@ -228,9 +228,12 @@ async function PortalEmpleado({ profile }: { profile: SessionProfile }) {
         {/* Historial */}
         <section className="mt-8">
           <h2 className="text-lg font-bold text-ink">Mis jornadas</h2>
-          <p className="mb-4 mt-1 text-sm leading-relaxed text-graphite">
+          <p className="mb-4 mt-1 max-w-3xl text-sm leading-relaxed text-graphite">
             Aquí queda el historial de lo que has registrado y el estado de cada
-            jornada. Puedes corregir o eliminar las que sigan pendientes.
+            jornada: <strong>pendiente</strong> (nadie la ha revisado todavía y
+            puedes corregirla o eliminarla), <strong>aprobada</strong> (queda fija,
+            con las horas que se le contaron) o <strong>rechazada</strong> (tu
+            coordinador te dejó una nota con lo que hay que corregir).
           </p>
           <MisJornadas
             jornadas={jornadas}

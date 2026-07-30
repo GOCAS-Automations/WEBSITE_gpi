@@ -19,7 +19,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getActiveSession } from "@/lib/supabase/auth";
-import { instanteColombia } from "@/lib/jornada";
+import { faltaColumnaDesglose, instanteColombia } from "@/lib/jornada";
 import type { ActionState } from "@/lib/admin-types";
 
 const SIN_SESION: ActionState = {
@@ -112,13 +112,31 @@ export async function saveJornada(
 
   if (id) {
     // Editar: solo si sigue pendiente y es propia (doble filtro + RLS).
-    const { data, error } = await session.supabase
-      .from("jornadas")
-      .update(payload)
-      .eq("id", id)
-      .eq("employee_id", session.profile.id)
-      .eq("status", "pendiente")
-      .select("id");
+    //
+    // El desglose congelado solo existe en jornadas APROBADAS, así que aquí no
+    // hay nada que invalidar; se limpia igualmente por si un snapshot quedó
+    // huérfano (p. ej. una jornada reabierta antes de una corrección de
+    // versiones anteriores). Si las columnas de la 0004 no existen todavía, se
+    // reintenta sin ellas.
+    const editar = (datos: Record<string, unknown>) =>
+      session.supabase
+        .from("jornadas")
+        .update(datos)
+        .eq("id", id)
+        .eq("employee_id", session.profile.id)
+        .eq("status", "pendiente")
+        .select("id");
+
+    let { data, error } = await editar({
+      ...payload,
+      desglose: null,
+      contexto_calculo: null,
+      calculado_at: null,
+    });
+
+    if (error && faltaColumnaDesglose(error)) {
+      ({ data, error } = await editar(payload));
+    }
 
     if (error) return fail(error.message);
     if (!data || data.length === 0)

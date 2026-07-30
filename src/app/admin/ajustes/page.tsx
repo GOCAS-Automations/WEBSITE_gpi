@@ -1,6 +1,8 @@
 import { getAdminSettings } from "@/lib/admin";
 import {
   AdminPageHeader,
+  AyudaSeccion,
+  AYUDA_ALT,
   Card,
   CardTitle,
   Field,
@@ -26,19 +28,31 @@ export default async function AdminAjustesPage() {
     <>
       <AdminPageHeader
         title="Contacto y ajustes"
-        description="Datos de contacto, redes sociales, mapa, textos del inicio y video corporativo."
+        description="Los datos de contacto de GPI, las redes, el mapa, los textos de la primera pantalla del inicio, el video y los interruptores de secciones completas."
         breadcrumb={[
           { label: "Panel", href: "/admin" },
           { label: "Contacto y ajustes" },
         ]}
       />
 
+      <AyudaSeccion title="Cómo se usa esta pantalla" className="mb-6">
+        Cada bloque de abajo se guarda <strong>por separado</strong>, con su
+        propio botón: si cambias un teléfono, pulsa «Guardar contacto» y ya. Lo
+        que guardes se ve en el sitio en pocos minutos. Aquí tienes, en orden:
+        los interruptores para <strong>apagar secciones completas</strong>, los{" "}
+        <strong>datos de contacto</strong> (que alimentan el pie de página, la
+        página Contacto y el botón de WhatsApp), los{" "}
+        <strong>textos e imagen de la primera pantalla</strong> del inicio, las{" "}
+        <strong>cifras</strong> de «Quiénes somos» y el{" "}
+        <strong>video</strong> de la página Nosotros.
+      </AyudaSeccion>
+
       <div className="space-y-6">
         {/* ---------------- Visibilidad de secciones ---------------- */}
         <Card>
           <CardTitle
             title="Visibilidad de secciones"
-            description="Apaga temporalmente bloques completos del sitio público. Nada se borra: al volver a encenderlos, el contenido reaparece tal como estaba."
+            description="Apaga bloques completos del sitio público sin borrar nada: al volver a encenderlos, el contenido reaparece tal como estaba. Es lo recomendado cuando algo no está listo para mostrarse."
           />
           <AdminForm
             action={saveVisibilitySettings}
@@ -169,8 +183,8 @@ export default async function AdminAjustesPage() {
         {/* ---------------- Hero ---------------- */}
         <Card>
           <CardTitle
-            title="Hero del inicio"
-            description="La primera pantalla que ve el visitante en la página principal."
+            title="Primera pantalla del inicio"
+            description="Lo primero que ve alguien al entrar a gpiprofesionales.com: la imagen de fondo, el título grande y los dos botones."
           />
           <AdminForm action={saveHeroSettings} submitLabel="Guardar hero">
             <Field
@@ -205,8 +219,14 @@ export default async function AdminAjustesPage() {
               folder="hero"
               required
               defaultValue={hero.image}
+              hint="Ocupa toda la primera pantalla, así que conviene una foto horizontal y de buena calidad."
             />
-            <Field label="Texto alternativo" name="imageAlt" defaultValue={hero.imageAlt} />
+            <Field
+              label="Texto alternativo"
+              name="imageAlt"
+              defaultValue={hero.imageAlt}
+              hint={AYUDA_ALT}
+            />
             <div className="grid gap-4 sm:grid-cols-2">
               <Field
                 label="Botón principal — texto"
@@ -235,8 +255,8 @@ export default async function AdminAjustesPage() {
         {/* ---------------- Banda EXCELENCIA + estadísticas ---------------- */}
         <Card>
           <CardTitle
-            title="Estadísticas y banda EXCELENCIA"
-            description="Las cifras de la sección «Quiénes somos» y la banda oscura del inicio."
+            title="Cifras y banda oscura del inicio"
+            description="Las cifras que acompañan a «Quiénes somos» y la franja oscura con el mensaje destacado, ambas en la página de inicio."
           />
           <AdminForm action={saveExcellenceSettings} submitLabel="Guardar sección">
             <Field label="Texto superior" name="eyebrow" defaultValue={excellence.eyebrow} />
@@ -276,7 +296,7 @@ export default async function AdminAjustesPage() {
         <Card>
           <CardTitle
             title="Video corporativo (YouTube)"
-            description="Se muestra en la página Nosotros con carga diferida."
+            description="El video que se muestra en la página Nosotros. Solo se carga cuando el visitante pulsa play, para que el sitio siga siendo rápido."
           />
           <AdminForm action={saveYouTubeSettings} submitLabel="Guardar video">
             <div className="grid gap-4 sm:grid-cols-2">

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getContentCounts, getTeamCounts } from "@/lib/admin";
 import { requireContentEditor } from "@/lib/supabase/auth";
 import { isManagerRole, ROLE_DESCRIPTIONS, ROLE_LABELS } from "@/lib/roles";
-import { Card } from "@/components/admin/ui";
+import { AyudaSeccion } from "@/components/admin/ui";
 import {
   Cog,
   Photo,
@@ -25,6 +25,8 @@ export default async function AdminDashboardPage() {
     manager ? getTeamCounts() : Promise.resolve({ people: 0, pending: 0 }),
   ]);
 
+  // Cada tarjeta lleva UNA frase que dice, en lenguaje llano, qué se administra
+  // ahí y en qué parte del sitio se ve.
   const contenido = [
     {
       href: "/admin/servicios",
@@ -33,7 +35,7 @@ export default async function AdminDashboardPage() {
       count: counts.services,
       unit: "servicios",
       description:
-        "Título, resumen, descripción, ítems, imágenes, categoría, orden y visibilidad de cada servicio.",
+        "Los servicios que ofrece GPI: sus textos, imágenes, lista de alcances y el orden en que aparecen en el menú y en la página Servicios.",
     },
     {
       href: "/admin/proyectos",
@@ -41,7 +43,8 @@ export default async function AdminDashboardPage() {
       icon: Photo,
       count: counts.projects,
       unit: "proyectos",
-      description: "Proyectos realizados que se muestran en la página /proyectos.",
+      description:
+        "Los trabajos ya realizados que se muestran, con su foto, en la página Proyectos.",
     },
     {
       href: "/admin/clientes",
@@ -49,7 +52,8 @@ export default async function AdminDashboardPage() {
       icon: Handshake,
       count: counts.clients,
       unit: "logos",
-      description: "Logos de clientes de la portada y su enlace opcional.",
+      description:
+        "Los logos de clientes que desfilan en la página de inicio, con el enlace opcional a su sitio web.",
     },
     {
       href: "/admin/faq",
@@ -57,7 +61,8 @@ export default async function AdminDashboardPage() {
       icon: Info,
       count: counts.faqs,
       unit: "preguntas",
-      description: "Preguntas y respuestas de la sección Nosotros.",
+      description:
+        "Las preguntas y respuestas que el visitante despliega al final de la página Nosotros.",
     },
     {
       href: "/admin/valores",
@@ -65,7 +70,8 @@ export default async function AdminDashboardPage() {
       icon: Shield,
       count: counts.values,
       unit: "valores",
-      description: "Los principios que se muestran en el inicio y en Nosotros.",
+      description:
+        "Los principios de la empresa, con su icono, que se muestran en el inicio y en la página Nosotros.",
     },
     {
       href: "/admin/ajustes",
@@ -74,7 +80,7 @@ export default async function AdminDashboardPage() {
       count: null,
       unit: "",
       description:
-        "Datos de contacto, redes, mapa, hero, estadísticas, video y visibilidad de secciones completas.",
+        "Dirección, teléfonos, correos, redes y mapa; los textos de la primera pantalla del inicio; el video; y los interruptores para apagar secciones completas.",
     },
   ];
 
@@ -86,7 +92,7 @@ export default async function AdminDashboardPage() {
       count: team.people,
       unit: "cuentas",
       description:
-        "Crea cuentas para el equipo, asigna roles y cargos, restablece contraseñas y activa o desactiva accesos.",
+        "Las cuentas con las que el equipo entra al portal: crearlas, asignar el rol y el cargo, restablecer contraseñas y activar o desactivar el acceso.",
     },
     {
       href: "/admin/horarios",
@@ -104,7 +110,7 @@ export default async function AdminDashboardPage() {
       count: team.pending,
       unit: "pendientes",
       description:
-        "Revisa las jornadas registradas por el equipo con su desglose de horas y apruébalas o recházalas.",
+        "Las jornadas que registra el equipo, con su desglose de horas, para aprobarlas o rechazarlas; y el tablero con los totales del período.",
     },
   ];
 
@@ -147,34 +153,33 @@ export default async function AdminDashboardPage() {
         </div>
       </section>
 
-      <Card className="mt-6">
-        <h2 className="text-base font-bold text-ink">
-          Visibilidad: ocultar sin borrar
+      {/* ---------------- Tres cosas que conviene saber ---------------- */}
+      <section className="mt-8">
+        <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-graphite">
+          Antes de empezar
         </h2>
-        <p className="mt-2 text-sm leading-relaxed text-graphite">
-          Cada servicio, proyecto, cliente, pregunta y valor tiene un interruptor{" "}
-          <strong>Visible / Oculto</strong>: al apagarlo desaparece del sitio
-          público pero se conserva aquí. En{" "}
-          <Link
-            href="/admin/ajustes"
-            className="font-semibold text-brand-dark hover:text-brand"
-          >
-            Contacto y ajustes
-          </Link>{" "}
-          también puedes apagar secciones completas del inicio y de Nosotros.
-        </p>
-      </Card>
+        <div className="grid gap-4 lg:grid-cols-3">
+          <AyudaSeccion title="Los cambios se ven en minutos">
+            Cada bloque se guarda con su propio botón. En cuanto guardas, el
+            sitio público se actualiza; si no lo ves, recarga la página al cabo
+            de un par de minutos.
+          </AyudaSeccion>
 
-      <Card className="mt-4">
-        <h2 className="text-base font-bold text-ink">¿Cómo funcionan las imágenes?</h2>
-        <p className="mt-2 text-sm leading-relaxed text-graphite">
-          En cada campo de imagen puedes <strong>subir un archivo</strong> (se
-          guarda en el bucket <code className="rounded bg-mist px-1">site-images</code>{" "}
-          de Supabase) o <strong>pegar una URL</strong>. Las rutas que empiezan por{" "}
-          <code className="rounded bg-mist px-1">/images/</code> corresponden a las
-          imágenes que ya vienen con el sitio.
-        </p>
-      </Card>
+          <AyudaSeccion title="Ocultar no es eliminar">
+            El interruptor <strong>Visible / Oculto</strong> retira algo del
+            sitio sin borrarlo: sigue aquí y puedes volver a mostrarlo.{" "}
+            <strong>Eliminar</strong> sí es permanente. Para retirar algo un
+            rato, oculta.
+          </AyudaSeccion>
+
+          <AyudaSeccion title="Fotos y texto alternativo">
+            En los campos de imagen puedes subir un archivo o pegar un enlace;
+            lo mejor son fotos horizontales y livianas. El{" "}
+            <strong>texto alternativo</strong> describe la foto para quien no
+            puede verla y ayuda en Google.
+          </AyudaSeccion>
+        </div>
+      </section>
     </>
   );
 }

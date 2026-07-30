@@ -14,6 +14,7 @@ que reconstruir el historial desde los commits.
 | 4 | Fase 2 del proyecto — Núcleo de horas extra | ✅ Completa | Roles ampliados, CRUD de empleados con cuentas, portal del empleado con registro de jornadas, aprobaciones y visibilidad del contenido. Migraciones 0001 y 0002 **ya aplicadas** en el GPI Project (27 jul 2026); `SUPABASE_SERVICE_ROLE_KEY` configurada en `.env.local`. |
 | 4b | Fase 2 — Tablero de métricas de horas extra | ✅ Completa | `/admin/jornadas?vista=metricas`: 4 KPIs, gráficas Recharts (por día, por empleado, extras, Gantt de turnos), filtros client-side, control semanal contra topes legales, glosario amable y export CSV para nómina. |
 | 4c | Fase 2 — Iteración post-feedback de GPI | ✅ Código listo | Horarios laborales **mes a mes** (`/admin/horarios`), cuentas por **usuario** en vez de correo, y el rol *marketing* pasa a llamarse **Community Manager** (y también registra jornadas). **Falta**: aplicar `supabase/migrations/0003_horarios_mensuales.sql` en el GPI Project. |
+| 4d | Fase 2 — Desglose congelado + ayudas del panel | ✅ Código listo | Al **aprobar** una jornada su desglose de horas se guarda tal cual, con el horario y los recargos que se usaron: los reportes de nómina ya cerrados no cambian si después se corrige un horario. Además, textos de ayuda en todo el panel para usuarios no técnicos. **Falta**: aplicar `supabase/migrations/0004_congelar_desglose.sql` en el GPI Project (el código funciona igual sin ella: calcula en vivo). |
 | 5 | Deploy en Vercel desde el repo de GitHub + variables de entorno | ⏳ Pendiente | Repo: `GOCAS-Automations/website_GPI`. Cuenta Vercel: GOCAS Automations (plan gratis). Recordar añadir `SUPABASE_SERVICE_ROLE_KEY` **sin** prefijo `NEXT_PUBLIC_`. |
 | 6 | Apuntar dominio `gpiprofesionales.com` de GoDaddy → Vercel | ⏳ Pendiente | Al final, cuando el sitio esté aprobado por GPI y desplegado en Vercel. |
 | 7 | Extra cotizable aparte: chatbot IA | 💡 Planeado | Claude Haiku 4.5 vía `/api/chat`, con conocimiento del contenido del sitio (servicios, proyectos, contacto) y captura de leads hacia Supabase. No incluido en la cotización actual. |
@@ -32,6 +33,8 @@ que reconstruir el historial desde los commits.
 | Visibilidad por ítem (`published`) y por sección (`visibility`) | Formularios de `/admin/*` y `/admin/ajustes` |
 | Horario laboral mes a mes | `supabase/migrations/0003…`, `src/lib/horarios.ts`, `/admin/horarios` |
 | Cuentas por usuario (correo sintético interno) | `src/lib/usuarios.ts`, `/mi-cuenta` (login) y `/admin/empleados` |
+| Desglose congelado al aprobar | `supabase/migrations/0004…`, `obtenerDesglose()` en `src/lib/jornada.ts` |
+| Ayudas del panel para usuarios no técnicos | `AyudaSeccion` / `AyudaDesplegable` + constantes `AYUDA_*` en `src/components/admin/ui.tsx` |
 
 Flujo completo: **el empleado registra su jornada** en `/mi-cuenta` (con vista
 previa del desglose) → queda **pendiente** → un **coordinador o admin** la ve en
@@ -39,6 +42,11 @@ previa del desglose) → queda **pendiente** → un **coordinador o admin** la v
 una nota obligatoria** → el empleado ve el resultado y la nota en su portal.
 Mientras esté pendiente puede editarla o eliminarla; después queda congelada
 (un manager puede devolverla a pendiente).
+
+Al aprobar, además, el **desglose de horas se persiste** junto con el horario y
+los recargos que se usaron: esa jornada muestra siempre las mismas cifras aunque
+después se corrija el horario del mes. Devolverla a pendiente borra ese
+snapshot y es la forma de recalcularla.
 
 ## Iteración post-feedback (28 de julio de 2026)
 
@@ -118,10 +126,23 @@ siendo solo de managers.
   campos de horario de `jornada_config` quedan como plantilla para crear meses
   nuevos.
 - **Tolerancia a migraciones sin aplicar**: igual que el contenido cae en
-  `src/data/*`, el sistema de jornadas funciona sin la 0003. Sin la tabla
-  `horarios_mensuales` el cálculo usa el horario predeterminado de GPI; sin las
-  columnas nuevas de `profiles` las cuentas se identifican por su correo y las
-  escrituras reintentan sin esos campos. El build no depende de la base de datos.
+  `src/data/*`, el sistema de jornadas funciona sin la 0003 ni la 0004. Sin la
+  tabla `horarios_mensuales` el cálculo usa el horario predeterminado de GPI; sin
+  las columnas nuevas de `profiles` las cuentas se identifican por su correo y
+  las escrituras reintentan sin esos campos; sin las columnas de la 0004 el
+  desglose se calcula en vivo y aprobar/rechazar/reabrir/editar reintentan sin el
+  snapshot. El build no depende de la base de datos.
+- **Nada de recalcular lo ya pagado**: el desglose de una jornada aprobada se
+  guarda en `jornadas.desglose` con su `contexto_calculo` (horario del día,
+  recargos y topes vigentes) y `calculado_at`. La lectura está centralizada en
+  `obtenerDesglose()`, así que aprobaciones, métricas, CSV e historial del
+  empleado muestran siempre la misma cifra. Las jornadas aprobadas antes de la
+  0004 **no se rellenan hacia atrás**: fabricar un `calculado_at` inexistente
+  falsearía la auditoría.
+- **Ayudas contextuales, no manuales**: el panel explica cada cosa donde se usa
+  (`AyudaSeccion`, `AyudaDesplegable`, `hint` de los campos e `InfoTooltip` del
+  tablero). Los textos que se repiten son constantes `AYUDA_*` para que no se
+  contradigan entre pantallas.
 - **ISR + revalidación explícita**: las páginas públicas usan
   `revalidate = 300` (5 minutos) y, además, cada server action de `/admin`
   llama a `revalidatePath("/", "layout")` para que los cambios se vean de

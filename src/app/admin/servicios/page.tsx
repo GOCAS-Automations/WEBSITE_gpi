@@ -2,6 +2,8 @@ import Link from "next/link";
 import { listServices } from "@/lib/admin";
 import {
   AdminPageHeader,
+  AyudaSeccion,
+  AYUDA_VISIBILIDAD,
   EmptyState,
   PrimaryLink,
   PublishedBadge,
@@ -17,7 +19,7 @@ export default async function AdminServiciosPage() {
     <>
       <AdminPageHeader
         title="Servicios"
-        description="Crea, edita, reordena y elimina los servicios industriales y ambientales."
+        description="Aquí editas los servicios que ofrece GPI: sus textos, sus imágenes y el orden en que aparecen. Lo que guardes se ve en el sitio en pocos minutos."
         breadcrumb={[{ label: "Panel", href: "/admin" }, { label: "Servicios" }]}
         action={
           <PrimaryLink href="/admin/servicios/nuevo">
@@ -26,6 +28,12 @@ export default async function AdminServiciosPage() {
           </PrimaryLink>
         }
       />
+
+      <AyudaSeccion className="mb-6">
+        En cada fila ves la categoría del servicio, si está visible y su número
+        de <strong>orden</strong>: el más bajo aparece primero en el menú y en la
+        página de servicios. {AYUDA_VISIBILIDAD}
+      </AyudaSeccion>
 
       {services.length === 0 ? (
         <EmptyState
@@ -91,7 +99,7 @@ export default async function AdminServiciosPage() {
                   <DeleteForm
                     action={deleteService}
                     id={service.id}
-                    confirmMessage={`¿Eliminar el servicio "${service.title}"? Esta acción no se puede deshacer.`}
+                    confirmMessage={`¿Eliminar el servicio "${service.title}"?\n\nEsto borra sus textos e imágenes para siempre y no se puede deshacer.\n\nSi solo quieres retirarlo del sitio, cancela y ponlo en "Oculto": así se conserva y puedes volver a mostrarlo cuando quieras.`}
                   />
                 </div>
               </li>

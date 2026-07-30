@@ -6,7 +6,12 @@
  * la pantalla de aprobaciones de /admin/jornadas (Server Component).
  */
 
-import { formatearDuracion, type DesgloseJornada } from "@/lib/jornada";
+import {
+  formatearDuracion,
+  textoCalculoCongelado,
+  type ContextoCalculo,
+  type DesgloseJornada,
+} from "@/lib/jornada";
 
 interface Fila {
   key: keyof DesgloseJornada;
@@ -70,10 +75,22 @@ const FILAS: Fila[] = [
 export function JornadaBreakdown({
   desglose,
   compacto = false,
+  congelado = false,
+  contexto = null,
+  calculadoEn = null,
 }: {
   desglose: DesgloseJornada;
   /** true = solo las categorías con minutos, en una fila de chips. */
   compacto?: boolean;
+  /**
+   * true = estas cifras se guardaron al aprobar la jornada y ya no cambian
+   * aunque después se edite el horario del mes o un recargo (migración 0004).
+   */
+  congelado?: boolean;
+  /** Con qué horario y recargos se calculó (para explicarlo al usuario). */
+  contexto?: ContextoCalculo | null;
+  /** Instante ISO en que se congeló el cálculo. */
+  calculadoEn?: string | null;
 }) {
   if (!desglose.valido) {
     return (
@@ -84,10 +101,21 @@ export function JornadaBreakdown({
   }
 
   const conMinutos = FILAS.filter((f) => (desglose[f.key] as number) > 0);
+  const notaCongelado = congelado
+    ? textoCalculoCongelado(contexto, calculadoEn)
+    : "";
 
   if (compacto) {
     return (
       <div className="flex flex-wrap items-center gap-1.5">
+        {congelado && (
+          <span
+            title={notaCongelado}
+            className="inline-flex items-center rounded-full bg-brand-tint px-2.5 py-0.5 text-[11px] font-semibold text-brand-deep"
+          >
+            Cálculo congelado
+          </span>
+        )}
         {conMinutos.map((fila) => (
           <span
             key={fila.key}
@@ -116,7 +144,17 @@ export function JornadaBreakdown({
   return (
     <div className="rounded-2xl border border-line bg-white p-4 sm:p-5">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <p className="text-sm font-bold text-ink">Desglose estimado</p>
+        <p className="flex flex-wrap items-center gap-2 text-sm font-bold text-ink">
+          {congelado ? "Desglose aprobado" : "Desglose estimado"}
+          {congelado && (
+            <span
+              title={notaCongelado}
+              className="inline-flex items-center rounded-full bg-brand-tint px-2.5 py-0.5 text-[11px] font-semibold text-brand-deep"
+            >
+              Cálculo congelado
+            </span>
+          )}
+        </p>
         <p className="text-sm text-graphite">
           Duración total:{" "}
           <span className="font-bold text-ink">
@@ -209,8 +247,9 @@ export function JornadaBreakdown({
       )}
 
       <p className="mt-3 text-xs leading-relaxed text-graphite">
-        Cálculo informativo con los parámetros configurados en el panel. La
-        liquidación final la confirma el área administrativa de GPI.
+        {congelado
+          ? notaCongelado
+          : "Cálculo informativo con los parámetros configurados en el panel: puede cambiar si se ajusta el horario del mes. Queda fijo cuando se aprueba la jornada."}
       </p>
     </div>
   );

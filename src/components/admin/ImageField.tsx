@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 import { SITE_IMAGES_BUCKET } from "@/lib/supabase/config";
 import { Upload, Photo } from "@/lib/icons";
-import { inputClass } from "./ui";
+import { AYUDA_IMAGEN, inputClass } from "./ui";
 
 function sanitize(name: string) {
   return name
@@ -135,6 +135,10 @@ export function ImageField({
           />
 
           {hint && <p className="mt-1.5 text-xs text-graphite">{hint}</p>}
+          {/* Ayuda práctica, siempre visible: es la duda que más se repite. */}
+          <p className="mt-1.5 text-xs leading-relaxed text-graphite">
+            {AYUDA_IMAGEN}
+          </p>
           {error && <p className="mt-1.5 text-xs text-red-600">{error}</p>}
         </div>
       </div>

@@ -12,13 +12,14 @@ la gestión de cuentas y el registro de jornadas (horas extra).
 
 ## 1. Aplicar las migraciones en Supabase
 
-Hay **tres** migraciones y se aplican **en orden**:
+Hay **cuatro** migraciones y se aplican **en orden**:
 
 | Archivo | Qué añade |
 | --- | --- |
 | `supabase/migrations/0001_site_content.sql` | Contenido del sitio, `profiles`, RLS, bucket de imágenes y usuario administrador inicial |
 | `supabase/migrations/0002_empleados_jornadas.sql` | Roles ampliados, visibilidad del contenido, tabla `jornadas` y ajustes de cálculo |
 | `supabase/migrations/0003_horarios_mensuales.sql` | Horario laboral mes a mes (`horarios_mensuales`), cuentas por **usuario** (`username`, `cedula`, `email_contacto`) y ajuste del horario por defecto |
+| `supabase/migrations/0004_congelar_desglose.sql` | Congela el desglose de horas al **aprobar** una jornada (`desglose`, `contexto_calculo`, `calculado_at`) para que los reportes de nómina no cambien después |
 
 Para cada una:
 
@@ -71,6 +72,20 @@ verás exactamente lo mismo que ahora, pero ya editable.
 > Mientras la 0003 no esté aplicada, el sitio **no se rompe**: el cálculo usa el
 > horario predeterminado de GPI, `/admin/horarios` avisa de que el mes no se
 > pudo guardar y las cuentas siguen identificándose por su correo.
+
+### ¿Qué añade la 0004?
+
+| Objeto | Para qué sirve |
+| --- | --- |
+| Columna `jornadas.desglose` | El desglose de horas **congelado** al aprobar (minutos por categoría + banderas de dominical/festivo) |
+| Columna `jornadas.contexto_calculo` | Respaldo de auditoría: el horario del día aplicado, la franja nocturna, los porcentajes de recargo y los topes vigentes al aprobar |
+| Columna `jornadas.calculado_at` | Cuándo se congeló el cálculo |
+| Índice `jornadas_aprobadas_sin_snapshot_idx` | Para localizar rápido las jornadas aprobadas *antes* de la 0004, que se siguen calculando en vivo |
+
+> Mientras la 0004 no esté aplicada el portal funciona **exactamente como
+> antes**: el desglose se calcula en vivo en cada consulta, y aprobar, rechazar,
+> reabrir y editar jornadas reintentan la escritura sin las columnas nuevas.
+> Ver [§7 · Congelar el desglose al aprobar](#congelar-el-desglose-al-aprobar).
 
 ### Si el bloque del usuario admin de la 0001 falla
 
@@ -322,10 +337,57 @@ Solo para **admin** y **coordinador**.
   descripción, observaciones y el **desglose de horas** calculado.
 - **Aprobar** (un clic, con confirmación) o **Rechazar** (exige escribir el
   motivo, que el empleado verá en su portal).
-- **Volver a pendiente**: reabre una jornada ya revisada para corregir un error.
+- **Volver a pendiente**: reabre una jornada ya revisada para corregir un error
+  y, además, es la forma de **recalcular** una jornada aprobada.
 
 La pestaña **Métricas** (`?vista=metricas`) añade los KPIs, las gráficas, el
 control semanal de horas extra y la exportación a CSV para nómina.
+
+### Congelar el desglose al aprobar
+
+El problema que resuelve: hasta la migración 0004, el desglose de horas se
+**recalculaba en cada consulta** a partir del horario del mes y de los recargos.
+Si en septiembre alguien corregía el horario de julio, cambiaban los reportes de
+jornadas de julio **ya aprobadas y pagadas**. Inaceptable para nómina.
+
+Desde la 0004:
+
+| Acción | Qué pasa con el cálculo |
+| --- | --- |
+| El empleado **registra** o **edita** una jornada pendiente | No hay nada congelado: sus horas se calculan en vivo y cambian si se ajusta el horario del mes |
+| Un manager **aprueba** | Se calcula **una vez** con el horario y los recargos vigentes y se guarda en `desglose` + `contexto_calculo` + `calculado_at`. A partir de ahí esa jornada muestra siempre lo mismo |
+| Un manager **rechaza** | No se congela nada (una jornada rechazada no es válida para nómina) y se limpia cualquier snapshot previo |
+| Un manager **devuelve a pendiente** | Se **borra** el snapshot: la jornada vuelve a calcularse en vivo. Es el mecanismo legítimo para recalcular una jornada cuyo horario estaba mal |
+
+Dónde se ve, en lenguaje de usuario:
+
+- En **aprobaciones** y en **Mis jornadas**, una jornada congelada lleva la
+  marca *«Cálculo congelado»* y, al pasar el cursor o al pie del desglose, la
+  frase completa: *«Cálculo congelado el 28/07/2026 con el horario de julio de
+  2026 (Lunes a jueves 08:00–17:30 · Viernes 08:00–17:00; 1 h de almuerzo).
+  Cambiar después el horario del mes o los recargos ya no altera esta
+  jornada.»*
+- En **`/admin/horarios`**, un aviso explica que lo que se cambie ahí afecta a
+  las jornadas **pendientes** y que las **aprobadas** conservan su cálculo.
+- En el **tablero de métricas**, la nota de los filtros y el glosario lo dicen,
+  y el **CSV** trae una columna `Cálculo` con `Congelado el dd/mm/aaaa` o
+  `Provisional`.
+
+Detalles técnicos:
+
+- La lectura está centralizada en **`obtenerDesglose()`**
+  (`src/lib/jornada.ts`): devuelve `{ desglose, congelado, contexto,
+  calculadoEn }` usando el snapshot si existe y calculando en vivo si no. Pasan
+  por ahí las aprobaciones, `construirMetrica()` (KPIs, gráficas, control
+  semanal y CSV) y el historial del empleado. La única excepción es la vista
+  previa del formulario, donde todavía no hay fila en la base de datos.
+- **Las jornadas aprobadas antes de la 0004 no se rellenan hacia atrás**: se
+  siguen calculando en vivo (inventar un `calculado_at` que nunca ocurrió
+  falsearía la auditoría). Se congelan solas si un manager las devuelve a
+  pendiente y las vuelve a aprobar.
+- Un empleado solo puede escribir en sus jornadas *pendientes*, y al aprobar el
+  servidor **siempre** sobrescribe el snapshot con su propio cálculo: nadie
+  puede inyectar cifras a mano.
 
 ### Cómo se calculan las horas
 
@@ -333,6 +395,10 @@ La lógica vive en `src/lib/jornada.ts` (función pura `calcularJornada`) y se u
 en los tres sitios: vista previa del empleado, aprobaciones y tablero de
 métricas. Trabaja siempre con la **hora de Colombia** (UTC-5 fijo), así que el
 resultado es idéntico en el navegador, en el servidor y en la base de datos.
+
+> Ojo: sobre una jornada **ya guardada** nadie llama a `calcularJornada`
+> directamente, sino a `obtenerDesglose()`, que respeta el desglose congelado de
+> las jornadas aprobadas (ver arriba).
 
 El procedimiento, paso a paso:
 
@@ -540,9 +606,17 @@ el contenido estático; `/mi-cuenta` mostrará el aviso de "próximamente" y
   - `src/lib/supabase/auth.ts` — sesión, perfil y guardas de servidor.
   - `src/lib/supabase/admin.ts` — cliente service-role y generador de contraseñas
     (**solo servidor**).
-  - `src/lib/jornada.ts` — cálculo de horas, festivos y formateo (módulo puro).
+  - `src/lib/jornada.ts` — cálculo de horas, festivos, formateo y la **regla de
+    lectura del desglose congelado** `obtenerDesglose()` (módulo puro).
   - `src/lib/admin.ts` — lecturas del panel, incluido `getMapaHorarios()` y el
     autocreado de meses (`asegurarHorarioMensual`).
+- **Textos de ayuda del panel**: los reutilizados viven como constantes en
+  `src/components/admin/ui.tsx` (`AYUDA_PUBLICACION`, `AYUDA_ORDEN`,
+  `AYUDA_VISIBILIDAD`, `AYUDA_ALT`, `AYUDA_IMAGEN`) para que digan siempre lo
+  mismo. Los componentes de ayuda son `AyudaSeccion` (nota corta con icono) y
+  `AyudaDesplegable` (`<details>` nativo, para lo largo); en el tablero de
+  métricas se usa además `InfoTooltip` de
+  `src/components/jornadas/dashboard-ui.tsx`.
 - `/mi-cuenta` y `/admin` llevan `robots: noindex` y están fuera del
   `sitemap.xml`, además de estar en `Disallow` dentro de `robots.txt`.
 - Si subes imágenes a Supabase, `next.config.ts` ya permite optimizar imágenes

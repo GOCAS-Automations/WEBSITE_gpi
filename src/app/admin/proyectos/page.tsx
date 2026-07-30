@@ -1,6 +1,10 @@
 import { listProjects, type ProjectRecord } from "@/lib/admin";
 import {
   AdminPageHeader,
+  AyudaSeccion,
+  AYUDA_ALT,
+  AYUDA_ORDEN,
+  AYUDA_VISIBILIDAD,
   Card,
   CardTitle,
   Field,
@@ -48,13 +52,13 @@ function ProjectFields({ project }: { project?: ProjectRecord }) {
           name="sort"
           type="number"
           defaultValue={project?.sort ?? 0}
-          hint="Menor número = aparece antes."
+          hint={`${AYUDA_ORDEN} Es la posición en la página Proyectos.`}
         />
         <Switch
           label="Visibilidad en el sitio"
           name="published"
           defaultChecked={project?.published ?? true}
-          hint="Oculto = no se muestra en /proyectos, pero se conserva aquí."
+          hint="Oculto = no se muestra en la página Proyectos, pero se conserva aquí y puedes volver a mostrarlo."
         />
       </div>
       <TextArea
@@ -69,12 +73,14 @@ function ProjectFields({ project }: { project?: ProjectRecord }) {
         name="image_url"
         folder="proyectos"
         defaultValue={project?.image_url}
+        hint="Es la foto que se ve en la tarjeta del proyecto."
       />
       <Field
         label="Texto alternativo de la imagen"
         name="image_alt"
         defaultValue={project?.image_alt}
-        placeholder="Describe la imagen para lectores de pantalla."
+        placeholder="Ej.: chiller instalado en la planta de Laboratorios OSA."
+        hint={AYUDA_ALT}
       />
     </>
   );
@@ -87,9 +93,14 @@ export default async function AdminProyectosPage() {
     <>
       <AdminPageHeader
         title="Proyectos"
-        description="Los proyectos realizados que se muestran en la página /proyectos."
+        description="Los trabajos ya realizados que se muestran, con su foto, en la página Proyectos del sitio. Lo que guardes se ve en el sitio en pocos minutos."
         breadcrumb={[{ label: "Panel", href: "/admin" }, { label: "Proyectos" }]}
       />
+
+      <AyudaSeccion className="mb-6">
+        Cada proyecto se guarda por separado con su propio botón{" "}
+        <strong>Guardar proyecto</strong>. {AYUDA_VISIBILIDAD}
+      </AyudaSeccion>
 
       <div className="space-y-5">
         {projects.map((project) => (
@@ -102,7 +113,7 @@ export default async function AdminProyectosPage() {
                   <DeleteForm
                     action={deleteProject}
                     id={project.id}
-                    confirmMessage={`¿Eliminar el proyecto "${project.title}"?`}
+                    confirmMessage={`¿Eliminar el proyecto "${project.title}"?\n\nSe borra para siempre y no se puede deshacer.\n\nSi solo quieres retirarlo del sitio, cancela y ponlo en "Oculto".`}
                   />
                 </div>
               }

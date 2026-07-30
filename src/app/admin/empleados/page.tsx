@@ -10,6 +10,7 @@ import {
 } from "@/lib/roles";
 import {
   AdminPageHeader,
+  AyudaSeccion,
   Badge,
   Card,
   EmptyState,
@@ -63,6 +64,18 @@ export default async function AdminEmpleadosPage({
       />
 
       {!isServiceRoleConfigured() && <ServiceRoleAviso />}
+
+      <AyudaSeccion title="Cómo se manejan las cuentas" className="mb-5">
+        Al crear una cuenta, el sistema genera una contraseña fácil de dictar y
+        la muestra <strong>una sola vez</strong>: cópiala y entrégasela a la
+        persona (por WhatsApp o dictándosela por teléfono). Después nadie puede
+        volver a verla; si se pierde, se genera otra desde su ficha.
+        <br />
+        Para retirar a alguien del portal,{" "}
+        <strong>desactiva</strong> su cuenta: no podrá entrar, pero se conserva
+        su historial de jornadas. <strong>Eliminar</strong> borra la cuenta{" "}
+        <em>y todas sus jornadas</em>, y no se puede deshacer.
+      </AyudaSeccion>
 
       {/* Búsqueda: formulario GET, sin JavaScript. */}
       <form method="get" className="mb-5 flex flex-wrap items-center gap-2">
@@ -167,6 +180,11 @@ export default async function AdminEmpleadosPage({
 
       <Card className="mt-6">
         <h2 className="text-base font-bold text-ink">¿Qué puede hacer cada rol?</h2>
+        <p className="mt-1.5 text-sm leading-relaxed text-graphite">
+          El rol se elige al crear la cuenta y se puede cambiar después. Todas
+          las cuentas activas registran sus propias jornadas en Mi Cuenta; lo que
+          cambia de un rol a otro es qué puede administrar en el panel.
+        </p>
         <dl className="mt-3 space-y-2.5">
           {USER_ROLES.map((role) => (
             <div key={role} className="flex flex-wrap items-start gap-2.5">
@@ -183,9 +201,9 @@ export default async function AdminEmpleadosPage({
         </dl>
         {profile.role === "coordinador" && (
           <p className="mt-4 rounded-xl bg-mist px-4 py-3 text-sm leading-relaxed text-graphite">
-            Como coordinador puedes gestionar cuentas de coordinador, marketing y
-            empleado. Las cuentas de administrador solo las gestiona un
-            administrador.
+            Como coordinador puedes gestionar cuentas de Coordinador, Community
+            Manager y Empleado. Las cuentas de Administrador solo las gestiona
+            otro administrador.
           </p>
         )}
       </Card>

@@ -21,15 +21,21 @@ import {
   JORNADA_STATUS_LABELS,
   type JornadaStatus,
 } from "@/lib/admin-types";
-import { Badge, Card, EmptyState, inputClass } from "@/components/admin/ui";
+import {
+  AyudaSeccion,
+  Badge,
+  Card,
+  EmptyState,
+  inputClass,
+} from "@/components/admin/ui";
 import { JornadaBreakdown } from "@/components/jornadas/JornadaBreakdown";
 import { ReopenAction, ReviewActions } from "@/components/jornadas/ReviewActions";
 import {
-  calcularJornada,
   formatearDuracion,
   formatearFechaLarga,
   formatearHora12,
   horaColombia,
+  obtenerDesglose,
 } from "@/lib/jornada";
 import { approveJornada, rejectJornada, reopenJornada } from "./actions";
 import { Info } from "@/lib/icons";
@@ -70,6 +76,38 @@ export async function AprobacionesView({
 
   return (
     <>
+      {/* ---------------- Qué significa cada estado ---------------- */}
+      <AyudaSeccion title="Cómo funciona esta bandeja" className="mb-6">
+        <ul className="space-y-1.5">
+          <li>
+            <strong>Pendiente:</strong> el empleado la registró y todavía nadie
+            la ha revisado. Mientras esté así, él puede corregirla o eliminarla.
+          </li>
+          <li>
+            <strong>Aprobada:</strong> queda confirmada para nómina. Su desglose
+            de horas se guarda tal cual, así que corregir después el horario de
+            un mes ya no la cambia.
+          </li>
+          <li>
+            <strong>Rechazada:</strong> el empleado debe corregirla. Rechazar
+            exige escribir un motivo, y <strong>ese texto lo verá él</strong> en
+            su portal: sé concreto para que sepa qué arreglar.
+          </li>
+          <li>
+            <strong>Volver a pendiente:</strong> reabre una jornada ya revisada.
+            Es también la forma de <strong>recalcular</strong> una jornada
+            aprobada si el horario del mes estaba mal: la corriges en{" "}
+            <Link
+              href="/admin/horarios"
+              className="font-semibold text-brand-dark hover:text-brand"
+            >
+              Horarios
+            </Link>
+            , la devuelves a pendiente y la vuelves a aprobar.
+          </li>
+        </ul>
+      </AyudaSeccion>
+
       {/* ---------------- Filtros (formulario GET, sin JavaScript) ------- */}
       <Card className="mb-6">
         <form method="get" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
@@ -164,13 +202,10 @@ export async function AprobacionesView({
           </p>
 
           {jornadas.map((jornada) => {
-            const desglose = calcularJornada(
-              jornada.start_at,
-              jornada.end_at,
-              jornada.work_date,
-              config,
-              horarios,
-            );
+            // Regla de lectura única: si la jornada se aprobó con el desglose
+            // congelado, se muestran esas cifras; si no, se calculan en vivo.
+            const { desglose, congelado, contexto, calculadoEn } =
+              obtenerDesglose(jornada, config, horarios);
             const empleado = jornada.employee_name ?? "Empleado";
 
             return (
@@ -248,7 +283,12 @@ export async function AprobacionesView({
                     </div>
                   </div>
 
-                  <JornadaBreakdown desglose={desglose} />
+                  <JornadaBreakdown
+                    desglose={desglose}
+                    congelado={congelado}
+                    contexto={contexto}
+                    calculadoEn={calculadoEn}
+                  />
                 </div>
               </article>
             );
@@ -286,6 +326,16 @@ export async function AprobacionesView({
             jornada_config
           </code>{" "}
           de la base de datos.
+        </p>
+        <p className="mt-2 text-sm leading-relaxed text-graphite">
+          <strong>Al aprobar, el desglose queda congelado.</strong> Se guarda
+          junto con el horario y los recargos que se usaron, y esa jornada
+          muestra siempre las mismas horas: si en septiembre alguien corrige el
+          horario de julio, los reportes de julio ya aprobados no se mueven. Las
+          jornadas pendientes sí se recalculan con lo que esté vigente. Las
+          jornadas aprobadas <em>antes</em> de activar esta función se siguen
+          calculando en vivo, y se congelan si se devuelven a pendiente y se
+          aprueban otra vez.
         </p>
       </Card>
     </>

@@ -14,6 +14,7 @@ import type {
 } from "@/data/site";
 import type { UserRole } from "@/lib/roles";
 import type { HorarioDias } from "@/lib/horarios";
+import type { ContextoCalculo, DesgloseJornada } from "@/lib/jornada";
 
 export type ActionStatus = "idle" | "success" | "error";
 
@@ -172,6 +173,20 @@ export interface JornadaRecord {
   reviewed_by: string | null;
   reviewed_at: string | null;
   created_at: string | null;
+
+  /* --- Desglose CONGELADO al aprobar (migración 0004) --------------- */
+  /**
+   * Desglose de horas guardado en el momento de aprobar. `null` mientras la
+   * jornada no esté aprobada, si se aprobó antes de la 0004, o si la migración
+   * todavía no está aplicada: en esos casos el cálculo se hace en vivo.
+   * Se lee SIEMPRE con `obtenerDesglose()` de `src/lib/jornada.ts`.
+   */
+  desglose: DesgloseJornada | null;
+  /** Con qué horario y qué recargos se calculó (respaldo de auditoría). */
+  contexto_calculo: ContextoCalculo | null;
+  /** Cuándo se congeló el desglose. */
+  calculado_at: string | null;
+
   /** Datos del empleado, resueltos aparte (la tabla solo guarda el id). */
   employee_name?: string;
   employee_email?: string;

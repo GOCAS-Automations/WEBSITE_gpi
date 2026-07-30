@@ -1,6 +1,9 @@
 import { listValues, type ValueRecord } from "@/lib/admin";
 import {
   AdminPageHeader,
+  AyudaSeccion,
+  AYUDA_ORDEN,
+  AYUDA_VISIBILIDAD,
   Card,
   CardTitle,
   Field,
@@ -35,12 +38,14 @@ function ValueFields({ value }: { value?: ValueRecord }) {
           name="icon_key"
           defaultValue={value?.icon_key ?? "shield"}
           options={iconOptions}
+          hint="El dibujo que acompaña al valor en el sitio."
         />
         <Field
           label="Orden"
           name="sort"
           type="number"
           defaultValue={value?.sort ?? 0}
+          hint={AYUDA_ORDEN}
         />
       </div>
       <TextArea
@@ -49,12 +54,13 @@ function ValueFields({ value }: { value?: ValueRecord }) {
         rows={2}
         defaultValue={value?.description}
         placeholder="La rentabilidad de nuestros clientes es nuestra obligación."
+        hint="Una frase corta: es lo que se lee debajo del título en la tarjeta."
       />
       <Switch
         label="Visibilidad en el sitio"
         name="published"
         defaultChecked={value?.published ?? true}
-        hint="Oculto = no aparece en el inicio ni en Nosotros, pero se conserva aquí."
+        hint="Oculto = no aparece en el inicio ni en Nosotros, pero se conserva aquí y puedes volver a mostrarlo."
       />
     </>
   );
@@ -67,9 +73,14 @@ export default async function AdminValoresPage() {
     <>
       <AdminPageHeader
         title="Valores corporativos"
-        description="Los principios que se muestran en el inicio y en la página Nosotros."
+        description="Los principios de GPI que se muestran en el inicio y en la página Nosotros. Lo que guardes se ve en el sitio en pocos minutos."
         breadcrumb={[{ label: "Panel", href: "/admin" }, { label: "Valores" }]}
       />
+
+      <AyudaSeccion className="mb-6">
+        Se ven como tarjetas con icono, en el orden que indiques.{" "}
+        {AYUDA_VISIBILIDAD}
+      </AyudaSeccion>
 
       <div className="space-y-5">
         {values.map((value) => (
@@ -82,7 +93,7 @@ export default async function AdminValoresPage() {
                   <DeleteForm
                     action={deleteValue}
                     id={value.id}
-                    confirmMessage={`¿Eliminar el valor "${value.title}"?`}
+                    confirmMessage={`¿Eliminar el valor "${value.title}"?\n\nSe borra para siempre y no se puede deshacer.\n\nSi solo quieres retirarlo del sitio, cancela y ponlo en "Oculto".`}
                   />
                 </div>
               }

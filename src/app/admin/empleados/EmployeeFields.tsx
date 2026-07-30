@@ -1,5 +1,17 @@
-import { Field, Select, Switch } from "@/components/admin/ui";
-import { ROLE_DESCRIPTIONS, ROLE_LABELS, USER_ROLES, type UserRole } from "@/lib/roles";
+import {
+  AyudaDesplegable,
+  Badge,
+  Field,
+  Select,
+  Switch,
+} from "@/components/admin/ui";
+import {
+  ROLE_BADGE_CLASSES,
+  ROLE_DESCRIPTIONS,
+  ROLE_LABELS,
+  USER_ROLES,
+  type UserRole,
+} from "@/lib/roles";
 import { AYUDA_USUARIO } from "@/lib/usuarios";
 import type { ProfileRecord } from "@/lib/admin-types";
 
@@ -66,8 +78,33 @@ export function EmployeeFields({
           name="role"
           defaultValue={profile?.role ?? "empleado"}
           options={opcionesDeRol(actorRole)}
-          hint={ROLE_DESCRIPTIONS[profile?.role ?? "empleado"]}
+          hint="Define qué puede hacer la persona en el portal. Si dudas, elige Empleado: es el rol con menos permisos y siempre se puede cambiar después."
         />
+
+        {/* Los cuatro roles explicados, para elegir con criterio. Va desplegable
+            (HTML nativo) para no llenar el formulario de texto. */}
+        <AyudaDesplegable
+          label="¿Qué puede hacer cada rol?"
+          className="sm:col-span-2"
+        >
+          <dl className="space-y-2.5">
+            {USER_ROLES.map((role) => (
+              <div key={role} className="flex flex-wrap items-start gap-2.5">
+                <dt className="shrink-0">
+                  <Badge className={ROLE_BADGE_CLASSES[role]}>
+                    {ROLE_LABELS[role]}
+                  </Badge>
+                </dt>
+                <dd className="min-w-0 flex-1">{ROLE_DESCRIPTIONS[role]}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="mt-3 text-xs leading-relaxed">
+            Todas las cuentas activas, sea cual sea su rol, registran sus propias
+            jornadas en <strong>Mi Cuenta</strong>. Lo que cambia de un rol a
+            otro es qué puede administrar en el panel.
+          </p>
+        </AyudaDesplegable>
 
         <Field
           label="Cédula (opcional)"
@@ -111,7 +148,7 @@ export function EmployeeFields({
             hint={
               esUnoMismo
                 ? "No puedes desactivar tu propia cuenta."
-                : "Una cuenta inactiva no puede iniciar sesión, pero conserva su historial de jornadas."
+                : "Inactiva = la persona no puede entrar al portal, pero se conserva todo su historial de jornadas. Es lo recomendado cuando alguien deja de trabajar en GPI: eliminar la cuenta sí borra sus jornadas."
             }
           />
         )}

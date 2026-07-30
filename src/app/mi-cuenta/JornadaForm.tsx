@@ -230,9 +230,15 @@ export function JornadaForm({
       {/* Vista previa del cálculo */}
       {desglose && (
         <div>
-          <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-ink">
+          <p className="mb-1 flex items-center gap-1.5 text-sm font-semibold text-ink">
             <Info className="h-4 w-4 text-brand-dark" />
             Así quedarían tus horas
+          </p>
+          <p className="mb-2.5 text-xs leading-relaxed text-graphite">
+            Es una <strong>vista previa</strong>: se recalcula sola cada vez que
+            cambias la fecha o las horas de arriba, para que veas cómo se
+            reparten entre ordinarias y extra antes de guardar. Las cifras
+            definitivas quedan fijas cuando tu coordinador aprueba la jornada.
           </p>
           <JornadaBreakdown desglose={desglose} />
         </div>

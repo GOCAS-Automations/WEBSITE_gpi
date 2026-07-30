@@ -1,4 +1,6 @@
 import {
+  AYUDA_ALT,
+  AYUDA_ORDEN,
   Field,
   Select,
   Switch,
@@ -30,7 +32,7 @@ export function ServiceFormFields({ service }: { service?: ServiceRecord }) {
       <Card>
         <CardTitle
           title="Información principal"
-          description="Estos textos aparecen en la tarjeta del servicio y en su página de detalle."
+          description="Estos textos aparecen en la tarjeta del servicio y en su página de detalle. Al guardar, el cambio se ve en el sitio en pocos minutos."
         />
         <div className="grid gap-4 sm:grid-cols-2">
           <Field
@@ -72,13 +74,13 @@ export function ServiceFormFields({ service }: { service?: ServiceRecord }) {
             name="sort"
             type="number"
             defaultValue={service?.sort ?? 0}
-            hint="Menor número = aparece antes."
+            hint={`${AYUDA_ORDEN} Es la posición en el menú y en la página Servicios.`}
           />
           <Switch
             label="Visibilidad en el sitio"
             name="published"
             defaultChecked={service?.published ?? true}
-            hint="Si lo ocultas, el servicio deja de aparecer en el menú y en /servicios, pero no se borra."
+            hint="Oculto = el servicio desaparece del menú y de la página Servicios, pero no se borra: sigues editándolo aquí y puedes volver a mostrarlo."
           />
         </div>
 
@@ -103,20 +105,21 @@ export function ServiceFormFields({ service }: { service?: ServiceRecord }) {
       <Card>
         <CardTitle
           title="¿Qué incluye este servicio?"
-          description="Cada ítem se muestra como una tarjeta con check verde en la página del servicio."
+          description="Cada ítem se muestra como una tarjeta con visto verde en la página del servicio."
         />
         <ListField
           label="Ítems"
           name="items"
           defaultValues={service?.items}
           placeholder="Describe una actividad o alcance del servicio."
+          hint="Se muestran en el sitio en el mismo orden de las filas: la fila 1 es el primer ítem. Para cambiar el orden, corta y pega el texto entre filas; para quitar uno, usa el botón de la papelera."
         />
       </Card>
 
       <Card>
         <CardTitle
           title="Imágenes"
-          description="Sube archivos al bucket de Supabase o pega una URL / ruta local."
+          description="La portada es la foto grande del servicio. La galería es opcional."
         />
         <div className="space-y-4">
           <ImageField
@@ -124,18 +127,19 @@ export function ServiceFormFields({ service }: { service?: ServiceRecord }) {
             name="cover"
             folder="servicios"
             defaultValue={service?.images.cover}
-            hint="Se usa en la tarjeta y en la cabecera de la página del servicio."
+            hint="Se usa en la tarjeta del servicio y en la cabecera de su página."
           />
           <Field
             label="Texto alternativo de la portada"
             name="cover_alt"
             defaultValue={service?.images.coverAlt}
-            placeholder="Describe la imagen para lectores de pantalla."
+            placeholder="Ej.: técnico revisando un tablero de control eléctrico."
+            hint={AYUDA_ALT}
           />
           <GalleryField
             label="Galería (opcional)"
             defaultValues={service?.images.gallery}
-            hint="Imágenes adicionales que se muestran al final de la página del servicio."
+            hint="Imágenes adicionales que se muestran al final de la página del servicio, en el orden de las filas. A cada una conviene ponerle su texto alternativo."
           />
         </div>
       </Card>
@@ -143,7 +147,7 @@ export function ServiceFormFields({ service }: { service?: ServiceRecord }) {
       <Card>
         <CardTitle
           title="SEO"
-          description="Título y descripción que ven Google y las redes sociales."
+          description="El título y el resumen que ven Google y las redes sociales cuando alguien comparte este servicio. Si los dejas vacíos se usan el título y el resumen de arriba."
         />
         <div className="space-y-4">
           <Field

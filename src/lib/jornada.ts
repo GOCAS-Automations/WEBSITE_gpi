@@ -28,12 +28,16 @@
 import {
   claveDiaSemana,
   diaSemanaDeFecha,
+  etiquetaMes,
   horarioDeFecha,
   horarioPredeterminado,
+  mesDeFecha,
   minutosAlmuerzoDia,
   minutosDesdeHora,
   minutosJornadaDia,
   normalizarHorarioDias,
+  resumenHorario,
+  type HorarioDia,
   type HorarioDias,
   type MapaHorarios,
 } from "@/lib/horarios";
@@ -673,4 +677,342 @@ export function normalizarJornadaConfig(value: unknown): JornadaConfig {
       ),
     },
   };
+}
+
+/* ------------------------------------------------------------------ */
+/* DESGLOSE CONGELADO (migración 0004)                                 */
+/* ------------------------------------------------------------------ */
+
+/**
+ * EL PROBLEMA QUE RESUELVE ESTA SECCIÓN
+ * -------------------------------------
+ * `calcularJornada` es una función pura: con el mismo turno, pero con OTRO
+ * horario del mes o otros porcentajes de recargo, devuelve otro resultado. Eso
+ * está bien mientras la jornada está pendiente, pero es inaceptable para nómina:
+ * si en septiembre alguien corrige el horario de julio, cambiarían los reportes
+ * de jornadas ya aprobadas y pagadas.
+ *
+ * Solución: al APROBAR se calcula una vez y se guarda el resultado (`desglose`)
+ * junto con el contexto que se usó (`contexto_calculo`) y el momento
+ * (`calculado_at`). Desde entonces esa jornada muestra siempre lo mismo.
+ *
+ * REGLA DE LECTURA ÚNICA: todos los consumidores —aprobaciones, tablero de
+ * métricas, CSV de nómina e historial del empleado— leen el desglose con
+ * `obtenerDesglose()`, nunca llamando a `calcularJornada` por su cuenta. Si hay
+ * snapshot lo usa; si no, calcula en vivo. Así el comportamiento es idéntico con
+ * la migración 0004 aplicada o sin aplicar.
+ */
+
+/** Versión del formato del snapshot, por si algún día cambia su estructura. */
+export const VERSION_CONTEXTO_CALCULO = 1;
+
+/**
+ * Todo lo que se usó para calcular una jornada, guardado tal cual.
+ * Es el respaldo de auditoría: permite explicarle a una persona POR QUÉ salió
+ * ese número aunque después se cambie el horario del mes o un recargo.
+ */
+export interface ContextoCalculo {
+  version: number;
+  /** Mes del horario aplicado, `"YYYY-MM"` (`""` si la fecha no era válida). */
+  mes: string;
+  /** Ese mes en palabras: "julio de 2026". */
+  mesEtiqueta: string;
+  /** Horario del día trabajado. `null` = ese día no era laboral. */
+  horarioDia: HorarioDia | null;
+  /** Resumen legible del horario semanal de ese mes. */
+  horarioSemana: string;
+  /** false = día no laboral o festivo: todo el turno va con recargo. */
+  diaLaboral: boolean;
+  /** Nombre del festivo del día imputado, si lo era. */
+  festivo: string | null;
+  /** Jornada ordinaria neta de ese día, en minutos. */
+  jornadaOrdinariaMinutos: number;
+  /** Franja nocturna vigente al calcular. */
+  inicioNocturno: string;
+  finNocturno: string;
+  /** Porcentajes de recargo vigentes al calcular. */
+  recargos: JornadaRecargos;
+  /** Topes de horas extra vigentes al calcular. */
+  limiteExtrasDia: number;
+  limiteExtrasSemana: number;
+}
+
+/** Lo mínimo que necesita `obtenerDesglose` de una fila de `jornadas`. */
+export interface JornadaCalculable {
+  start_at: string;
+  end_at: string;
+  work_date: string;
+  /** Snapshot guardado al aprobar. `undefined` si la 0004 no está aplicada. */
+  desglose?: unknown;
+  contexto_calculo?: unknown;
+  calculado_at?: string | null;
+}
+
+export interface DesgloseResuelto {
+  desglose: DesgloseJornada;
+  /** true = viene del snapshot guardado al aprobar; ya no cambia nunca. */
+  congelado: boolean;
+  /** Contexto del snapshot o, si se calculó en vivo, el contexto vigente. */
+  contexto: ContextoCalculo | null;
+  /** Instante ISO en que se congeló; `null` si se calculó en vivo. */
+  calculadoEn: string | null;
+}
+
+/**
+ * Reconstruye el contexto de cálculo de un día laboral con el horario y la
+ * configuración que rigen AHORA. Es lo que se persiste al aprobar y también lo
+ * que se muestra como referencia mientras la jornada sigue pendiente.
+ */
+export function construirContextoCalculo(
+  workDate: string,
+  config: JornadaConfig = jornadaConfigDefaults,
+  horarios?: MapaHorarios | null,
+): ContextoCalculo {
+  const fecha = /^\d{4}-\d{2}-\d{2}$/.test(workDate) ? workDate : "";
+
+  const semanaPorDefecto = normalizarHorarioDias(
+    config.horarioSemanal ?? horarioPredeterminado,
+    horarioPredeterminado,
+  );
+  const dias = fecha
+    ? horarioDeFecha(fecha, horarios, semanaPorDefecto)
+    : semanaPorDefecto;
+
+  const horarioDia = fecha ? dias[claveDiaSemana(diaSemanaDeFecha(fecha))] : null;
+  const festivo = fecha ? nombreFestivo(fecha) : null;
+  const diaLaboral = horarioDia !== null && festivo === null;
+
+  const mes = mesDeFecha(fecha);
+  const anio = Number(mes.slice(0, 4));
+  const numeroMes = Number(mes.slice(5, 7));
+  const mesValido =
+    Number.isInteger(anio) && Number.isInteger(numeroMes) && numeroMes >= 1 && numeroMes <= 12;
+
+  return {
+    version: VERSION_CONTEXTO_CALCULO,
+    mes,
+    mesEtiqueta: mesValido ? etiquetaMes(anio, numeroMes) : "",
+    horarioDia: horarioDia ? { ...horarioDia } : null,
+    horarioSemana: resumenHorario(dias),
+    diaLaboral,
+    festivo,
+    jornadaOrdinariaMinutos: diaLaboral ? minutosJornadaDia(horarioDia) : 0,
+    inicioNocturno: config.inicioNocturno,
+    finNocturno: config.finNocturno,
+    recargos: { ...jornadaConfigDefaults.recargos, ...(config.recargos ?? {}) },
+    limiteExtrasDia: config.limiteExtrasDia,
+    limiteExtrasSemana: config.limiteExtrasSemana,
+  };
+}
+
+/** Minutos leídos de un JSON: nunca negativos, siempre enteros. */
+function minutosGuardados(value: unknown): number {
+  const n = numeroOr(value, 0);
+  return Number.isFinite(n) && n > 0 ? Math.round(n) : 0;
+}
+
+/**
+ * Convierte el JSON de `jornadas.desglose` en un `DesgloseJornada` completo.
+ *
+ * Devuelve `null` cuando NO hay snapshot utilizable (columna inexistente porque
+ * la 0004 no está aplicada, jornada nunca aprobada, o JSON incompleto): en ese
+ * caso el llamador calcula en vivo. Nunca lanza.
+ */
+export function normalizarDesglose(value: unknown): DesgloseJornada | null {
+  if (!esObjeto(value)) return null;
+  if (value.valido === false) return null;
+
+  const totalMinutos = minutosGuardados(value.totalMinutos);
+  // Un snapshot sin duración no explica nada: se trata como ausente.
+  if (totalMinutos <= 0) return null;
+
+  return {
+    valido: true,
+    totalMinutos,
+    almuerzoMinutos: minutosGuardados(value.almuerzoMinutos),
+    minutosTrabajados: minutosGuardados(value.minutosTrabajados),
+    jornadaOrdinariaMinutos: minutosGuardados(value.jornadaOrdinariaMinutos),
+    diaLaboral: value.diaLaboral !== false,
+    ordinariaDiurna: minutosGuardados(value.ordinariaDiurna),
+    ordinariaNocturna: minutosGuardados(value.ordinariaNocturna),
+    extraDiurna: minutosGuardados(value.extraDiurna),
+    extraNocturna: minutosGuardados(value.extraNocturna),
+    dominicalDiurna: minutosGuardados(value.dominicalDiurna),
+    dominicalNocturna: minutosGuardados(value.dominicalNocturna),
+    extraDominicalDiurna: minutosGuardados(value.extraDominicalDiurna),
+    extraDominicalNocturna: minutosGuardados(value.extraDominicalNocturna),
+    ordinarias: minutosGuardados(value.ordinarias),
+    extras: minutosGuardados(value.extras),
+    minutosNocturnos: minutosGuardados(value.minutosNocturnos),
+    minutosDominicales: minutosGuardados(value.minutosDominicales),
+    esDominicalFestivo: value.esDominicalFestivo === true,
+    festivos: Array.isArray(value.festivos)
+      ? value.festivos.filter((f): f is string => typeof f === "string")
+      : [],
+    cruzaMedianoche: value.cruzaMedianoche === true,
+    horasEquivalentes: numeroOr(value.horasEquivalentes, 0),
+  };
+}
+
+/**
+ * Convierte el JSON de `jornadas.contexto_calculo` en un `ContextoCalculo`.
+ * Devuelve `null` si no hay nada legible. Nunca lanza.
+ */
+export function normalizarContextoCalculo(value: unknown): ContextoCalculo | null {
+  if (!esObjeto(value)) return null;
+
+  const d = jornadaConfigDefaults;
+  const diaBruto = esObjeto(value.horarioDia) ? value.horarioDia : null;
+  const recargosBrutos = esObjeto(value.recargos) ? value.recargos : {};
+
+  const horarioDia: HorarioDia | null =
+    diaBruto &&
+    minutosDesdeHora(diaBruto.inicio) !== null &&
+    minutosDesdeHora(diaBruto.fin) !== null
+      ? {
+          inicio: String(diaBruto.inicio),
+          fin: String(diaBruto.fin),
+          almuerzoHoras: Math.max(0, numeroOr(diaBruto.almuerzoHoras, 0)),
+        }
+      : null;
+
+  return {
+    version: numeroOr(value.version, VERSION_CONTEXTO_CALCULO),
+    mes: typeof value.mes === "string" ? value.mes : "",
+    mesEtiqueta: typeof value.mesEtiqueta === "string" ? value.mesEtiqueta : "",
+    horarioDia,
+    horarioSemana:
+      typeof value.horarioSemana === "string" ? value.horarioSemana : "",
+    diaLaboral: value.diaLaboral !== false,
+    festivo: typeof value.festivo === "string" && value.festivo ? value.festivo : null,
+    jornadaOrdinariaMinutos: minutosGuardados(value.jornadaOrdinariaMinutos),
+    inicioNocturno: horaOr(value.inicioNocturno, d.inicioNocturno),
+    finNocturno: horaOr(value.finNocturno, d.finNocturno),
+    recargos: {
+      extraDiurna: numeroOr(recargosBrutos.extraDiurna, d.recargos.extraDiurna),
+      extraNocturna: numeroOr(recargosBrutos.extraNocturna, d.recargos.extraNocturna),
+      nocturno: numeroOr(recargosBrutos.nocturno, d.recargos.nocturno),
+      dominicalFestivo: numeroOr(
+        recargosBrutos.dominicalFestivo,
+        d.recargos.dominicalFestivo,
+      ),
+      extraDominicalDiurna: numeroOr(
+        recargosBrutos.extraDominicalDiurna,
+        d.recargos.extraDominicalDiurna,
+      ),
+      extraDominicalNocturna: numeroOr(
+        recargosBrutos.extraDominicalNocturna,
+        d.recargos.extraDominicalNocturna,
+      ),
+    },
+    limiteExtrasDia: numeroOr(value.limiteExtrasDia, d.limiteExtrasDia),
+    limiteExtrasSemana: numeroOr(value.limiteExtrasSemana, d.limiteExtrasSemana),
+  };
+}
+
+/**
+ * **REGLA DE LECTURA ÚNICA del desglose de una jornada.**
+ *
+ * Si la jornada tiene desglose congelado (se aprobó estando la migración 0004
+ * aplicada) devuelve ese, marcado con `congelado: true`. Si no, lo calcula en
+ * vivo con el horario y la configuración actuales, como se hacía siempre.
+ *
+ * La usan la pantalla de aprobaciones, el tablero de métricas (KPIs, gráficas,
+ * control semanal y CSV) y el historial del empleado. Nadie más debería llamar
+ * a `calcularJornada` sobre una jornada YA GUARDADA: la única excepción legítima
+ * es la vista previa del formulario, donde todavía no hay fila en la base.
+ */
+export function obtenerDesglose(
+  jornada: JornadaCalculable,
+  config: JornadaConfig = jornadaConfigDefaults,
+  horarios?: MapaHorarios | null,
+): DesgloseResuelto {
+  const guardado = normalizarDesglose(jornada.desglose);
+
+  if (guardado) {
+    return {
+      desglose: guardado,
+      congelado: true,
+      contexto: normalizarContextoCalculo(jornada.contexto_calculo),
+      calculadoEn:
+        typeof jornada.calculado_at === "string" && jornada.calculado_at
+          ? jornada.calculado_at
+          : null,
+    };
+  }
+
+  return {
+    desglose: calcularJornada(
+      jornada.start_at,
+      jornada.end_at,
+      jornada.work_date,
+      config,
+      horarios,
+    ),
+    congelado: false,
+    contexto: construirContextoCalculo(jornada.work_date, config, horarios),
+    calculadoEn: null,
+  };
+}
+
+/** "1 h de almuerzo" · "0,5 h de almuerzo" · "" si no hay almuerzo. */
+function textoAlmuerzo(horas: number): string {
+  if (!Number.isFinite(horas) || horas <= 0) return "";
+  return `${horas.toLocaleString("es-CO", { maximumFractionDigits: 2 })} h de almuerzo`;
+}
+
+/**
+ * Explicación en lenguaje llano de un cálculo congelado, para mostrarla al
+ * pasar el cursor o como nota al pie. Por ejemplo:
+ *
+ *   «Cálculo congelado el 28/07/2026 con el horario de julio de 2026
+ *    (Lunes a jueves 08:00–17:30 · Viernes 08:00–17:00; 1 h de almuerzo).
+ *    Cambiar después el horario del mes o los recargos ya no altera esta
+ *    jornada.»
+ */
+export function textoCalculoCongelado(
+  contexto: ContextoCalculo | null,
+  calculadoEn: string | null,
+): string {
+  const fecha = calculadoEn ? fechaColombia(calculadoEn) : "";
+  const cuando = fecha ? ` el ${formatearFechaNumerica(fecha)}` : "";
+
+  let conQue = "";
+  if (contexto?.mesEtiqueta) {
+    const detalles = [
+      contexto.horarioSemana,
+      textoAlmuerzo(contexto.horarioDia?.almuerzoHoras ?? 0),
+    ].filter((d) => d !== "");
+    conQue = ` con el horario de ${contexto.mesEtiqueta}${
+      detalles.length > 0 ? ` (${detalles.join("; ")})` : ""
+    }`;
+  }
+
+  return `Cálculo congelado${cuando}${conQue}. Cambiar después el horario del mes o los recargos ya no altera esta jornada.`;
+}
+
+/**
+ * ¿El error de Supabase se debe a que las columnas de la migración 0004
+ * todavía no existen?
+ *
+ * Se usa para REINTENTAR la escritura sin el snapshot: aprobar, rechazar,
+ * reabrir y editar jornadas deben seguir funcionando con la 0004 sin aplicar,
+ * igual que el resto del panel tolera migraciones pendientes.
+ */
+export function faltaColumnaDesglose(
+  error: { code?: string | null; message?: string | null } | null | undefined,
+): boolean {
+  if (!error) return false;
+
+  const codigo = error.code ?? "";
+  // 42703 = undefined_column (Postgres) · PGRST204 = columna ausente del caché
+  // de esquema de PostgREST. Las únicas columnas nuevas del proyecto son las de
+  // la 0004, así que el código basta para identificar el caso.
+  if (codigo === "42703" || codigo === "PGRST204") return true;
+
+  const mensaje = error.message ?? "";
+  return (
+    /(desglose|contexto_calculo|calculado_at)/i.test(mensaje) &&
+    /(does not exist|no existe|schema cache|could not find|find the)/i.test(mensaje)
+  );
 }

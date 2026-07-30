@@ -16,10 +16,10 @@
 
 import type { JornadaRecord, JornadaStatus } from "@/lib/admin-types";
 import {
-  calcularJornada,
   fechaColombia,
   horaColombia,
   jornadaConfigDefaults,
+  obtenerDesglose,
   type JornadaConfig,
 } from "@/lib/jornada";
 import type { MapaHorarios } from "@/lib/horarios";
@@ -71,6 +71,15 @@ export interface JornadaMetrica {
   status: JornadaStatus;
   /** Instante de creación (para el pill de frescura). */
   creadaEn: string | null;
+
+  /**
+   * true = las cifras vienen del desglose CONGELADO al aprobar la jornada, no
+   * de un recálculo. Es lo que garantiza que un reporte de nómina ya cerrado no
+   * cambie si después se corrige el horario de un mes.
+   */
+  congelado: boolean;
+  /** Instante ISO en que se congeló, o `null` si se calculó en vivo. */
+  calculadoEn: string | null;
 }
 
 /** "07:58" → 7.9667. Devuelve 0 si la hora no es válida. */
@@ -84,16 +93,19 @@ export function horaADecimal(hora: string): number {
  * Convierte una fila cruda de `jornadas` en la fila plana del tablero.
  * Nunca lanza: si las horas no son válidas devuelve una fila en ceros para que
  * el tablero siga dibujándose.
+ *
+ * El desglose se pide SIEMPRE a `obtenerDesglose()`: si la jornada se aprobó con
+ * la migración 0004 aplicada, sus cifras vienen del snapshot congelado; si no,
+ * se calculan en vivo. Así los KPIs, las gráficas, el control semanal y el CSV
+ * de nómina hablan todos del mismo número.
  */
 export function construirMetrica(
   jornada: JornadaRecord,
   config: JornadaConfig = jornadaConfigDefaults,
   horarios?: MapaHorarios | null,
 ): JornadaMetrica {
-  const desglose = calcularJornada(
-    jornada.start_at,
-    jornada.end_at,
-    jornada.work_date,
+  const { desglose, congelado, calculadoEn } = obtenerDesglose(
+    jornada,
     config,
     horarios,
   );
@@ -137,6 +149,9 @@ export function construirMetrica(
     festivos: desglose.festivos,
     status: jornada.status,
     creadaEn: jornada.created_at,
+
+    congelado,
+    calculadoEn,
   };
 }
 

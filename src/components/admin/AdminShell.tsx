@@ -181,8 +181,8 @@ export function AdminShell({
                 Recuerda
               </p>
               <p className="mt-2 text-xs leading-relaxed text-graphite">
-                Los cambios se publican en el sitio inmediatamente después de
-                guardar.
+                Cada bloque se guarda con su propio botón. Lo que guardes se ve
+                en el sitio en pocos minutos.
               </p>
             </div>
           </nav>

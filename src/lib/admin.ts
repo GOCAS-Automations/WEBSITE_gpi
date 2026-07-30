@@ -22,6 +22,8 @@ import {
 import { normalizeRole } from "@/lib/roles";
 import { usuarioDesdeEmail } from "@/lib/usuarios";
 import {
+  normalizarContextoCalculo,
+  normalizarDesglose,
   normalizarJornadaConfig,
   jornadaConfigDefaults,
   type JornadaConfig,
@@ -539,6 +541,13 @@ function rowToJornada(row: Record<string, unknown>): JornadaRecord {
     reviewed_by: typeof row.reviewed_by === "string" ? row.reviewed_by : null,
     reviewed_at: typeof row.reviewed_at === "string" ? row.reviewed_at : null,
     created_at: typeof row.created_at === "string" ? row.created_at : null,
+    // Snapshot del cálculo (migración 0004). Las consultas usan `select("*")`,
+    // así que mientras la 0004 no esté aplicada estas claves llegan
+    // `undefined` y los normalizadores devuelven `null`: el desglose se
+    // calcula en vivo, exactamente como antes.
+    desglose: normalizarDesglose(row.desglose),
+    contexto_calculo: normalizarContextoCalculo(row.contexto_calculo),
+    calculado_at: typeof row.calculado_at === "string" ? row.calculado_at : null,
   };
 }
 

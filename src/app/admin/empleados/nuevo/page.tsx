@@ -70,8 +70,10 @@ export default async function NuevaCuentaPage() {
                 Al guardar se generará una contraseña fácil de dictar (por
                 ejemplo <strong>Sol-Andes42</strong>) que verás{" "}
                 <strong>una sola vez</strong>. Cópiala junto con el usuario y
-                compártelas con la persona; podrá cambiar la contraseña cuando
-                quiera desde Mi Cuenta.
+                entrégaselas a la persona: por WhatsApp, o dictándoselas por
+                teléfono si trabaja en campo. Podrá cambiar la contraseña cuando
+                quiera desde Mi Cuenta y, si se pierde, se genera otra desde su
+                ficha.
               </span>
             </p>
           </CredentialForm>

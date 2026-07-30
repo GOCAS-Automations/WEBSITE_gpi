@@ -9,11 +9,12 @@ import {
   type JornadaRecord,
 } from "@/lib/admin-types";
 import {
-  calcularJornada,
   formatearDuracion,
   formatearFechaLarga,
   formatearHora12,
   horaColombia,
+  obtenerDesglose,
+  textoCalculoCongelado,
   type JornadaConfig,
 } from "@/lib/jornada";
 import type { MapaHorarios } from "@/lib/horarios";
@@ -90,10 +91,10 @@ function JornadaItem({
   deleteAction: Accion;
 }) {
   const [editando, setEditando] = useState(false);
-  const desglose = calcularJornada(
-    jornada.start_at,
-    jornada.end_at,
-    jornada.work_date,
+  // Misma regla de lectura que el panel: las jornadas aprobadas muestran el
+  // desglose congelado al aprobarlas; el resto se calcula en vivo.
+  const { desglose, congelado, contexto, calculadoEn } = obtenerDesglose(
+    jornada,
     config,
     horarios,
   );
@@ -196,7 +197,19 @@ function JornadaItem({
             </p>
           )}
 
-          <JornadaBreakdown desglose={desglose} compacto />
+          <JornadaBreakdown
+            desglose={desglose}
+            compacto
+            congelado={congelado}
+            contexto={contexto}
+            calculadoEn={calculadoEn}
+          />
+
+          {congelado && (
+            <p className="text-xs leading-relaxed text-graphite">
+              {textoCalculoCongelado(contexto, calculadoEn)}
+            </p>
+          )}
         </div>
       )}
     </article>

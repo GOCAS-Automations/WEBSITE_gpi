@@ -1,6 +1,9 @@
 import { listFaqs, type FaqRecord } from "@/lib/admin";
 import {
   AdminPageHeader,
+  AyudaSeccion,
+  AYUDA_ORDEN,
+  AYUDA_VISIBILIDAD,
   Card,
   CardTitle,
   Field,
@@ -28,6 +31,7 @@ function FaqFields({ faq }: { faq?: FaqRecord }) {
           name="sort"
           type="number"
           defaultValue={faq?.sort ?? 0}
+          hint={AYUDA_ORDEN}
         />
       </div>
       <TextArea
@@ -37,12 +41,13 @@ function FaqFields({ faq }: { faq?: FaqRecord }) {
         rows={4}
         defaultValue={faq?.answer}
         placeholder="Respuesta clara y concreta para el visitante."
+        hint="Responde en dos o tres frases, como se lo explicarías a un cliente por teléfono."
       />
       <Switch
         label="Visibilidad en el sitio"
         name="published"
         defaultChecked={faq?.published ?? true}
-        hint="Oculta = no se muestra en Nosotros ni en el marcado FAQPage de Google."
+        hint="Oculta = no se muestra en la página Nosotros ni la tiene en cuenta Google, pero se conserva aquí."
       />
     </>
   );
@@ -55,9 +60,14 @@ export default async function AdminFaqPage() {
     <>
       <AdminPageHeader
         title="Preguntas frecuentes"
-        description="Se muestran en la página Nosotros y alimentan el marcado FAQPage para Google."
+        description="Las preguntas y respuestas que el visitante despliega al final de la página Nosotros. Lo que guardes se ve en el sitio en pocos minutos."
         breadcrumb={[{ label: "Panel", href: "/admin" }, { label: "FAQ" }]}
       />
+
+      <AyudaSeccion className="mb-6">
+        Google también las lee y puede mostrarlas en sus resultados, así que vale
+        la pena responder con claridad. {AYUDA_VISIBILIDAD}
+      </AyudaSeccion>
 
       <div className="space-y-5">
         {faqs.map((faq) => (
@@ -70,7 +80,7 @@ export default async function AdminFaqPage() {
                   <DeleteForm
                     action={deleteFaq}
                     id={faq.id}
-                    confirmMessage={`¿Eliminar la pregunta "${faq.question}"?`}
+                    confirmMessage={`¿Eliminar la pregunta "${faq.question}"?\n\nSe borra para siempre y no se puede deshacer.\n\nSi solo quieres retirarla del sitio, cancela y ponla en "Oculta".`}
                   />
                 </div>
               }

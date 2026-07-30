@@ -21,6 +21,7 @@ import {
 } from "@/lib/admin-types";
 import { Badge, EmptyState } from "@/components/admin/ui";
 import {
+  fechaColombia,
   formatearFechaNumerica,
   formatearHoras,
   type JornadaConfig,
@@ -116,6 +117,7 @@ function descargarCSV(
     "Dominical o festivo",
     "Cruzó medianoche",
     "Estado",
+    "Cálculo",
   ];
 
   const filas = datos.map((j) =>
@@ -143,6 +145,11 @@ function descargarCSV(
         : "No",
       j.cruzaMedianoche ? "Sí" : "No",
       JORNADA_STATUS_LABELS[j.status],
+      // Trazabilidad para nómina: si la cifra viene del cálculo congelado al
+      // aprobar la jornada, o si todavía puede cambiar.
+      j.congelado
+        ? `Congelado${j.calculadoEn ? ` el ${formatearFechaNumerica(fechaColombia(j.calculadoEn))}` : ""}`
+        : "Provisional",
     ].map(campo),
   );
 
@@ -366,7 +373,12 @@ export function JornadasDashboard({
             Las cifras oficiales son las de las jornadas <strong>aprobadas</strong>.
             Por defecto también se incluyen las pendientes, para que puedas
             anticipar el cierre del período; cambia el filtro de estado si quieres
-            ver solo lo aprobado.
+            ver solo lo aprobado.{" "}
+            <strong>
+              Al aprobar una jornada su desglose queda congelado
+            </strong>
+            : cambiar después el horario del mes o un porcentaje de recargo ya no
+            modifica lo que ves aquí. Las jornadas pendientes sí se recalculan.
           </span>
         </p>
       </div>
@@ -395,6 +407,10 @@ export function JornadasDashboard({
             {
               label: "Pendientes de aprobación",
               desc: "Horas que el equipo ya registró pero que aún no ha revisado un coordinador o un administrador. Pueden cambiar.",
+            },
+            {
+              label: "¿De dónde salen estas cifras?",
+              desc: "De las jornadas aprobadas salen del cálculo que se guardó al aprobarlas: quedan fijas aunque después se corrija el horario del mes o un recargo. Las pendientes se recalculan con lo que esté vigente hoy.",
             },
           ]}
         />
@@ -587,7 +603,7 @@ export function JornadasDashboard({
             },
             {
               label: "Exportar CSV",
-              desc: "Descarga la tabla tal como la estás viendo, con el desglose completo de horas extra, lista para abrir en Excel.",
+              desc: "Descarga la tabla tal como la estás viendo, con el desglose completo de horas extra, lista para abrir en Excel. Incluye una columna «Cálculo» que dice si las horas de cada jornada ya quedaron congeladas o si todavía son provisionales.",
             },
           ]}
         />
@@ -657,9 +673,17 @@ export function JornadasDashboard({
                         {j.extrasMin > 0 ? formatearHoras(j.extrasMin) : "—"}
                       </Td>
                       <Td>
-                        <Badge className={JORNADA_STATUS_CLASSES[j.status]}>
-                          {JORNADA_STATUS_LABELS[j.status]}
-                        </Badge>
+                        <span
+                          title={
+                            j.congelado
+                              ? `Horas congeladas al aprobar la jornada${j.calculadoEn ? ` el ${formatearFechaNumerica(fechaColombia(j.calculadoEn))}` : ""}. Ya no cambian aunque se edite el horario del mes.`
+                              : "Horas provisionales: se recalculan con el horario del mes vigente hasta que se apruebe la jornada."
+                          }
+                        >
+                          <Badge className={JORNADA_STATUS_CLASSES[j.status]}>
+                            {JORNADA_STATUS_LABELS[j.status]}
+                          </Badge>
+                        </span>
                       </Td>
                     </tr>
                   ))}

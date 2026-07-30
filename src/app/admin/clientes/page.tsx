@@ -1,6 +1,9 @@
 import { listClients, type ClientRecord } from "@/lib/admin";
 import {
   AdminPageHeader,
+  AyudaSeccion,
+  AYUDA_ORDEN,
+  AYUDA_VISIBILIDAD,
   Card,
   CardTitle,
   Field,
@@ -28,7 +31,7 @@ function ClientFields({ client }: { client?: ClientRecord }) {
           name="sort"
           type="number"
           defaultValue={client?.sort ?? 0}
-          hint="Menor número = aparece antes."
+          hint={`${AYUDA_ORDEN} Es la posición en la banda de logos del inicio.`}
         />
       </div>
       <ImageField
@@ -36,19 +39,20 @@ function ClientFields({ client }: { client?: ClientRecord }) {
         name="logo_url"
         folder="clientes"
         defaultValue={client?.logo_url}
-        hint="Preferiblemente con fondo blanco o transparente."
+        hint="Lo mejor es un logo con fondo blanco o transparente (archivo .png)."
       />
       <Field
         label="Sitio web (opcional)"
         name="website"
         defaultValue={client?.website}
         placeholder="https://..."
+        hint="Si lo pones, el logo se vuelve un enlace al sitio del cliente."
       />
       <Switch
         label="Visibilidad en el sitio"
         name="published"
         defaultChecked={client?.published ?? true}
-        hint="Oculto = su logo no aparece en la portada, pero se conserva aquí."
+        hint="Oculto = su logo no aparece en el inicio, pero se conserva aquí y puedes volver a mostrarlo."
       />
     </>
   );
@@ -61,9 +65,14 @@ export default async function AdminClientesPage() {
     <>
       <AdminPageHeader
         title="Clientes"
-        description="Logos de clientes que aparecen en la portada del sitio."
+        description="Los logos de clientes que se muestran en la página de inicio. Lo que guardes se ve en el sitio en pocos minutos."
         breadcrumb={[{ label: "Panel", href: "/admin" }, { label: "Clientes" }]}
       />
+
+      <AyudaSeccion className="mb-6">
+        Cada cliente se guarda por separado con su propio botón{" "}
+        <strong>Guardar cliente</strong>. {AYUDA_VISIBILIDAD}
+      </AyudaSeccion>
 
       <div className="space-y-5">
         {clients.map((client) => (
@@ -76,7 +85,7 @@ export default async function AdminClientesPage() {
                   <DeleteForm
                     action={deleteClient}
                     id={client.id}
-                    confirmMessage={`¿Eliminar el cliente "${client.name}"?`}
+                    confirmMessage={`¿Eliminar el cliente "${client.name}"?\n\nSe borra para siempre y no se puede deshacer.\n\nSi solo quieres retirar su logo del sitio, cancela y ponlo en "Oculto".`}
                   />
                 </div>
               }
