@@ -131,6 +131,12 @@ const nextConfig: NextConfig = {
   // No anunciar la versión del framework.
   poweredByHeader: false,
 
+  // `nodemailer` (envío del formulario de contacto por SMTP) es una librería
+  // puramente de Node: abre sockets TLS y carga módulos con `require`
+  // dinámico. Empaquetarla con el resto del código de servidor la rompe, así
+  // que se deja fuera del bundle y se carga con el `require` nativo.
+  serverExternalPackages: ["nodemailer"],
+
   images: {
     // Imágenes subidas desde /admin al bucket público `site-images`.
     // El hostname del proyecto Supabase es <ref>.supabase.co.

@@ -12,7 +12,7 @@ la gestión de cuentas y el registro de jornadas (horas extra).
 
 ## 1. Aplicar las migraciones en Supabase
 
-Hay **cinco** migraciones y se aplican **en orden**:
+Hay **seis** migraciones y se aplican **en orden**:
 
 | Archivo | Qué añade |
 | --- | --- |
@@ -21,6 +21,7 @@ Hay **cinco** migraciones y se aplican **en orden**:
 | `supabase/migrations/0003_horarios_mensuales.sql` | Horario laboral mes a mes (`horarios_mensuales`), cuentas por **usuario** (`username`, `cedula`, `email_contacto`) y ajuste del horario por defecto |
 | `supabase/migrations/0004_congelar_desglose.sql` | Congela el desglose de horas al **aprobar** una jornada (`desglose`, `contexto_calculo`, `calculado_at`) para que los reportes de nómina no cambien después |
 | `supabase/migrations/0005_proyectos_correo_orden.sql` | Correo del formulario de contacto (`contact.correoFormulario`), página propia por proyecto (`slug`, `gallery`, `details`) y orden de trabajo **opcional** en las jornadas |
+| `supabase/migrations/0006_mensajes_contacto.sql` | Tabla `site_mensajes`: respaldo en base de datos de cada mensaje del formulario de `/contacto` |
 
 Para cada una:
 
@@ -109,6 +110,30 @@ verás exactamente lo mismo que ahora, pero ya editable.
 > columnas nuevas, y una jornada sin orden se guarda con el campo en blanco (que
 > el panel lee igual como «Sin orden de trabajo»).
 
+### ¿Qué añade la 0006?
+
+| Objeto | Para qué sirve |
+| --- | --- |
+| Tabla `site_mensajes` | Una copia de cada mensaje del formulario de `/contacto`: `nombre`, `empresa`, `correo`, `mensaje`, `correo_destino`, `enviado` y `created_at` |
+| Política `site_mensajes_select_manager` | **Única** política de la tabla: solo un manager autenticado puede leerla (pensando en una futura bandeja de mensajes en el panel) |
+
+> **Por qué existe:** el formulario envía el correo de verdad, pero un envío
+> puede fallar por cosas ajenas al sitio (la contraseña de aplicación de Google
+> se vence, Gmail corta, el correo cae en spam). El mensaje se guarda **antes**
+> de intentar el envío, así que el correo puede fallar pero el prospecto no se
+> pierde. La columna `enviado` distingue los que sí salieron por correo de los
+> que hay que responder a mano.
+>
+> **Seguridad:** la tabla **no tiene política de INSERT** ni para `anon` ni para
+> `authenticated`, a propósito. Con una, cualquiera podría insertar filas contra
+> la API REST de Supabase (la clave anónima es pública por diseño) sin pasar por
+> el formulario ni por los filtros anti-robot. Las inserciones las hace el
+> servidor con la clave `service_role`, que no pasa por RLS.
+>
+> Mientras la 0006 no esté aplicada el sitio funciona igual: el formulario envía
+> el correo y solo se pierde el respaldo. En los registros del servidor queda un
+> aviso (`La tabla site_mensajes no existe todavía…`) una vez por proceso.
+
 ### Si el bloque del usuario admin de la 0001 falla
 
 Algunas versiones de Supabase no permiten insertar directamente en `auth.users`.
@@ -138,15 +163,21 @@ cp .env.example .env.local
 NEXT_PUBLIC_SUPABASE_URL=https://xxxxxxxxxxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOi...
 SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOi...
+CONTACT_SMTP_USER=gpi.gerencia1@gmail.com
+CONTACT_SMTP_PASS=abcdefghijklmnop
 ```
 
-**Dónde encontrarlas:** Dashboard de Supabase → **Settings** → **API Keys**
+**Dónde encontrarlas:** las tres de Supabase, en el Dashboard →
+**Settings** → **API Keys**. Las dos del correo, en la cuenta de Google (ver
+[§13](#13-correo-del-formulario-de-contacto--envío-directo)).
 
 | Variable | Valor | ¿Secreta? |
 | --- | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | Campo **Project URL** | No |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Clave **anon** / **publishable** | No |
 | `SUPABASE_SERVICE_ROLE_KEY` | Clave **service_role** | **Sí** |
+| `CONTACT_SMTP_USER` | Cuenta de Gmail desde la que sale el correo del formulario | No |
+| `CONTACT_SMTP_PASS` | **Contraseña de aplicación** de esa cuenta (16 letras) | **Sí** |
 
 ### Sobre `SUPABASE_SERVICE_ROLE_KEY`
 
@@ -650,13 +681,11 @@ contacto"** (valor inicial `gpi.gerencia1@gmail.com`).
 - El panel valida que tenga forma de correo; si se deja vacío se conserva el
   valor por defecto, para que el formulario nunca quede sin destinatario.
 
-**Cómo se envía, técnicamente:** el sitio no tiene (ni necesita) un proveedor de
-envío de correo. Al pulsar **"Enviar por correo"** se abre el programa de correo
-del visitante con el destinatario, el asunto
-(*"Contacto desde el sitio web — [nombre] ([empresa])"*) y el cuerpo ya escritos;
-él solo pulsa Enviar. El mensaje sale de **su** cuenta, así que basta con
-responderle. Debajo del botón queda un enlace discreto **"¿Prefieres WhatsApp?
-Escríbenos aquí"** que arma el mismo mensaje hacia el WhatsApp principal.
+**Cómo se envía, técnicamente:** el servidor manda el correo por SMTP de Gmail
+en cuanto el visitante pulsa el botón, y además guarda una copia del mensaje en
+la base de datos. Todo el detalle —cómo generar la contraseña de aplicación,
+dónde poner las variables y qué pasa si faltan— está en
+[§13 · Correo del formulario de contacto](#13-correo-del-formulario-de-contacto--envío-directo).
 
 ### Los proyectos tienen su propia página
 
@@ -704,8 +733,12 @@ Siempre se muestra una vista previa.
    mismos valores del `.env.local`, marcando **Production**, **Preview** y
    **Development**.
 3. Añade `SUPABASE_SERVICE_ROLE_KEY` **sin** prefijo `NEXT_PUBLIC_`.
-4. Vuelve a desplegar (**Redeploy**): las variables `NEXT_PUBLIC_*` se incrustan
-   en el build, así que no basta con guardarlas.
+4. Añade `CONTACT_SMTP_USER` y `CONTACT_SMTP_PASS`, también **sin** prefijo
+   `NEXT_PUBLIC_` (ver [§13](#13-correo-del-formulario-de-contacto--envío-directo)).
+5. Vuelve a desplegar (**Redeploy**): las variables `NEXT_PUBLIC_*` se incrustan
+   en el build, y la página `/contacto` decide **en el build** si muestra el
+   envío directo o el modo alternativo. Guardar las variables sin volver a
+   desplegar no cambia nada.
 
 Si no configuras las variables en Vercel, el sitio se despliega igual y muestra
 el contenido estático; `/mi-cuenta` mostrará el aviso de "próximamente" y
@@ -747,5 +780,112 @@ el contenido estático; `/mi-cuenta` mostrará el aviso de "próximamente" y
   `src/components/jornadas/dashboard-ui.tsx`.
 - `/mi-cuenta` y `/admin` llevan `robots: noindex` y están fuera del
   `sitemap.xml`, además de estar en `Disallow` dentro de `robots.txt`.
+
+---
+
+## 13. Correo del formulario de contacto — envío directo
+
+### Qué hace ahora
+
+Cuando alguien llena el formulario de `/contacto` y pulsa **Enviar mensaje**:
+
+1. El servidor comprueba los datos y pasa los filtros anti-robot.
+2. **Guarda el mensaje** en la tabla `site_mensajes` (migración 0006).
+3. **Envía el correo** al buzón de `/admin/ajustes` → *Correo del formulario de
+   contacto*, con:
+   - **Asunto**: *"Contacto desde el sitio web — [nombre] ([empresa])"*.
+   - **Cuerpo**: nombre, empresa, correo, fecha en hora de Colombia y el
+     mensaje, en texto plano y en HTML.
+   - **Responder-a (`Reply-To`) = el correo del visitante**. Esto es lo más
+     útil de todo: al pulsar *Responder* en Gmail, la respuesta le llega
+     directamente al prospecto, no a la cuenta de GPI.
+4. El visitante ve **"✅ Tu mensaje fue enviado"** sin salir de la página.
+
+Antes se abría el programa de correo del visitante (`mailto:`). GPI reportó que
+"no abre nada", que es exactamente lo que ocurre en un computador sin programa
+de correo configurado — la situación de la mayoría de la gente hoy.
+
+### Cómo generar la contraseña de aplicación de Google (una sola vez)
+
+⚠️ **No es la contraseña normal de la cuenta.** Google no deja entrar por SMTP
+con la contraseña de siempre: hay que crear una clave aparte, de 16 letras, que
+solo sirve para enviar correo y se puede revocar sin tocar nada más.
+
+1. Inicia sesión en Google con **gpi.gerencia1@gmail.com** (o la cuenta que se
+   vaya a usar para enviar).
+2. Activa la **verificación en dos pasos** —sin ella Google ni siquiera muestra
+   la opción—:
+   <https://myaccount.google.com/signinoptions/two-step-verification>
+3. Entra a <https://myaccount.google.com/apppasswords>
+4. En **Nombre de la aplicación** escribe `Sitio web GPI` → **Crear**.
+5. Google muestra 16 letras en cuatro grupos (`abcd efgh ijkl mnop`). **Cópialas
+   ya**: no se pueden volver a ver. Si se pierden, se borra esa contraseña y se
+   crea otra. Los espacios dan igual, el código los quita.
+
+### Dónde se ponen las variables
+
+**En el computador (desarrollo)** — en `.env.local`:
+
+```bash
+CONTACT_SMTP_USER=gpi.gerencia1@gmail.com
+CONTACT_SMTP_PASS=abcdefghijklmnop
+```
+
+**En Vercel (producción)** — *Settings → Environment Variables*, con esos
+mismos nombres y **sin** el prefijo `NEXT_PUBLIC_` (son secretas: con ese
+prefijo Next.js las incrustaría en el JavaScript que descarga el navegador).
+Después, **Redeploy**: `/contacto` es una página estática y decide en el build
+qué formulario mostrar.
+
+| Variable | Qué es |
+| --- | --- |
+| `CONTACT_SMTP_USER` | La cuenta de Gmail **desde la que sale** el correo |
+| `CONTACT_SMTP_PASS` | Su **contraseña de aplicación** de 16 letras |
+
+El correo que **recibe** los mensajes no se configura aquí: se cambia desde el
+panel, en `/admin/ajustes` → *Datos de contacto* → **Correo del formulario de
+contacto**. Puede ser distinto del que envía, y cambiarlo **no** requiere tocar
+variables ni volver a desplegar.
+
+### Qué pasa si algo falla
+
+| Situación | Qué ve el visitante |
+| --- | --- |
+| Todo bien | *"✅ Tu mensaje fue enviado. Te responderemos pronto al correo que nos dejaste."* |
+| El correo falla pero el mensaje **sí** se guardó en `site_mensajes` | *"✅ Recibimos tu mensaje y ya está en nuestra bandeja."* — es la verdad: GPI lo tiene aunque el correo no saliera, así que no se le molesta con alternativas |
+| El correo falla **y** no se pudo guardar | Mensaje amable + tres alternativas: **Gmail en el navegador**, **su programa de correo** y **WhatsApp** |
+| Las variables `CONTACT_SMTP_*` no están puestas | El formulario cambia a **modo alternativo**: el botón principal abre el compositor de Gmail en el navegador con el mensaje ya escrito, y debajo quedan el programa de correo y WhatsApp. Aun así se guarda una copia en `site_mensajes` |
+
+En todos los casos el mensaje **nunca desaparece en silencio**: o sale por
+correo, o queda guardado, o el visitante recibe una vía alternativa clara.
+
+### Filtros anti-robot (sin captcha ni servicios externos)
+
+- **Campo trampa**: un campo oculto que una persona no ve ni puede enfocar. Si
+  llega relleno, el mensaje se descarta y se responde *"éxito"* — un robot que
+  recibe un error reintenta; uno que recibe éxito se va.
+- **Tiempo mínimo**: entre que el formulario aparece y se envía tienen que pasar
+  al menos **3 segundos**. Se miden con dos marcas del reloj del propio
+  visitante, así que un computador con la hora mal puesta no descarta mensajes
+  buenos.
+- **Longitudes máximas** por campo (nombre 120, empresa 140, correo 200, mensaje
+  4 000 caracteres).
+- **Tope de 5 envíos cada 10 minutos por IP**, en memoria del servidor. Es una
+  defensa modesta a propósito (no hay Redis ni servicios de terceros), pero
+  evita que un robot llene la bandeja de GPI en un minuto.
+
+### Dónde vive el código
+
+| Pieza | Archivo |
+| --- | --- |
+| Envío por SMTP y redacción del correo | `src/lib/correo.ts` (**solo servidor**) |
+| Server action: validación, anti-robot, guardado y envío | `src/app/contacto/actions.ts` |
+| Tipos y textos compartidos (asunto, cuerpo, límites) | `src/lib/contacto-types.ts` |
+| Formulario y sus tres modos | `src/components/sections/ContactForm.tsx` |
+| Tabla de respaldo | `supabase/migrations/0006_mensajes_contacto.sql` |
+
+> `nodemailer` es la única dependencia nueva del proyecto. Está declarada en
+> `serverExternalPackages` (`next.config.ts`) porque es una librería de Node
+> pura y empaquetarla con el resto del código de servidor la rompe.
 - Si subes imágenes a Supabase, `next.config.ts` ya permite optimizar imágenes
   desde `**.supabase.co/storage/v1/object/public/**`.

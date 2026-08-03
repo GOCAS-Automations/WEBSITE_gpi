@@ -4,6 +4,7 @@ import { Reveal } from "@/components/ui/Reveal";
 import { PageHero } from "@/components/sections/PageHero";
 import { ContactForm } from "@/components/sections/ContactForm";
 import { getSettings, whatsappLink, telLink } from "@/lib/content";
+import { smtpContactoConfigurado } from "@/lib/correo";
 import {
   MapPin,
   Phone,
@@ -38,6 +39,15 @@ export const revalidate = 300;
 
 export default async function ContactoPage() {
   const { contact } = await getSettings();
+
+  /**
+   * ¿El servidor puede enviar el correo por sí mismo?
+   *
+   * Se resuelve AQUÍ, en el servidor, y al formulario solo baja un booleano.
+   * Las credenciales (`CONTACT_SMTP_USER` / `CONTACT_SMTP_PASS`) no llevan el
+   * prefijo `NEXT_PUBLIC_` y nunca se leen desde el navegador.
+   */
+  const smtpConfigurado = smtpContactoConfigurado();
 
   return (
     <>
@@ -160,14 +170,15 @@ export default async function ContactoPage() {
               <div className="rounded-3xl border border-line bg-mist p-6 shadow-soft sm:p-8">
                 <h2 className="text-2xl font-extrabold text-ink">Envíanos un mensaje</h2>
                 <p className="mt-2 text-sm text-graphite">
-                  Completa el formulario y te lo dejamos listo para enviarlo a
-                  nuestro correo. Si lo prefieres, también puedes seguir la
-                  conversación por WhatsApp.
+                  {smtpConfigurado
+                    ? "Completa el formulario y tu mensaje llegará directamente a nuestro correo. Si lo prefieres, también puedes seguir la conversación por WhatsApp."
+                    : "Completa el formulario y te lo dejamos listo para enviarlo a nuestro correo. Si lo prefieres, también puedes seguir la conversación por WhatsApp."}
                 </p>
                 <div className="mt-6">
                   <ContactForm
                     whatsappNumber={contact.primaryWhatsApp}
                     email={contact.correoFormulario}
+                    smtpConfigurado={smtpConfigurado}
                   />
                 </div>
               </div>

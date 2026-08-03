@@ -17,6 +17,7 @@ que reconstruir el historial desde los commits.
 | 4d | Fase 2 — Desglose congelado + ayudas del panel | ✅ Código listo | Al **aprobar** una jornada su desglose de horas se guarda tal cual, con el horario y los recargos que se usaron: los reportes de nómina ya cerrados no cambian si después se corrige un horario. Además, textos de ayuda en todo el panel para usuarios no técnicos. Migración 0004 aplicada. |
 | 4e | Fase 2 — Ajustes del testing del cliente (30 jul) | ✅ Hecho | El panel pasa a ser la pantalla principal de admin y coordinador, los managers pueden **eliminar** jornadas y los filtros de aprobaciones se aplican al cambiar. **Sin migración nueva.** |
 | 4f | Complementos post-aprobación (31 jul) | ✅ Código listo | Formulario de contacto al **correo corporativo** (editable en Ajustes), **página propia por proyecto** con galería, y **orden de trabajo opcional** en las jornadas. **Falta aplicar la migración 0005.** |
+| 4g | Envío real del formulario de contacto (3 ago) | ✅ Código listo | El formulario pasa de `mailto:` a **envío directo por SMTP de Gmail** desde una server action, con respaldo del mensaje en `site_mensajes` y modo alternativo (Gmail web / programa de correo / WhatsApp). **Falta aplicar la migración 0006** y configurar `CONTACT_SMTP_USER` / `CONTACT_SMTP_PASS`. |
 | 5 | Deploy en Vercel desde el repo de GitHub + variables de entorno | ✅ Completa | **https://website-gpi.vercel.app** — despliega solo con cada push a `main`; las 3 env vars configuradas (incl. `SUPABASE_SERVICE_ROLE_KEY` sin prefijo). Verificado en vivo: 7 cabeceras de seguridad, 9 rutas 200, `/admin` protegido. |
 | 6 | Apuntar dominio `gpiprofesionales.com` de GoDaddy → Vercel | ⏳ Pendiente | Al final, cuando el sitio esté aprobado por GPI y desplegado en Vercel. |
 | 7 | Extra cotizable aparte: chatbot IA | 💡 Planeado | Claude Haiku 4.5 vía `/api/chat`, con conocimiento del contenido del sitio (servicios, proyectos, contacto) y captura de leads hacia Supabase. No incluido en la cotización actual. |
@@ -38,6 +39,8 @@ que reconstruir el historial desde los commits.
 | Desglose congelado al aprobar | `supabase/migrations/0004…`, `obtenerDesglose()` en `src/lib/jornada.ts` |
 | Página propia por proyecto | `supabase/migrations/0005…`, `src/app/proyectos/[slug]/page.tsx` |
 | Correo del formulario de contacto | `site_settings.contact.correoFormulario`, `src/components/sections/ContactForm.tsx` |
+| Envío real del formulario por SMTP | `src/lib/correo.ts`, `src/app/contacto/actions.ts`, `src/lib/contacto-types.ts` |
+| Respaldo de los mensajes de contacto | `supabase/migrations/0006…` (`site_mensajes`) |
 | Ayudas del panel para usuarios no técnicos | `AyudaSeccion` / `AyudaDesplegable` + constantes `AYUDA_*` en `src/components/admin/ui.tsx` |
 
 Flujo completo: **el empleado registra su jornada** en `/mi-cuenta` (con vista
@@ -162,15 +165,12 @@ ve y se comporta igual, apoyándose en el respaldo estático.
 ### 1. El formulario de contacto llega al correo corporativo
 
 Antes, el formulario de `/contacto` armaba un mensaje de WhatsApp. Ahora el
-botón principal es **"Enviar por correo"** y el destino es el correo corporativo
-de GPI, inicialmente `gpi.gerencia1@gmail.com`.
+destino es el correo corporativo de GPI, inicialmente `gpi.gerencia1@gmail.com`.
 
-- **Sin proveedor de correo ni servicios de terceros**: al enviar se abre el
-  programa de correo del visitante con destinatario, asunto
-  (*"Contacto desde el sitio web — [nombre] ([empresa])"*) y cuerpo ya escritos.
-  El mensaje sale de **su** cuenta, así que GPI le responde directamente. Es la
-  única forma honesta de "enviar correo" desde un sitio estático sin contratar
-  un SMTP ni exponer credenciales.
+- En esta iteración el envío se hacía abriendo el programa de correo del
+  visitante (`mailto:`). **Eso cambió el 3 de agosto**: GPI probó el sitio y el
+  botón "no abría nada" en computadores sin programa de correo configurado. Ver
+  la [iteración del 3 de agosto](#iteración-del-3-de-agosto-de-2026--el-formulario-envía-el-correo-de-verdad).
 - **WhatsApp se conserva** como alternativa secundaria: un enlace discreto
   *"¿Prefieres WhatsApp? Escríbenos aquí"* arma el mismo mensaje hacia el número
   principal. Es el canal que más usa el cliente de GPI y quitarlo habría sido un
@@ -220,6 +220,92 @@ a inventar un número ensuciaba el reporte.
   `src/lib/admin-types.ts`, compartida por aprobaciones, «Mis jornadas», la
   tabla del tablero, el CSV y la gráfica.
 
+## Iteración del 3 de agosto de 2026 — el formulario envía el correo de verdad
+
+GPI probó el formulario de `/contacto` en producción y reportó que **"no abre
+nada"**. No era un error: `mailto:` abre el programa de correo del equipo, y su
+equipo —como la mayoría de la gente hoy— no tiene ninguno configurado. El
+cliente pidió lo obvio: *que al presionar el botón el correo se envíe de
+inmediato*.
+
+Necesita la **migración 0006**
+(`supabase/migrations/0006_mensajes_contacto.sql`) para el respaldo en base de
+datos, pero —como siempre— el código funciona sin ella.
+
+### 1. Envío por SMTP de Gmail desde una server action
+
+- Nueva server action `enviarMensajeContacto`
+  (`src/app/contacto/actions.ts`): valida en el servidor, guarda, envía y
+  devuelve un estado tipado (éxito / error por campo / error de envío).
+- El envío usa **`nodemailer`** contra `smtp.gmail.com:465` con una
+  **contraseña de aplicación** de Google (`CONTACT_SMTP_USER` /
+  `CONTACT_SMTP_PASS`). Es la única dependencia nueva del proyecto y evita
+  contratar un proveedor de correo transaccional: GPI ya tiene la cuenta.
+- **`Reply-To` = el correo del visitante.** Es el detalle que convierte el
+  formulario en una herramienta comercial: GPI pulsa *Responder* en Gmail y le
+  escribe al prospecto, no a su propia bandeja.
+- **El destinatario sale SIEMPRE del servidor**
+  (`site_settings.contact.correoFormulario`), nunca del formulario. Si viniera
+  del cliente, la acción sería un relay abierto: cualquiera podría mandar correo
+  a quien quisiera firmado por la cuenta de GPI.
+- Las credenciales no cruzan al navegador: el Server Component de `/contacto`
+  baja un único booleano `smtpConfigurado`.
+
+### 2. El mensaje se guarda antes de intentar enviarlo
+
+`site_mensajes` (migración 0006) guarda cada mensaje con `correo_destino` y
+`enviado`. **El orden importa**: se guarda *antes* del envío porque el correo es
+la parte frágil (la contraseña de aplicación se vence, Gmail corta, el mensaje
+cae en spam). Si el guardado funciona, el prospecto ya no se pierde aunque el
+correo falle.
+
+- La tabla tiene RLS con **una sola política**: SELECT para managers, pensando
+  en una futura bandeja de mensajes en el panel. **No hay política de INSERT**:
+  las inserciones las hace el servidor con la clave `service_role`. Con una
+  política de INSERT para `anon`, cualquiera podría llenar la tabla contra la
+  API REST de Supabase saltándose el formulario y sus filtros.
+- **Matiz de UX decidido aquí**: si el correo falla pero el mensaje quedó
+  guardado, el visitante ve *"✅ Recibimos tu mensaje y ya está en nuestra
+  bandeja"*, no un error. Es literalmente lo que pasó, y ofrecerle
+  "alternativas" cuando su mensaje ya llegó solo sembraría dudas. Las
+  alternativas aparecen **únicamente** cuando el mensaje no quedó en ninguna
+  parte.
+
+### 3. Tres modos en una sola pantalla
+
+| Situación | Botón principal | Qué más se ve |
+| --- | --- | --- |
+| SMTP configurado | **Enviar mensaje** → "Enviando…" → "✅ Tu mensaje fue enviado" | Nada más: no hay por qué distraer |
+| SMTP configurado y falla | El mismo, con mensaje amable | Gmail web + programa de correo + WhatsApp |
+| Sin SMTP | **Enviar por correo** → abre el **compositor de Gmail en el navegador** | Las mismas alternativas, siempre visibles |
+
+El respaldo dejó de ser `mailto:` y pasó a ser el **compositor de Gmail**
+(`mail.google.com/mail/?view=cm&…`), que es una URL normal: se abre en una
+pestaña y funciona sin ningún programa instalado — justo el fallo que reportó
+GPI. `mailto:` se conserva como segunda opción para quien sí usa Outlook. En
+modo sin SMTP el formulario **también** manda una copia a la server action, que
+la guarda: si el visitante abre Gmail y no llega a pulsar Enviar, GPI conserva
+igualmente el contacto.
+
+### 4. Anti-spam sin captcha ni servicios de terceros
+
+- **Campo trampa (honeypot)** oculto: si llega relleno, se descarta y se
+  responde *éxito*. Un robot que recibe error reintenta; uno que recibe éxito se
+  va.
+- **Tiempo mínimo de 3 segundos** entre que el formulario aparece y se envía. Se
+  miden con **dos marcas del reloj del propio visitante** (montaje y envío), no
+  contra la hora del servidor: comparar relojes distintos descartaría en
+  silencio los mensajes de quien tenga el computador mal puesto en hora.
+- **Longitudes máximas** por campo y **tope de 5 envíos cada 10 minutos por IP**
+  (en memoria del proceso; defensa modesta a propósito, pero corta el
+  martilleo).
+
+> Detalle que costó un intento: el compilador de React marca `Date.now()` como
+> función impura si se llama desde el cuerpo de un componente, y `setState`
+> dentro de un efecto como render en cascada. La marca de montaje se escribe
+> directamente en el campo oculto desde el efecto (vía `ref`) y la lectura del
+> reloj vive en una función del módulo, fuera del componente.
+
 ## Decisiones técnicas
 
 - **Fallback estático primero**: toda la capa de contenido (`src/lib/content.ts`)
@@ -259,7 +345,14 @@ a inventar un número ensuciaba el reporte.
   snapshot. Sin la 0005, el formulario usa el correo por defecto, los proyectos
   toman slug, texto y galería del respaldo estático (por título), `saveProject`
   reintenta sin las columnas nuevas y una jornada sin orden se guarda con el
-  campo en blanco. El build no depende de la base de datos.
+  campo en blanco. Sin la 0006, el formulario **envía el correo igual** y solo
+  se pierde el respaldo en base de datos (queda un aviso en los registros del
+  servidor). El build no depende de la base de datos.
+- **El correo tampoco es un requisito para que el sitio funcione**: si faltan
+  `CONTACT_SMTP_USER` / `CONTACT_SMTP_PASS`, el formulario cambia solo a su modo
+  alternativo (compositor de Gmail en el navegador, programa de correo y
+  WhatsApp) en vez de prometer un envío que no va a ocurrir. Mismo principio que
+  el fallback estático del contenido.
 - **`undefined` ≠ vacío**: una columna que llega `undefined` es una migración
   pendiente y activa el respaldo estático; una columna que existe y está vacía es
   una decisión de quien edita el panel y se respeta. Esa distinción es lo que
@@ -282,6 +375,12 @@ a inventar un número ensuciaba el reporte.
 
 ## Pendientes del cliente
 
+- **Contraseña de aplicación de Google** ⚠️: para que el formulario de contacto
+  envíe el correo de verdad hace falta generarla en la cuenta
+  `gpi.gerencia1@gmail.com` (verificación en dos pasos →
+  <https://myaccount.google.com/apppasswords>) y cargarla en Vercel como
+  `CONTACT_SMTP_USER` / `CONTACT_SMTP_PASS`. Mientras no esté, el formulario
+  funciona en su modo alternativo. Paso a paso en `docs/ADMIN.md` §13.
 - **Imágenes**: confirmar/actualizar fotografías de servicios y proyectos si
   GPI quiere reemplazar las heredadas del sitio viejo.
 - **Lista de empleados** (Fase 2): nombres, **usuarios**, cédulas, cargos,
