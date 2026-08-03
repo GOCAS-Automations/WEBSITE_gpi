@@ -744,8 +744,29 @@
   <h2 id="s2-7"><span class="num">2.7</span> Proyectos</h2>
   <p>Muestra los proyectos ejecutados en una cuadrícula de fotografías. Sobre cada
   imagen aparece el nombre del cliente en una etiqueta pequeña (si el proyecto lo tiene)
-  y el título del proyecto. Las tarjetas son informativas: no abren otra página.
-  Al final está la banda «¿Quiere ser nuestro próximo caso de éxito?».</p>
+  y el título del proyecto. Al final está la banda «¿Quiere ser nuestro próximo caso
+  de éxito?».</p>
+  <p><strong>Cada proyecto tiene su propia página.</strong> Al pulsar cualquier tarjeta
+  —toda la tarjeta es pulsable— se abre la ficha completa del proyecto, con:</p>
+  <ul class="check">
+    <li>La <strong>fotografía principal</strong> a lo ancho, con el título y la ruta
+      «Inicio › Proyectos › [nombre del proyecto]» para volver atrás.</li>
+    <li>El <strong>cliente</strong> y el <strong>área</strong> (industrial o ambiental),
+      cuando los tiene.</li>
+    <li>La <strong>descripción</strong> del trabajo realizado.</li>
+    <li>La <strong>galería</strong> con las fotografías adicionales que se hayan cargado
+      desde el panel.</li>
+    <li>El botón <span class="ui">Contáctanos</span> bajo la pregunta «¿Tiene un proyecto
+      similar?», la lista del resto de proyectos y los enlaces al proyecto
+      <span class="ui">anterior</span> y <span class="ui">siguiente</span>.</li>
+  </ul>
+  <div class="caja tip">
+    <span class="titulo">Consejo</span>
+    <p>La dirección de cada ficha es corta y se puede compartir por WhatsApp o correo,
+    por ejemplo <code>gpiprofesionales.com/proyectos/planta-piloto-vaselina</code>.
+    Google también las indexa por separado, así que un proyecto bien descrito trae
+    visitas por su cuenta.</p>
+  </div>
 
   <h2 id="s2-8"><span class="num">2.8</span> Contacto</h2>
   <p>Es la página que más se usa. Tiene tres partes:</p>
@@ -761,9 +782,10 @@
   </ul>
 
   <h2 id="s2-9"><span class="num">2.9</span> El formulario de contacto</h2>
-  <p>El formulario <strong>no envía un correo</strong>: abre WhatsApp con el mensaje ya
-  redactado, para que el visitante solo tenga que pulsar «enviar». Así la conversación
-  llega al celular de GPI de inmediato.</p>
+  <p>El formulario <strong>abre el programa de correo del visitante</strong> con el
+  mensaje ya redactado y dirigido al correo corporativo de GPI, para que solo tenga que
+  pulsar «enviar». El mensaje sale desde la cuenta de esa persona, así que para
+  responderle basta con darle a «Responder».</p>
   <div class="tabla-wrap">
     <table class="keep">
       <thead><tr><th style="width:34%">Campo</th><th class="c" style="width:20%">¿Obligatorio?</th><th>Qué se escribe</th></tr></thead>
@@ -775,17 +797,30 @@
       </tbody>
     </table>
   </div>
-  <p>Al pulsar <span class="ui">Enviar por WhatsApp</span> se abre una pestaña nueva con
-  WhatsApp y un mensaje armado así: «Hola GPI, soy <em>Nombre</em> de <em>Empresa</em>.
-  Mi correo es <em>correo</em>.» y, a continuación, el texto del mensaje. Bajo el botón
-  hay un aviso permanente que se lo explica al visitante y aclara que el sitio no guarda
-  sus datos.</p>
+  <p>Al pulsar <span class="ui">Enviar por correo</span> se abre el programa de correo
+  del visitante (Gmail, Outlook, el del celular…) con todo listo:</p>
+  <ul class="check">
+    <li><strong>Para:</strong> el correo corporativo de GPI, hoy
+      <code>gpi.gerencia1@gmail.com</code>.</li>
+    <li><strong>Asunto:</strong> «Contacto desde el sitio web — <em>Nombre</em>
+      (<em>Empresa</em>)».</li>
+    <li><strong>Mensaje:</strong> el nombre, la empresa, el correo de contacto y el texto
+      que escribió.</li>
+  </ul>
+  <p>Debajo del botón hay un enlace <span class="ui">¿Prefieres WhatsApp? Escríbenos
+  aquí</span> que arma exactamente el mismo mensaje y lo abre en una conversación de
+  WhatsApp con el número principal, para quien prefiera ese canal. Y más abajo, un aviso
+  permanente que explica lo que va a pasar y aclara que el sitio no guarda sus datos.</p>
   <div class="caja tip">
     <span class="titulo">Consejo</span>
-    <p>Como los mensajes llegan por WhatsApp, conviene que la persona encargada de
-    responder tenga ese número siempre a mano. El número que recibe los mensajes del
-    formulario y del botón flotante es el <strong>WhatsApp principal</strong>, y se puede
-    cambiar desde el panel (ver 6.7).</p>
+    <p>El correo que recibe los mensajes del formulario se puede cambiar cuando quiera
+    desde el panel: <span class="ui">Contacto y ajustes</span> →
+    <span class="ui">Datos de contacto</span> → <span class="ui-wrap">Correo del
+    formulario de contacto</span> (ver 6.7). El cambio se aplica en minutos.
+    Ese correo <strong>no reemplaza</strong> los correos de las personas que se muestran
+    en las tarjetas de la página de Contacto: esos siguen igual. Y el número que usan el
+    enlace de WhatsApp del formulario y el botón flotante es el
+    <strong>WhatsApp principal</strong>, que también se cambia ahí mismo.</p>
   </div>
 
   <h2 id="s2-10"><span class="num">2.10</span> El botón flotante de WhatsApp</h2>
@@ -1045,9 +1080,11 @@
     <li><strong>Fecha del día laboral.</strong> Viene puesta con la fecha de hoy. Es el día
       en que <strong>empezó</strong> el turno; si trabajó ayer y lo está registrando hoy,
       cámbiela a ayer.</li>
-    <li><strong>Número de orden de trabajo.</strong> Escriba la orden tal como aparece en el
-      documento que le asignaron, por ejemplo <em>OT-1042</em>. Este dato es el que permite
-      después saber cuántas horas se fueron en cada trabajo.</li>
+    <li><strong>Número de orden de trabajo</strong> (opcional). Escriba la orden tal como
+      aparece en el documento que le asignaron, por ejemplo <em>OT-1042</em>. Este dato es el
+      que permite después saber cuántas horas se fueron en cada trabajo. <strong>Si su labor
+      no tiene una orden de trabajo asociada, déjelo vacío</strong>: la jornada se registra
+      igual y en el panel aparecerá como «Sin orden de trabajo».</li>
     <li><strong>Hora de inicio.</strong> La hora real en que empezó a trabajar. Viene
       propuesta como las 7:00 a. m.</li>
     <li><strong>Hora de finalización.</strong> La hora real en que terminó. Viene propuesta
@@ -1062,8 +1099,9 @@
       <span class="ui">Registrar jornada</span>.</li>
   </ol>
   <p>Al guardar aparece un mensaje verde: «Tu jornada quedó registrada y está pendiente de
-  aprobación». Los cinco campos marcados con asterisco verde son obligatorios; si falta
-  alguno, el sistema se lo dirá con un mensaje concreto en lugar de guardar a medias.</p>
+  aprobación». Los campos marcados con asterisco verde son obligatorios; si falta alguno,
+  el sistema se lo dirá con un mensaje concreto en lugar de guardar a medias. La orden de
+  trabajo y las observaciones son los dos campos opcionales.</p>
 
   <div class="caja tip">
     <span class="titulo">Consejo</span>
@@ -1323,11 +1361,35 @@
   </ol>
   <p>Campos: <span class="ui">Título</span> (obligatorio),
   <span class="ui-wrap">Cliente (opcional)</span> —se muestra como etiqueta sobre la foto—,
+  <span class="ui-wrap">Dirección web (slug)</span>,
   <span class="ui">Categoría</span> (Industrial o Ambiental),
   <span class="ui">Orden</span>, <span class="ui-wrap">Visibilidad en el sitio</span>,
-  <span class="ui-wrap">Descripción (opcional)</span> —notas internas, no se publica en la
-  tarjeta—, la <span class="ui-wrap">imagen del proyecto</span> y su
-  <span class="ui-wrap">texto alternativo</span>.</p>
+  <span class="ui-wrap">Descripción corta (opcional)</span>,
+  <span class="ui-wrap">Descripción larga (opcional)</span>,
+  la <span class="ui-wrap">imagen del proyecto</span> con su
+  <span class="ui-wrap">texto alternativo</span> y la
+  <span class="ui-wrap">Galería (opcional)</span>.</p>
+  <p>Como cada proyecto tiene su propia página en el sitio (ver 2.7), hay tres campos que
+  conviene entender bien:</p>
+  <div class="tabla-wrap">
+    <table>
+      <thead><tr><th style="width:30%">Campo</th><th>Para qué sirve</th></tr></thead>
+      <tbody>
+        <tr><td><span class="ui-wrap">Dirección web (slug)</span></td><td>Es la parte final de la dirección de su página:
+          <code>gpiprofesionales.com/proyectos/…</code>. Si lo deja vacío se genera solo a partir
+          del título. <strong>Cambiarlo cambia la dirección pública</strong>, así que si ya
+          compartió el enlace con alguien, mejor no tocarlo.</td></tr>
+        <tr><td><span class="ui-wrap">Descripción corta</span></td><td>Una o dos líneas. Se muestran bajo el título de la página
+          del proyecto y son las que ven Google y las redes sociales.</td></tr>
+        <tr><td><span class="ui-wrap">Descripción larga</span></td><td>El texto principal de la página: qué se hizo, con qué
+          equipos, qué resultado se obtuvo. Puede usar varios párrafos dejando una línea en
+          blanco entre ellos. <strong>Si la deja vacía, se usa la descripción corta.</strong></td></tr>
+        <tr><td><span class="ui">Galería</span></td><td>Fotos adicionales que se muestran al final de la página del
+          proyecto, en el orden de las filas. Funciona igual que la galería de un servicio
+          (ver 6.8): a cada foto conviene ponerle su texto alternativo.</td></tr>
+      </tbody>
+    </table>
+  </div>
 
   <h2 id="s6-4"><span class="num">6.4</span> Clientes</h2>
   <p>Controla la franja de logos de la portada. Por cada cliente:
@@ -1373,7 +1435,7 @@
       <thead><tr><th style="width:30%">Tarjeta</th><th>Qué contiene</th></tr></thead>
       <tbody>
         <tr><td><strong>Visibilidad de secciones</strong><br><span class="ui-wrap">Guardar visibilidad</span></td><td>Los cuatro interruptores que apagan bloques completos del sitio: <span class="ui-wrap">Valores corporativos</span>, <span class="ui">Clientes</span>, <span class="ui-wrap">Video corporativo</span> y <span class="ui-wrap">Preguntas frecuentes</span> (ver 6.9).</td></tr>
-        <tr><td><strong>Datos de contacto</strong><br><span class="ui-wrap">Guardar contacto</span></td><td>Nombre corto, razón social, tagline, dirección completa (calle, barrio, ciudad, departamento, país), coordenadas del mapa, la lista de <strong>teléfonos / WhatsApp</strong>, el <strong>WhatsApp principal</strong>, la lista de <strong>correos</strong>, Facebook, Instagram, canal de YouTube, horario de atención, el mapa de Google y la dirección del sitio.</td></tr>
+        <tr><td><strong>Datos de contacto</strong><br><span class="ui-wrap">Guardar contacto</span></td><td>Nombre corto, razón social, tagline, dirección completa (calle, barrio, ciudad, departamento, país), coordenadas del mapa, la lista de <strong>teléfonos / WhatsApp</strong>, el <strong>WhatsApp principal</strong>, la lista de <strong>correos</strong>, el <strong>correo del formulario de contacto</strong>, Facebook, Instagram, canal de YouTube, horario de atención, el mapa de Google y la dirección del sitio.</td></tr>
         <tr><td><strong>Hero del inicio</strong><br><span class="ui-wrap">Guardar hero</span></td><td>La primera pantalla de la página principal: etiqueta superior, título en dos partes (la segunda se ve en verde degradado), descripción, imagen de fondo con su texto alternativo y el texto y destino de los dos botones.</td></tr>
         <tr><td><strong>Estadísticas y banda EXCELENCIA</strong><br><span class="ui-wrap">Guardar sección</span></td><td>Las cuatro cifras del bloque «Quiénes somos» y la franja oscura del inicio: texto superior, mensaje, palabra destacada y el botón.</td></tr>
         <tr><td><strong>Video corporativo</strong><br><span class="ui-wrap">Guardar video</span></td><td>El video de la página Nosotros: se puede pegar la dirección completa de YouTube y el sistema extrae el identificador solo. También el título del video y los textos que lo presentan.</td></tr>
@@ -1392,6 +1454,18 @@
     <li>Para el mapa: en Google Maps use <em>Compartir → Insertar un mapa</em> y copie la
       dirección que aparece dentro del código, pegándola en el campo del mapa.</li>
   </ul>
+  <div class="caja tip">
+    <span class="titulo">El correo del formulario de contacto</span>
+    <p>Dentro de <span class="ui">Datos de contacto</span>, justo debajo de la lista de
+    correos, está el campo <span class="ui-wrap">Correo del formulario de contacto</span>
+    (hoy <code>gpi.gerencia1@gmail.com</code>). <strong>A ese correo llegan los mensajes
+    del formulario de la página de Contacto.</strong> Puede cambiarlo cuando quiera y se
+    aplica en minutos; el sistema comprueba que tenga forma de correo antes de guardar.</p>
+    <p>Ojo con la diferencia: la <strong>lista de correos</strong> de arriba son los que se
+    muestran al público en las tarjetas de la página de Contacto y en el pie de página
+    (los de Ximena y Yeison). El <strong>correo del formulario</strong> es solo el buzón de
+    destino y no se muestra en ningún sitio.</p>
+  </div>
 
   <h2 id="s6-8"><span class="num">6.8</span> Imágenes</h2>
   <p>Todos los campos de imagen del panel funcionan igual y ofrecen dos caminos:</p>
@@ -1787,7 +1861,7 @@
         <tr><td class="c">4</td><td><strong>Horas por empleado</strong></td><td>Barras horizontales con el total de horas de cada persona, de mayor a menor. Muestra el reparto de la carga.</td></tr>
         <tr><td class="c">5</td><td><strong>Horas extra por empleado</strong></td><td>Igual que la anterior pero solo con las horas extra. Solo aparecen las personas que trabajaron por fuera de la jornada; si nadie hizo extras, la gráfica no se dibuja.</td></tr>
         <tr><td class="c">6</td><td><strong>Turnos del día</strong></td><td>Un diagrama de barras horizontales donde cada barra va de la hora de entrada a la de salida, con un color por persona. Sirve para ver solapamientos y turnos nocturnos. Se recorre de tres en tres días y la leyenda de colores se despliega aparte.</td></tr>
-        <tr><td class="c">7</td><td><strong>Horas por orden de trabajo</strong></td><td>Las diez órdenes de trabajo que más horas consumieron en el período. Es la gráfica clave para saber si un trabajo se cotizó bien. Las jornadas sin orden se agrupan en «Sin orden asignada».</td></tr>
+        <tr><td class="c">7</td><td><strong>Horas por orden de trabajo</strong></td><td>Las diez órdenes de trabajo que más horas consumieron en el período. Es la gráfica clave para saber si un trabajo se cotizó bien. Las jornadas sin orden de trabajo no se descartan: se agrupan todas en una barra llamada «Sin orden de trabajo», para que la gráfica siga sumando el total de horas del período.</td></tr>
         <tr><td class="c">8</td><td><strong>Estado de las jornadas</strong></td><td>Una dona con cuántas jornadas están pendientes, aprobadas o rechazadas. Si todas están aprobadas, en su lugar aparece «Todo revisado».</td></tr>
       </tbody>
     </table>
@@ -2202,8 +2276,9 @@
     la vista previa del empleado, en las aprobaciones y en el archivo exportado.</dd>
 
     <dt>Dirección de una página (o «slug»)</dt>
-    <dd>La parte final de la dirección web de un servicio. Cambiarla cambia el enlace público
-    de esa página, por lo que conviene no tocarla en servicios que ya están publicados.</dd>
+    <dd>La parte final de la dirección web de un servicio o de un proyecto. Cambiarla cambia
+    el enlace público de esa página, por lo que conviene no tocarla en lo que ya está
+    publicado.</dd>
 
     <dt>Exportar CSV</dt>
     <dd>Descargar la tabla de jornadas como archivo de hoja de cálculo, listo para abrir en
@@ -2222,8 +2297,8 @@
     mes. Se paga con recargo.</dd>
 
     <dt>Jornada</dt>
-    <dd>Un turno de trabajo registrado: una fecha, una orden de trabajo, una hora de entrada,
-    una de salida y la descripción de lo que se hizo.</dd>
+    <dd>Un turno de trabajo registrado: una fecha, una hora de entrada, una de salida, la
+    descripción de lo que se hizo y, si la tiene, la orden de trabajo.</dd>
 
     <dt>Jornada ordinaria</dt>
     <dd>Las horas que se consideran normales en un día, según el horario del mes. Se calcula
@@ -2235,7 +2310,9 @@
 
     <dt>Orden de trabajo</dt>
     <dd>El número con que GPI identifica un trabajo concreto. Se pide en cada jornada porque
-    permite después saber cuántas horas consumió cada trabajo.</dd>
+    permite después saber cuántas horas consumió cada trabajo. Es <strong>opcional</strong>:
+    si la labor no tiene una orden asociada, el campo se deja vacío y en el panel aparece
+    como «Sin orden de trabajo».</dd>
 
     <dt>Pendiente</dt>
     <dd>Estado inicial de toda jornada registrada. Nadie la ha revisado todavía y el empleado

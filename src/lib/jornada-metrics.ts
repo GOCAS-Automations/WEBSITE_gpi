@@ -32,6 +32,10 @@ export interface JornadaMetrica {
   id: string;
   empleadoId: string;
   empleadoNombre: string;
+  /**
+   * Orden de trabajo, o cadena vacía si la jornada no tenía ninguna (opcional
+   * desde la migración 0005). Quien la muestre usa `SIN_ORDEN_TRABAJO`.
+   */
   ordenTrabajo: string;
   /** Día laboral imputado, `YYYY-MM-DD`. */
   fecha: string;
@@ -118,7 +122,7 @@ export function construirMetrica(
     id: jornada.id,
     empleadoId: jornada.employee_id,
     empleadoNombre: jornada.employee_name?.trim() || "Sin nombre",
-    ordenTrabajo: jornada.work_order,
+    ordenTrabajo: jornada.work_order ?? "",
     fecha: jornada.work_date || fechaColombia(jornada.start_at),
     inicio,
     fin,

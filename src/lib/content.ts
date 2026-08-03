@@ -14,6 +14,7 @@
 
 import { getPublicSupabase } from "@/lib/supabase/server";
 import { iconMap, type IconName } from "@/lib/icons";
+import { slugify } from "@/lib/slug";
 
 import {
   services as staticServices,
@@ -28,6 +29,7 @@ import { faq as staticFaq, type FaqItem } from "@/data/faq";
 import { values as staticValues, type CorporateValue } from "@/data/values";
 import {
   contactDefaults,
+  esCorreoValido,
   excellenceDefaults,
   heroDefaults,
   visibilityDefaults,
@@ -198,6 +200,74 @@ export function getServiceCategories(): ServiceCategory[] {
   return serviceCategories;
 }
 
+/**
+ * Respaldo de los proyectos sembrados por la migración 0001, indexado por
+ * título.
+ *
+ * Mientras la 0005 no esté aplicada, `site_projects` no tiene las columnas
+ * `slug`, `details` ni `gallery`. Derivar el slug del título daría direcciones
+ * larguísimas y distintas de las que publican el sitemap y `generateStaticParams`,
+ * y la página quedaría sin texto ni fotos. Con este mapa, esos cuatro proyectos
+ * se ven exactamente igual antes y después de aplicar la migración.
+ */
+const PROYECTOS_POR_TITULO = new Map(staticProjects.map((p) => [p.title, p]));
+
+/** Proyecto estático con el mismo título, si existe. */
+function estatico(title: string): Project | undefined {
+  return PROYECTOS_POR_TITULO.get(title);
+}
+
+/**
+ * Fila de `site_projects` → `Project`.
+ *
+ * Tolerante a la migración 0005 sin aplicar: si la columna `slug` no existe, se
+ * usa el del proyecto estático con el mismo título y, si tampoco lo hay, se
+ * deriva del título con la misma regla que aplica el SQL. `gallery` acepta
+ * tanto `{url, alt}` (el formato de la 0005) como `{src, alt}` (el de los
+ * servicios), para que dé igual cuál se haya guardado.
+ */
+function rowToProject(row: Record<string, unknown>, index: number): Project {
+  const title = str(row.title, "Proyecto");
+  const slug =
+    str(row.slug) ||
+    estatico(title)?.slug ||
+    slugify(title) ||
+    `proyecto-${index + 1}`;
+
+  const gallery = Array.isArray(row.gallery)
+    ? row.gallery
+        .filter(isRecord)
+        .map((img) => ({ src: str(img.url) || str(img.src), alt: str(img.alt) }))
+        .filter((img) => img.src !== "")
+    : [];
+
+  // `undefined` (no `null`) significa que la COLUMNA no existe todavía, es
+  // decir que la 0005 está pendiente: solo en ese caso se recurre al texto y a
+  // las fotos estáticas. Si la columna existe y está vacía se respeta, porque
+  // es una decisión de quien edita el panel.
+  const respaldo = estatico(title);
+  const details =
+    row.details === undefined ? respaldo?.details : str(row.details) || undefined;
+  const galeria =
+    row.gallery === undefined
+      ? respaldo?.gallery
+      : gallery.length > 0
+        ? gallery
+        : undefined;
+
+  return {
+    slug,
+    title,
+    client: str(row.client) || undefined,
+    category: row.category === "ambiental" ? "ambiental" : "industrial",
+    description: str(row.description) || respaldo?.description,
+    details,
+    image: str(row.image_url, "/images/proyectos/13a.jpg"),
+    imageAlt: str(row.image_alt, title),
+    gallery: galeria,
+  };
+}
+
 export async function getProjects(): Promise<Project[]> {
   const supabase = getPublicSupabase();
   if (!supabase) return staticProjects;
@@ -210,17 +280,15 @@ export async function getProjects(): Promise<Project[]> {
 
     if (error || !data || data.length === 0) return staticProjects;
 
-    return data.filter(estaPublicado).map((row) => ({
-      title: str(row.title, "Proyecto"),
-      client: str(row.client) || undefined,
-      category: row.category === "ambiental" ? "ambiental" : "industrial",
-      description: str(row.description) || undefined,
-      image: str(row.image_url, "/images/proyectos/13a.jpg"),
-      imageAlt: str(row.image_alt, str(row.title, "Proyecto de GPI")),
-    }));
+    return data.filter(estaPublicado).map(rowToProject);
   } catch {
     return staticProjects;
   }
+}
+
+export async function getProject(slug: string): Promise<Project | undefined> {
+  const all = await getProjects();
+  return all.find((p) => p.slug === slug);
 }
 
 export async function getClients(): Promise<Client[]> {
@@ -332,6 +400,12 @@ export async function getSettings(): Promise<SiteSettings> {
     }
     if (!Array.isArray(contact.emails) || contact.emails.length === 0) {
       contact.emails = contactDefaults.emails;
+    }
+    // Mientras la migración 0005 no esté aplicada la clave no existe: el
+    // formulario cae en el correo corporativo por defecto en vez de generar un
+    // `mailto:` sin destinatario.
+    if (!esCorreoValido(str(contact.correoFormulario))) {
+      contact.correoFormulario = contactDefaults.correoFormulario;
     }
 
     const excellence = mergeSetting(

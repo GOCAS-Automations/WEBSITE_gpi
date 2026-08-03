@@ -64,6 +64,7 @@ import {
   inicioDeSemana,
   type JornadaMetrica,
 } from "@/lib/jornada-metrics";
+import { SIN_ORDEN_TRABAJO } from "@/lib/admin-types";
 import { formatearHoras } from "@/lib/jornada";
 import { ChevronDown, ChevronUp, Users } from "@/lib/icons";
 
@@ -448,7 +449,11 @@ export function JornadasCharts({
       { ordinariasMin: number; extrasMin: number; totalMin: number; empleados: Set<string> }
     >();
     for (const j of datos) {
-      const clave = j.ordenTrabajo?.trim() || "Sin orden asignada";
+      // Las jornadas sin orden de trabajo NO se excluyen: se agrupan bajo una
+      // etiqueta propia. Son horas realmente trabajadas y dejarlas fuera haría
+      // que la gráfica no sumara el total de la bandeja, que es peor que una
+      // barra llamada "Sin orden de trabajo".
+      const clave = j.ordenTrabajo?.trim() || SIN_ORDEN_TRABAJO;
       const actual = mapa.get(clave) ?? {
         ordinariasMin: 0,
         extrasMin: 0,
@@ -959,7 +964,12 @@ export function JornadasCharts({
                 tickLine={false}
                 axisLine={false}
                 width={130}
-                tickFormatter={(v: string) => (v.length > 16 ? `${v.slice(0, 15)}…` : v)}
+                // El corte es de 20 caracteres, justo lo que mide la etiqueta
+                // "Sin orden de trabajo": recortada quedaba en "Sin orden de
+                // tr…", que no dice nada. Los números de orden reales
+                // ("OT-1042") son mucho más cortos, así que no les afecta; si
+                // alguno se recorta, el tooltip muestra el nombre completo.
+                tickFormatter={(v: string) => (v.length > 20 ? `${v.slice(0, 19)}…` : v)}
               />
               <Tooltip content={<OrdenTooltip />} cursor={{ fill: "rgba(21,24,27,0.04)" }} />
               <Bar dataKey="horas" radius={[0, 4, 4, 0]}>

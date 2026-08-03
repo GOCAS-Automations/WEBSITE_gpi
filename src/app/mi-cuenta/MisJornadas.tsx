@@ -5,6 +5,7 @@ import {
   idleState,
   JORNADA_STATUS_CLASSES,
   JORNADA_STATUS_LABELS,
+  SIN_ORDEN_TRABAJO,
   type ActionState,
   type JornadaRecord,
 } from "@/lib/admin-types";
@@ -117,8 +118,15 @@ function JornadaItem({
             </span>
           </div>
           <p className="mt-1 text-sm text-graphite">
-            Orden <span className="font-semibold text-ink">{jornada.work_order}</span> ·{" "}
-            {formatearHora12(horaColombia(jornada.start_at))} a{" "}
+            {jornada.work_order ? (
+              <>
+                Orden{" "}
+                <span className="font-semibold text-ink">{jornada.work_order}</span>
+              </>
+            ) : (
+              SIN_ORDEN_TRABAJO
+            )}{" "}
+            · {formatearHora12(horaColombia(jornada.start_at))} a{" "}
             {formatearHora12(horaColombia(jornada.end_at))} ·{" "}
             <span className="font-semibold text-ink">
               {formatearDuracion(desglose.totalMinutos)}

@@ -9,6 +9,7 @@
 import { getServerSupabase } from "@/lib/supabase/server";
 import {
   contactDefaults,
+  esCorreoValido,
   excellenceDefaults,
   heroDefaults,
   visibilityDefaults,
@@ -39,6 +40,7 @@ import type {
   AdminSettings,
   ClientRecord,
   FaqRecord,
+  GalleryImage,
   HorarioMensualRecord,
   JornadaRecord,
   JornadaStatus,
@@ -80,6 +82,29 @@ function normalizeImages(value: unknown): ServiceImages {
     coverAlt: typeof value.coverAlt === "string" ? value.coverAlt : "",
     gallery,
   };
+}
+
+/**
+ * Galería de un proyecto (`site_projects.gallery`, migración 0005).
+ *
+ * Acepta las dos formas del par imagen/texto: `{url, alt}` —el que escribe la
+ * migración— y `{src, alt}` —el que ya usaban los servicios—, para que dé igual
+ * cuál se haya guardado. El panel siempre trabaja con `{src, alt}`.
+ */
+function normalizeProjectGallery(value: unknown): GalleryImage[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(isRecord)
+    .map((img) => ({
+      src:
+        typeof img.url === "string" && img.url
+          ? img.url
+          : typeof img.src === "string"
+            ? img.src
+            : "",
+      alt: typeof img.alt === "string" ? img.alt : "",
+    }))
+    .filter((img) => img.src !== "");
 }
 
 /**
@@ -135,14 +160,20 @@ export async function listProjects(): Promise<ProjectRecord[]> {
     .select("*")
     .order("sort", { ascending: true });
   if (!data) return [];
+  // `slug`, `details` y `gallery` llegan `undefined` mientras la migración 0005
+  // no esté aplicada: el panel muestra el slug propuesto desde el título y la
+  // galería vacía, y al guardar se reintenta sin esas columnas.
   return data.map((row) => ({
     id: String(row.id),
+    slug: typeof row.slug === "string" ? row.slug : "",
     title: String(row.title ?? ""),
     client: row.client ?? null,
     category: row.category === "ambiental" ? "ambiental" : "industrial",
     description: row.description ?? null,
+    details: row.details ?? null,
     image_url: row.image_url ?? null,
     image_alt: row.image_alt ?? null,
+    gallery: normalizeProjectGallery(row.gallery),
     sort: Number(row.sort ?? 0),
     published: isPublished(row.published),
   }));
@@ -244,6 +275,14 @@ export async function getAdminSettings(): Promise<AdminSettings> {
   };
   if (!Array.isArray(contact.phones)) contact.phones = contactDefaults.phones;
   if (!Array.isArray(contact.emails)) contact.emails = contactDefaults.emails;
+  // Sin la migración 0005 la clave no existe todavía: el campo del panel se
+  // muestra con el correo corporativo por defecto en vez de en blanco.
+  if (
+    typeof contact.correoFormulario !== "string" ||
+    !esCorreoValido(contact.correoFormulario)
+  ) {
+    contact.correoFormulario = contactDefaults.correoFormulario;
+  }
 
   const excellence: ExcellenceSettings = {
     ...excellenceDefaults,
@@ -525,7 +564,12 @@ function rowToJornada(row: Record<string, unknown>): JornadaRecord {
   return {
     id: String(row.id),
     employee_id: String(row.employee_id ?? ""),
-    work_order: String(row.work_order ?? ""),
+    // Opcional desde la 0005. Las cadenas vacías de registros antiguos se
+    // normalizan a `null`: una sola forma de decir "no tiene orden".
+    work_order:
+      typeof row.work_order === "string" && row.work_order.trim() !== ""
+        ? row.work_order.trim()
+        : null,
     work_date: String(row.work_date ?? ""),
     start_at: String(row.start_at ?? ""),
     end_at: String(row.end_at ?? ""),

@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { getServices } from "@/lib/content";
+import { getProjects, getServices } from "@/lib/content";
 
 const baseUrl = "https://www.gpiprofesionales.com";
 
@@ -23,7 +23,7 @@ const CONTENT_DATE = new Date("2026-07-29T00:00:00Z");
 
 // /mi-cuenta y /admin quedan fuera del sitemap a propósito (portal privado).
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const services = await getServices();
+  const [services, projects] = await Promise.all([getServices(), getProjects()]);
 
   const staticRoutes: MetadataRoute.Sitemap = [
     {
@@ -65,5 +65,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }));
 
-  return [...staticRoutes, ...serviceRoutes];
+  // Las páginas de cada proyecto (portafolio): se editan desde /admin, así que
+  // llevan la fecha del despliegue como el resto del contenido dinámico.
+  const projectRoutes: MetadataRoute.Sitemap = projects.map((project) => ({
+    url: `${baseUrl}/proyectos/${project.slug}`,
+    lastModified: BUILD_DATE,
+    changeFrequency: "monthly",
+    priority: 0.6,
+  }));
+
+  return [...staticRoutes, ...serviceRoutes, ...projectRoutes];
 }

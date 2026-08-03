@@ -160,10 +160,15 @@ export default async function ContactoPage() {
               <div className="rounded-3xl border border-line bg-mist p-6 shadow-soft sm:p-8">
                 <h2 className="text-2xl font-extrabold text-ink">Envíanos un mensaje</h2>
                 <p className="mt-2 text-sm text-graphite">
-                  Completa el formulario y continúa la conversación por WhatsApp.
+                  Completa el formulario y te lo dejamos listo para enviarlo a
+                  nuestro correo. Si lo prefieres, también puedes seguir la
+                  conversación por WhatsApp.
                 </p>
                 <div className="mt-6">
-                  <ContactForm whatsappNumber={contact.primaryWhatsApp} />
+                  <ContactForm
+                    whatsappNumber={contact.primaryWhatsApp}
+                    email={contact.correoFormulario}
+                  />
                 </div>
               </div>
             </Reveal>

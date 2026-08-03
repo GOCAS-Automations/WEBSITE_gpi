@@ -42,6 +42,15 @@ export const contact = {
     { address: "xperea@gpiprofesionales.com", person: "X. Perea" },
     { address: "ycamacho@gpiprofesionales.com", person: "Y. Camacho" },
   ] as EmailContact[],
+  /**
+   * Buzón al que llega el formulario de /contacto.
+   *
+   * NO reemplaza a `emails`: esos son los correos de las personas que se
+   * muestran en las tarjetas de contacto. Este es el correo corporativo único
+   * donde GPI quiere recibir los mensajes del sitio, y se edita desde
+   * /admin/ajustes (bloque «Datos de contacto»).
+   */
+  correoFormulario: "gpi.gerencia1@gmail.com",
   social: {
     facebook: "https://www.facebook.com/gpiprofesionales",
     instagram: "https://www.instagram.com/gpiprofesionales/",

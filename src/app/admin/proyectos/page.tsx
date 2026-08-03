@@ -15,6 +15,7 @@ import {
 } from "@/components/admin/ui";
 import { AdminForm, DeleteForm } from "@/components/admin/AdminForm";
 import { ImageField } from "@/components/admin/ImageField";
+import { GalleryField } from "@/components/admin/ListField";
 import { saveProject, deleteProject } from "../actions";
 import { Plus } from "@/lib/icons";
 
@@ -41,6 +42,13 @@ function ProjectFields({ project }: { project?: ProjectRecord }) {
           defaultValue={project?.client}
           placeholder="Laboratorios OSA"
         />
+        <Field
+          label="Dirección web (slug)"
+          name="slug"
+          defaultValue={project?.slug}
+          placeholder="chiller-laboratorios-osa"
+          hint="Es la parte final de la dirección de su página: gpiprofesionales.com/proyectos/… Se genera desde el título si lo dejas vacío. Cambiarlo cambia la dirección pública."
+        />
         <Select
           label="Categoría"
           name="category"
@@ -58,22 +66,31 @@ function ProjectFields({ project }: { project?: ProjectRecord }) {
           label="Visibilidad en el sitio"
           name="published"
           defaultChecked={project?.published ?? true}
-          hint="Oculto = no se muestra en la página Proyectos, pero se conserva aquí y puedes volver a mostrarlo."
+          hint="Oculto = no se muestra en la página Proyectos ni tiene página propia, pero se conserva aquí y puedes volver a mostrarlo."
         />
       </div>
       <TextArea
-        label="Descripción (opcional)"
+        label="Descripción corta (opcional)"
         name="description"
         rows={2}
         defaultValue={project?.description}
-        placeholder="Notas internas o detalle del alcance."
+        placeholder="Una o dos líneas que resuman el proyecto."
+        hint="Se muestra bajo el título en la página del proyecto y es lo que ven Google y las redes sociales."
+      />
+      <TextArea
+        label="Descripción larga (opcional)"
+        name="details"
+        rows={5}
+        defaultValue={project?.details}
+        placeholder="Cuenta el alcance del trabajo: qué se hizo, con qué equipos, qué resultado se obtuvo. Puedes usar varios párrafos separándolos con una línea en blanco."
+        hint="Es el texto principal de la página del proyecto. Si la dejas vacía, se usa la descripción corta."
       />
       <ImageField
         label="Imagen del proyecto"
         name="image_url"
         folder="proyectos"
         defaultValue={project?.image_url}
-        hint="Es la foto que se ve en la tarjeta del proyecto."
+        hint="Es la foto que se ve en la tarjeta y en la cabecera de su página."
       />
       <Field
         label="Texto alternativo de la imagen"
@@ -81,6 +98,11 @@ function ProjectFields({ project }: { project?: ProjectRecord }) {
         defaultValue={project?.image_alt}
         placeholder="Ej.: chiller instalado en la planta de Laboratorios OSA."
         hint={AYUDA_ALT}
+      />
+      <GalleryField
+        label="Galería (opcional)"
+        defaultValues={project?.gallery}
+        hint="Fotos adicionales que se muestran al final de la página del proyecto, en el orden de las filas. A cada una conviene ponerle su texto alternativo."
       />
     </>
   );
@@ -99,7 +121,13 @@ export default async function AdminProyectosPage() {
 
       <AyudaSeccion className="mb-6">
         Cada proyecto se guarda por separado con su propio botón{" "}
-        <strong>Guardar proyecto</strong>. {AYUDA_VISIBILIDAD}
+        <strong>Guardar proyecto</strong>. Además de la tarjeta, cada uno tiene
+        su <strong>propia página</strong> en el sitio (
+        <code className="rounded bg-white px-1 py-0.5 text-xs">
+          /proyectos/…
+        </code>
+        ), con la descripción larga y la galería que cargues aquí.{" "}
+        {AYUDA_VISIBILIDAD}
       </AyudaSeccion>
 
       <div className="space-y-5">

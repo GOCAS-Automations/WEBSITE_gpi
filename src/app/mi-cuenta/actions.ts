@@ -50,6 +50,26 @@ function revalidar() {
   revalidatePath("/admin/jornadas");
 }
 
+/**
+ * ¿La base de datos rechazó la jornada porque `work_order` todavía es
+ * obligatoria (migración 0005 sin aplicar) y la persona la dejó vacía?
+ *
+ * Misma filosofía que el resto del portal: el sistema funciona con migraciones
+ * pendientes. Si es el caso, se reintenta guardando cadena vacía —que
+ * `rowToJornada` vuelve a leer como "sin orden"—, así el empleado registra su
+ * jornada igual y ve exactamente lo mismo en pantalla.
+ */
+function rechazaOrdenVacia(
+  error: { code?: string | null; message?: string | null } | null | undefined,
+  workOrder: string | null,
+): boolean {
+  if (!error || workOrder !== null) return false;
+  // 23502 = not_null_violation.
+  if ((error.code ?? "") === "23502") return true;
+  const mensaje = error.message ?? "";
+  return /work_order/i.test(mensaje) && /null/i.test(mensaje);
+}
+
 /* ------------------------------------------------------------------ */
 /* Registrar / editar una jornada                                      */
 /* ------------------------------------------------------------------ */
@@ -62,15 +82,15 @@ export async function saveJornada(
   if (!session) return SIN_SESION;
 
   const id = text(formData, "id");
-  const workOrder = text(formData, "work_order");
+  // Opcional desde la migración 0005: hay labores sin orden de trabajo
+  // asociada. Vacío se guarda como NULL, nunca como cadena vacía.
+  const workOrder = textOrNull(formData, "work_order");
   const workDate = text(formData, "work_date");
   const horaInicio = text(formData, "start_time");
   const horaFin = text(formData, "end_time");
   const description = text(formData, "description");
 
   /* --- Validaciones amables, una a una --- */
-  if (workOrder === "")
-    return fail("Escribe el número de la orden de trabajo.");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(workDate))
     return fail("Selecciona la fecha del día que trabajaste.");
   if (!/^\d{2}:\d{2}$/.test(horaInicio))
@@ -137,6 +157,9 @@ export async function saveJornada(
     if (error && faltaColumnaDesglose(error)) {
       ({ data, error } = await editar(payload));
     }
+    if (error && rechazaOrdenVacia(error, workOrder)) {
+      ({ data, error } = await editar({ ...payload, work_order: "" }));
+    }
 
     if (error) return fail(error.message);
     if (!data || data.length === 0)
@@ -148,9 +171,14 @@ export async function saveJornada(
     return ok("Los cambios de tu jornada quedaron guardados.");
   }
 
-  const { error } = await session.supabase
-    .from("jornadas")
-    .insert({ ...payload, status: "pendiente" });
+  const crear = (datos: Record<string, unknown>) =>
+    session.supabase.from("jornadas").insert({ ...datos, status: "pendiente" });
+
+  let { error } = await crear(payload);
+
+  if (error && rechazaOrdenVacia(error, workOrder)) {
+    ({ error } = await crear({ ...payload, work_order: "" }));
+  }
 
   if (error) return fail(error.message);
 

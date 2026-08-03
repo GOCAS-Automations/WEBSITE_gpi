@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getContentEditorOrNull } from "@/lib/supabase/auth";
-import { visibilityDefaults } from "@/data/site";
+import { contactDefaults, esCorreoValido, visibilityDefaults } from "@/data/site";
+import { slugify } from "@/lib/slug";
 import type { ActionState, GalleryImage } from "@/lib/admin-types";
 
 /* ------------------------------------------------------------------ */
@@ -26,10 +27,21 @@ const fail = (message: string): ActionState => ({ status: "error", message });
 
 /**
  * El header, el footer y todas las páginas consumen la capa de contenido, así
- * que cualquier cambio invalida el árbol completo desde el layout raíz.
+ * que cualquier cambio invalida el árbol completo desde el layout raíz. Eso
+ * incluye las rutas dinámicas (`/servicios/[slug]`, `/proyectos/[slug]`).
  */
 function revalidateSite() {
   revalidatePath("/", "layout");
+}
+
+/**
+ * Además del árbol completo, las páginas de detalle de proyectos se invalidan
+ * por patrón: un slug nuevo o cambiado tiene que resolverse ya, no cuando
+ * caduque el ISR de 5 minutos.
+ */
+function revalidateProyectos() {
+  revalidateSite();
+  revalidatePath("/proyectos/[slug]", "page");
 }
 
 function text(formData: FormData, key: string): string {
@@ -82,16 +94,6 @@ function zip(
     out.push({ a: as[i], b: bs[i] ?? "" });
   }
   return out;
-}
-
-function slugify(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "") // quita tildes
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 80);
 }
 
 /* ------------------------------------------------------------------ */
@@ -175,6 +177,30 @@ export async function deleteService(
 /* Proyectos                                                           */
 /* ------------------------------------------------------------------ */
 
+/**
+ * ¿El error viene de que las columnas de la migración 0005 (`slug`, `gallery`,
+ * `details`) todavía no existen en `site_projects`?
+ *
+ * Misma lógica que `faltaColumnaDesglose` para la 0004: el panel debe seguir
+ * guardando proyectos aunque la migración esté pendiente, sencillamente sin los
+ * campos nuevos.
+ */
+function faltaColumnaProyecto(
+  error: { code?: string | null; message?: string | null } | null | undefined,
+): boolean {
+  if (!error) return false;
+  // 42703 = undefined_column (Postgres) · PGRST204 = columna ausente del caché
+  // de esquema de PostgREST.
+  const codigo = error.code ?? "";
+  if (codigo === "42703" || codigo === "PGRST204") return true;
+
+  const mensaje = error.message ?? "";
+  return (
+    /(slug|gallery|details)/i.test(mensaje) &&
+    /(does not exist|no existe|schema cache|could not find|find the)/i.test(mensaje)
+  );
+}
+
 export async function saveProject(
   _prev: ActionState,
   formData: FormData,
@@ -185,8 +211,21 @@ export async function saveProject(
   const title = text(formData, "title");
   if (title === "") return fail("El título es obligatorio.");
 
+  // El slug se genera desde el título si el campo va vacío, igual que en
+  // servicios. Es lo que forma la URL de la página del proyecto.
+  const slug = slugify(text(formData, "slug") || title);
+  if (slug === "")
+    return fail(
+      "No se pudo generar una dirección web a partir del título. Escribe un slug con letras y números, por ejemplo: chiller-laboratorios-osa",
+    );
+
+  const gallery = zip(formData, "gallery_src", "gallery_alt").map(({ a, b }) => ({
+    url: a,
+    alt: b,
+  }));
+
   const id = text(formData, "id");
-  const payload = {
+  const base = {
     title,
     client: textOrNull(formData, "client"),
     category: text(formData, "category") === "ambiental" ? "ambiental" : "industrial",
@@ -196,13 +235,30 @@ export async function saveProject(
     sort: num(formData, "sort"),
     published: bool(formData, "published"),
   };
+  const nuevo = { slug, details: textOrNull(formData, "details"), gallery };
 
-  const { error } = id
-    ? await session.supabase.from("site_projects").update(payload).eq("id", id)
-    : await session.supabase.from("site_projects").insert(payload);
-  if (error) return fail(error.message);
+  const escribir = (datos: Record<string, unknown>) =>
+    id
+      ? session.supabase.from("site_projects").update(datos).eq("id", id)
+      : session.supabase.from("site_projects").insert(datos);
 
-  revalidateSite();
+  let { error } = await escribir({ ...base, ...nuevo });
+
+  // Migración 0005 sin aplicar: se guarda lo de siempre y el sitio deriva el
+  // slug del título mientras tanto.
+  if (error && faltaColumnaProyecto(error)) {
+    ({ error } = await escribir(base));
+  }
+
+  if (error) {
+    if (error.code === "23505")
+      return fail(
+        `Ya hay otro proyecto con la dirección web "${slug}". Cámbiala en el campo «Dirección web (slug)».`,
+      );
+    return fail(error.message);
+  }
+
+  revalidateProyectos();
   return ok(id ? "Proyecto actualizado." : "Proyecto creado.");
 }
 
@@ -222,7 +278,7 @@ export async function deleteProject(
     .eq("id", id);
   if (error) return fail(error.message);
 
-  revalidateSite();
+  revalidateProyectos();
   return ok("Proyecto eliminado.");
 }
 
@@ -421,6 +477,15 @@ export async function saveContactSettings(
   if (phones.length === 0) return fail("Debe haber al menos un teléfono.");
   if (emails.length === 0) return fail("Debe haber al menos un correo.");
 
+  // Buzón del formulario de contacto: si se deja vacío se conserva el correo
+  // corporativo por defecto, para que el formulario nunca quede sin destino.
+  const correoFormulario =
+    text(formData, "correoFormulario") || contactDefaults.correoFormulario;
+  if (!esCorreoValido(correoFormulario))
+    return fail(
+      `«${correoFormulario}» no parece un correo válido. Escríbelo completo, por ejemplo: gpi.gerencia1@gmail.com`,
+    );
+
   const value = {
     companyName: text(formData, "companyName") || "GPI",
     legalName: text(formData, "legalName"),
@@ -443,6 +508,7 @@ export async function saveContactSettings(
     primaryWhatsApp:
       text(formData, "primaryWhatsApp").replace(/\D/g, "") || phones[0].intl,
     emails,
+    correoFormulario,
     social: {
       facebook: text(formData, "facebook"),
       instagram: text(formData, "instagram"),

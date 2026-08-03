@@ -24,6 +24,8 @@ export interface ContactSettings {
   phones: { label: string; intl: string }[];
   primaryWhatsApp: string;
   emails: { address: string; person: string }[];
+  /** Correo corporativo al que llega el formulario de /contacto. */
+  correoFormulario: string;
   social: { facebook: string; instagram: string; youtube: string };
   schedule: string;
   mapEmbedUrl: string;
@@ -100,11 +102,23 @@ export const contactDefaults: ContactSettings = {
   phones: staticContact.phones.map((p) => ({ ...p })),
   primaryWhatsApp: staticContact.primaryWhatsApp,
   emails: staticContact.emails.map((e) => ({ ...e })),
+  correoFormulario: staticContact.correoFormulario,
   social: { ...staticContact.social },
   schedule: "Lunes a viernes, 8:00 a. m. – 5:00 p. m.",
   mapEmbedUrl: staticContact.mapEmbedUrl,
   siteUrl: staticContact.siteUrl,
 };
+
+/**
+ * Validación mínima de un correo (algo@algo.algo, sin espacios).
+ *
+ * Deliberadamente permisiva: solo descarta lo que es claramente un error de
+ * digitación. La comprobación de verdad la hace el servidor de correo, y una
+ * expresión estricta rechazaría direcciones válidas raras.
+ */
+export function esCorreoValido(valor: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(valor.trim());
+}
 
 export const heroDefaults: HeroSettings = {
   badge: "+5 años en el sector industrial-ambiental",

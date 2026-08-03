@@ -62,7 +62,7 @@ export function JornadaForm({
     }
     return {
       workDate: jornada.work_date,
-      workOrder: jornada.work_order,
+      workOrder: jornada.work_order ?? "",
       start: horaColombia(jornada.start_at),
       end: horaColombia(jornada.end_at),
       nextDay: fechaColombia(jornada.end_at) !== jornada.work_date,
@@ -114,19 +114,18 @@ export function JornadaForm({
 
         <label className="block">
           <span className="mb-1.5 block text-sm font-semibold text-ink">
-            Número de orden de trabajo <span className="text-brand-dark">*</span>
+            Número de orden de trabajo (opcional)
           </span>
           <input
             type="text"
             name="work_order"
-            required
-            aria-required="true"
             defaultValue={inicial.workOrder}
             placeholder="Ej.: OT-1042"
             className={campoClase}
           />
           <span className="mt-1 block text-xs text-graphite">
-            Tal como aparece en la orden que te asignaron.
+            Tal como aparece en la orden que te asignaron. Si tu labor no tiene
+            orden de trabajo asociada, déjalo vacío.
           </span>
         </label>
 

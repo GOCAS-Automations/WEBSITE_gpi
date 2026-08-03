@@ -71,12 +71,23 @@ export interface ServiceRecord {
 
 export interface ProjectRecord {
   id: string;
+  /**
+   * Parte final de la URL de su página (/proyectos/<slug>).
+   * Cadena vacía mientras la migración 0005 no esté aplicada: en ese caso el
+   * sitio público lo deriva del título.
+   */
+  slug: string;
   title: string;
   client: string | null;
   category: "industrial" | "ambiental";
+  /** Frase corta de la tarjeta. */
   description: string | null;
+  /** Descripción larga de la página de detalle (opcional). */
+  details: string | null;
   image_url: string | null;
   image_alt: string | null;
+  /** Fotos adicionales de la página del proyecto. */
+  gallery: GalleryImage[];
   sort: number;
   published: boolean;
 }
@@ -160,7 +171,12 @@ export type JornadaStatus = "pendiente" | "aprobada" | "rechazada";
 export interface JornadaRecord {
   id: string;
   employee_id: string;
-  work_order: string;
+  /**
+   * Número de la orden de trabajo. OPCIONAL desde la migración 0005:
+   * `null` = la labor no tenía una orden asociada. Todo el panel lo muestra
+   * como "Sin orden de trabajo".
+   */
+  work_order: string | null;
   /** Día laboral en formato `YYYY-MM-DD`. */
   work_date: string;
   /** Instantes ISO (con zona horaria). */
@@ -193,6 +209,15 @@ export interface JornadaRecord {
   /** Nombre de quien revisó, resuelto aparte. */
   reviewer_name?: string;
 }
+
+/**
+ * Cómo se nombra una jornada sin orden de trabajo.
+ *
+ * Vive aquí, en un módulo puro, porque lo comparten la bandeja de aprobaciones,
+ * el portal del empleado, la tabla del tablero, el CSV de nómina y la gráfica
+ * «Horas por orden de trabajo»: si el texto cambia, cambia en todos a la vez.
+ */
+export const SIN_ORDEN_TRABAJO = "Sin orden de trabajo";
 
 export const JORNADA_STATUS_LABELS: Record<JornadaStatus, string> = {
   pendiente: "Pendiente",

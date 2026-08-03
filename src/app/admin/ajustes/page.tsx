@@ -156,6 +156,16 @@ export default async function AdminAjustesPage() {
                 b: e.person,
               }))}
               addLabel="Añadir correo"
+              hint="Son los correos de las personas que se muestran en la página de Contacto y en el pie de página."
+            />
+
+            <Field
+              label="Correo del formulario de contacto"
+              name="correoFormulario"
+              type="email"
+              defaultValue={contact.correoFormulario}
+              placeholder="gpi.gerencia1@gmail.com"
+              hint="A este correo llegan los mensajes del formulario de contacto del sitio. Puede cambiarlo cuando quiera y se aplica en minutos."
             />
 
             <div className="grid gap-4 sm:grid-cols-2">

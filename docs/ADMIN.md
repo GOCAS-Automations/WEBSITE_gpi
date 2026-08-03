@@ -12,7 +12,7 @@ la gestión de cuentas y el registro de jornadas (horas extra).
 
 ## 1. Aplicar las migraciones en Supabase
 
-Hay **cuatro** migraciones y se aplican **en orden**:
+Hay **cinco** migraciones y se aplican **en orden**:
 
 | Archivo | Qué añade |
 | --- | --- |
@@ -20,6 +20,7 @@ Hay **cuatro** migraciones y se aplican **en orden**:
 | `supabase/migrations/0002_empleados_jornadas.sql` | Roles ampliados, visibilidad del contenido, tabla `jornadas` y ajustes de cálculo |
 | `supabase/migrations/0003_horarios_mensuales.sql` | Horario laboral mes a mes (`horarios_mensuales`), cuentas por **usuario** (`username`, `cedula`, `email_contacto`) y ajuste del horario por defecto |
 | `supabase/migrations/0004_congelar_desglose.sql` | Congela el desglose de horas al **aprobar** una jornada (`desglose`, `contexto_calculo`, `calculado_at`) para que los reportes de nómina no cambien después |
+| `supabase/migrations/0005_proyectos_correo_orden.sql` | Correo del formulario de contacto (`contact.correoFormulario`), página propia por proyecto (`slug`, `gallery`, `details`) y orden de trabajo **opcional** en las jornadas |
 
 Para cada una:
 
@@ -87,19 +88,40 @@ verás exactamente lo mismo que ahora, pero ya editable.
 > reabrir y editar jornadas reintentan la escritura sin las columnas nuevas.
 > Ver [§7 · Congelar el desglose al aprobar](#congelar-el-desglose-al-aprobar).
 
+### ¿Qué añade la 0005?
+
+| Objeto | Para qué sirve |
+| --- | --- |
+| `site_settings.contact.correoFormulario` | El correo corporativo al que llega el formulario de `/contacto`. Valor inicial: `gpi.gerencia1@gmail.com`. Se edita en `/admin/ajustes` |
+| Columna `site_projects.slug` (única) | La dirección de la página propia de cada proyecto: `/proyectos/<slug>` |
+| Columna `site_projects.gallery` | Fotos adicionales de la página del proyecto (`[{ "url": "…", "alt": "…" }]`) |
+| Columna `site_projects.details` | Descripción **larga** de la página del proyecto (si está vacía se usa la corta) |
+| Textos y galería semilla | Descripción y descripción larga de los cuatro proyectos originales, y una segunda foto para «Montaje de planta piloto para fabricación de vaselina» |
+| `jornadas.work_order` deja de ser obligatoria | Hay labores sin orden de trabajo asociada; el formulario ya no la exige |
+
+> El `update` del correo hace **merge** del JSON de contacto: no toca teléfonos,
+> correos, dirección ni redes, y si alguien ya cambió el correo desde el panel
+> se respeta ese valor.
+>
+> Mientras la 0005 no esté aplicada, el sitio **no se rompe**: el formulario usa
+> el correo por defecto, los cuatro proyectos conservan su dirección corta y su
+> texto desde `src/data/projects.ts`, el panel reintenta guardar sin las
+> columnas nuevas, y una jornada sin orden se guarda con el campo en blanco (que
+> el panel lee igual como «Sin orden de trabajo»).
+
 ### Si el bloque del usuario admin de la 0001 falla
 
 Algunas versiones de Supabase no permiten insertar directamente en `auth.users`.
 En ese caso:
 
 1. Dashboard → **Authentication** → **Users** → **Add user**.
-2. Correo `admin@gpiprofesionales.com`, la contraseña de abajo, y marca
-   **Auto Confirm User**.
+2. Correo `admin@cuentas.gpiprofesionales.com` (el sintético del usuario
+   `admin`), la contraseña de abajo, y marca **Auto Confirm User**.
 3. Vuelve al SQL Editor y ejecuta solo:
 
 ```sql
-update public.profiles set role = 'admin'
- where email = 'admin@gpiprofesionales.com';
+update public.profiles set role = 'admin', username = 'admin'
+ where email = 'admin@cuentas.gpiprofesionales.com';
 ```
 
 ---
@@ -169,7 +191,7 @@ En el formulario de ingreso:
 
 | | |
 | --- | --- |
-| **Usuario** | `admin@gpiprofesionales.com` (cuenta antigua: se escribe el correo completo) |
+| **Usuario** | `admin` (desde el 30 de julio; antes se ingresaba escribiendo el correo completo `admin@gpiprofesionales.com`) |
 | **Contraseña** | `Kt7#mQx4-Rv9zBp2` |
 
 Se entra por **`/mi-cuenta`** ("Mi Cuenta" en la barra de navegación).
@@ -332,10 +354,16 @@ al iniciar sesión*, en el apartado 4). Las cuentas con acceso al panel ven el
 portal debajo del botón **"Ir al panel"**:
 
 - **Registrar una jornada**: fecha del día laboral (por defecto hoy), número de
-  orden de trabajo, hora de inicio, hora de finalización, descripción de la
-  labor y observaciones. Hay una casilla **"terminé al día siguiente"** para los
-  turnos que cruzan la medianoche (si la hora de fin es anterior a la de inicio,
-  el sistema lo detecta solo y avisa).
+  orden de trabajo **(opcional)**, hora de inicio, hora de finalización,
+  descripción de la labor y observaciones. Hay una casilla **"terminé al día
+  siguiente"** para los turnos que cruzan la medianoche (si la hora de fin es
+  anterior a la de inicio, el sistema lo detecta solo y avisa).
+- **Orden de trabajo opcional** (migración 0005): si la labor no tiene una orden
+  asociada, el campo se deja vacío y se guarda como `NULL`. En las aprobaciones,
+  en «Mis jornadas», en la tabla del tablero y en el CSV de nómina aparece como
+  **«Sin orden de trabajo»**, y la gráfica *Horas por orden de trabajo* agrupa
+  esas jornadas bajo esa misma etiqueta —no las excluye—, para que la gráfica
+  siga sumando el total de horas de la bandeja.
 - **Vista previa en vivo** del desglose de horas mientras llena el formulario.
 - **Mis jornadas**: historial con el estado de cada una
   (*pendiente* / *aprobada* / *rechazada*) y la nota del revisor si la hay.
@@ -576,9 +604,19 @@ Consecuencias prácticas:
   **ocultas** uno a uno, sí desaparecen: ocultar es una decisión explícita y el
   fallback no la pisa.
 
+**Columnas que aún no existen:** el mismo criterio se aplica campo a campo. Si
+una migración está pendiente, la columna llega como `undefined` y se usa el dato
+estático equivalente; si la columna **existe pero está vacía**, se respeta,
+porque eso es una decisión de quien edita el panel. Es lo que hace que los
+cuatro proyectos originales conserven su dirección corta
+(`/proyectos/planta-piloto-vaselina`), su texto y su galería aunque la 0005
+todavía no se haya aplicado.
+
 **Renderizado:** las páginas usan ISR con `revalidate = 300` (5 minutos) y,
 además, cada vez que guardas en `/admin` se llama a
-`revalidatePath("/", "layout")`, así que los cambios se ven de inmediato.
+`revalidatePath("/", "layout")` —y, al tocar un proyecto, también a
+`revalidatePath("/proyectos/[slug]", "page")`—, así que los cambios se ven de
+inmediato.
 
 ---
 
@@ -587,17 +625,53 @@ además, cada vez que guardas en `/admin` se llama a
 | Sección | Quién | Qué permite |
 | --- | --- | --- |
 | **Servicios** | contenido | CRUD completo: título, título de menú, slug, categoría, icono, orden, visibilidad, resumen, descripción, ítems, portada, galería y SEO |
-| **Proyectos** | contenido | CRUD: título, cliente, categoría, descripción, imagen, orden y visibilidad |
+| **Proyectos** | contenido | CRUD: título, cliente, **dirección web (slug)**, categoría, descripción corta, **descripción larga**, imagen, **galería**, orden y visibilidad. Cada proyecto tiene su propia página en `/proyectos/<slug>` |
 | **Clientes** | contenido | CRUD: nombre, logo, sitio web, orden y visibilidad |
 | **FAQ** | contenido | CRUD de preguntas y respuestas (alimentan el marcado FAQPage) + visibilidad |
 | **Valores** | contenido | CRUD de valores corporativos + visibilidad |
-| **Contacto y ajustes** | contenido | Visibilidad de secciones, dirección, coordenadas, teléfonos/WhatsApp, correos, redes, horario, mapa, hero, banda EXCELENCIA y video de YouTube |
+| **Contacto y ajustes** | contenido | Visibilidad de secciones, dirección, coordenadas, teléfonos/WhatsApp, correos, **correo del formulario de contacto**, redes, horario, mapa, hero, banda EXCELENCIA y video de YouTube |
 | **Equipo** | managers | Cuentas del portal: crear, editar, roles, activar/desactivar, contraseñas y eliminación |
 | **Horarios** | managers | Horario laboral de cada mes (base de la jornada ordinaria y de las horas extra) |
 | **Jornadas** | managers | Revisión de jornadas con desglose de horas: aprobar, rechazar, volver a pendiente y **eliminar** + tablero de métricas |
 
 *"contenido" = admin, coordinador y Community Manager · "managers" = admin y
 coordinador*
+
+### El correo al que llega el formulario de contacto
+
+`/admin/ajustes` → **Datos de contacto** → campo **"Correo del formulario de
+contacto"** (valor inicial `gpi.gerencia1@gmail.com`).
+
+- Es el buzón al que se dirige el formulario de la página `/contacto`. Se puede
+  cambiar cuando GPI quiera y se aplica en minutos.
+- **No sustituye a los correos de las tarjetas de contacto**: esos siguen siendo
+  los de las personas (`xperea@…`, `ycamacho@…`) y se editan en la lista de
+  correos, justo encima.
+- El panel valida que tenga forma de correo; si se deja vacío se conserva el
+  valor por defecto, para que el formulario nunca quede sin destinatario.
+
+**Cómo se envía, técnicamente:** el sitio no tiene (ni necesita) un proveedor de
+envío de correo. Al pulsar **"Enviar por correo"** se abre el programa de correo
+del visitante con el destinatario, el asunto
+(*"Contacto desde el sitio web — [nombre] ([empresa])"*) y el cuerpo ya escritos;
+él solo pulsa Enviar. El mensaje sale de **su** cuenta, así que basta con
+responderle. Debajo del botón queda un enlace discreto **"¿Prefieres WhatsApp?
+Escríbenos aquí"** que arma el mismo mensaje hacia el WhatsApp principal.
+
+### Los proyectos tienen su propia página
+
+Desde la migración 0005 cada proyecto tiene página propia en
+`/proyectos/<slug>`, como los servicios: cabecera con su foto, cliente y área,
+descripción larga, galería, botón de contacto y navegación al proyecto anterior
+y siguiente. En la página `/proyectos` la **tarjeta entera** es el enlace.
+
+En `/admin/proyectos` eso se traduce en tres campos nuevos:
+
+- **Dirección web (slug)**: se genera desde el título si se deja vacío.
+  Cambiarlo cambia la dirección pública del proyecto.
+- **Descripción larga**: el texto principal de la página. Si se deja vacía se
+  usa la descripción corta. Los párrafos se separan con una línea en blanco.
+- **Galería**: fotos adicionales que se muestran al final de la página.
 
 ### Imágenes
 

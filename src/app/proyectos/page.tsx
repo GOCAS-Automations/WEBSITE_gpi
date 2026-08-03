@@ -50,9 +50,12 @@ export default async function ProyectosPage() {
           <h2 id="titulo-proyectos" className="sr-only">
             Proyectos ejecutados por GPI
           </h2>
+          <p className="mb-8 text-sm text-graphite">
+            Pulse cualquier proyecto para ver su ficha completa.
+          </p>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {projects.map((project, i) => (
-              <Reveal key={`${project.title}-${i}`} delay={(i % 4) * 90}>
+              <Reveal key={project.slug} delay={(i % 4) * 90}>
                 <ProjectCard project={project} />
               </Reveal>
             ))}

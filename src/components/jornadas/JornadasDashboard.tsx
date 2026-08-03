@@ -17,6 +17,7 @@ import { useMemo, useState } from "react";
 import {
   JORNADA_STATUS_CLASSES,
   JORNADA_STATUS_LABELS,
+  SIN_ORDEN_TRABAJO,
   type JornadaStatus,
 } from "@/lib/admin-types";
 import { Badge, EmptyState } from "@/components/admin/ui";
@@ -124,7 +125,8 @@ function descargarCSV(
     [
       j.empleadoNombre,
       formatearFechaNumerica(j.fecha),
-      j.ordenTrabajo,
+      // Opcional desde la 0005: la celda dice qué pasa, no queda en blanco.
+      j.ordenTrabajo || SIN_ORDEN_TRABAJO,
       j.inicio,
       j.fin,
       formatearHoras(j.duracionMin),
@@ -644,7 +646,16 @@ export function JornadasDashboard({
                       <Td className="whitespace-nowrap font-mono text-xs">
                         {formatearFechaNumerica(j.fecha)}
                       </Td>
-                      <Td>{j.ordenTrabajo || "—"}</Td>
+                      <Td>
+                        {j.ordenTrabajo || (
+                          <span
+                            className="text-graphite"
+                            title={SIN_ORDEN_TRABAJO}
+                          >
+                            —
+                          </span>
+                        )}
+                      </Td>
                       <Td align="right" className="font-mono text-xs">
                         {j.inicio}
                       </Td>

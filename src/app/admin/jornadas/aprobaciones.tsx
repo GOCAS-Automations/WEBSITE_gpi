@@ -26,6 +26,7 @@ import {
   JORNADA_FILTRO_ESTADO_DEFECTO,
   JORNADA_STATUS_CLASSES,
   JORNADA_STATUS_LABELS,
+  SIN_ORDEN_TRABAJO,
   type JornadaStatus,
 } from "@/lib/admin-types";
 import { AyudaSeccion, Badge, Card, EmptyState } from "@/components/admin/ui";
@@ -173,7 +174,9 @@ export async function AprobacionesView({
                     </p>
                   </div>
                   <span className="rounded-full bg-mist px-3 py-1 text-xs font-semibold text-graphite">
-                    Orden {jornada.work_order}
+                    {jornada.work_order
+                      ? `Orden ${jornada.work_order}`
+                      : SIN_ORDEN_TRABAJO}
                   </span>
                 </header>
 

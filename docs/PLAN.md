@@ -1,6 +1,6 @@
 # Plan del proyecto — Sitio web GPI
 
-Estado al **30 de julio de 2026**. Este documento existe para que cualquier
+Estado al **31 de julio de 2026**. Este documento existe para que cualquier
 sesión futura (humana o de Claude) arranque con contexto completo sin tener
 que reconstruir el historial desde los commits.
 
@@ -16,6 +16,7 @@ que reconstruir el historial desde los commits.
 | 4c | Fase 2 — Iteración post-feedback de GPI | ✅ Código listo | Horarios laborales **mes a mes** (`/admin/horarios`), cuentas por **usuario** en vez de correo, y el rol *marketing* pasa a llamarse **Community Manager** (y también registra jornadas). Migración 0003 aplicada. |
 | 4d | Fase 2 — Desglose congelado + ayudas del panel | ✅ Código listo | Al **aprobar** una jornada su desglose de horas se guarda tal cual, con el horario y los recargos que se usaron: los reportes de nómina ya cerrados no cambian si después se corrige un horario. Además, textos de ayuda en todo el panel para usuarios no técnicos. Migración 0004 aplicada. |
 | 4e | Fase 2 — Ajustes del testing del cliente (30 jul) | ✅ Hecho | El panel pasa a ser la pantalla principal de admin y coordinador, los managers pueden **eliminar** jornadas y los filtros de aprobaciones se aplican al cambiar. **Sin migración nueva.** |
+| 4f | Complementos post-aprobación (31 jul) | ✅ Código listo | Formulario de contacto al **correo corporativo** (editable en Ajustes), **página propia por proyecto** con galería, y **orden de trabajo opcional** en las jornadas. **Falta aplicar la migración 0005.** |
 | 5 | Deploy en Vercel desde el repo de GitHub + variables de entorno | ✅ Completa | **https://website-gpi.vercel.app** — despliega solo con cada push a `main`; las 3 env vars configuradas (incl. `SUPABASE_SERVICE_ROLE_KEY` sin prefijo). Verificado en vivo: 7 cabeceras de seguridad, 9 rutas 200, `/admin` protegido. |
 | 6 | Apuntar dominio `gpiprofesionales.com` de GoDaddy → Vercel | ⏳ Pendiente | Al final, cuando el sitio esté aprobado por GPI y desplegado en Vercel. |
 | 7 | Extra cotizable aparte: chatbot IA | 💡 Planeado | Claude Haiku 4.5 vía `/api/chat`, con conocimiento del contenido del sitio (servicios, proyectos, contacto) y captura de leads hacia Supabase. No incluido en la cotización actual. |
@@ -35,6 +36,8 @@ que reconstruir el historial desde los commits.
 | Horario laboral mes a mes | `supabase/migrations/0003…`, `src/lib/horarios.ts`, `/admin/horarios` |
 | Cuentas por usuario (correo sintético interno) | `src/lib/usuarios.ts`, `/mi-cuenta` (login) y `/admin/empleados` |
 | Desglose congelado al aprobar | `supabase/migrations/0004…`, `obtenerDesglose()` en `src/lib/jornada.ts` |
+| Página propia por proyecto | `supabase/migrations/0005…`, `src/app/proyectos/[slug]/page.tsx` |
+| Correo del formulario de contacto | `site_settings.contact.correoFormulario`, `src/components/sections/ContactForm.tsx` |
 | Ayudas del panel para usuarios no técnicos | `AyudaSeccion` / `AyudaDesplegable` + constantes `AYUDA_*` en `src/components/admin/ui.tsx` |
 
 Flujo completo: **el empleado registra su jornada** en `/mi-cuenta` (con vista
@@ -149,6 +152,74 @@ los empleados y sin rango de fechas.
 > como arreglo—. Vive en `src/lib/admin-types.ts` como
 > `JORNADA_FILTRO_ESTADOS` / `JORNADA_FILTRO_ESTADO_DEFECTO`.
 
+## Iteración del 31 de julio de 2026 — complementos post-aprobación
+
+Tres complementos que GPI pidió después de aprobar el sitio. Todos necesitan la
+**migración 0005** (`supabase/migrations/0005_proyectos_correo_orden.sql`), pero
+—como siempre— el código funciona sin ella: mientras esté pendiente el sitio se
+ve y se comporta igual, apoyándose en el respaldo estático.
+
+### 1. El formulario de contacto llega al correo corporativo
+
+Antes, el formulario de `/contacto` armaba un mensaje de WhatsApp. Ahora el
+botón principal es **"Enviar por correo"** y el destino es el correo corporativo
+de GPI, inicialmente `gpi.gerencia1@gmail.com`.
+
+- **Sin proveedor de correo ni servicios de terceros**: al enviar se abre el
+  programa de correo del visitante con destinatario, asunto
+  (*"Contacto desde el sitio web — [nombre] ([empresa])"*) y cuerpo ya escritos.
+  El mensaje sale de **su** cuenta, así que GPI le responde directamente. Es la
+  única forma honesta de "enviar correo" desde un sitio estático sin contratar
+  un SMTP ni exponer credenciales.
+- **WhatsApp se conserva** como alternativa secundaria: un enlace discreto
+  *"¿Prefieres WhatsApp? Escríbenos aquí"* arma el mismo mensaje hacia el número
+  principal. Es el canal que más usa el cliente de GPI y quitarlo habría sido un
+  retroceso.
+- **El correo es editable** desde `/admin/ajustes` → *Datos de contacto* →
+  **"Correo del formulario de contacto"**, con validación de formato. Vive en
+  `site_settings.contact.correoFormulario` y **no reemplaza** los correos
+  personales de las tarjetas de contacto, que siguen igual.
+
+### 2. Cada proyecto tiene su página
+
+Se descartó el lightbox: una página por proyecto posiciona en Google, es
+compartible por WhatsApp y queda consistente con `/servicios/[slug]`.
+
+- **`/proyectos/[slug]`** con breadcrumbs, cabecera con la foto del proyecto,
+  ficha de cliente y área, descripción larga en párrafos, galería, CTA
+  *"¿Tiene un proyecto similar?"*, listado del resto del portafolio y navegación
+  anterior / todos / siguiente. `generateStaticParams` + `dynamicParams`,
+  metadata propia con canonical y OpenGraph, JSON-LD `CreativeWork` (más el
+  `BreadcrumbList` que ya emite el componente de breadcrumbs) y entrada en el
+  `sitemap.ts`.
+- **Las tarjetas de `/proyectos` son clicables enteras**, con el mismo diseño de
+  siempre más el foco visible y un "Ver el proyecto" al pasar el cursor.
+- **Tres campos nuevos en `/admin/proyectos`**: dirección web (slug,
+  autogenerado desde el título), descripción larga y galería.
+- **Slugs finales**: `extraccion-aire-clinica-farallones`,
+  `chiller-laboratorios-osa`, `bodega-laboratorios-osa` y
+  `planta-piloto-vaselina`. Son los mismos en la migración y en
+  `src/data/projects.ts`, y `content.ts` los recupera **por título** si la
+  columna `slug` todavía no existe: así la dirección pública no cambia al
+  aplicar la 0005.
+
+### 3. La orden de trabajo es opcional
+
+Hay labores sin orden asociada (apoyos internos, traslados, urgencias) y obligar
+a inventar un número ensuciaba el reporte.
+
+- `jornadas.work_order` deja de ser `not null`; el formulario dice
+  **"Número de orden de trabajo (opcional)"** y explica cuándo dejarlo vacío.
+- Vacío se guarda como **NULL**, nunca como cadena vacía; `rowToJornada`
+  normaliza a `null` también las cadenas vacías que quedaran de antes.
+- **Decisión sobre la gráfica** *"Horas por orden de trabajo"*: las jornadas sin
+  orden **se agrupan** bajo la etiqueta **"Sin orden de trabajo"**, no se
+  excluyen. Excluirlas haría que la gráfica no sumara el total de horas de la
+  bandeja, y una cifra que no cuadra con el resto del tablero es peor que una
+  barra con nombre explícito. La etiqueta es la constante `SIN_ORDEN_TRABAJO` de
+  `src/lib/admin-types.ts`, compartida por aprobaciones, «Mis jornadas», la
+  tabla del tablero, el CSV y la gráfica.
+
 ## Decisiones técnicas
 
 - **Fallback estático primero**: toda la capa de contenido (`src/lib/content.ts`)
@@ -185,7 +256,14 @@ los empleados y sin rango de fechas.
   las columnas nuevas de `profiles` las cuentas se identifican por su correo y
   las escrituras reintentan sin esos campos; sin las columnas de la 0004 el
   desglose se calcula en vivo y aprobar/rechazar/reabrir/editar reintentan sin el
-  snapshot. El build no depende de la base de datos.
+  snapshot. Sin la 0005, el formulario usa el correo por defecto, los proyectos
+  toman slug, texto y galería del respaldo estático (por título), `saveProject`
+  reintenta sin las columnas nuevas y una jornada sin orden se guarda con el
+  campo en blanco. El build no depende de la base de datos.
+- **`undefined` ≠ vacío**: una columna que llega `undefined` es una migración
+  pendiente y activa el respaldo estático; una columna que existe y está vacía es
+  una decisión de quien edita el panel y se respeta. Esa distinción es lo que
+  evita que un texto borrado a propósito "reaparezca solo".
 - **Nada de recalcular lo ya pagado**: el desglose de una jornada aprobada se
   guarda en `jornadas.desglose` con su `contexto_calculo` (horario del día,
   recargos y topes vigentes) y `calculado_at`. La lectura está centralizada en
