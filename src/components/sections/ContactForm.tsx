@@ -6,7 +6,6 @@ import {
   useState,
   useTransition,
   type FormEvent,
-  type MouseEvent,
 } from "react";
 import { enviarMensajeContacto } from "@/app/contacto/actions";
 import { whatsappLink } from "@/data/contact";
@@ -46,23 +45,21 @@ function marcaDeTiempo(): string {
 /**
  * Formulario de contacto.
  *
- * TRES MODOS, UNA SOLA PANTALLA
+ * DOS MODOS, UNA SOLA PANTALLA
  * -----------------------------
  * 1. **Envío directo** (hay credenciales SMTP): al pulsar el botón, una server
  *    action guarda el mensaje y manda el correo al buzón corporativo; el
- *    visitante ve "Enviando…" → "✅ Tu mensaje fue enviado". Es lo que pidió
- *    GPI.
- * 2. **Envío directo que falla** (Gmail rechaza, se venció la contraseña de
- *    aplicación, no hay red): si el mensaje al menos quedó GUARDADO en la base
- *    de datos, el visitante ve "✅ Recibimos tu mensaje" —que es la verdad— y
- *    no se le molesta con alternativas. Solo si no quedó en ninguna parte
- *    aparecen las tres opciones de respaldo.
- * 3. **Sin SMTP configurado**: no se promete un envío que no va a ocurrir. El
- *    botón principal abre el **compositor de Gmail en el navegador** con todo
- *    escrito, y debajo quedan el programa de correo y WhatsApp. Aun así se
- *    envía una copia a la server action, que la guarda en la base de datos:
- *    si el visitante se arrepiente y no pulsa "Enviar" en Gmail, GPI conserva
- *    de todos modos el contacto.
+ *    visitante ve "Enviando…" → "✅ Tu mensaje fue enviado". Si el correo
+ *    falla pero el mensaje al menos quedó GUARDADO en la base de datos, ve
+ *    "✅ Recibimos tu mensaje" —que es la verdad— y no se le molesta con
+ *    alternativas. Solo si no quedó en ninguna parte aparecen Gmail web y
+ *    WhatsApp como respaldo.
+ * 2. **Sin SMTP configurado** (estado transitorio, mientras llegan las
+ *    credenciales): no se promete un envío que no va a ocurrir. El botón
+ *    principal queda INHABILITADO, con un aviso honesto debajo, y la única
+ *    vía activa en pantalla es WhatsApp. En cuanto lleguen
+ *    `CONTACT_SMTP_USER` / `CONTACT_SMTP_PASS` el formulario pasa solo al
+ *    modo 1, sin tocar código.
  *
  * POR QUÉ EL RESPALDO ES GMAIL WEB Y NO `mailto:`
  * -----------------------------------------------
@@ -70,8 +67,8 @@ function marcaDeTiempo(): string {
  * comportamiento correcto de `mailto:` en un computador sin programa de correo
  * configurado, que es la situación de mucha gente hoy. El compositor de Gmail
  * es una URL normal: se abre en una pestaña del navegador y funciona en
- * cualquier equipo con sesión de Gmail. `mailto:` se conserva como segunda
- * opción, para quien sí usa Outlook o Correo de Windows.
+ * cualquier equipo con sesión de Gmail. Por eso `mailto:` no aparece en
+ * ninguna parte del formulario.
  *
  * El correo de destino llega por props desde `site_settings.contact`
  * (`correoFormulario`), editable en /admin/ajustes.
@@ -149,11 +146,6 @@ export function ContactForm({
     email,
   )}&su=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpoPlano)}`;
 
-  /** El clásico: abre Outlook, Correo de Windows, Mail del Mac… si los hay. */
-  const enlaceMailto = `mailto:${email}?subject=${encodeURIComponent(
-    asunto,
-  )}&body=${encodeURIComponent(cuerpoContacto(form, { salto: "\r\n" }))}`;
-
   const enlaceWhatsApp = whatsappLink(
     whatsappNumber,
     [
@@ -199,12 +191,10 @@ export function ContactForm({
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
-    if (!smtpConfigurado) {
-      // Sin envío directo, la tecla Enter hace lo mismo que el botón: abrir el
-      // compositor de Gmail en una pestaña nueva.
-      if (revisarCampos()) abrirGmail();
-      return;
-    }
+    // Sin credenciales SMTP el botón está inhabilitado y no hay ningún envío
+    // posible: no debería poder llegarse aquí, pero por si algún navegador
+    // dispara el evento igual (por ejemplo con Enter), no se hace nada.
+    if (!smtpConfigurado) return;
 
     if (!revisarCampos()) return;
 
@@ -227,74 +217,12 @@ export function ContactForm({
   }
 
   /* ---------------------------------------------------------------- */
-  /* Modo 3 — compositor de Gmail en el navegador                      */
-  /* ---------------------------------------------------------------- */
-
-  /**
-   * Manda una copia del mensaje a la server action.
-   *
-   * Sin SMTP no hay correo que enviar, pero la acción SÍ guarda el mensaje en
-   * la base de datos. Vale mucho la pena: si el visitante abre Gmail y no
-   * llega a pulsar "Enviar" —se distrae, cierra la pestaña, no tiene sesión
-   * iniciada—, GPI conserva igualmente su nombre, su correo y lo que quería.
-   * Es un extra silencioso: si falla, no se le dice nada, porque su vía
-   * principal (Gmail) ya está abierta.
-   */
-  function registrarCopia() {
-    const formulario = formRef.current;
-    if (!formulario) return;
-
-    const datos = new FormData(formulario);
-    datos.set(CAMPO_ENVIADO, marcaDeTiempo());
-
-    startTransition(async () => {
-      const resultado = await enviarMensajeContacto(datos);
-      if (resultado.estado === "exito" && resultado.via === "registro") {
-        setEstado({
-          estado: "exito",
-          via: "registro",
-          mensaje: `Abrimos Gmail con el mensaje listo para ${email}. También guardamos una copia aquí, así que ya tenemos tu solicitud.`,
-        });
-      }
-    });
-  }
-
-  function abrirGmail() {
-    window.open(enlaceGmail, "_blank", "noopener,noreferrer");
-    setEstado({
-      estado: "exito",
-      via: "navegador",
-      mensaje: `Abrimos Gmail en una pestaña nueva con el mensaje listo para ${email}. Solo falta que pulses «Enviar» allí.`,
-    });
-    registrarCopia();
-  }
-
-  /**
-   * Clic en el botón principal cuando NO hay envío directo.
-   *
-   * Es un enlace de verdad (`<a href>`), no un botón con JavaScript: un
-   * enlace nunca lo bloquea el navegador por ventanas emergentes y se puede
-   * abrir en otra pestaña con el botón derecho. El `onClick` solo se encarga
-   * de frenarlo si faltan datos.
-   */
-  function handleGmail(e: MouseEvent<HTMLAnchorElement>) {
-    if (!revisarCampos()) {
-      e.preventDefault();
-      return;
-    }
-    setEstado({
-      estado: "exito",
-      via: "navegador",
-      mensaje: `Abrimos Gmail con el mensaje listo para ${email}. Solo falta que pulses «Enviar» allí.`,
-    });
-    registrarCopia();
-  }
-
-  /* ---------------------------------------------------------------- */
 
   const errores = estado.estado === "invalido" ? estado.errores : {};
-  const mostrarAlternativas =
-    !smtpConfigurado || estado.estado === "error-envio";
+  // Solo puede haber "error-envio" cuando SÍ hay envío directo (sin él, el
+  // botón está inhabilitado y no hay ningún submit posible): mostrar las
+  // alternativas de respaldo aquí basta para cubrir ese único caso.
+  const mostrarAlternativas = estado.estado === "error-envio";
 
   return (
     <form
@@ -414,7 +342,10 @@ export function ContactForm({
         <ErrorCampo id="error-mensaje" texto={errores.mensaje} />
       </div>
 
-      {/* ---- Botón principal, distinto en cada modo ------------------ */}
+      {/* ---- Botón principal, distinto en cada modo ------------------
+          Sin SMTP configurado no se promete un envío que no va a ocurrir:
+          el botón queda inhabilitado de verdad (no solo visualmente) y no
+          dispara ningún envío al pulsarlo ni al pulsar Enter. */}
       {smtpConfigurado ? (
         <button
           type="submit"
@@ -436,24 +367,34 @@ export function ContactForm({
           )}
         </button>
       ) : (
-        <a
-          href={enlaceGmail}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={handleGmail}
-          aria-describedby="contacto-nota"
-          data-testid="gmail-principal"
-          className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-brand-dark px-6 py-3.5 text-base font-semibold text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-deep hover:shadow-card sm:w-auto"
+        <button
+          type="submit"
+          disabled
+          aria-disabled="true"
+          aria-describedby="contacto-envio-pendiente"
+          data-testid="enviar"
+          className="inline-flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-full border border-line bg-mist px-6 py-3.5 text-base font-semibold text-graphite/70 sm:w-auto"
         >
           <Mail className="h-5 w-5" />
-          Enviar por correo
-        </a>
+          Enviar mensaje
+        </button>
       )}
 
-      {/* Alternativa discreta: mismo mensaje, por WhatsApp. Es el canal que
-          más usa el cliente de GPI, así que nunca desaparece de la pantalla. */}
+      {!smtpConfigurado && (
+        <p
+          id="contacto-envio-pendiente"
+          data-testid="envio-pendiente"
+          className="text-xs leading-relaxed text-graphite"
+        >
+          El envío directo desde el sitio estará disponible muy pronto.
+          Mientras tanto, escríbenos por WhatsApp.
+        </p>
+      )}
+
+      {/* Único acceso a WhatsApp del bloque: se muestra siempre, en los tres
+          escenarios (envío directo, envío que falla y envío sin configurar),
+          porque es el canal que más usa el cliente de GPI. */}
       <p className="text-sm text-graphite">
-        ¿Prefieres WhatsApp?{" "}
         <a
           href={enlaceWhatsApp}
           target="_blank"
@@ -462,7 +403,7 @@ export function ContactForm({
           className="inline-flex items-center gap-1.5 font-semibold text-brand-dark underline underline-offset-2 transition-colors hover:text-brand-deep"
         >
           <WhatsApp className="h-4 w-4" />
-          Escríbenos aquí
+          Escribirnos por WhatsApp
         </a>
       </p>
 
@@ -484,9 +425,9 @@ export function ContactForm({
       </div>
 
       {/* ---- Alternativas -------------------------------------------
-          Se muestran siempre en modo respaldo y solo cuando el envío falla
-          en modo directo: si el correo salió, ofrecer «otras formas de
-          escribirnos» solo sembraría la duda de si llegó o no. */}
+          Solo cuando el envío directo falla: si el correo salió, ofrecer
+          «otras formas de escribirnos» solo sembraría la duda de si llegó o
+          no. WhatsApp no se repite aquí: ya tiene su único acceso arriba. */}
       {mostrarAlternativas && (
         <div
           data-testid="alternativas"
@@ -494,51 +435,29 @@ export function ContactForm({
         >
           <p className="font-semibold text-ink">Otras formas de escribirnos</p>
           <ul className="mt-2 space-y-1.5">
-            {!smtpConfigurado ? null : (
-              <li>
-                <a
-                  href={enlaceGmail}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  data-testid="gmail-alternativa"
-                  className="font-semibold text-brand-dark underline underline-offset-2 hover:text-brand-deep"
-                >
-                  Enviarlo desde Gmail
-                </a>{" "}
-                — se abre en el navegador con el mensaje ya escrito.
-              </li>
-            )}
             <li>
               <a
-                href={enlaceMailto}
-                data-testid="mailto"
-                className="font-semibold text-brand-dark underline underline-offset-2 hover:text-brand-deep"
-              >
-                Abrirlo en mi programa de correo
-              </a>{" "}
-              — Outlook, Correo de Windows, Mail… si tienes uno configurado.
-            </li>
-            <li>
-              <a
-                href={enlaceWhatsApp}
+                href={enlaceGmail}
                 target="_blank"
                 rel="noopener noreferrer"
-                data-testid="whatsapp-alternativa"
+                data-testid="gmail-alternativa"
                 className="font-semibold text-brand-dark underline underline-offset-2 hover:text-brand-deep"
               >
-                Escribirnos por WhatsApp
+                Enviarlo desde Gmail
               </a>{" "}
-              — normalmente es la vía más rápida.
+              — se abre en el navegador con el mensaje ya escrito.
             </li>
           </ul>
         </div>
       )}
 
-      <p id="contacto-nota" className="text-xs leading-relaxed text-graphite">
-        {smtpConfigurado
-          ? "Al pulsar «Enviar mensaje», tu mensaje llega directamente al correo de nuestro equipo y te respondemos a la dirección que nos dejaste. Solo usamos tus datos para contestarte."
-          : "Al pulsar «Enviar por correo» se abrirá tu correo con el mensaje ya escrito: solo tendrás que pulsar «Enviar» ahí. No almacenamos tus datos en este sitio."}
-      </p>
+      {smtpConfigurado && (
+        <p id="contacto-nota" className="text-xs leading-relaxed text-graphite">
+          Al pulsar «Enviar mensaje», tu mensaje llega directamente al correo
+          de nuestro equipo y te respondemos a la dirección que nos dejaste.
+          Solo usamos tus datos para contestarte.
+        </p>
+      )}
     </form>
   );
 }

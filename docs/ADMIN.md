@@ -853,8 +853,8 @@ variables ni volver a desplegar.
 | --- | --- |
 | Todo bien | *"✅ Tu mensaje fue enviado. Te responderemos pronto al correo que nos dejaste."* |
 | El correo falla pero el mensaje **sí** se guardó en `site_mensajes` | *"✅ Recibimos tu mensaje y ya está en nuestra bandeja."* — es la verdad: GPI lo tiene aunque el correo no saliera, así que no se le molesta con alternativas |
-| El correo falla **y** no se pudo guardar | Mensaje amable + tres alternativas: **Gmail en el navegador**, **su programa de correo** y **WhatsApp** |
-| Las variables `CONTACT_SMTP_*` no están puestas | El formulario cambia a **modo alternativo**: el botón principal abre el compositor de Gmail en el navegador con el mensaje ya escrito, y debajo quedan el programa de correo y WhatsApp. Aun así se guarda una copia en `site_mensajes` |
+| El correo falla **y** no se pudo guardar | Mensaje amable + dos alternativas: **Gmail en el navegador** y **WhatsApp** (ya no se ofrece `mailto:` / "programa de correo": GPI probó esa opción y no abre nada en equipos sin cliente de correo configurado) |
+| Las variables `CONTACT_SMTP_*` no están puestas (situación actual, temporal) | El botón principal aparece **inhabilitado** (no se promete un envío que no va a ocurrir) con un aviso pequeño debajo: *"El envío directo desde el sitio estará disponible muy pronto. Mientras tanto, escríbenos por WhatsApp."* La única vía activa en pantalla es **WhatsApp**. Ya no se guarda copia en `site_mensajes` en este caso porque no hay ningún envío que dispare el guardado. En cuanto se carguen las credenciales, este estado desaparece solo |
 
 En todos los casos el mensaje **nunca desaparece en silencio**: o sale por
 correo, o queda guardado, o el visitante recibe una vía alternativa clara.
