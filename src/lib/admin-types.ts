@@ -9,6 +9,8 @@ import type {
   ContactSettings,
   ExcellenceSettings,
   HeroSettings,
+  HomeSettings,
+  NosotrosSettings,
   VisibilitySettings,
   YouTubeSettings,
 } from "@/data/site";
@@ -51,6 +53,26 @@ export interface ServiceImages {
   gallery?: GalleryImage[];
 }
 
+/**
+ * Video de YouTube de un servicio, tal como se GUARDA (columna
+ * `site_services.video`, migración 0007). El identificador del video no se
+ * guarda: se deriva de la URL al leer.
+ */
+export interface ServiceVideoRecord {
+  url: string;
+  titulo: string;
+  descripcion: string;
+  /** false = el video sigue guardado pero no se muestra en el sitio. */
+  visible: boolean;
+}
+
+export const servicioVideoVacio: ServiceVideoRecord = {
+  url: "",
+  titulo: "",
+  descripcion: "",
+  visible: true,
+};
+
 export interface ServiceRecord {
   id: string;
   slug: string;
@@ -62,6 +84,12 @@ export interface ServiceRecord {
   description: string | null;
   items: string[];
   images: ServiceImages;
+  /**
+   * `null` = este servicio no tiene video, o la migración 0007 todavía no está
+   * aplicada (la columna llega `undefined`). El formulario muestra los campos
+   * vacíos en los dos casos.
+   */
+  video: ServiceVideoRecord | null;
   meta_title: string | null;
   meta_description: string | null;
   sort: number;
@@ -123,6 +151,8 @@ export interface AdminSettings {
   hero: HeroSettings;
   excellence: ExcellenceSettings;
   youtube: YouTubeSettings;
+  home: HomeSettings;
+  nosotros: NosotrosSettings;
   visibility: VisibilitySettings;
 }
 

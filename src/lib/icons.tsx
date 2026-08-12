@@ -263,6 +263,15 @@ export const ClipboardList = (p: IconProps) => (
   </Base>
 );
 
+/** Casa: sección «Página de inicio» del panel. */
+export const Home = (p: IconProps) => (
+  <Base {...p}>
+    <path d="m3 10.5 9-7 9 7" />
+    <path d="M5.5 9.5V20a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V9.5" />
+    <path d="M10 21v-6h4v6" />
+  </Base>
+);
+
 /* ---------- Redes sociales ---------- */
 export const WhatsApp = (p: IconProps) => (
   <Base {...p} fill="currentColor" stroke="none">
@@ -333,6 +342,51 @@ export const Shuffle = (p: IconProps) => (
     <path d="M4 5h3.5c1 0 1.9.5 2.5 1.3L15 13c.6.8 1.5 1.3 2.5 1.3H21" />
     <path d="M4 19h3.5c1 0 1.9-.5 2.5-1.3l.8-1.1M14.2 8.4l.8-1.1c.6-.8 1.5-1.3 2.5-1.3H21" />
     <path d="m18 3 3 3-3 3M18 15l3 3-3 3" />
+  </Base>
+);
+
+/* ---------- Línea de tiempo / hitos de la empresa ---------- */
+
+/** Bandera: el punto de partida ("Enfoque inicial"). */
+export const Flag = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M5 21V4" />
+    <path d="M5 4.5h11l-2 3.5 2 3.5H5" />
+  </Base>
+);
+
+/** Diana con dardo: la MISIÓN. */
+export const Target = (p: IconProps) => (
+  <Base {...p}>
+    <circle cx="11" cy="13" r="8" />
+    <circle cx="11" cy="13" r="3.5" />
+    <path d="m13.5 10.5 6-6M17 5.2 18.9 3l.6 2.5 2.5.6L20 8" />
+  </Base>
+);
+
+/** Ojo: la VISIÓN. */
+export const Eye = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" />
+    <circle cx="12" cy="12" r="3" />
+  </Base>
+);
+
+/** Engranaje con visto: asesorías y ejecución de proyectos con método. */
+export const CogCheck = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M10.3 2.6a1 1 0 0 1 1-.6h1.4a1 1 0 0 1 1 .6l.4 1.4 1.6.7 1.3-.7a1 1 0 0 1 1.2.2l1 1a1 1 0 0 1 .2 1.2l-.7 1.3.7 1.6 1.4.4a1 1 0 0 1 .6 1v1.4a1 1 0 0 1-.6 1l-1.4.4-.7 1.6.7 1.3a1 1 0 0 1-.2 1.2l-1 1a1 1 0 0 1-1.2.2l-1.3-.7-1.6.7-.4 1.4a1 1 0 0 1-1 .6h-1.4a1 1 0 0 1-1-.6l-.4-1.4-1.6-.7-1.3.7a1 1 0 0 1-1.2-.2l-1-1a1 1 0 0 1-.2-1.2l.7-1.3-.7-1.6-1.4-.4a1 1 0 0 1-.6-1v-1.4a1 1 0 0 1 .6-1l1.4-.4.7-1.6-.7-1.3a1 1 0 0 1 .2-1.2l1-1a1 1 0 0 1 1.2-.2l1.3.7 1.6-.7Z" />
+    <path d="m9.5 12 1.8 1.8L15 10" />
+  </Base>
+);
+
+/** Barras con flecha ascendente: consolidación, crecimiento, resultados. */
+export const ChartUp = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M3 21h18" />
+    <path d="M6 21v-5M11 21v-8M16 21v-4" />
+    <path d="m13 8 4-4 4 4" />
+    <path d="M17 4v7" />
   </Base>
 );
 
@@ -416,7 +470,14 @@ export const Certificate = (p: IconProps) => (
   </Base>
 );
 
-/** Mapa de nombre → componente para uso data-driven. */
+/**
+ * Mapa de nombre → componente para uso data-driven.
+ *
+ * Lo consumen los valores corporativos, los servicios y —desde la migración
+ * 0007— los hitos y las etiquetas de la línea de tiempo de la página Nosotros.
+ * Añadir una entrada aquí la hace elegible en los desplegables del panel; nunca
+ * se debe QUITAR una (una fila guardada con ese nombre perdería su icono).
+ */
 export const iconMap = {
   handshake: Handshake,
   trophy: Trophy,
@@ -435,6 +496,16 @@ export const iconMap = {
   building: Building,
   droplet: Droplet,
   certificate: Certificate,
+  /* Línea de tiempo empresarial (0007) */
+  user: User,
+  users: Users,
+  cogCheck: CogCheck,
+  chartUp: ChartUp,
+  barChart: BarChart,
+  flag: Flag,
+  target: Target,
+  eye: Eye,
+  clipboardList: ClipboardList,
 } as const;
 
 export type IconName = keyof typeof iconMap;

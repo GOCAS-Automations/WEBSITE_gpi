@@ -7,10 +7,12 @@ import {
   Cog,
   Photo,
   Handshake,
+  Home,
   Info,
   Shield,
   Sliders,
   User,
+  Users,
   Clock,
   ClockPlus,
   Calendar,
@@ -30,13 +32,31 @@ export default async function AdminDashboardPage() {
   // ahí y en qué parte del sitio se ve.
   const contenido = [
     {
+      href: "/admin/inicio",
+      label: "Página de inicio",
+      icon: Home,
+      count: null,
+      unit: "",
+      description:
+        "La portada del sitio: la primera pantalla con su foto, el bloque «Quiénes somos» con las cifras y la banda oscura.",
+    },
+    {
+      href: "/admin/nosotros",
+      label: "Página Nosotros",
+      icon: Users,
+      count: null,
+      unit: "",
+      description:
+        "La historia de GPI: presentación, misión y visión, galería de aliados, línea de tiempo, video y textos de cierre.",
+    },
+    {
       href: "/admin/servicios",
       label: "Servicios",
       icon: Cog,
       count: counts.services,
       unit: "servicios",
       description:
-        "Los servicios que ofrece GPI: sus textos, imágenes, lista de alcances y el orden en que aparecen en el menú y en la página Servicios.",
+        "Los servicios que ofrece GPI: sus textos, imágenes, video, lista de alcances y el orden en que aparecen en el menú y en la página Servicios.",
     },
     {
       href: "/admin/proyectos",
@@ -81,7 +101,7 @@ export default async function AdminDashboardPage() {
       count: null,
       unit: "",
       description:
-        "Dirección, teléfonos, correos, redes y mapa; los textos de la primera pantalla del inicio; el video; y los interruptores para apagar secciones completas.",
+        "Dirección, teléfonos, correos, redes sociales, mapa y el correo al que llega el formulario de contacto.",
     },
   ];
 

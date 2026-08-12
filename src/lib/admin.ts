@@ -7,19 +7,7 @@
  */
 
 import { getServerSupabase } from "@/lib/supabase/server";
-import {
-  contactDefaults,
-  esCorreoValido,
-  excellenceDefaults,
-  heroDefaults,
-  visibilityDefaults,
-  youtubeDefaults,
-  type ContactSettings,
-  type ExcellenceSettings,
-  type HeroSettings,
-  type VisibilitySettings,
-  type YouTubeSettings,
-} from "@/data/site";
+import { normalizarSettings, siteSettingsDefaults } from "@/data/site";
 import { normalizeRole } from "@/lib/roles";
 import { usuarioDesdeEmail } from "@/lib/usuarios";
 import {
@@ -48,6 +36,7 @@ import type {
   ProjectRecord,
   ServiceImages,
   ServiceRecord,
+  ServiceVideoRecord,
   ValueRecord,
 } from "@/lib/admin-types";
 
@@ -108,6 +97,26 @@ function normalizeProjectGallery(value: unknown): GalleryImage[] {
 }
 
 /**
+ * Video de un servicio, para el FORMULARIO (columna `video`, migración 0007).
+ *
+ * Devuelve `null` cuando no hay nada guardado: la columna no existe todavía,
+ * está en NULL o el objeto quedó sin URL. El formulario muestra entonces los
+ * campos en blanco, listos para escribir.
+ */
+function normalizeServiceVideo(value: unknown): ServiceVideoRecord | null {
+  if (!isRecord(value)) return null;
+  const url = typeof value.url === "string" ? value.url.trim() : "";
+  if (url === "") return null;
+
+  return {
+    url,
+    titulo: typeof value.titulo === "string" ? value.titulo : "",
+    descripcion: typeof value.descripcion === "string" ? value.descripcion : "",
+    visible: value.visible !== false,
+  };
+}
+
+/**
  * `published` llega `undefined` mientras la migración 0002 no esté aplicada:
  * en ese caso se considera publicado (el comportamiento anterior a 0002).
  */
@@ -138,6 +147,7 @@ export async function listServices(): Promise<ServiceRecord[]> {
     description: row.description ?? null,
     items: normalizeItems(row.items),
     images: normalizeImages(row.images),
+    video: normalizeServiceVideo(row.video),
     meta_title: row.meta_title ?? null,
     meta_description: row.meta_description ?? null,
     sort: Number(row.sort ?? 0),
@@ -232,93 +242,29 @@ export async function listValues(): Promise<ValueRecord[]> {
   }));
 }
 
+/**
+ * Ajustes del sitio para los formularios del panel.
+ *
+ * Usa EXACTAMENTE la misma normalización que el sitio público
+ * (`normalizarSettings` de `src/data/site.ts`): lo que el panel muestra en los
+ * campos es, literalmente, lo que la página va a pintar. Cuando una clave no
+ * existe todavía en la base de datos —una migración pendiente— los campos
+ * aparecen con el respaldo estático, listos para guardarse tal cual.
+ */
 export async function getAdminSettings(): Promise<AdminSettings> {
   const supabase = await getServerSupabase();
-  const fallback: AdminSettings = {
-    contact: contactDefaults,
-    hero: heroDefaults,
-    excellence: excellenceDefaults,
-    youtube: youtubeDefaults,
-    visibility: visibilityDefaults,
-  };
-  if (!supabase) return fallback;
+  if (!supabase) return siteSettingsDefaults;
 
-  const { data } = await supabase.from("site_settings").select("key, value");
-  if (!data) return fallback;
+  try {
+    const { data } = await supabase.from("site_settings").select("key, value");
+    if (!data) return siteSettingsDefaults;
 
-  const map = new Map<string, unknown>(
-    data.map((row) => [String(row.key), row.value]),
-  );
-
-  const contactValue = map.get("contact");
-  const contact: ContactSettings = {
-    ...contactDefaults,
-    ...(isRecord(contactValue) ? (contactValue as Partial<ContactSettings>) : {}),
-    address: {
-      ...contactDefaults.address,
-      ...(isRecord(contactValue) && isRecord(contactValue.address)
-        ? contactValue.address
-        : {}),
-    },
-    geo: {
-      ...contactDefaults.geo,
-      ...(isRecord(contactValue) && isRecord(contactValue.geo)
-        ? contactValue.geo
-        : {}),
-    },
-    social: {
-      ...contactDefaults.social,
-      ...(isRecord(contactValue) && isRecord(contactValue.social)
-        ? contactValue.social
-        : {}),
-    },
-  };
-  if (!Array.isArray(contact.phones)) contact.phones = contactDefaults.phones;
-  if (!Array.isArray(contact.emails)) contact.emails = contactDefaults.emails;
-  // Sin la migración 0005 la clave no existe todavía: el campo del panel se
-  // muestra con el correo corporativo por defecto en vez de en blanco.
-  if (
-    typeof contact.correoFormulario !== "string" ||
-    !esCorreoValido(contact.correoFormulario)
-  ) {
-    contact.correoFormulario = contactDefaults.correoFormulario;
+    return normalizarSettings(
+      new Map<string, unknown>(data.map((row) => [String(row.key), row.value])),
+    );
+  } catch {
+    return siteSettingsDefaults;
   }
-
-  const excellence: ExcellenceSettings = {
-    ...excellenceDefaults,
-    ...(isRecord(map.get("excellence"))
-      ? (map.get("excellence") as Partial<ExcellenceSettings>)
-      : {}),
-  };
-  if (!Array.isArray(excellence.stats)) excellence.stats = excellenceDefaults.stats;
-
-  const visibilityValue = map.get("visibility");
-  const visibility: VisibilitySettings = { ...visibilityDefaults };
-  if (isRecord(visibilityValue)) {
-    for (const key of Object.keys(visibilityDefaults) as (keyof VisibilitySettings)[]) {
-      if (typeof visibilityValue[key] === "boolean") {
-        visibility[key] = visibilityValue[key];
-      }
-    }
-  }
-
-  return {
-    contact,
-    hero: {
-      ...heroDefaults,
-      ...(isRecord(map.get("hero"))
-        ? (map.get("hero") as Partial<HeroSettings>)
-        : {}),
-    },
-    excellence,
-    youtube: {
-      ...youtubeDefaults,
-      ...(isRecord(map.get("youtube"))
-        ? (map.get("youtube") as Partial<YouTubeSettings>)
-        : {}),
-    },
-    visibility,
-  };
 }
 
 /**

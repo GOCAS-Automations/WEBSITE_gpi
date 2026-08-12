@@ -12,6 +12,25 @@ export interface ServiceCategory {
   icon: IconName;
 }
 
+/**
+ * Video de YouTube de un servicio (columna `site_services.video`, migración
+ * 0007). Opcional: la inmensa mayoría de los servicios no tiene video.
+ *
+ * En la base de datos se guarda `{ url, titulo, descripcion, visible }`; el
+ * `id` se DERIVA de la URL al leer (`youtubeId()`), no se persiste, para que
+ * no puedan quedar desincronizados.
+ */
+export interface ServiceVideo {
+  /** La URL de YouTube tal como la pegó quien edita el panel. */
+  url: string;
+  /** Identificador del video extraído de la URL. Vacío = URL no reconocida. */
+  id: string;
+  titulo: string;
+  descripcion: string;
+  /** false = el video existe pero no se muestra (se oculta sin borrarlo). */
+  visible: boolean;
+}
+
 export interface Service {
   slug: string;
   title: string;
@@ -30,6 +49,8 @@ export interface Service {
   coverAlt: string;
   /** Galería opcional de imágenes adicionales */
   gallery?: { src: string; alt: string }[];
+  /** Video de YouTube opcional, al final de la página del servicio. */
+  video?: ServiceVideo;
   metaTitle: string;
   metaDescription: string;
 }

@@ -2,33 +2,36 @@ import { getAdminSettings } from "@/lib/admin";
 import {
   AdminPageHeader,
   AyudaSeccion,
-  AYUDA_ALT,
   Card,
   CardTitle,
   Field,
+  NextStepLink,
   Switch,
   TextArea,
 } from "@/components/admin/ui";
 import { AdminForm } from "@/components/admin/AdminForm";
-import { ImageField } from "@/components/admin/ImageField";
 import { PairListField } from "@/components/admin/ListField";
-import {
-  saveContactSettings,
-  saveHeroSettings,
-  saveExcellenceSettings,
-  saveVisibilitySettings,
-  saveYouTubeSettings,
-} from "../actions";
+import { saveContactSettings, saveVisibilitySettings } from "../actions";
 
+/**
+ * CONTACTO Y AJUSTES
+ * ==================
+ * Lo transversal del sitio: los datos con los que la gente contacta a GPI
+ * (pie de página, página de Contacto, botón de WhatsApp, marcado para Google)
+ * y el único interruptor de visibilidad que afecta a más de una página.
+ *
+ * Los textos e imágenes de cada página se editan en «Página de inicio» y
+ * «Página Nosotros», que es de donde salieron el hero, las cifras y el video
+ * que antes vivían aquí.
+ */
 export default async function AdminAjustesPage() {
-  const { contact, hero, excellence, youtube, visibility } =
-    await getAdminSettings();
+  const { contact, visibility } = await getAdminSettings();
 
   return (
     <>
       <AdminPageHeader
         title="Contacto y ajustes"
-        description="Los datos de contacto de GPI, las redes, el mapa, los textos de la primera pantalla del inicio, el video y los interruptores de secciones completas."
+        description="Los datos de contacto de GPI, las redes sociales, el mapa, el correo al que llega el formulario y la visibilidad de los valores en todo el sitio."
         breadcrumb={[
           { label: "Panel", href: "/admin" },
           { label: "Contacto y ajustes" },
@@ -36,57 +39,21 @@ export default async function AdminAjustesPage() {
       />
 
       <AyudaSeccion title="Cómo se usa esta pantalla" className="mb-6">
-        Cada bloque de abajo se guarda <strong>por separado</strong>, con su
-        propio botón: si cambias un teléfono, pulsa «Guardar contacto» y ya. Lo
-        que guardes se ve en el sitio en pocos minutos. Aquí tienes, en orden:
-        los interruptores para <strong>apagar secciones completas</strong>, los{" "}
-        <strong>datos de contacto</strong> (que alimentan el pie de página, la
-        página Contacto y el botón de WhatsApp), los{" "}
-        <strong>textos e imagen de la primera pantalla</strong> del inicio, las{" "}
-        <strong>cifras</strong> de «Quiénes somos» y el{" "}
-        <strong>video</strong> de la página Nosotros.
+        Aquí están los datos que se repiten en <strong>todo</strong> el sitio:
+        dirección, teléfonos, correos, redes, el mapa y el buzón al que llega el
+        formulario de contacto. Cada bloque se guarda{" "}
+        <strong>por separado</strong>, con su propio botón, y lo que guardes se
+        ve en el sitio en pocos minutos. Los textos e imágenes de cada página se
+        editan en <strong>Página de inicio</strong> y{" "}
+        <strong>Página Nosotros</strong>.
       </AyudaSeccion>
 
-      <div className="space-y-6">
-        {/* ---------------- Visibilidad de secciones ---------------- */}
-        <Card>
-          <CardTitle
-            title="Visibilidad de secciones"
-            description="Apaga bloques completos del sitio público sin borrar nada: al volver a encenderlos, el contenido reaparece tal como estaba. Es lo recomendado cuando algo no está listo para mostrarse."
-          />
-          <AdminForm
-            action={saveVisibilitySettings}
-            submitLabel="Guardar visibilidad"
-          >
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Switch
-                label="Valores corporativos"
-                name="valuesSection"
-                defaultChecked={visibility.valuesSection}
-                hint="Bloque «Nuestros valores» del inicio y de la página Nosotros."
-              />
-              <Switch
-                label="Clientes"
-                name="clientsSection"
-                defaultChecked={visibility.clientsSection}
-                hint="Banda de logos de clientes en la página de inicio."
-              />
-              <Switch
-                label="Video corporativo"
-                name="videoSection"
-                defaultChecked={visibility.videoSection}
-                hint="Video de YouTube que se muestra en la página Nosotros."
-              />
-              <Switch
-                label="Preguntas frecuentes"
-                name="faqSection"
-                defaultChecked={visibility.faqSection}
-                hint="Acordeón de FAQ en Nosotros (y su marcado FAQPage para Google)."
-              />
-            </div>
-          </AdminForm>
-        </Card>
+      <div className="mb-6 flex flex-wrap items-center gap-x-6 gap-y-2">
+        <NextStepLink href="/admin/inicio" label="Editar la página de inicio" />
+        <NextStepLink href="/admin/nosotros" label="Editar la página Nosotros" />
+      </div>
 
+      <div className="space-y-6">
         {/* ---------------- Contacto ---------------- */}
         <Card>
           <CardTitle
@@ -190,154 +157,28 @@ export default async function AdminAjustesPage() {
           </AdminForm>
         </Card>
 
-        {/* ---------------- Hero ---------------- */}
+        {/* ---------------- Visibilidad global ---------------- */}
         <Card>
           <CardTitle
-            title="Primera pantalla del inicio"
-            description="Lo primero que ve alguien al entrar a gpiprofesionales.com: la imagen de fondo, el título grande y los dos botones."
+            title="Visibilidad en todo el sitio"
+            description="El único bloque que sale en más de una página y, por eso, se apaga desde aquí. Apagarlo no borra nada: al volver a encenderlo, el contenido reaparece tal como estaba."
           />
-          <AdminForm action={saveHeroSettings} submitLabel="Guardar hero">
-            <Field
-              label="Etiqueta superior"
-              name="badge"
-              defaultValue={hero.badge}
-              placeholder="+5 años en el sector industrial-ambiental"
+          <AdminForm
+            action={saveVisibilitySettings}
+            submitLabel="Guardar visibilidad"
+          >
+            <Switch
+              label="Valores corporativos"
+              name="valuesSection"
+              defaultChecked={visibility.valuesSection}
+              hint="Los apaga a la vez en la página de inicio y en Nosotros. Para quitarlos solo de Nosotros, usa el interruptor de esa pantalla."
             />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field
-                label="Título (primera parte)"
-                name="titleLead"
-                defaultValue={hero.titleLead}
-                hint="Se muestra en blanco."
-              />
-              <Field
-                label="Título (palabra destacada)"
-                name="titleHighlight"
-                defaultValue={hero.titleHighlight}
-                hint="Se muestra con el degradado verde."
-              />
-            </div>
-            <TextArea
-              label="Descripción"
-              name="description"
-              rows={3}
-              defaultValue={hero.description}
-            />
-            <ImageField
-              label="Imagen de fondo"
-              name="image"
-              folder="hero"
-              required
-              defaultValue={hero.image}
-              hint="Ocupa toda la primera pantalla, así que conviene una foto horizontal y de buena calidad."
-            />
-            <Field
-              label="Texto alternativo"
-              name="imageAlt"
-              defaultValue={hero.imageAlt}
-              hint={AYUDA_ALT}
-            />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field
-                label="Botón principal — texto"
-                name="primaryCtaLabel"
-                defaultValue={hero.primaryCtaLabel}
-              />
-              <Field
-                label="Botón principal — enlace"
-                name="primaryCtaHref"
-                defaultValue={hero.primaryCtaHref}
-              />
-              <Field
-                label="Botón secundario — texto"
-                name="secondaryCtaLabel"
-                defaultValue={hero.secondaryCtaLabel}
-              />
-              <Field
-                label="Botón secundario — enlace"
-                name="secondaryCtaHref"
-                defaultValue={hero.secondaryCtaHref}
-              />
-            </div>
-          </AdminForm>
-        </Card>
-
-        {/* ---------------- Banda EXCELENCIA + estadísticas ---------------- */}
-        <Card>
-          <CardTitle
-            title="Cifras y banda oscura del inicio"
-            description="Las cifras que acompañan a «Quiénes somos» y la franja oscura con el mensaje destacado, ambas en la página de inicio."
-          />
-          <AdminForm action={saveExcellenceSettings} submitLabel="Guardar sección">
-            <Field label="Texto superior" name="eyebrow" defaultValue={excellence.eyebrow} />
-            <TextArea
-              label="Mensaje"
-              name="messageLead"
-              rows={2}
-              defaultValue={excellence.messageLead}
-              hint="Se completa con la palabra destacada y un punto final."
-            />
-            <div className="grid gap-4 sm:grid-cols-3">
-              <Field
-                label="Palabra destacada"
-                name="messageHighlight"
-                defaultValue={excellence.messageHighlight}
-              />
-              <Field label="Botón — texto" name="ctaLabel" defaultValue={excellence.ctaLabel} />
-              <Field label="Botón — enlace" name="ctaHref" defaultValue={excellence.ctaHref} />
-            </div>
-            <PairListField
-              label="Estadísticas"
-              nameA="stat_value"
-              nameB="stat_label"
-              labelA="Cifra (+5, 100%…)"
-              labelB="Descripción"
-              defaultValues={excellence.stats.map((s) => ({
-                a: s.value,
-                b: s.label,
-              }))}
-              addLabel="Añadir estadística"
-              hint="Se muestran en una cuadrícula de dos columnas; lo ideal son 4."
-            />
-          </AdminForm>
-        </Card>
-
-        {/* ---------------- YouTube ---------------- */}
-        <Card>
-          <CardTitle
-            title="Video corporativo (YouTube)"
-            description="El video que se muestra en la página Nosotros. Solo se carga cuando el visitante pulsa play, para que el sitio siga siendo rápido."
-          />
-          <AdminForm action={saveYouTubeSettings} submitLabel="Guardar video">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field
-                label="ID o URL del video"
-                name="id"
-                required
-                defaultValue={youtube.id}
-                hint="Puedes pegar la URL completa; se extrae el ID automáticamente."
-              />
-              <Field label="URL para ver en YouTube" name="watchUrl" defaultValue={youtube.watchUrl} />
-            </div>
-            <Field label="Título del video" name="title" defaultValue={youtube.title} />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field
-                label="Texto superior de la sección"
-                name="sectionEyebrow"
-                defaultValue={youtube.sectionEyebrow}
-              />
-              <Field
-                label="Título de la sección"
-                name="sectionTitle"
-                defaultValue={youtube.sectionTitle}
-              />
-            </div>
-            <TextArea
-              label="Descripción de la sección"
-              name="sectionDescription"
-              rows={2}
-              defaultValue={youtube.sectionDescription}
-            />
+            <AyudaSeccion>
+              El resto de los interruptores están en la pantalla de la página a
+              la que pertenecen: <strong>Página de inicio</strong> (Quiénes
+              somos, clientes) y <strong>Página Nosotros</strong> (misión y
+              visión, galería, línea de tiempo, video, preguntas frecuentes).
+            </AyudaSeccion>
           </AdminForm>
         </Card>
       </div>

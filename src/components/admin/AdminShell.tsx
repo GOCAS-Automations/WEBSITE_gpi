@@ -8,12 +8,14 @@ import {
   Cog,
   Photo,
   Handshake,
+  Home,
   Info,
   Shield,
   Sliders,
   LogOut,
   ArrowRight,
   User,
+  Users,
   Clock,
   ClockPlus,
   Calendar,
@@ -36,6 +38,8 @@ interface AdminSection {
  */
 export const adminSections: AdminSection[] = [
   { href: "/admin", label: "Dashboard", icon: Sliders, exact: true },
+  { href: "/admin/inicio", label: "Página de inicio", icon: Home },
+  { href: "/admin/nosotros", label: "Página Nosotros", icon: Users },
   { href: "/admin/servicios", label: "Servicios", icon: Cog },
   { href: "/admin/proyectos", label: "Proyectos", icon: Photo },
   { href: "/admin/clientes", label: "Clientes", icon: Handshake },

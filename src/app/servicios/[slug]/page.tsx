@@ -6,6 +6,7 @@ import { Container } from "@/components/ui/Container";
 import { ButtonLink } from "@/components/ui/Button";
 import { PageHero } from "@/components/sections/PageHero";
 import { CtaBand } from "@/components/sections/CtaBand";
+import { YouTubeFacade } from "@/components/sections/YouTubeFacade";
 import { services as staticServices, getCategory } from "@/data/services";
 import { whatsappLink } from "@/data/contact";
 import { getService, getServices, getSettings } from "@/lib/content";
@@ -184,6 +185,29 @@ export default async function ServiceDetailPage({
                         />
                       </div>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Video del servicio (columna `video`, migración 0007).
+                  `getServices()` ya devuelve `undefined` cuando no hay video,
+                  cuando la URL no es de YouTube o cuando está oculto: aquí
+                  basta con preguntar si existe. */}
+              {service.video && (
+                <div className="mt-10">
+                  <h3 className="text-lg font-bold text-ink">
+                    {service.video.titulo || "Video del servicio"}
+                  </h3>
+                  {service.video.descripcion !== "" && (
+                    <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-graphite">
+                      {service.video.descripcion}
+                    </p>
+                  )}
+                  <div className="mt-4">
+                    <YouTubeFacade
+                      id={service.video.id}
+                      title={service.video.titulo || service.title}
+                    />
                   </div>
                 </div>
               )}

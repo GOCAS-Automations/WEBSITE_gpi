@@ -1,6 +1,8 @@
 import {
   AYUDA_ALT,
   AYUDA_ORDEN,
+  AYUDA_VIDEO_SERVICIO,
+  AyudaSeccion,
   Field,
   Select,
   Switch,
@@ -140,6 +142,43 @@ export function ServiceFormFields({ service }: { service?: ServiceRecord }) {
             label="Galería (opcional)"
             defaultValues={service?.images.gallery}
             hint="Imágenes adicionales que se muestran al final de la página del servicio, en el orden de las filas. A cada una conviene ponerle su texto alternativo."
+          />
+        </div>
+      </Card>
+
+      <Card>
+        <CardTitle
+          title="Video del servicio (YouTube)"
+          description="Opcional. Si pegas un enlace de YouTube, el video se muestra al final de la página de este servicio."
+        />
+        <div className="space-y-4">
+          <AyudaSeccion>{AYUDA_VIDEO_SERVICIO}</AyudaSeccion>
+          <Field
+            label="Enlace del video"
+            name="video_url"
+            type="url"
+            defaultValue={service?.video?.url}
+            placeholder="https://www.youtube.com/watch?v=..."
+            hint="Copia la dirección de la barra del navegador mientras ves el video. También sirven los enlaces cortos (youtu.be) y los de Shorts. Déjalo vacío para quitar el video."
+          />
+          <Field
+            label="Título del video"
+            name="video_titulo"
+            defaultValue={service?.video?.titulo}
+            placeholder="Ej.: Montaje de tablero de control en planta"
+          />
+          <TextArea
+            label="Descripción del video"
+            name="video_descripcion"
+            rows={2}
+            defaultValue={service?.video?.descripcion}
+            placeholder="Una frase que cuente qué se ve en el video."
+          />
+          <Switch
+            label="Mostrar el video"
+            name="video_visible"
+            defaultChecked={service?.video?.visible ?? true}
+            hint="Apagarlo lo esconde del sitio pero conserva el enlace y los textos aquí."
           />
         </div>
       </Card>

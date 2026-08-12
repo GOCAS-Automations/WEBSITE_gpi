@@ -1,12 +1,21 @@
-// Textos e imágenes editables del inicio (hero + banda EXCELENCIA), datos de
-// contacto y video corporativo. Fuente de verdad estática: se usa como seed de
-// `site_settings` en Supabase y como fallback cuando el proyecto no está
-// configurado.
+// Textos e imágenes editables de las páginas generales del sitio (inicio,
+// Nosotros), datos de contacto, video corporativo y visibilidad de secciones.
+// Fuente de verdad estática: se usa como seed de `site_settings` en Supabase y
+// como fallback cuando el proyecto no está configurado o la migración
+// correspondiente todavía no se ha aplicado.
 //
 // Este módulo es PURO (sin dependencias de servidor): puede importarse tanto
 // desde Server Components como desde Client Components.
+//
+// REGLA DE ORO DE ESTE ARCHIVO
+// ----------------------------
+// Los textos de aquí están DUPLICADOS a propósito en la migración que los
+// siembra (`supabase/migrations/0007_contenido_paginas.sql`). Es el patrón del
+// repositorio: el sitio se ve exactamente igual con base de datos y sin ella.
+// Si cambias un texto aquí, cámbialo también allí.
 
 import { contact as staticContact } from "@/data/contact";
+import { iconMap, type IconName } from "@/lib/icons";
 
 export interface ContactSettings {
   companyName: string;
@@ -56,6 +65,12 @@ export interface ExcellenceSettings {
   messageHighlight: string;
   ctaLabel: string;
   ctaHref: string;
+  /**
+   * LEGADO. Las cifras de «Quiénes somos» del inicio viven desde la migración
+   * 0007 en `home.quienesSomos.stats`, que es lo que se edita y lo que se
+   * muestra. Esta clave se conserva porque las bases de datos anteriores la
+   * tienen y de ella se siembran las nuevas (ver `normalizarHome`).
+   */
   stats: StatItem[];
 }
 
@@ -68,14 +83,115 @@ export interface YouTubeSettings {
   sectionDescription: string;
 }
 
+/** Par imagen + texto alternativo usado por las secciones editables. */
+export interface ImagenContenido {
+  url: string;
+  alt: string;
+}
+
+/* ------------------------------------------------------------------ */
+/* Página de inicio (clave `home`)                                     */
+/* ------------------------------------------------------------------ */
+
+export interface HomeQuienesSomos {
+  eyebrow: string;
+  titulo: string;
+  descripcion: string;
+  bullets: string[];
+  imagen: ImagenContenido;
+  /** Las tarjetas de cifras. Se muestran junto al contador de visitas. */
+  stats: StatItem[];
+  ctaLabel: string;
+  ctaHref: string;
+}
+
+export interface HomeSettings {
+  quienesSomos: HomeQuienesSomos;
+}
+
+/* ------------------------------------------------------------------ */
+/* Página Nosotros (clave `nosotros`)                                  */
+/* ------------------------------------------------------------------ */
+
+export interface NosotrosHero {
+  titulo: string;
+  descripcion: string;
+  imagen: ImagenContenido;
+}
+
+export interface NosotrosQuienesSomos {
+  titulo: string;
+  /** Uno o varios párrafos; cada elemento es un `<p>`. */
+  parrafos: string[];
+  imagen: ImagenContenido;
+}
+
+export interface NosotrosGaleria {
+  titulo: string;
+  descripcion: string;
+  fotos: ImagenContenido[];
+}
+
+/** Una tarjeta de la línea de tiempo (arriba de la flecha). */
+export interface HitoLineaTiempo {
+  /** "Abril de 2015", "Hoy"… */
+  fecha: string;
+  titulo: string;
+  descripcion: string;
+  icono: IconName;
+}
+
+/** Una etiqueta de la línea de tiempo (debajo de la flecha). */
+export interface EtiquetaLineaTiempo {
+  titulo: string;
+  descripcion: string;
+  icono: IconName;
+}
+
+export interface NosotrosLineaTiempo {
+  eyebrow: string;
+  titulo: string;
+  descripcion: string;
+  hitos: HitoLineaTiempo[];
+  etiquetas: EtiquetaLineaTiempo[];
+}
+
+export interface SeccionIntro {
+  eyebrow: string;
+  titulo: string;
+  descripcion: string;
+}
+
+export interface NosotrosSettings {
+  hero: NosotrosHero;
+  quienesSomos: NosotrosQuienesSomos;
+  mision: { texto: string };
+  vision: { texto: string };
+  galeria: NosotrosGaleria;
+  lineaTiempo: NosotrosLineaTiempo;
+  valoresIntro: SeccionIntro;
+  cta: { titulo: string; descripcion: string };
+}
+
+/* ------------------------------------------------------------------ */
+/* Visibilidad                                                         */
+/* ------------------------------------------------------------------ */
+
 /**
  * Interruptores de visibilidad de secciones completas del sitio público.
- * Se editan en /admin/ajustes y viven en `site_settings` con la clave
- * `visibility`. Todo `true` por defecto: el sitio se ve completo salvo que
- * alguien apague algo a propósito.
+ * Viven en `site_settings` con la clave `visibility`. Todo `true` por defecto:
+ * el sitio se ve completo salvo que alguien apague algo a propósito.
+ *
+ * Hay dos niveles y conviven a propósito:
+ *   · Las cuatro claves ORIGINALES (`valuesSection`, `clientsSection`,
+ *     `videoSection`, `faqSection`) siguen significando lo mismo que siempre.
+ *   · Las claves `home*` / `nosotros*` (migración 0007) son por PÁGINA.
+ * Una sección se ve si su clave de página Y su clave global están encendidas.
+ * Así, apagar los valores desde «Contacto y ajustes» los apaga en todo el
+ * sitio, y apagarlos desde «Página Nosotros» solo los quita de esa página.
  */
 export interface VisibilitySettings {
-  /** Bloque "Nuestros valores" (inicio y Nosotros). */
+  /** Bloque "Nuestros valores" (inicio y Nosotros). Interruptor GLOBAL. */
   valuesSection: boolean;
   /** Banda de logos de clientes (inicio). */
   clientsSection: boolean;
@@ -83,6 +199,24 @@ export interface VisibilitySettings {
   videoSection: boolean;
   /** Preguntas frecuentes (Nosotros, incluido el marcado FAQPage). */
   faqSection: boolean;
+
+  /* --- Por página (migración 0007) --------------------------------- */
+  /** Bloque "Quiénes somos" con las cifras, en la página de inicio. */
+  homeQuienesSomos: boolean;
+  /** Bloque "Quiénes Somos" con la foto del equipo, en Nosotros. */
+  nosotrosQuienesSomos: boolean;
+  /** Tarjetas de Misión y Visión. */
+  nosotrosMisionVision: boolean;
+  /** Galería "Más que proveedores, somos aliados estratégicos". */
+  nosotrosGaleria: boolean;
+  /** Línea de tiempo empresarial. */
+  nosotrosLineaTiempo: boolean;
+  /** Valores corporativos EN LA PÁGINA NOSOTROS (además del global). */
+  nosotrosValores: boolean;
+  /** Video corporativo EN LA PÁGINA NOSOTROS (además del global). */
+  nosotrosVideo: boolean;
+  /** Preguntas frecuentes EN LA PÁGINA NOSOTROS (además del global). */
+  nosotrosFaq: boolean;
 }
 
 export interface SiteSettings {
@@ -90,8 +224,14 @@ export interface SiteSettings {
   hero: HeroSettings;
   excellence: ExcellenceSettings;
   youtube: YouTubeSettings;
+  home: HomeSettings;
+  nosotros: NosotrosSettings;
   visibility: VisibilitySettings;
 }
+
+/* ------------------------------------------------------------------ */
+/* Valores por defecto                                                 */
+/* ------------------------------------------------------------------ */
 
 export const contactDefaults: ContactSettings = {
   companyName: staticContact.companyName,
@@ -121,7 +261,7 @@ export function esCorreoValido(valor: string): boolean {
 }
 
 export const heroDefaults: HeroSettings = {
-  badge: "+5 años en el sector industrial-ambiental",
+  badge: "+15 años en el sector industrial-ambiental",
   titleLead: "Optimización de",
   titleHighlight: "procesos",
   description:
@@ -135,19 +275,166 @@ export const heroDefaults: HeroSettings = {
   secondaryCtaHref: "/contacto",
 };
 
+/**
+ * Las cuatro cifras que GPI aprobó el 12 de agosto de 2026.
+ * Se comparten entre `home.quienesSomos.stats` (lo que se muestra) y el legado
+ * `excellence.stats`, para que las dos claves digan lo mismo.
+ */
+const STATS_QUIENES_SOMOS: StatItem[] = [
+  { value: "+15", label: "años en el sector industrial-ambiental" },
+  { value: "100%", label: "objetivo en el desempeño del cliente" },
+  { value: "11", label: "servicios industriales y ambientales" },
+  { value: "2", label: "grandes áreas: industrial y ambiental" },
+];
+
 export const excellenceDefaults: ExcellenceSettings = {
-  eyebrow: "Más de 5 años en el sector industrial-ambiental",
+  eyebrow: "Más de 15 años en el sector industrial-ambiental",
   messageLead:
     "Trabajamos para lograr el 100% en el desempeño de nuestros clientes, siempre buscando la",
   messageHighlight: "EXCELENCIA",
   ctaLabel: "Ver proyectos realizados",
   ctaHref: "/proyectos",
-  stats: [
-    { value: "+5", label: "años en el sector industrial-ambiental" },
-    { value: "100%", label: "objetivo en el desempeño del cliente" },
-    { value: "11", label: "servicios industriales y ambientales" },
-    { value: "2", label: "grandes áreas: industrial y ambiental" },
-  ],
+  stats: STATS_QUIENES_SOMOS.map((s) => ({ ...s })),
+};
+
+export const homeDefaults: HomeSettings = {
+  quienesSomos: {
+    eyebrow: "Quiénes somos",
+    titulo: "Gestión estratégica y ejecución para su operación",
+    descripcion:
+      "Somos una empresa de gestión estratégica y ejecución, enfocada en generar rentabilidad y el cumplimiento de requisitos internos y externos a las compañías, basados en la mejora continua e integrando las variables de los modelos de negocio de cada organización.",
+    bullets: [
+      "Objetivo: lograr el 100% en el desempeño de nuestros clientes.",
+      "Integración de disciplinas industriales y ambientales.",
+      "Metodología basada en la mejora continua.",
+    ],
+    imagen: {
+      url: "/images/cm/foto-equipo-gpi-sede.jpg",
+      alt: "Equipo de GPI reunido en la sede de la empresa, frente a la pared con el logo corporativo",
+    },
+    stats: STATS_QUIENES_SOMOS.map((s) => ({ ...s })),
+    ctaLabel: "Conócenos",
+    ctaHref: "/nosotros",
+  },
+};
+
+export const nosotrosDefaults: NosotrosSettings = {
+  hero: {
+    titulo: "Optimizamos procesos, generamos rentabilidad",
+    descripcion:
+      "Somos una empresa de gestión estratégica y ejecución, enfocada en el desempeño y el cumplimiento de nuestros clientes.",
+    imagen: {
+      url: "/images/slides/2.jpg",
+      alt: "Profesional de GPI realizando mediciones ambientales en campo",
+    },
+  },
+  quienesSomos: {
+    titulo: "Quiénes Somos",
+    parrafos: [
+      "Con más de 15 años de experiencia en el sector industrial y ambiental, somos una empresa de gestión estratégica y ejecución dedicada a impulsar la rentabilidad y el cumplimiento normativo de nuestros clientes, teniendo en cuenta las características y el modelo de negocio de cada uno de nuestros clientes.",
+      "A lo largo de nuestra trayectoria hemos acompañado a empresas del Valle del Cauca en sus procesos de mejora continua, combinando conocimiento técnico, visión estratégica y compromiso con resultados medibles. Creemos que cada organización es única, y por eso diseñamos soluciones a la medida de sus necesidades económicas, operativas y ambientales.",
+    ],
+    imagen: {
+      url: "/images/cm/foto-equipo-gpi-sede.jpg",
+      alt: "Equipo de GPI reunido en la sede de la empresa, frente a la pared con el logo corporativo",
+    },
+  },
+  mision: {
+    texto:
+      "Generar rentabilidad, cumplimiento de requisitos internos y externos a las compañías, basados en la mejora continua, integrando las variables de los modelos de negocio de cada organización.",
+  },
+  vision: {
+    texto:
+      "Convertirnos en el aliado estratégico de las empresas en el Valle del Cauca a nivel industrial en temas ambientales y de proyectos de mejoramiento industrial.",
+  },
+  galeria: {
+    titulo: "Más que proveedores, somos aliados estratégicos",
+    descripcion:
+      "Hoy trabajamos con la meta de consolidarnos como el mejor aliado estratégico para el sector industrial y ambiental, primero en el Valle del Cauca y, progresivamente, a nivel nacional construyendo relaciones basadas en la transparencia, la confianza y el crecimiento conjunto.",
+    fotos: [
+      {
+        url: "/images/cm/foto-aforo-quebrada-gpi.jpg",
+        alt: "Profesional de GPI midiendo el caudal de una quebrada con equipo de aforo durante un monitoreo ambiental",
+      },
+      {
+        url: "/images/cm/foto-monitoreo-agua-registro-datos.jpg",
+        alt: "Dos profesionales de GPI registrando datos durante un monitoreo de calidad del agua en campo",
+      },
+      {
+        url: "/images/cm/foto-tablero-control-planta-gpi.jpg",
+        alt: "Técnico de GPI operando el tablero de control de un equipo automatizado en planta",
+      },
+    ],
+  },
+  lineaTiempo: {
+    eyebrow: "Nuestra trayectoria",
+    titulo: "Línea de tiempo empresarial",
+    descripcion:
+      "Un camino de evolución, compromiso y resultados que nos ha permitido crecer junto a nuestros clientes y aliados estratégicos.",
+    hitos: [
+      {
+        fecha: "Abril de 2015",
+        titulo: "Nuestros inicios",
+        descripcion:
+          "Comenzamos como persona natural, brindando asesorías especializadas en ingeniería.",
+        icono: "user",
+      },
+      {
+        fecha: "Julio de 2021",
+        titulo: "Asesorías y ejecución de proyectos",
+        descripcion:
+          "Ampliamos nuestro alcance para incluir la ejecución de proyectos, integrando conocimiento técnico y gestión orientada a resultados.",
+        icono: "cogCheck",
+      },
+      {
+        fecha: "Septiembre de 2022",
+        titulo: "Nacemos como persona jurídica",
+        descripcion:
+          "Constituimos nuestra empresa como SAS, robustecimos nuestro portafolio de servicios y fortalecimos nuestra estructura organizacional.",
+        icono: "building",
+      },
+      {
+        fecha: "Hoy",
+        titulo: "Consolidación y futuro",
+        descripcion:
+          "Contamos con punto físico y atendemos a las empresas más importantes del Valle del Cauca, impulsando su competitividad y sostenibilidad.",
+        icono: "chartUp",
+      },
+    ],
+    etiquetas: [
+      {
+        titulo: "Enfoque inicial",
+        descripcion: "Asesorías técnicas con compromiso y calidad.",
+        icono: "flag",
+      },
+      {
+        titulo: "Crecimiento",
+        descripcion: "De la asesoría a la acción, generando impacto real.",
+        icono: "barChart",
+      },
+      {
+        titulo: "Fortalecimiento",
+        descripcion: "Más servicios, más capacidades, más valor para nuestros clientes.",
+        icono: "shield",
+      },
+      {
+        titulo: "Impacto",
+        descripcion: "Alianzas sólidas, resultados medibles y relaciones a largo plazo.",
+        icono: "users",
+      },
+    ],
+  },
+  valoresIntro: {
+    eyebrow: "Nuestros valores",
+    titulo: "Lo que nos define",
+    descripcion:
+      "Los principios que están presentes en cada propuesta y ejecución de valor para nuestros clientes.",
+  },
+  cta: {
+    titulo: "¿Listo para optimizar sus procesos?",
+    descripcion:
+      "Cuéntenos su necesidad y le presentamos una propuesta a la medida de su proceso y su presupuesto.",
+  },
 };
 
 export const visibilityDefaults: VisibilitySettings = {
@@ -155,6 +442,14 @@ export const visibilityDefaults: VisibilitySettings = {
   clientsSection: true,
   videoSection: true,
   faqSection: true,
+  homeQuienesSomos: true,
+  nosotrosQuienesSomos: true,
+  nosotrosMisionVision: true,
+  nosotrosGaleria: true,
+  nosotrosLineaTiempo: true,
+  nosotrosValores: true,
+  nosotrosVideo: true,
+  nosotrosFaq: true,
 };
 
 export const youtubeDefaults: YouTubeSettings = {
@@ -167,3 +462,298 @@ export const youtubeDefaults: YouTubeSettings = {
   sectionDescription:
     "Una muestra de nuestros servicios profesionales de inspección con drones 4K.",
 };
+
+export const siteSettingsDefaults: SiteSettings = {
+  contact: contactDefaults,
+  hero: heroDefaults,
+  excellence: excellenceDefaults,
+  youtube: youtubeDefaults,
+  home: homeDefaults,
+  nosotros: nosotrosDefaults,
+  visibility: visibilityDefaults,
+};
+
+/* ------------------------------------------------------------------ */
+/* Contador de visitas                                                 */
+/* ------------------------------------------------------------------ */
+
+/** Etiqueta de la tarjeta del contador, junto a las cifras de «Quiénes somos». */
+export const ETIQUETA_VISITAS = "visitas al sitio web";
+
+/** Formatea el total con separador de miles colombiano (1.234). */
+export function formatearVisitas(total: number): string {
+  const seguro = Number.isFinite(total) && total > 0 ? Math.floor(total) : 0;
+  return new Intl.NumberFormat("es-CO").format(seguro);
+}
+
+/* ------------------------------------------------------------------ */
+/* NORMALIZADORES                                                      */
+/*                                                                     */
+/* Puros: reciben lo que venga de `site_settings` (que es jsonb, es     */
+/* decir: cualquier cosa) y devuelven un objeto con la forma correcta,  */
+/* rellenando con los valores por defecto lo que falte o no sea válido. */
+/*                                                                     */
+/* Los usan la capa pública (`src/lib/content.ts`), el panel            */
+/* (`src/lib/admin.ts`) y las server actions: una sola definición de    */
+/* "qué es válido", imposible de contradecir entre pantallas.           */
+/* ------------------------------------------------------------------ */
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** Texto no vacío, o el respaldo. */
+function texto(value: unknown, respaldo: string): string {
+  return typeof value === "string" && value.trim() !== "" ? value : respaldo;
+}
+
+/** Nombre de icono válido, o el respaldo. */
+function icono(value: unknown, respaldo: IconName): IconName {
+  return typeof value === "string" && value in iconMap
+    ? (value as IconName)
+    : respaldo;
+}
+
+/** Lista de textos no vacíos. Devuelve `null` si el valor no era una lista. */
+function listaTextos(value: unknown): string[] | null {
+  if (!Array.isArray(value)) return null;
+  return value.filter((v): v is string => typeof v === "string" && v.trim() !== "");
+}
+
+/**
+ * Lista de imágenes `{url, alt}`. Acepta también `{src, alt}` (el formato que
+ * usan las galerías de servicios) para que dé igual cuál se haya guardado.
+ * Devuelve `null` si el valor no era una lista.
+ */
+function listaImagenes(value: unknown): ImagenContenido[] | null {
+  if (!Array.isArray(value)) return null;
+  return value
+    .filter(isRecord)
+    .map((img) => ({ url: texto(img.url ?? img.src, ""), alt: texto(img.alt, "") }))
+    .filter((img) => img.url !== "");
+}
+
+function imagen(value: unknown, respaldo: ImagenContenido): ImagenContenido {
+  if (!isRecord(value)) return { ...respaldo };
+  return {
+    url: texto(value.url ?? value.src, respaldo.url),
+    // El texto alternativo SÍ puede quedarse vacío a propósito (imagen
+    // decorativa), así que solo se respalda cuando la clave no existe.
+    alt: typeof value.alt === "string" ? value.alt : respaldo.alt,
+  };
+}
+
+function stats(value: unknown, respaldo: StatItem[]): StatItem[] {
+  if (!Array.isArray(value)) return respaldo.map((s) => ({ ...s }));
+  const limpias = value
+    .filter(isRecord)
+    .map((s) => ({ value: texto(s.value, ""), label: texto(s.label, "") }))
+    .filter((s) => s.value !== "");
+  return limpias.length > 0 ? limpias : respaldo.map((s) => ({ ...s }));
+}
+
+export function normalizarContact(value: unknown): ContactSettings {
+  const entrada = isRecord(value) ? value : {};
+  const contact: ContactSettings = {
+    ...contactDefaults,
+    ...(entrada as Partial<ContactSettings>),
+    address: {
+      ...contactDefaults.address,
+      ...(isRecord(entrada.address) ? entrada.address : {}),
+    },
+    geo: { ...contactDefaults.geo, ...(isRecord(entrada.geo) ? entrada.geo : {}) },
+    social: {
+      ...contactDefaults.social,
+      ...(isRecord(entrada.social) ? entrada.social : {}),
+    },
+  };
+
+  if (!Array.isArray(contact.phones) || contact.phones.length === 0) {
+    contact.phones = contactDefaults.phones;
+  }
+  if (!Array.isArray(contact.emails) || contact.emails.length === 0) {
+    contact.emails = contactDefaults.emails;
+  }
+  // Mientras la migración 0005 no esté aplicada la clave no existe: el
+  // formulario cae en el correo corporativo por defecto en vez de quedarse sin
+  // destinatario.
+  if (
+    typeof contact.correoFormulario !== "string" ||
+    !esCorreoValido(contact.correoFormulario)
+  ) {
+    contact.correoFormulario = contactDefaults.correoFormulario;
+  }
+
+  return contact;
+}
+
+export function normalizarHero(value: unknown): HeroSettings {
+  return { ...heroDefaults, ...(isRecord(value) ? value : {}) } as HeroSettings;
+}
+
+export function normalizarExcellence(value: unknown): ExcellenceSettings {
+  const salida = {
+    ...excellenceDefaults,
+    ...(isRecord(value) ? value : {}),
+  } as ExcellenceSettings;
+  salida.stats = stats(salida.stats, excellenceDefaults.stats);
+  return salida;
+}
+
+export function normalizarYouTube(value: unknown): YouTubeSettings {
+  return {
+    ...youtubeDefaults,
+    ...(isRecord(value) ? value : {}),
+  } as YouTubeSettings;
+}
+
+/**
+ * Ajustes de la página de inicio.
+ *
+ * `statsLegado` son las cifras de la clave `excellence`, donde vivían antes de
+ * la migración 0007: si la clave `home` todavía no existe se usan esas, para
+ * que unas cifras que GPI hubiera editado desde el panel NO se pierdan al
+ * estrenar la pantalla nueva.
+ */
+export function normalizarHome(value: unknown, statsLegado?: StatItem[]): HomeSettings {
+  const base = homeDefaults.quienesSomos;
+  const respaldoStats =
+    statsLegado && statsLegado.length > 0 ? statsLegado : base.stats;
+
+  if (!isRecord(value)) {
+    return { quienesSomos: { ...base, stats: respaldoStats.map((s) => ({ ...s })) } };
+  }
+
+  const qs = isRecord(value.quienesSomos) ? value.quienesSomos : {};
+  const bullets = listaTextos(qs.bullets);
+
+  return {
+    quienesSomos: {
+      eyebrow: texto(qs.eyebrow, base.eyebrow),
+      titulo: texto(qs.titulo, base.titulo),
+      descripcion: texto(qs.descripcion, base.descripcion),
+      // `null` = la clave no existe (respaldo). Lista vacía = decisión de quien
+      // edita el panel y se respeta.
+      bullets: bullets ?? [...base.bullets],
+      imagen: imagen(qs.imagen, base.imagen),
+      stats: stats(qs.stats, respaldoStats),
+      ctaLabel: texto(qs.ctaLabel, base.ctaLabel),
+      ctaHref: texto(qs.ctaHref, base.ctaHref),
+    },
+  };
+}
+
+export function normalizarNosotros(value: unknown): NosotrosSettings {
+  const base = nosotrosDefaults;
+  // Sin la migración 0007 la clave `nosotros` no existe: con un objeto vacío
+  // todas las ramas de abajo caen en el respaldo estático, que es exactamente
+  // lo que se quiere.
+  const entrada = isRecord(value) ? value : {};
+
+  const hero = isRecord(entrada.hero) ? entrada.hero : {};
+  const qs = isRecord(entrada.quienesSomos) ? entrada.quienesSomos : {};
+  const mision = isRecord(entrada.mision) ? entrada.mision : {};
+  const vision = isRecord(entrada.vision) ? entrada.vision : {};
+  const galeria = isRecord(entrada.galeria) ? entrada.galeria : {};
+  const linea = isRecord(entrada.lineaTiempo) ? entrada.lineaTiempo : {};
+  const valores = isRecord(entrada.valoresIntro) ? entrada.valoresIntro : {};
+  const cta = isRecord(entrada.cta) ? entrada.cta : {};
+
+  const parrafos = listaTextos(qs.parrafos);
+  const fotos = listaImagenes(galeria.fotos);
+
+  const hitos = Array.isArray(linea.hitos)
+    ? linea.hitos
+        .filter(isRecord)
+        .map((h, i) => ({
+          fecha: texto(h.fecha, ""),
+          titulo: texto(h.titulo, ""),
+          descripcion: texto(h.descripcion, ""),
+          icono: icono(h.icono, base.lineaTiempo.hitos[i]?.icono ?? "cog"),
+        }))
+        .filter((h) => h.titulo !== "" || h.fecha !== "")
+    : null;
+
+  const etiquetas = Array.isArray(linea.etiquetas)
+    ? linea.etiquetas
+        .filter(isRecord)
+        .map((e, i) => ({
+          titulo: texto(e.titulo, ""),
+          descripcion: texto(e.descripcion, ""),
+          icono: icono(e.icono, base.lineaTiempo.etiquetas[i]?.icono ?? "shield"),
+        }))
+        .filter((e) => e.titulo !== "")
+    : null;
+
+  return {
+    hero: {
+      titulo: texto(hero.titulo, base.hero.titulo),
+      descripcion: texto(hero.descripcion, base.hero.descripcion),
+      imagen: imagen(hero.imagen, base.hero.imagen),
+    },
+    quienesSomos: {
+      titulo: texto(qs.titulo, base.quienesSomos.titulo),
+      parrafos: parrafos ?? [...base.quienesSomos.parrafos],
+      imagen: imagen(qs.imagen, base.quienesSomos.imagen),
+    },
+    mision: { texto: texto(mision.texto, base.mision.texto) },
+    vision: { texto: texto(vision.texto, base.vision.texto) },
+    galeria: {
+      titulo: texto(galeria.titulo, base.galeria.titulo),
+      descripcion: texto(galeria.descripcion, base.galeria.descripcion),
+      fotos: fotos ?? base.galeria.fotos.map((f) => ({ ...f })),
+    },
+    lineaTiempo: {
+      eyebrow: texto(linea.eyebrow, base.lineaTiempo.eyebrow),
+      titulo: texto(linea.titulo, base.lineaTiempo.titulo),
+      descripcion: texto(linea.descripcion, base.lineaTiempo.descripcion),
+      hitos: hitos ?? base.lineaTiempo.hitos.map((h) => ({ ...h })),
+      etiquetas: etiquetas ?? base.lineaTiempo.etiquetas.map((e) => ({ ...e })),
+    },
+    valoresIntro: {
+      eyebrow: texto(valores.eyebrow, base.valoresIntro.eyebrow),
+      titulo: texto(valores.titulo, base.valoresIntro.titulo),
+      descripcion: texto(valores.descripcion, base.valoresIntro.descripcion),
+    },
+    cta: {
+      titulo: texto(cta.titulo, base.cta.titulo),
+      descripcion: texto(cta.descripcion, base.cta.descripcion),
+    },
+  };
+}
+
+/**
+ * Visibilidad: solo se aceptan booleanos; cualquier otra cosa usa el valor por
+ * defecto (visible). Una clave que no existe todavía en la base de datos deja
+ * la sección VISIBLE, que es el comportamiento seguro al aplicar una migración.
+ */
+export function normalizarVisibility(value: unknown): VisibilitySettings {
+  const salida: VisibilitySettings = { ...visibilityDefaults };
+  if (!isRecord(value)) return salida;
+
+  for (const key of Object.keys(visibilityDefaults) as (keyof VisibilitySettings)[]) {
+    if (typeof value[key] === "boolean") salida[key] = value[key];
+  }
+  return salida;
+}
+
+/**
+ * Convierte el conjunto de filas de `site_settings` (clave → valor jsonb) en
+ * los ajustes tipados del sitio. Punto ÚNICO de normalización: lo llaman tanto
+ * la capa pública como el panel, así que las dos ven exactamente lo mismo.
+ */
+export function normalizarSettings(map: Map<string, unknown>): SiteSettings {
+  const excellence = normalizarExcellence(map.get("excellence"));
+
+  return {
+    contact: normalizarContact(map.get("contact")),
+    hero: normalizarHero(map.get("hero")),
+    excellence,
+    youtube: normalizarYouTube(map.get("youtube")),
+    // Sin la clave `home` (migración 0007 pendiente) las cifras salen de
+    // `excellence`, que es donde vivían: nada de lo editado se pierde.
+    home: normalizarHome(map.get("home"), excellence.stats),
+    nosotros: normalizarNosotros(map.get("nosotros")),
+    visibility: normalizarVisibility(map.get("visibility")),
+  };
+}

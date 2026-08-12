@@ -12,7 +12,7 @@ la gestión de cuentas y el registro de jornadas (horas extra).
 
 ## 1. Aplicar las migraciones en Supabase
 
-Hay **seis** migraciones y se aplican **en orden**:
+Hay **siete** migraciones y se aplican **en orden**:
 
 | Archivo | Qué añade |
 | --- | --- |
@@ -22,6 +22,7 @@ Hay **seis** migraciones y se aplican **en orden**:
 | `supabase/migrations/0004_congelar_desglose.sql` | Congela el desglose de horas al **aprobar** una jornada (`desglose`, `contexto_calculo`, `calculado_at`) para que los reportes de nómina no cambien después |
 | `supabase/migrations/0005_proyectos_correo_orden.sql` | Correo del formulario de contacto (`contact.correoFormulario`), página propia por proyecto (`slug`, `gallery`, `details`) y orden de trabajo **opcional** en las jornadas |
 | `supabase/migrations/0006_mensajes_contacto.sql` | Tabla `site_mensajes`: respaldo en base de datos de cada mensaje del formulario de `/contacto` |
+| `supabase/migrations/0007_contenido_paginas.sql` | Contenido editable de las páginas de **inicio** y **Nosotros**, interruptores por sección, **contador de visitas** (`site_visitas`) y **video por servicio** (`site_services.video`) |
 
 Para cada una:
 
@@ -30,7 +31,7 @@ Para cada una:
 3. Abre el archivo del repo, copia **todo** su contenido y pégalo en el editor.
 4. Pulsa **Run** y revisa los `NOTICE` del panel de resultados.
 
-Ambas son **idempotentes**: puedes volver a ejecutarlas sin duplicar datos.
+Todas son **idempotentes**: puedes volver a ejecutarlas sin duplicar datos.
 
 ### ¿Qué crea la 0001?
 
@@ -133,6 +134,34 @@ verás exactamente lo mismo que ahora, pero ya editable.
 > Mientras la 0006 no esté aplicada el sitio funciona igual: el formulario envía
 > el correo y solo se pierde el respaldo. En los registros del servidor queda un
 > aviso (`La tabla site_mensajes no existe todavía…`) una vez por proceso.
+
+### ¿Qué añade la 0007?
+
+| Objeto | Para qué sirve |
+| --- | --- |
+| `site_settings.nosotros` | **Todo** el contenido de la página Nosotros: primera pantalla, Quiénes Somos (título, párrafos, foto), Misión, Visión, galería de aliados, línea de tiempo (hitos y etiquetas), título de los valores y texto de cierre |
+| `site_settings.home` | El bloque «Quiénes somos» del inicio: texto superior, título, descripción, puntos con visto verde, foto de apoyo, **cifras** y botón |
+| Claves nuevas en `site_settings.visibility` | `homeQuienesSomos`, `nosotrosQuienesSomos`, `nosotrosMisionVision`, `nosotrosGaleria`, `nosotrosLineaTiempo`, `nosotrosValores`, `nosotrosVideo` y `nosotrosFaq`. Todas encendidas |
+| Tabla `site_visitas` | Contador de visitas: **una fila por día** (`dia`, `total`, `updated_at`). El sitio muestra la suma |
+| Función `registrar_visita()` | Suma una visita de hoy de forma atómica. `security definer`, con permiso de ejecución **solo** para `service_role` |
+| Columna `site_services.video` | Video de YouTube por servicio: `{ url, titulo, descripcion, visible }`. `NULL` = sin video |
+| Corrección **«+5 años» → «+15 años»** | En el badge del hero, en el texto de la banda oscura y en la primera cifra, solo si conservaban el texto original |
+
+> **Las cifras no se pierden.** La migración copia `excellence.stats` (donde
+> vivían) dentro de la clave nueva `home`: si GPI ya las había editado desde el
+> panel, se conservan tal cual. `excellence.stats` se queda como legado; lo que
+> se ve y se edita es `home.quienesSomos.stats`.
+>
+> **Nada se pisa.** Las claves `nosotros` y `home` se insertan con
+> `on conflict do nothing`, y los interruptores nuevos se mezclan dejando ganar
+> a los que ya existieran. Ejecutarla dos veces no cambia nada.
+>
+> Mientras la 0007 no esté aplicada el sitio **se ve exactamente igual**: los
+> textos, las fotos y la línea de tiempo salen del respaldo estático de
+> `src/data/site.ts` (son los mismos), `/admin/inicio` y `/admin/nosotros`
+> muestran esos valores listos para guardar, los servicios se guardan sin la
+> columna `video`, y la tarjeta del contador de visitas sencillamente no
+> aparece.
 
 ### Si el bloque del usuario admin de la 0001 falla
 
@@ -604,17 +633,40 @@ desde el panel.
 Se apoya en la columna `published`: la política RLS de anon solo devuelve
 `published = true`, y `src/lib/content.ts` vuelve a filtrar por si acaso.
 
-### Por sección — `/admin/ajustes` → "Visibilidad de secciones"
+### Por sección — cada interruptor vive en la pantalla de su página
 
-| Interruptor | Qué apaga |
-| --- | --- |
-| Valores corporativos | Bloque "Nuestros valores" en el inicio y en Nosotros |
-| Clientes | Banda de logos de clientes en el inicio |
-| Video corporativo | Video de YouTube en Nosotros |
-| Preguntas frecuentes | Acordeón de FAQ en Nosotros (y su marcado FAQPage) |
+Desde la migración 0007 los interruptores están **donde se edita la sección**,
+no todos juntos en Ajustes:
 
-Se guardan en el ajuste `visibility` de `site_settings`. Todo está encendido por
-defecto: el sitio se ve completo salvo que alguien apague algo a propósito.
+| Pantalla | Interruptor | Qué apaga |
+| --- | --- | --- |
+| `/admin/inicio` | Quiénes somos y cifras | El bloque de presentación del inicio, con sus puntos y sus tarjetas de cifras |
+| `/admin/inicio` | Clientes | Banda de logos de clientes en el inicio |
+| `/admin/nosotros` | Quiénes Somos | La foto del equipo con los dos párrafos |
+| `/admin/nosotros` | Misión y Visión | Las dos tarjetas |
+| `/admin/nosotros` | Galería de aliados | «Más que proveedores, somos aliados estratégicos» y sus fotos |
+| `/admin/nosotros` | Línea de tiempo | La trayectoria de la empresa |
+| `/admin/nosotros` | Valores corporativos | Los valores **solo** en la página Nosotros |
+| `/admin/nosotros` | Video corporativo | Video de YouTube en Nosotros |
+| `/admin/nosotros` | Preguntas frecuentes | Acordeón de FAQ en Nosotros (y su marcado FAQPage) |
+| `/admin/ajustes` | Valores corporativos | Los valores **a la vez** en el inicio y en Nosotros |
+
+Se guardan todos en el ajuste `visibility` de `site_settings`. Todo está
+encendido por defecto: el sitio se ve completo salvo que alguien apague algo a
+propósito.
+
+**Dos detalles que conviene entender:**
+
+- Los **valores** salen en dos páginas, así que tienen dos niveles: el
+  interruptor de Ajustes los apaga en todo el sitio y el de Nosotros solo en esa
+  página. Se ven cuando **los dos** están encendidos.
+- El **video** y las **preguntas frecuentes** solo existen en Nosotros. Su
+  interruptor escribe a la vez la clave nueva (`nosotrosVideo`, `nosotrosFaq`) y
+  la antigua (`videoSection`, `faqSection`), para que haga lo que dice aunque en
+  la base de datos hubiera quedado apagada la clave vieja.
+
+Cada pantalla guarda **solo sus** interruptores y conserva los demás: guardar en
+`/admin/nosotros` nunca toca lo configurado en `/admin/inicio`.
 
 ---
 
@@ -643,6 +695,13 @@ cuatro proyectos originales conserven su dirección corta
 (`/proyectos/planta-piloto-vaselina`), su texto y su galería aunque la 0005
 todavía no se haya aplicado.
 
+Lo mismo vale para la 0007: los textos, las fotos y la línea de tiempo de las
+páginas de inicio y Nosotros están **duplicados a propósito** en
+`src/data/site.ts` y en la migración. Sin la 0007 aplicada el sitio se ve
+idéntico, `/admin/inicio` y `/admin/nosotros` muestran esos mismos valores
+listos para guardar, guardar un servicio reintenta sin la columna `video`, y la
+tarjeta del contador de visitas no se pinta.
+
 **Renderizado:** las páginas usan ISR con `revalidate = 300` (5 minutos) y,
 además, cada vez que guardas en `/admin` se llama a
 `revalidatePath("/", "layout")` —y, al tocar un proyecto, también a
@@ -655,18 +714,120 @@ inmediato.
 
 | Sección | Quién | Qué permite |
 | --- | --- | --- |
-| **Servicios** | contenido | CRUD completo: título, título de menú, slug, categoría, icono, orden, visibilidad, resumen, descripción, ítems, portada, galería y SEO |
+| **Página de inicio** | contenido | Primera pantalla (hero), bloque «Quiénes somos» con sus puntos, foto y cifras, banda oscura, y qué secciones del inicio se ven |
+| **Página Nosotros** | contenido | Primera pantalla, Quiénes Somos, Misión, Visión, galería de aliados, línea de tiempo, título de los valores, video de YouTube, texto de cierre y qué secciones se ven |
+| **Servicios** | contenido | CRUD completo: título, título de menú, slug, categoría, icono, orden, visibilidad, resumen, descripción, ítems, portada, galería, **video de YouTube** y SEO |
 | **Proyectos** | contenido | CRUD: título, cliente, **dirección web (slug)**, categoría, descripción corta, **descripción larga**, imagen, **galería**, orden y visibilidad. Cada proyecto tiene su propia página en `/proyectos/<slug>` |
 | **Clientes** | contenido | CRUD: nombre, logo, sitio web, orden y visibilidad |
 | **FAQ** | contenido | CRUD de preguntas y respuestas (alimentan el marcado FAQPage) + visibilidad |
 | **Valores** | contenido | CRUD de valores corporativos + visibilidad |
-| **Contacto y ajustes** | contenido | Visibilidad de secciones, dirección, coordenadas, teléfonos/WhatsApp, correos, **correo del formulario de contacto**, redes, horario, mapa, hero, banda EXCELENCIA y video de YouTube |
+| **Contacto y ajustes** | contenido | Dirección, coordenadas, teléfonos/WhatsApp, correos, **correo del formulario de contacto**, redes, horario, mapa y el interruptor global de los valores |
 | **Equipo** | managers | Cuentas del portal: crear, editar, roles, activar/desactivar, contraseñas y eliminación |
 | **Horarios** | managers | Horario laboral de cada mes (base de la jornada ordinaria y de las horas extra) |
 | **Jornadas** | managers | Revisión de jornadas con desglose de horas: aprobar, rechazar, volver a pendiente y **eliminar** + tablero de métricas |
 
 *"contenido" = admin, coordinador y Community Manager · "managers" = admin y
 coordinador*
+
+### Las páginas generales se editan desde su propia pantalla
+
+Antes, el hero del inicio, las cifras y el video vivían mezclados en «Contacto y
+ajustes», y el resto de los textos de Nosotros estaban escritos en el código.
+Desde la migración 0007 hay **una pantalla por página**:
+
+**`/admin/inicio` — Página de inicio**
+
+| Bloque | Qué edita |
+| --- | --- |
+| Qué se ve en la página de inicio | Interruptores de «Quiénes somos y cifras» y de la banda de clientes |
+| Primera pantalla | Etiqueta superior, título en dos partes, descripción, imagen de fondo con su texto alternativo y los dos botones |
+| Quiénes somos y cifras | Texto superior, título, descripción, puntos con visto verde, foto de apoyo, **las cifras** y el botón |
+| Banda oscura del inicio | Texto superior, mensaje, palabra destacada y botón |
+
+**`/admin/nosotros` — Página Nosotros**
+
+| Bloque | Qué edita |
+| --- | --- |
+| Qué se ve en la página Nosotros | Los siete interruptores de esta página |
+| Primera pantalla | Título, descripción e imagen de fondo |
+| Quiénes Somos | Título, **párrafos** (uno por fila) y la foto del equipo |
+| Misión y Visión | Los dos textos |
+| Galería de aliados | Título, descripción y las fotos con su texto alternativo |
+| Línea de tiempo empresarial | Texto superior, título, descripción, los **hitos** (fecha, título, descripción e icono) y las **etiquetas** de debajo de la flecha |
+| Título de los valores | El encabezado que presenta los valores (los valores en sí siguen en su sección) |
+| Video corporativo | El video de YouTube de la página, con sus textos |
+| Cierre de la página | Título y descripción de la franja verde final |
+
+> Los **valores corporativos**, las **preguntas frecuentes**, los **servicios**,
+> los **proyectos** y los **clientes** son listas y siguen editándose en sus
+> propias secciones: en estas dos pantallas solo están los títulos que las
+> presentan.
+
+### La línea de tiempo: hitos y etiquetas
+
+La línea de tiempo tiene **dos filas** y cada una se edita por separado:
+
+- **Hitos** (las tarjetas de arriba): fecha, título, descripción e icono. El
+  diseño está pensado para cuatro; se pueden añadir o quitar con los botones.
+- **Etiquetas** (debajo de la flecha): título, descripción e icono. Resumen de
+  una palabra de cada etapa (*Enfoque inicial*, *Crecimiento*, *Fortalecimiento*,
+  *Impacto*).
+
+El **icono** se elige de una lista con vista previa al lado, la misma que usan
+los valores y los servicios. Si alguna vez quedara guardado un nombre de icono
+que ya no existe, el sitio pinta el icono por defecto en vez de romperse.
+
+### El contador de visitas
+
+La página de inicio muestra, junto a las cifras de «Quiénes somos», una tarjeta
+con las **visitas al sitio web**. Esa cifra **no se edita**: la cuenta el sitio
+solo. Cómo funciona, de principio a fin:
+
+1. Al abrir cualquier página pública, un componente diminuto
+   (`VisitBeacon`) comprueba si esta sesión del navegador ya avisó. Si no, hace
+   un `POST` a **`/api/visita`** y deja una marca en `sessionStorage`.
+2. Ese endpoint corre en el **servidor**, descarta la petición si la misma IP ya
+   sumó en los últimos 30 minutos, y llama a `registrar_visita()` con la clave
+   `service_role`.
+3. La función suma 1 a la fila del día de hoy en `site_visitas` (una fila por
+   día).
+4. La página de inicio lee la **suma** de todas las filas y la muestra con
+   separador de miles.
+
+Detalles pensados a propósito:
+
+- **`/admin` y `/mi-cuenta` no cuentan**: son el trabajo interno de GPI y
+  contarlos inflaría la cifra con la propia empresa.
+- **Una visita por sesión del navegador**, no por página: recorrer el sitio
+  entero cuenta como una sola visita. Quien vuelve otro día suma otra.
+- **La cifra se refresca cada 5 minutos**, igual que el resto del contenido
+  (ISR). Leerla en vivo obligaría a generar el inicio en cada petición y haría
+  el sitio más lento a cambio de nada.
+- **El navegador no puede inflarla**: la función de base de datos solo la puede
+  ejecutar el servidor. Si se hubiera expuesto a la clave anónima —que es
+  pública por diseño— cualquiera la subiría en bucle desde la consola.
+- **Si la 0007 no está aplicada, la tarjeta no aparece.** Mostrar «0 visitas» se
+  leería como un sitio que nadie visita, que es peor que no mostrar nada.
+
+### Un video de YouTube por servicio
+
+En `/admin/servicios` → cualquier servicio → bloque **«Video del servicio
+(YouTube)»**:
+
+- **Enlace del video**: se pega la dirección de YouTube. Sirven la de la barra
+  del navegador (`youtube.com/watch?v=…`), la corta del botón Compartir
+  (`youtu.be/…`), la de insertar (`/embed/…`) y las de Shorts y directos. Si el
+  enlace no es de YouTube, el panel lo dice al guardar en vez de dejar un video
+  roto.
+- **Título** y **descripción**: los textos que acompañan al video en la página
+  del servicio.
+- **Mostrar el video**: apagarlo lo esconde del sitio pero **conserva** el
+  enlace y los textos en el panel.
+- **Para quitarlo**: se borra el enlace y se guarda.
+
+El video se muestra al final de la página del servicio, con el mismo reproductor
+diferido que la página Nosotros: la portada es una imagen y YouTube solo se
+carga cuando el visitante pulsa reproducir.
 
 ### El correo al que llega el formulario de contacto
 
@@ -719,8 +880,10 @@ Siempre se muestra una vista previa.
 - Barra superior siempre visible con el rol de la sesión, **Registrar mi
   jornada** (lleva a `/mi-cuenta`), **Ver sitio** y **Cerrar sesión**.
 - Menú lateral en escritorio y tabs desplazables en móvil, con la sección activa
-  resaltada. Las secciones internas (Equipo, Horarios, Jornadas) solo aparecen
-  para managers.
+  resaltada. El orden sigue al del sitio: **Página de inicio**, **Página
+  Nosotros**, Servicios, Proyectos, Clientes, FAQ, Valores y Contacto y ajustes.
+  Las secciones internas (Equipo, Horarios, Jornadas) solo aparecen para
+  managers.
 - Cada sección tiene breadcrumb y botón **← Volver al dashboard**; los
   formularios de crear/editar añaden **← Volver a [sección]**.
 

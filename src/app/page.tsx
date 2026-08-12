@@ -14,7 +14,9 @@ import {
   getServices,
   getSettings,
   getValues,
+  getVisitas,
 } from "@/lib/content";
+import { ETIQUETA_VISITAS } from "@/data/site";
 import { iconMap, ArrowRight, Check } from "@/lib/icons";
 
 export const metadata: Metadata = {
@@ -24,19 +26,37 @@ export const metadata: Metadata = {
 export const revalidate = 300;
 
 export default async function HomePage() {
-  const [settings, services, values, clients] = await Promise.all([
+  const [settings, services, values, clients, visitas] = await Promise.all([
     getSettings(),
     getServices(),
     getValues(),
     getClients(),
+    getVisitas(),
   ]);
-  const { hero, excellence, contact, visibility } = settings;
+  const { hero, excellence, contact, visibility, home } = settings;
+  const quienesSomos = home.quienesSomos;
   const categories = getServiceCategories();
 
-  // Secciones que se pueden apagar desde /admin/ajustes → «Visibilidad de
-  // secciones». También se ocultan solas si se quedan sin contenido.
+  // Secciones que se pueden apagar desde el panel (/admin/inicio y
+  // /admin/ajustes). También se ocultan solas si se quedan sin contenido.
+  const showQuienesSomos = visibility.homeQuienesSomos;
   const showValues = visibility.valuesSection && values.length > 0;
   const showClients = visibility.clientsSection && clients.length > 0;
+
+  /**
+   * Las cifras editables más, al final, el contador de visitas.
+   *
+   * El contador NO se edita en el panel a propósito: lo cuenta el sitio solo.
+   * Y solo aparece cuando la tabla existe (migración 0007 aplicada): mostrar
+   * "0 visitas" se leería como un sitio que nadie visita, que es peor que no
+   * mostrar nada.
+   */
+  const stats = [
+    ...quienesSomos.stats,
+    ...(visitas.disponible
+      ? [{ value: visitas.formateado, label: ETIQUETA_VISITAS }]
+      : []),
+  ];
 
   return (
     <>
@@ -84,51 +104,59 @@ export default async function HomePage() {
       </section>
 
       {/* ---------------- INTRO / QUIÉNES SOMOS ---------------- */}
-      <section className="py-20 sm:py-24">
-        <Container>
-          <div className="grid items-center gap-12 lg:grid-cols-2">
-            <Reveal>
-              <SectionHeading
-                eyebrow="Quiénes somos"
-                title="Gestión estratégica y ejecución para su operación"
-                description="Somos una empresa de gestión estratégica y ejecución, enfocada en generar rentabilidad y el cumplimiento de requisitos internos y externos a las compañías, basados en la mejora continua e integrando las variables de los modelos de negocio de cada organización."
-              />
-              <ul className="mt-6 space-y-3">
-                {[
-                  "Objetivo: lograr el 100% en el desempeño de nuestros clientes.",
-                  "Integración de disciplinas industriales y ambientales.",
-                  "Metodología basada en la mejora continua.",
-                ].map((point) => (
-                  <li key={point} className="flex items-start gap-3">
-                    <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-tint text-brand-deep">
-                      <Check className="h-4 w-4" />
-                    </span>
-                    <span className="text-sm leading-relaxed text-graphite">{point}</span>
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-8">
-                <ButtonLink href="/nosotros" variant="outline">
-                  Conócenos
-                  <ArrowRight className="h-4 w-4" />
-                </ButtonLink>
-              </div>
-            </Reveal>
+      {showQuienesSomos && (
+        <section className="py-20 sm:py-24">
+          <Container>
+            <div className="grid items-center gap-12 lg:grid-cols-2">
+              <Reveal>
+                <SectionHeading
+                  eyebrow={quienesSomos.eyebrow}
+                  title={quienesSomos.titulo}
+                  description={quienesSomos.descripcion}
+                />
+                {quienesSomos.bullets.length > 0 && (
+                  <ul className="mt-6 space-y-3">
+                    {quienesSomos.bullets.map((point) => (
+                      <li key={point} className="flex items-start gap-3">
+                        <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-tint text-brand-deep">
+                          <Check className="h-4 w-4" />
+                        </span>
+                        <span className="text-sm leading-relaxed text-graphite">
+                          {point}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {quienesSomos.ctaLabel !== "" && (
+                  <div className="mt-8">
+                    <ButtonLink href={quienesSomos.ctaHref} variant="outline">
+                      {quienesSomos.ctaLabel}
+                      <ArrowRight className="h-4 w-4" />
+                    </ButtonLink>
+                  </div>
+                )}
+              </Reveal>
 
-            <Reveal delay={120} className="grid grid-cols-2 gap-4">
-              {excellence.stats.map((stat) => (
-                <div
-                  key={stat.label}
-                  className="rounded-2xl border border-line bg-mist p-6 shadow-soft"
-                >
-                  <p className="text-4xl font-extrabold text-brand-dark">{stat.value}</p>
-                  <p className="mt-2 text-sm leading-snug text-graphite">{stat.label}</p>
-                </div>
-              ))}
-            </Reveal>
-          </div>
-        </Container>
-      </section>
+              <Reveal delay={120} className="grid grid-cols-2 gap-4">
+                {stats.map((stat) => (
+                  <div
+                    key={stat.label}
+                    className="rounded-2xl border border-line bg-mist p-6 shadow-soft"
+                  >
+                    <p className="text-4xl font-extrabold text-brand-dark">
+                      {stat.value}
+                    </p>
+                    <p className="mt-2 text-sm leading-snug text-graphite">
+                      {stat.label}
+                    </p>
+                  </div>
+                ))}
+              </Reveal>
+            </div>
+          </Container>
+        </section>
+      )}
 
       {/* ---------------- CATEGORÍAS DE SERVICIOS ---------------- */}
       <section className="bg-mist py-20 sm:py-24">

@@ -1,6 +1,6 @@
 # Plan del proyecto — Sitio web GPI
 
-Estado al **31 de julio de 2026**. Este documento existe para que cualquier
+Estado al **12 de agosto de 2026**. Este documento existe para que cualquier
 sesión futura (humana o de Claude) arranque con contexto completo sin tener
 que reconstruir el historial desde los commits.
 
@@ -18,6 +18,8 @@ que reconstruir el historial desde los commits.
 | 4e | Fase 2 — Ajustes del testing del cliente (30 jul) | ✅ Hecho | El panel pasa a ser la pantalla principal de admin y coordinador, los managers pueden **eliminar** jornadas y los filtros de aprobaciones se aplican al cambiar. **Sin migración nueva.** |
 | 4f | Complementos post-aprobación (31 jul) | ✅ Código listo | Formulario de contacto al **correo corporativo** (editable en Ajustes), **página propia por proyecto** con galería, y **orden de trabajo opcional** en las jornadas. **Falta aplicar la migración 0005.** |
 | 4g | Envío real del formulario de contacto (3 ago) | ✅ Código listo | El formulario pasa de `mailto:` a **envío directo por SMTP de Gmail** desde una server action, con respaldo del mensaje en `site_mensajes` y modo alternativo (Gmail web / programa de correo / WhatsApp). **Falta aplicar la migración 0006** y configurar `CONTACT_SMTP_USER` / `CONTACT_SMTP_PASS`. |
+| 4h | Rediseño y contenido editable total (12 ago) — **capa de datos y panel** | ✅ Código listo | Contenido de **inicio** y **Nosotros** editable desde dos pantallas nuevas del panel y sembrado con los textos oficiales del community manager, **contador de visitas**, **video por servicio** e interruptores por sección. **Falta aplicar la migración 0007.** |
+| 4i | Rediseño y contenido editable total (12 ago) — **pase visual** | ⏳ En curso | El rediseño de las páginas públicas según el prototipo del community manager (línea de tiempo, galería de aliados, misión/visión, menú, opacidad del hero, logos de clientes a color). El contenido ya existe y es editable: falta la estética. |
 | 5 | Deploy en Vercel desde el repo de GitHub + variables de entorno | ✅ Completa | **https://website-gpi.vercel.app** — despliega solo con cada push a `main`; las 3 env vars configuradas (incl. `SUPABASE_SERVICE_ROLE_KEY` sin prefijo). Verificado en vivo: 7 cabeceras de seguridad, 9 rutas 200, `/admin` protegido. |
 | 6 | Apuntar dominio `gpiprofesionales.com` de GoDaddy → Vercel | ⏳ Pendiente | Al final, cuando el sitio esté aprobado por GPI y desplegado en Vercel. |
 | 7 | Extra cotizable aparte: chatbot IA | 💡 Planeado | Claude Haiku 4.5 vía `/api/chat`, con conocimiento del contenido del sitio (servicios, proyectos, contacto) y captura de leads hacia Supabase. No incluido en la cotización actual. |
@@ -41,6 +43,9 @@ que reconstruir el historial desde los commits.
 | Correo del formulario de contacto | `site_settings.contact.correoFormulario`, `src/components/sections/ContactForm.tsx` |
 | Envío real del formulario por SMTP | `src/lib/correo.ts`, `src/app/contacto/actions.ts`, `src/lib/contacto-types.ts` |
 | Respaldo de los mensajes de contacto | `supabase/migrations/0006…` (`site_mensajes`) |
+| Contenido editable del inicio y de Nosotros | `supabase/migrations/0007…`, `/admin/inicio`, `/admin/nosotros` |
+| Contador de visitas | `site_visitas` + `registrar_visita()`, `/api/visita`, `VisitBeacon`, `getVisitas()` |
+| Video de YouTube por servicio | `site_services.video`, `src/lib/youtube.ts` |
 | Ayudas del panel para usuarios no técnicos | `AyudaSeccion` / `AyudaDesplegable` + constantes `AYUDA_*` en `src/components/admin/ui.tsx` |
 
 Flujo completo: **el empleado registra su jornada** en `/mi-cuenta` (con vista
@@ -306,6 +311,153 @@ igualmente el contacto.
 > directamente en el campo oculto desde el efecto (vía `ref`) y la lectura del
 > reloj vive en una función del módulo, fuera del componente.
 
+## Iteración del 12 de agosto de 2026 — rediseño y contenido editable total
+
+El community manager de GPI entregó dos documentos que son la fuente de verdad
+de esta iteración:
+
+- **`prototipo pagina web 12 AGOSTO - Seccion Nosotros.pdf`** — el diseño
+  completo de la página Nosotros: hero, Quiénes Somos, Misión/Visión, galería de
+  «aliados estratégicos», línea de tiempo empresarial con cuatro hitos y cuatro
+  etiquetas, valores y cierre.
+- **`CAMBIOS PAGINA WEB 12 DE AGOSTO 2026.pdf`** — la lista de cambios (logo más
+  pequeño, menú sobre fondo oscuro, opacidad del hero, «Portafolio de clientes»
+  con logos a color, contador de visitas) y una página **TEXTOS** con la
+  redacción canónica de *¿Quiénes somos?*, *Misión* y *Visión*.
+
+> **Regla que se aplicó:** cuando el mockup y la página TEXTOS diferían, **mandan
+> los textos de la página TEXTOS**. Pasó con la Misión y con la Visión: el
+> mockup traía una redacción más pulida («…a través de la mejora continua y la
+> integración estratégica…», «…el aliado estratégico de referencia…») y se
+> descartó en favor de la que escribió GPI.
+
+El trabajo se partió en dos: **primero la capa de datos y el panel** (esta parte,
+ya completa) y **después el pase visual** de las páginas públicas, que está en
+curso. El orden importa: rediseñar sobre textos que todavía viven en el código
+habría obligado a rehacer el mismo trabajo dos veces.
+
+Todo necesita la **migración 0007**
+(`supabase/migrations/0007_contenido_paginas.sql`) pero —como siempre— el código
+funciona sin ella: el respaldo estático de `src/data/site.ts` trae exactamente
+los mismos textos y las mismas fotos.
+
+### 1. Las páginas generales dejan de estar escritas en el código
+
+La página Nosotros tenía sus textos —presentación, valores, todo— en el TSX. El
+cliente pidió poder editar «todas las imágenes y contenido de todas las
+secciones generales», así que se crearon **dos claves nuevas** en
+`site_settings` y **dos pantallas nuevas** en el panel:
+
+| Clave | Pantalla | Qué contiene |
+| --- | --- | --- |
+| `home` | **`/admin/inicio`** | El bloque «Quiénes somos» del inicio: texto superior, título, descripción, puntos, foto, **cifras** y botón. Además la pantalla recoge el hero y la banda oscura, que venían de Ajustes |
+| `nosotros` | **`/admin/nosotros`** | Hero, Quiénes Somos (título, párrafos, foto), Misión, Visión, galería de aliados, línea de tiempo (hitos y etiquetas), título de los valores, video y cierre |
+
+`/admin/ajustes` se queda con lo transversal: datos de contacto, redes, mapa,
+correo del formulario y el único interruptor que afecta a dos páginas.
+
+**Las cifras se mudaron de sitio.** Vivían en `excellence.stats` y se muestran en
+«Quiénes somos», así que ahora viven en `home.quienesSomos.stats`. La migración
+las **copia** desde donde estaban: unas cifras que GPI hubiera editado desde el
+panel no se pierden. `excellence.stats` queda como legado, sin editor.
+
+**«+5 años» pasó a «+15 años»** en el badge del hero, en la banda oscura y en la
+primera cifra —GPI corrigió su antigüedad—, pero solo donde el texto seguía
+siendo el original: si alguien lo había cambiado a mano, se respeta.
+
+### 2. La visibilidad se reparte por página
+
+`visibility` gana ocho claves (`homeQuienesSomos`, `nosotrosQuienesSomos`,
+`nosotrosMisionVision`, `nosotrosGaleria`, `nosotrosLineaTiempo`,
+`nosotrosValores`, `nosotrosVideo`, `nosotrosFaq`) y los interruptores pasan a
+estar **en la pantalla de la sección que apagan**, no todos juntos en Ajustes.
+
+Dos matices que costaron pensar:
+
+- **Guardado parcial obligatorio.** `visibility` es una sola clave de
+  `site_settings` editada desde tres pantallas, y `upsert` reemplaza el valor
+  entero. Cada acción **lee lo guardado, mezcla solo sus interruptores y
+  escribe**; sin eso, guardar en Nosotros apagaría las secciones del inicio.
+  Lo mismo aplica a `home` y `nosotros`, que se editan bloque a bloque.
+- **Nada de dos controles para lo mismo.** El video y las FAQ solo existen en
+  Nosotros, así que su interruptor escribe **a la vez** la clave nueva y la
+  antigua (`videoSection`, `faqSection`). Los valores sí salen en dos páginas y
+  por eso conservan de verdad dos niveles: el global de Ajustes y el de la
+  página.
+
+### 3. Contador de visitas
+
+`site_visitas` guarda **una fila por día** (`dia`, `total`), no una fila por
+visita: así la tabla suma 365 filas al año, el total es una sola consulta y
+queda el histórico gratis.
+
+El flujo completo: `VisitBeacon` (en el layout público) hace un `POST` a
+**`/api/visita`** una vez por sesión del navegador → el route handler descarta
+la petición si esa IP ya sumó en los últimos 30 minutos → llama a
+`registrar_visita()` con la clave `service_role` → la función hace
+`insert … on conflict do update set total = total + 1`, que es atómico.
+
+- **Se descartó exponer una RPC a `anon`**, que era la vía obvia: la clave
+  anónima de Supabase es pública por diseño y cualquiera dejaría el contador en
+  el número que quisiera desde la consola del navegador. La función tiene
+  `revoke … from public/anon/authenticated` y `grant execute to service_role`.
+- **`/admin` y `/mi-cuenta` no cuentan**: contarlos inflaría la cifra con el
+  propio trabajo interno de GPI.
+- **La lectura mantiene el sitio estático.** `getVisitas()` usa el cliente
+  anónimo sin cookies, así que el inicio sigue con ISR y el contador se refresca
+  cada 5 minutos. Leerlo en vivo (`unstable_noStore`) habría vuelto dinámica la
+  portada entera a cambio de una cifra de vanidad más fresca.
+- **Si la 0007 no está aplicada, la tarjeta no se pinta.** Mostrar «0 visitas» se
+  leería como un sitio que nadie visita, que es peor que no mostrar nada.
+
+### 4. Un video de YouTube por servicio
+
+Columna `site_services.video` (`{ url, titulo, descripcion, visible }` o `NULL`).
+El **identificador del video no se guarda**: se deriva de la URL al leer, así no
+pueden quedar desincronizados. La extracción vive en `src/lib/youtube.ts`, que
+acepta las cinco formas de URL que la gente copia (barra del navegador, botón
+Compartir, insertar, Shorts y directos) y también el identificador pelado; la
+comparte el video corporativo de Nosotros, que antes tenía su propio regex.
+
+El interruptor **Mostrar el video** lo esconde sin borrar el enlace, y
+`saveService` reintenta la escritura sin la columna si la 0007 está pendiente
+—el mismo patrón que la 0005 con los proyectos—.
+
+### 5. Fotos nuevas
+
+Las cuatro fotos del prototipo no estaban en el repositorio ni en la carpeta de
+insumos: solo existían **dentro del PDF**. Se extrajeron de sus streams y se
+guardaron en `public/images/cm/`:
+
+| Archivo | Qué se ve | Dónde se usa |
+| --- | --- | --- |
+| `foto-equipo-gpi-sede.jpg` | El equipo completo frente a la pared con el logo de GPI | Quiénes Somos (Nosotros) y foto de apoyo del inicio |
+| `foto-aforo-quebrada-gpi.jpg` | Aforo de una quebrada con la camioneta al fondo | Galería de aliados |
+| `foto-monitoreo-agua-registro-datos.jpg` | Dos profesionales registrando datos en un monitoreo de agua | Galería de aliados |
+| `foto-tablero-control-planta-gpi.jpg` | Técnico operando un tablero de control en planta | Galería de aliados |
+
+> ⚠️ Salen del PDF, así que están a la resolución a la que el community manager
+> las exportó (**512×384** y **385×512**). Se ven bien en tarjeta, pero si GPI
+> quiere usarlas a pantalla completa conviene pedirle los originales.
+
+### 6. Una sola definición de «qué es válido»
+
+Al añadir dos claves grandes, `getSettings()` (sitio público) y
+`getAdminSettings()` (panel) habrían tenido que normalizar lo mismo por
+duplicado, con el riesgo de que el panel mostrara en un campo algo distinto de
+lo que la página iba a pintar. Se unificaron en **`normalizarSettings()`**, una
+función pura de `src/data/site.ts` que las dos llaman. Lo que el panel enseña es,
+literalmente, lo que se ve.
+
+### Lo que falta
+
+El **pase visual** de las páginas públicas. Ahora mismo el contenido nuevo se
+renderiza con una maquetación correcta pero conservadora, reutilizando los
+componentes que ya existían; el prototipo pide más (la línea de tiempo con su
+flecha, la galería con la tarjeta superpuesta, el menú sobre fondo oscuro, la
+opacidad del hero, los logos de clientes a color). Nada de eso necesita tocar la
+base de datos ni el panel.
+
 ## Decisiones técnicas
 
 - **Fallback estático primero**: toda la capa de contenido (`src/lib/content.ts`)
@@ -347,7 +499,10 @@ igualmente el contacto.
   reintenta sin las columnas nuevas y una jornada sin orden se guarda con el
   campo en blanco. Sin la 0006, el formulario **envía el correo igual** y solo
   se pierde el respaldo en base de datos (queda un aviso en los registros del
-  servidor). El build no depende de la base de datos.
+  servidor). Sin la 0007, el inicio y Nosotros muestran los mismos textos y
+  fotos desde `src/data/site.ts`, el panel los enseña listos para guardar,
+  `saveService` reintenta sin la columna `video` y la tarjeta de visitas no se
+  pinta. El build no depende de la base de datos.
 - **El correo tampoco es un requisito para que el sitio funcione**: si faltan
   `CONTACT_SMTP_USER` / `CONTACT_SMTP_PASS`, el formulario cambia solo a su modo
   alternativo (compositor de Gmail en el navegador, programa de correo y

@@ -36,6 +36,10 @@ export const AYUDA_ALT =
 export const AYUDA_IMAGEN =
   "Sube un archivo desde tu computador o pega el enlace de una imagen. Lo ideal son fotos horizontales (más anchas que altas) y de menos de 1 MB: si pesan mucho, el sitio carga lento.";
 
+/** Qué hace el bloque de video de un servicio (migración 0007). */
+export const AYUDA_VIDEO_SERVICIO =
+  "Pega el enlace de YouTube. El video aparece en la página del servicio con su título y descripción; puedes ocultarlo sin borrarlo.";
+
 /**
  * Nota de ayuda del panel: un párrafo corto con icono, opcionalmente titulado.
  *
@@ -118,16 +122,25 @@ interface FieldProps {
   type?: string;
   hint?: string;
   className?: string;
+  /**
+   * Prefijo del `id` del campo. Obligatorio cuando una pantalla tiene VARIOS
+   * formularios que reutilizan el mismo `name` (p. ej. «Título» en cada bloque
+   * de la página Nosotros): los `name` pueden repetirse entre formularios, pero
+   * los `id` del documento no, y un `id` duplicado hace que la etiqueta apunte
+   * al campo equivocado para quien navega con lector de pantalla.
+   */
+  scope?: string;
 }
 
 /**
  * Los campos usan `htmlFor`/`id` explícitos (no solo el `<label>` envolvente) y
  * enlazan la ayuda con `aria-describedby`: así el lector de pantalla lee primero
  * la etiqueta y después la ayuda, en vez de mezclarlo todo en el nombre del
- * campo. El `id` se deriva del `name`, que ya es único dentro de cada formulario.
+ * campo.
  */
-const fieldId = (name: string) => `campo-${name}`;
-const hintId = (name: string) => `campo-${name}-ayuda`;
+const fieldId = (name: string, scope?: string) =>
+  scope ? `campo-${scope}-${name}` : `campo-${name}`;
+const hintId = (name: string, scope?: string) => `${fieldId(name, scope)}-ayuda`;
 
 export function Field({
   label,
@@ -138,29 +151,30 @@ export function Field({
   type = "text",
   hint,
   className = "",
+  scope,
 }: FieldProps) {
   return (
     <div className={`block ${className}`}>
       <label
-        htmlFor={fieldId(name)}
+        htmlFor={fieldId(name, scope)}
         className="mb-1.5 block text-sm font-semibold text-ink"
       >
         {label}
         {required && <span className="text-brand-dark"> *</span>}
       </label>
       <input
-        id={fieldId(name)}
+        id={fieldId(name, scope)}
         name={name}
         type={type}
         required={required}
         aria-required={required ? true : undefined}
-        aria-describedby={hint ? hintId(name) : undefined}
+        aria-describedby={hint ? hintId(name, scope) : undefined}
         defaultValue={defaultValue ?? ""}
         placeholder={placeholder}
         className={inputClass}
       />
       {hint && (
-        <span id={hintId(name)} className="mt-1 block text-xs text-graphite">
+        <span id={hintId(name, scope)} className="mt-1 block text-xs text-graphite">
           {hint}
         </span>
       )}
@@ -181,29 +195,30 @@ export function TextArea({
   rows = 4,
   hint,
   className = "",
+  scope,
 }: TextAreaProps) {
   return (
     <div className={`block ${className}`}>
       <label
-        htmlFor={fieldId(name)}
+        htmlFor={fieldId(name, scope)}
         className="mb-1.5 block text-sm font-semibold text-ink"
       >
         {label}
         {required && <span className="text-brand-dark"> *</span>}
       </label>
       <textarea
-        id={fieldId(name)}
+        id={fieldId(name, scope)}
         name={name}
         rows={rows}
         required={required}
         aria-required={required ? true : undefined}
-        aria-describedby={hint ? hintId(name) : undefined}
+        aria-describedby={hint ? hintId(name, scope) : undefined}
         defaultValue={defaultValue ?? ""}
         placeholder={placeholder}
         className={`${inputClass} resize-y`}
       />
       {hint && (
-        <span id={hintId(name)} className="mt-1 block text-xs text-graphite">
+        <span id={hintId(name, scope)} className="mt-1 block text-xs text-graphite">
           {hint}
         </span>
       )}
@@ -218,6 +233,7 @@ export function Select({
   options,
   hint,
   className = "",
+  scope,
 }: {
   label: string;
   name: string;
@@ -225,20 +241,21 @@ export function Select({
   options: { value: string; label: string }[];
   hint?: string;
   className?: string;
+  scope?: string;
 }) {
   return (
     <div className={`block ${className}`}>
       <label
-        htmlFor={fieldId(name)}
+        htmlFor={fieldId(name, scope)}
         className="mb-1.5 block text-sm font-semibold text-ink"
       >
         {label}
       </label>
       <select
-        id={fieldId(name)}
+        id={fieldId(name, scope)}
         name={name}
         defaultValue={defaultValue}
-        aria-describedby={hint ? hintId(name) : undefined}
+        aria-describedby={hint ? hintId(name, scope) : undefined}
         className={inputClass}
       >
         {options.map((o) => (
@@ -248,7 +265,7 @@ export function Select({
         ))}
       </select>
       {hint && (
-        <span id={hintId(name)} className="mt-1 block text-xs text-graphite">
+        <span id={hintId(name, scope)} className="mt-1 block text-xs text-graphite">
           {hint}
         </span>
       )}

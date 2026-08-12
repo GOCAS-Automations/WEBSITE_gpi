@@ -15,6 +15,7 @@
 import { getPublicSupabase } from "@/lib/supabase/server";
 import { iconMap, type IconName } from "@/lib/icons";
 import { slugify } from "@/lib/slug";
+import { youtubeId } from "@/lib/youtube";
 
 import {
   services as staticServices,
@@ -22,21 +23,21 @@ import {
   type Service,
   type ServiceCategory,
   type ServiceCategoryId,
+  type ServiceVideo,
 } from "@/data/services";
 import { projects as staticProjects, type Project } from "@/data/projects";
 import { clients as staticClients, type Client } from "@/data/clients";
 import { faq as staticFaq, type FaqItem } from "@/data/faq";
 import { values as staticValues, type CorporateValue } from "@/data/values";
 import {
-  contactDefaults,
-  esCorreoValido,
-  excellenceDefaults,
-  heroDefaults,
-  visibilityDefaults,
-  youtubeDefaults,
+  formatearVisitas,
+  normalizarSettings,
+  siteSettingsDefaults,
   type ContactSettings,
   type ExcellenceSettings,
   type HeroSettings,
+  type HomeSettings,
+  type NosotrosSettings,
   type SiteSettings,
   type VisibilitySettings,
   type YouTubeSettings,
@@ -46,6 +47,7 @@ export type {
   Service,
   ServiceCategory,
   ServiceCategoryId,
+  ServiceVideo,
   Project,
   Client,
   FaqItem,
@@ -54,17 +56,13 @@ export type {
   HeroSettings,
   ExcellenceSettings,
   YouTubeSettings,
+  HomeSettings,
+  NosotrosSettings,
   VisibilitySettings,
   SiteSettings,
 };
 
-export const defaultSettings: SiteSettings = {
-  contact: contactDefaults,
-  hero: heroDefaults,
-  excellence: excellenceDefaults,
-  youtube: youtubeDefaults,
-  visibility: visibilityDefaults,
-};
+export const defaultSettings: SiteSettings = siteSettingsDefaults;
 
 /**
  * Visibilidad por ítem (columna `published`, migración 0002).
@@ -109,12 +107,6 @@ function toGallery(value: unknown): { src: string; alt: string }[] {
     .filter((item) => item.src !== "");
 }
 
-/** Combina un objeto por defecto con el guardado en Supabase (nivel 1). */
-function mergeSetting<T extends object>(base: T, incoming: unknown): T {
-  if (!isRecord(incoming)) return base;
-  return { ...base, ...(incoming as Partial<T>) };
-}
-
 /* ------------------------------------------------------------------ */
 /* Filas de Supabase                                                   */
 /* ------------------------------------------------------------------ */
@@ -129,9 +121,38 @@ interface ServiceRow {
   description: string | null;
   items: unknown;
   images: unknown;
+  video?: unknown;
   meta_title: string | null;
   meta_description: string | null;
   published?: boolean;
+}
+
+/**
+ * Video de un servicio (columna `video`, migración 0007).
+ *
+ * Devuelve `undefined` cuando no hay video que mostrar: si la columna no existe
+ * todavía, si está en NULL, si la URL no es de YouTube o si quien edita el
+ * panel lo marcó como oculto. Así la página del servicio solo tiene que
+ * preguntar `if (service.video)`.
+ */
+function rowToServiceVideo(value: unknown): ServiceVideo | undefined {
+  if (!isRecord(value)) return undefined;
+
+  const url = str(value.url);
+  const id = youtubeId(url);
+  if (id === "") return undefined;
+
+  // Solo `false` explícito oculta: un video guardado antes de que existiera el
+  // interruptor se considera visible.
+  if (value.visible === false) return undefined;
+
+  return {
+    url,
+    id,
+    titulo: str(value.titulo),
+    descripcion: str(value.descripcion),
+    visible: true,
+  };
 }
 
 function rowToService(row: ServiceRow): Service {
@@ -152,6 +173,9 @@ function rowToService(row: ServiceRow): Service {
     cover: str(images.cover, "/images/servicios/s1.jpg"),
     coverAlt: str(images.coverAlt, title),
     gallery: gallery.length > 0 ? gallery : undefined,
+    // `undefined` mientras la migración 0007 no esté aplicada: sin columna no
+    // hay video, y la página del servicio se ve exactamente como antes.
+    video: rowToServiceVideo(row.video),
     metaTitle: str(row.meta_title, title),
     metaDescription: str(row.meta_description, summary),
   };
@@ -373,71 +397,66 @@ export async function getSettings(): Promise<SiteSettings> {
 
     if (error || !data || data.length === 0) return defaultSettings;
 
-    const map = new Map<string, unknown>(
-      data.map((row) => [String(row.key), row.value]),
+    // La normalización vive en `src/data/site.ts` y la comparte el panel: una
+    // sola definición de qué es válido para el sitio público y para /admin.
+    return normalizarSettings(
+      new Map<string, unknown>(data.map((row) => [String(row.key), row.value])),
     );
-
-    const contactValue = map.get("contact");
-    const contact: ContactSettings = {
-      ...contactDefaults,
-      ...(isRecord(contactValue) ? (contactValue as Partial<ContactSettings>) : {}),
-      address: mergeSetting(
-        contactDefaults.address,
-        isRecord(contactValue) ? contactValue.address : undefined,
-      ),
-      geo: mergeSetting(
-        contactDefaults.geo,
-        isRecord(contactValue) ? contactValue.geo : undefined,
-      ),
-      social: mergeSetting(
-        contactDefaults.social,
-        isRecord(contactValue) ? contactValue.social : undefined,
-      ),
-    };
-
-    if (!Array.isArray(contact.phones) || contact.phones.length === 0) {
-      contact.phones = contactDefaults.phones;
-    }
-    if (!Array.isArray(contact.emails) || contact.emails.length === 0) {
-      contact.emails = contactDefaults.emails;
-    }
-    // Mientras la migración 0005 no esté aplicada la clave no existe: el
-    // formulario cae en el correo corporativo por defecto en vez de generar un
-    // `mailto:` sin destinatario.
-    if (!esCorreoValido(str(contact.correoFormulario))) {
-      contact.correoFormulario = contactDefaults.correoFormulario;
-    }
-
-    const excellence = mergeSetting(
-      excellenceDefaults,
-      map.get("excellence"),
-    ) as ExcellenceSettings;
-    if (!Array.isArray(excellence.stats) || excellence.stats.length === 0) {
-      excellence.stats = excellenceDefaults.stats;
-    }
-
-    // Visibilidad: solo se aceptan booleanos; cualquier otra cosa usa el
-    // valor por defecto (visible). Si la clave no existe todavía en la base
-    // de datos, el sitio se muestra completo.
-    const visibilityValue = map.get("visibility");
-    const visibility: VisibilitySettings = { ...visibilityDefaults };
-    if (isRecord(visibilityValue)) {
-      for (const key of Object.keys(visibilityDefaults) as (keyof VisibilitySettings)[]) {
-        if (typeof visibilityValue[key] === "boolean") {
-          visibility[key] = visibilityValue[key];
-        }
-      }
-    }
-
-    return {
-      contact,
-      hero: mergeSetting(heroDefaults, map.get("hero")),
-      excellence,
-      youtube: mergeSetting(youtubeDefaults, map.get("youtube")),
-      visibility,
-    };
   } catch {
     return defaultSettings;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Contador de visitas (tabla `site_visitas`, migración 0007)          */
+/* ------------------------------------------------------------------ */
+
+export interface Visitas {
+  /** Total acumulado desde que se instaló el contador. */
+  total: number;
+  /** El total con separador de miles, listo para mostrar (p. ej. "1.284"). */
+  formateado: string;
+  /**
+   * false = la tabla todavía no existe (migración 0007 pendiente) o la
+   * consulta falló. Quien muestra el dato puede así ocultar la tarjeta en vez
+   * de anunciar "0 visitas", que se leería como un sitio que nadie visita.
+   */
+  disponible: boolean;
+}
+
+const VISITAS_VACIAS: Visitas = {
+  total: 0,
+  formateado: formatearVisitas(0),
+  disponible: false,
+};
+
+/**
+ * Total de visitas al sitio.
+ *
+ * SOBRE EL CACHEADO — decisión consciente: esta lectura usa el cliente anónimo
+ * SIN cookies, así que las páginas que la consumen siguen siendo estáticas con
+ * ISR (`revalidate = 300`). El contador se refresca, por tanto, cada 5 minutos.
+ * La alternativa (`unstable_noStore` / render dinámico) obligaría a generar el
+ * inicio en cada petición y tiraría por la borda el rendimiento del sitio
+ * entero a cambio de un número más fresco. Para una cifra de vanidad como esta,
+ * 5 minutos de retraso no significan nada.
+ */
+export async function getVisitas(): Promise<Visitas> {
+  const supabase = getPublicSupabase();
+  if (!supabase) return VISITAS_VACIAS;
+
+  try {
+    const { data, error } = await supabase.from("site_visitas").select("total");
+    if (error || !data) return VISITAS_VACIAS;
+
+    const total = data.reduce((suma, fila) => {
+      const valor = Number(fila.total);
+      return suma + (Number.isFinite(valor) && valor > 0 ? valor : 0);
+    }, 0);
+
+    return { total, formateado: formatearVisitas(total), disponible: true };
+  } catch {
+    return VISITAS_VACIAS;
   }
 }
 

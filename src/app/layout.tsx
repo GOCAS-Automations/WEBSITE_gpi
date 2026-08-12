@@ -4,6 +4,7 @@ import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { WhatsAppFloat } from "@/components/layout/WhatsAppFloat";
+import { VisitBeacon } from "@/components/layout/VisitBeacon";
 import { getServices, getSettings, type ContactSettings } from "@/lib/content";
 
 const inter = Inter({
@@ -190,6 +191,9 @@ export default async function RootLayout({
         </main>
         <Footer settings={settings} services={services} />
         <WhatsAppFloat contact={settings.contact} />
+        {/* Suma una visita al entrar (una por sesión; ignora /admin y
+            /mi-cuenta). No pinta nada. */}
+        <VisitBeacon />
       </body>
     </html>
   );
