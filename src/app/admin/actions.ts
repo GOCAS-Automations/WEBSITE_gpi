@@ -9,10 +9,13 @@ import {
   normalizarExcellence,
   normalizarHome,
   normalizarNosotros,
+  normalizarPaginas,
   normalizarVisibility,
   type HomeSettings,
   type ImagenContenido,
   type NosotrosSettings,
+  type PaginaHero,
+  type PaginasSettings,
   type VisibilitySettings,
 } from "@/data/site";
 import { slugify } from "@/lib/slug";
@@ -572,6 +575,17 @@ async function guardarHome(parcial: Partial<HomeSettings>): Promise<ActionState>
   return upsertConSesion(session, "home", { ...actual, ...parcial });
 }
 
+/** Guarda un trozo de la clave `paginas` conservando el resto. */
+async function guardarPaginas(
+  parcial: Partial<PaginasSettings>,
+): Promise<ActionState> {
+  const session = await getContentEditorOrNull();
+  if (!session) return NOT_ADMIN;
+
+  const actual = normalizarPaginas(await leerSetting(session, "paginas"));
+  return upsertConSesion(session, "paginas", { ...actual, ...parcial });
+}
+
 /** Guarda un trozo de la clave `nosotros` conservando el resto. */
 async function guardarNosotros(
   parcial: Partial<NosotrosSettings>,
@@ -770,6 +784,114 @@ export async function saveHomeQuienesSomos(
       ctaLabel: text(formData, "ctaLabel"),
       ctaHref: text(formData, "ctaHref") || "/nosotros",
     },
+  });
+}
+
+/**
+ * Encabezados de sección del inicio (migración 0008).
+ *
+ * Son tres formularios distintos con exactamente los mismos campos —texto
+ * superior, título y descripción—, así que comparten la lectura del formulario
+ * y solo cambian la rama de `home` que escriben.
+ */
+function seccionDeFormulario(formData: FormData) {
+  return {
+    eyebrow: text(formData, "eyebrow"),
+    titulo: text(formData, "titulo"),
+    descripcion: text(formData, "descripcion"),
+  };
+}
+
+export async function saveHomeServiciosIntro(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return guardarHome({ serviciosIntro: seccionDeFormulario(formData) });
+}
+
+export async function saveHomeValoresIntro(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return guardarHome({ valoresIntro: seccionDeFormulario(formData) });
+}
+
+export async function saveHomeClientes(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return guardarHome({ clientes: seccionDeFormulario(formData) });
+}
+
+export async function saveHomeCta(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return guardarHome({
+    cta: {
+      titulo: text(formData, "titulo"),
+      descripcion: text(formData, "descripcion"),
+    },
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/* Cabeceras de Servicios, Proyectos y Contacto (`paginas`)            */
+/* ------------------------------------------------------------------ */
+
+/** Los cuatro campos de una `PageHero` leídos del formulario. */
+function cabeceraDeFormulario(formData: FormData): PaginaHero {
+  return {
+    eyebrow: text(formData, "eyebrow"),
+    titulo: text(formData, "titulo"),
+    descripcion: text(formData, "descripcion"),
+    imagen: imagenDeFormulario(formData, "imagen_url", "imagen_alt"),
+  };
+}
+
+/** Título obligatorio: una cabecera sin `<h1>` dejaría la página sin encabezado. */
+function validarCabecera(cabecera: PaginaHero): string | null {
+  if (cabecera.titulo === "") return "El título de la página es obligatorio.";
+  if (cabecera.imagen.url === "") return "La imagen de fondo es obligatoria.";
+  return null;
+}
+
+export async function savePaginaServicios(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const servicios = cabeceraDeFormulario(formData);
+  const error = validarCabecera(servicios);
+  if (error) return fail(error);
+  return guardarPaginas({ servicios });
+}
+
+export async function savePaginaProyectos(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const proyectos = cabeceraDeFormulario(formData);
+  const error = validarCabecera(proyectos);
+  if (error) return fail(error);
+  return guardarPaginas({ proyectos });
+}
+
+export async function savePaginaContacto(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const contacto = cabeceraDeFormulario(formData);
+  const error = validarCabecera(contacto);
+  if (error) return fail(error);
+  return guardarPaginas({ contacto });
+}
+
+export async function savePaginaFooter(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return guardarPaginas({
+    footer: { descripcion: text(formData, "descripcion") },
   });
 }
 

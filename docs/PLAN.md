@@ -20,6 +20,7 @@ que reconstruir el historial desde los commits.
 | 4g | Envío real del formulario de contacto (3 ago) | ✅ Código listo | El formulario pasa de `mailto:` a **envío directo por SMTP de Gmail** desde una server action, con respaldo del mensaje en `site_mensajes` y modo alternativo (Gmail web / programa de correo / WhatsApp). **Falta aplicar la migración 0006** y configurar `CONTACT_SMTP_USER` / `CONTACT_SMTP_PASS`. |
 | 4h | Rediseño y contenido editable total (12 ago) — **capa de datos y panel** | ✅ Código listo | Contenido de **inicio** y **Nosotros** editable desde dos pantallas nuevas del panel y sembrado con los textos oficiales del community manager, **contador de visitas**, **video por servicio** e interruptores por sección. **Falta aplicar la migración 0007.** |
 | 4i | Rediseño y contenido editable total (12 ago) — **pase visual** | ⏳ En curso | El rediseño de las páginas públicas según el prototipo del community manager (línea de tiempo, galería de aliados, misión/visión, menú, opacidad del hero, logos de clientes a color). El contenido ya existe y es editable: falta la estética. |
+| 4j | Pulido final (12 ago) | ✅ Código listo | Últimos títulos editables del inicio y de las cabeceras de página (`/admin/inicio`, `/admin/paginas`), menú del panel agrupado en seis entradas detrás de «Contenido del sitio», «Mi Cuenta» rebota al panel para los roles de contenido, arreglo del bug «el panel se traba» al navegar, y ajustes visuales menores. **Falta aplicar la migración 0008**; el código funciona igual sin ella. |
 | 5 | Deploy en Vercel desde el repo de GitHub + variables de entorno | ✅ Completa | **https://website-gpi.vercel.app** — despliega solo con cada push a `main`; las 3 env vars configuradas (incl. `SUPABASE_SERVICE_ROLE_KEY` sin prefijo). Verificado en vivo: 7 cabeceras de seguridad, 9 rutas 200, `/admin` protegido. |
 | 6 | Apuntar dominio `gpiprofesionales.com` de GoDaddy → Vercel | ⏳ Pendiente | Al final, cuando el sitio esté aprobado por GPI y desplegado en Vercel. |
 | 7 | Extra cotizable aparte: chatbot IA | 💡 Planeado | Claude Haiku 4.5 vía `/api/chat`, con conocimiento del contenido del sitio (servicios, proyectos, contacto) y captura de leads hacia Supabase. No incluido en la cotización actual. |
@@ -44,9 +45,15 @@ que reconstruir el historial desde los commits.
 | Envío real del formulario por SMTP | `src/lib/correo.ts`, `src/app/contacto/actions.ts`, `src/lib/contacto-types.ts` |
 | Respaldo de los mensajes de contacto | `supabase/migrations/0006…` (`site_mensajes`) |
 | Contenido editable del inicio y de Nosotros | `supabase/migrations/0007…`, `/admin/inicio`, `/admin/nosotros` |
-| Contador de visitas | `site_visitas` + `registrar_visita()`, `/api/visita`, `VisitBeacon`, `getVisitas()` |
+| Contador de visitas (registro) | `site_visitas` + `registrar_visita()`, `VisitBeacon` |
+| Contador de visitas (lectura en vivo, pulido final) | `GET /api/visita`, `VisitCounter` (`src/components/sections/VisitCounter.tsx`) |
 | Video de YouTube por servicio | `site_services.video`, `src/lib/youtube.ts` |
 | Ayudas del panel para usuarios no técnicos | `AyudaSeccion` / `AyudaDesplegable` + constantes `AYUDA_*` en `src/components/admin/ui.tsx` |
+| Títulos del inicio y de las cabeceras de página (pulido final) | `supabase/migrations/0008…`, `site_settings.home` (cuatro bloques nuevos), `site_settings.paginas`, `/admin/inicio`, `/admin/paginas` |
+| Menú del panel agrupado en un hub (pulido final) | `/admin/contenido`, `RUTAS_CONTENIDO` en `src/lib/admin-types.ts`, `src/components/admin/AdminShell.tsx` |
+| «Mi Cuenta» rebota al panel para roles de contenido (pulido final) | `src/app/mi-cuenta/IrAlPanel.tsx`, portal en `/mi-cuenta?portal=1` |
+| Arreglo del bug «el panel se traba» (pulido final) | `src/app/admin/loading.tsx`, `src/components/admin/PuntoDeCarga.tsx`, `prefetch={false}` en `AdminShell` |
+| Galería de Nosotros en carrusel desde la 4.ª foto (pulido final) | `src/components/sections/GaleriaAliados.tsx` |
 
 Flujo completo: **el empleado registra su jornada** en `/mi-cuenta` (con vista
 previa del desglose) → queda **pendiente** → un **coordinador o admin** la ve en
@@ -404,9 +411,13 @@ la petición si esa IP ya sumó en los últimos 30 minutos → llama a
 - **`/admin` y `/mi-cuenta` no cuentan**: contarlos inflaría la cifra con el
   propio trabajo interno de GPI.
 - **La lectura mantiene el sitio estático.** `getVisitas()` usa el cliente
-  anónimo sin cookies, así que el inicio sigue con ISR y el contador se refresca
-  cada 5 minutos. Leerlo en vivo (`unstable_noStore`) habría vuelto dinámica la
-  portada entera a cambio de una cifra de vanidad más fresca.
+  anónimo sin cookies, así que el inicio sigue con ISR. En esta iteración el
+  contador se refrescaba cada 5 minutos junto con el resto del contenido; GPI lo
+  notó como "el contador está mal" al no ver reflejada su propia visita, y el
+  pulido final del 12 de agosto lo corrigió sin volver dinámica la página — ver
+  el punto 7 de esa iteración, más abajo. Leerlo en vivo con `unstable_noStore`
+  se descartó porque habría vuelto dinámica la portada entera a cambio de una
+  cifra de vanidad más fresca.
 - **Si la 0007 no está aplicada, la tarjeta no se pinta.** Mostrar «0 visitas» se
   leería como un sitio que nadie visita, que es peor que no mostrar nada.
 
@@ -458,6 +469,264 @@ flecha, la galería con la tarjeta superpuesta, el menú sobre fondo oscuro, la
 opacidad del hero, los logos de clientes a color). Nada de eso necesita tocar la
 base de datos ni el panel.
 
+## Iteración del 12 de agosto de 2026 — pulido final
+
+Mismo día que el rediseño, pero un encargo distinto: con el contenido de inicio
+y Nosotros ya editable, GPI revisó el panel en uso real y volvió con una lista
+corta de fricciones —algunas de texto, una de diseño y una **de verdad grave**,
+un bug de navegación que hacía parecer roto el panel entero. Esta sección cierra
+esa lista, punto por punto.
+
+Necesita la **migración 0008**
+(`supabase/migrations/0008_titulos_paginas.sql`), pero —como siempre— el código
+funciona sin ella: el respaldo estático de `src/data/site.ts` trae los mismos
+textos. La diferencia con la 0007 es que aquí no hay ninguna columna nueva que
+pueda faltar (ver el punto 1).
+
+### 1. Los últimos títulos escritos en el código pasan a ser editables
+
+Después de la 0007 quedaban dos bolsillos de texto que GPI no podía tocar desde
+el panel: los encabezados que presentan cada bloque grande del inicio, y las
+cabeceras de las páginas que no son inicio ni Nosotros.
+
+- **Cuatro bloques nuevos en `site_settings.home`**: `serviciosIntro` (el
+  encabezado de «Dos áreas, una misma excelencia»), `valoresIntro` (el
+  encabezado de los valores del inicio), `clientes` («Clientes / Portafolio de
+  clientes» y su descripción) y `cta` (título y descripción de la franja verde
+  de cierre). Se editan en `/admin/inicio`, que pasó de **cuatro tarjetas a
+  ocho**, colocadas en el mismo orden en que se ven en la página.
+- **Clave nueva `site_settings.paginas`**: la primera pantalla (texto superior,
+  título, descripción, imagen de fondo y su texto alternativo) de
+  **Servicios**, **Proyectos** y **Contacto**, más el párrafo de presentación
+  del **pie de página**. Se edita en la pantalla nueva **`/admin/paginas`**
+  («Títulos de páginas»), dentro de «Contenido del sitio». El inicio y
+  Nosotros no están aquí a propósito: ya tienen su propia pantalla, con muchos
+  más bloques que una sola cabecera.
+- **El pie decía «Más de 5 años»** —quedó escrito directamente en
+  `Footer.tsx` y se congeló ahí mientras el resto del sitio ya decía 15—.
+  Ahora sale de `paginas.footer.descripcion` y la semilla dice **«Más de 15
+  años»**; la 0008 además corrige el texto viejo exacto si alguien ya lo
+  hubiera guardado, y repite por seguridad los tres reemplazos «+5 → +15» de
+  la 0007, por si una base se sembró con la 0001 después de la 0007.
+- **Sin dependencia real de la migración.** A diferencia del video de
+  servicios (una columna nueva de verdad sobre `site_services`), `home` y
+  `paginas` son **claves dentro de `site_settings`**, tabla que existe desde
+  la 0001: guardar desde el panel crea la fila con `upsert` aunque la 0008
+  nunca se aplique. La migración no es un requisito para poder editar, solo
+  adelanta la semilla inicial y ahorra que alguien tenga que escribir esos
+  ocho textos a mano.
+- Normalizadores nuevos en `src/data/site.ts`: `normalizarPaginas()` y
+  `seccionIntro()`; `normalizarHome()` se amplió con los cuatro bloques. Todo
+  sigue entrando por el punto único de normalización, `normalizarSettings()`
+  (ver la iteración anterior). Ocho server actions nuevas en
+  `src/app/admin/actions.ts` (`saveHomeServiciosIntro`, `saveHomeValoresIntro`,
+  `saveHomeClientes`, `saveHomeCta`, `savePaginaServicios`,
+  `savePaginaProyectos`, `savePaginaContacto`, `savePaginaFooter`), todas con
+  el mismo patrón de guardado parcial que `home`/`nosotros`/`visibility`: leen
+  lo guardado, mezclan solo su bloque y escriben, para que guardar el cierre
+  del inicio no borre el título de servicios.
+
+### 2. Logos de clientes centrados
+
+`ClientLogos` pasó de una rejilla `grid grid-cols-6` a `flex flex-wrap
+justify-center`, con el ancho de cada tarjeta calculado a mano para dar
+exactamente las mismas 2 / 3 / 6 columnas de antes. Un `grid` no puede centrar
+su última fila —las columnas están fijadas de antemano—, así que con 15 logos
+(el caso real de GPI) la última fila de tres quedaba pegada a la izquierda y se
+leía como un hueco, no como un cierre limpio. Con `flex-wrap` la fila
+incompleta queda centrada sola.
+
+### 3. Logo del nav más grande
+
+La píldora de escritorio creció de `4.75rem` a `5rem` (76 → 80 px, variable
+`--nav-pill-h` en `globals.css`) y el logo pasó de `h-10/h-11/h-14` a
+`h-11/h-12/h-16` (44/48/**64 px**). Quedan 10 px de aire en móvil y 8 px en
+escritorio respecto al borde de la píldora — lo justo para que el logo crezca
+sin tocar el contorno. `sizes` del `<Image>` se actualizó a juego.
+
+### 4. Galería de Nosotros → carrusel
+
+Componente nuevo `src/components/sections/GaleriaAliados.tsx`. La franja de
+«Más que proveedores, somos aliados estratégicos» dejaba encoger las fotos
+hasta volverlas sellos en cuanto GPI subía una cuarta o quinta imagen, porque
+la rejilla estaba pensada para tres.
+
+- **Con hasta 3 fotos se ve exactamente como hoy**: la franja estática de
+  siempre, pixel por pixel. Es el caso real de GPI y el diseño que aprobó el
+  community manager; meterlo en un carrusel habría añadido flechas y puntos
+  que no llevan a ninguna parte.
+- **A partir de la 4.ª foto** se convierte en carrusel: scroll-snap horizontal
+  **nativo** (sin librerías, ni un byte de JavaScript de terceros), flechas ←
+  → discretas que se deshabilitan en los extremos en vez de desaparecer (para
+  que la fila de controles no salte de posición), puntos indicadores, y
+  operable con teclado —el carril es enfocable (`tabIndex=0`) y se recorre con
+  las flechas del navegador, comportamiento nativo de un contenedor
+  desplazable—. Respeta `prefers-reduced-motion` (el desplazamiento pasa de
+  `smooth` a instantáneo) y el gesto táctil es el nativo del navegador.
+- Verificado con axe: 0 violaciones. Un detalle que costó un intento: ponerle
+  `role="group"` al `<ul>` para nombrar el carrusel le rompía la semántica a
+  sus `<li>` (quedaban «huérfanos» y axe los marcaba); la solución fue dejar el
+  rol de lista intacto y nombrar con `aria-label` en su lugar.
+
+### 5. «Mi Cuenta» lleva al panel
+
+Quien tiene rol de contenido (administrador, coordinador y **Community
+Manager**) y pulsa «Mi Cuenta» en el menú público aterrizaba en el formulario
+de jornadas, cuando lo que iba a hacer nueve de cada diez veces era entrar al
+panel — GPI lo reportó como algo obvio que debía arreglarse.
+
+- Ahora esas tres cuentas, si ya tienen sesión iniciada, ven una pantalla breve
+  *"Abriendo tu panel…"* y saltan solas a **`/admin`**. Lo hace
+  `src/app/mi-cuenta/IrAlPanel.tsx`, un redirect de **CLIENTE**
+  (`router.replace("/admin")`), no de servidor, por la misma razón de
+  siempre: `src/proxy.ts` ya manda `/admin` → `/mi-cuenta` cuando no ve sesión,
+  así que un `redirect()` de servidor en `/mi-cuenta` cerraría el círculo con
+  cualquier cookie a medio refrescar, y además obligaría a `/mi-cuenta` a
+  decidir por rol antes de poder servir el portal, que tiene que seguir
+  estando disponible para **todos**.
+- El **portal de jornadas sigue existiendo** para esas cuentas: vive en
+  **`/mi-cuenta?portal=1`**, el parámetro que pide explícitamente el portal en
+  vez del panel. Es a donde apuntan ahora el botón «Registrar mi jornada» de
+  la barra del `AdminShell` y el enlace del dashboard.
+- **También cambió el aterrizaje tras iniciar sesión.** Antes solo admin y
+  coordinador iban a `/admin` al ingresar; el Community Manager se quedaba en
+  su portal. Ahora los tres roles de contenido (`is_content_editor()`) entran
+  directo al panel; el **empleado** sigue yendo a su portal, sin cambios. Lo
+  decide `LoginForm`, con el mismo razonamiento de cliente-no-servidor.
+- Nadie queda encerrado: el empleado nunca notó nada distinto, y las tres
+  cuentas de contenido conservan su portal íntegro (registrar horas, ver su
+  historial, cambiar contraseña) a un clic de distancia.
+
+### 6. Menú del panel reorganizado
+
+El menú lateral tenía **doce** entradas y ocho de ellas eran pantallas de
+contenido: se leía como un inventario, no como un menú.
+
+- Pasó a **seis**: **Dashboard · Contenido del sitio · Equipo · Horarios ·
+  Jornadas · Ajustes**. «Contenido del sitio» es la ruta nueva
+  `/admin/contenido`, un índice con tarjetas hacia Página de inicio, Página
+  Nosotros, Títulos de páginas, Servicios, Proyectos, Clientes, Preguntas
+  frecuentes y Valores corporativos.
+- **Ninguna URL cambió** (`/admin/servicios` sigue siendo `/admin/servicios`):
+  solo se agrupó el menú. Estar en cualquiera de esas ocho pantallas marca
+  «Contenido del sitio» como activo, y sus migas de pan y su botón «volver»
+  apuntan al índice. La lista de rutas que hace ese reconocimiento es
+  `RUTAS_CONTENIDO`, en `src/lib/admin-types.ts`, compartida entre el menú
+  (`AdminShell`) y el propio hub.
+- El **dashboard** de `/admin` se reorganizó igual: «Gestión interna» (Equipo,
+  Horarios, Jornadas, solo managers) y «El sitio web» (Contenido del sitio,
+  Contacto y ajustes).
+- La entrada de menú «Contacto y ajustes» se acortó a **«Ajustes»** (la
+  pantalla conserva su título completo «Contacto y ajustes»); en un menú de
+  seis palabras, un nombre de tres términos desentonaba con el resto.
+
+### 7. Contador de visitas al día
+
+El número de visitas venía del HTML estático con hasta cinco minutos de
+retraso (el intervalo de ISR): GPI abría el sitio, generaba una visita nueva y
+todavía veía la cifra de antes — parecía roto sin estarlo.
+
+- `VisitCounter` pasó a ser un componente de **cliente**: pinta el número
+  servido de inmediato (no hay hueco ni «cargando…») y, al montarse, pide el
+  total en vivo a la ruta nueva **`GET /api/visita`** (`no-store`, lectura con
+  el cliente anónimo, apoyada en la política `site_visitas_select_public` de
+  la 0007). Solo actualiza el número **si cambió**, para no provocar un
+  parpadeo gratuito.
+- El `POST` que suma una visita no cambió: sigue en la misma ruta y sigue
+  usando la clave `service_role`, así que el navegador no puede inflar la
+  cifra escribiendo directo contra la base de datos.
+- Se descartó volver dinámicas las páginas de inicio y Nosotros para leer la
+  cifra siempre fresca: habría tirado el ISR de todo el sitio por una cifra de
+  vanidad. El HTML sigue siendo estático; solo esta tarjeta pide su propio
+  dato una vez, ya en el navegador.
+
+### 8. BUG «la navegación del panel se traba» — RESUELTO
+
+El reporte de GPI: *«a veces se traba, no permite navegar y toca recargar»*. Se
+reprodujo con Playwright y la causa no era ningún cuelgue del servidor.
+
+**Qué pasaba.** Todas las rutas de `/admin` son `force-dynamic` y consultan
+Supabase en cada petición, pero el segmento **no tenía frontera de carga**
+(`loading.tsx`). Sin ella, el router de Next **no confirma la navegación hasta
+que el servidor termina de renderizar** — la URL no cambia, la pantalla no se
+mueve y no aparece ningún indicador mientras tanto. Medido en local, 400–700 ms
+de espera muda; contra Supabase desde Colombia, varios segundos. Durante esa
+espera el panel *parecía* congelado, así que la persona volvía a hacer clic —
+y **cada clic nuevo cancelaba la navegación en curso**. Con clics cada ~120 ms
+no llegaba a confirmarse ninguna: reproducido en pruebas, **doce clics
+seguidos y la URL sin moverse ni una vez**. De ahí el «toca recargar»: recargar
+manualmente era la única forma de que el navegador abandonara la carrera de
+navegaciones canceladas.
+
+**El arreglo, en tres piezas que dependen entre sí:**
+
+1. **`src/app/admin/loading.tsx`** — el `<Suspense>` que le faltaba al
+   segmento. Con él, la navegación se confirma **al instante**: la URL cambia,
+   el menú marca la sección nueva y el contenido se sustituye por un esqueleto
+   mientras el servidor responde. Solo reemplaza el `<main>`: el `AdminShell`
+   (barra superior, menú lateral, tabs) vive en el layout y se queda quieto,
+   que es lo que hace que el cambio se lea como «esta sección está cargando» y
+   no como «la página se recargó».
+2. **`src/components/admin/PuntoDeCarga.tsx`** — un punto giratorio en cada
+   entrada del menú y en cada tarjeta, con `useLinkStatus()` de Next 16 (que
+   solo funciona dentro de un `<Link>` y expone su estado pendiente; es la vía
+   que la propia documentación recomienda para este caso — ruta dinámica +
+   `prefetch={false}`). Con él, el clic **siempre** hace algo visible, así que
+   nadie vuelve a pulsar a ciegas.
+3. **`prefetch={false}`** en toda la navegación de `AdminShell`, y en
+   `src/proxy.ts` los prefetch ya no refrescan la sesión de Supabase. Esta
+   pieza no es cosmética: con el prefetch por defecto, asomar el ratón por el
+   menú dispara varias peticiones simultáneas a `/admin/*`, cada una
+   intentando canjear el **mismo** refresh token; Supabase los rota de uno en
+   uno e invalida los canjes perdedores, lo que deja cookies de sesión
+   pisadas, `getUser()` devolviendo `null` y navegaciones a medias hasta
+   recargar — exactamente lo que reportó GPI. Sin prefetch, cada navegación es
+   una sola petición en serie y el problema desaparece.
+
+**Verificado después del arreglo:** 20 transiciones seguidas sin trabarse, y
+tras 10 clics rápidos sobre el mismo enlace, la última navegación se completa
+sola y el panel sigue respondiendo con normalidad.
+
+> Las tres piezas dependen entre sí y **no deben quitarse por separado**:
+> `loading.tsx` sin `prefetch={false}` deja el problema de las cookies
+> pisadas intacto; `prefetch={false}` sin `loading.tsx` deja al clic sin
+> respuesta visible otra vez.
+
+### 9. Video de servicio: apagado por defecto
+
+En `/admin/servicios`, cuando el servicio no tenía video guardado, el
+interruptor «Mostrar el video» aparecía en **«Mostrar»** sobre campos
+completamente vacíos, y GPI creyó que había un video publicado que en
+realidad no existía — la página pública nunca mostró nada sin URL (se
+verificó), pero el panel sí sugería lo contrario. Ahora el interruptor nace
+en **«No visible»**: hay que encenderlo a propósito cuando el enlace esté
+listo.
+
+### 10. Recordatorio de guardar, ARRIBA
+
+El aviso de que los cambios no se aplican hasta pulsar «Guardar» vivía al pie
+de la barra lateral, donde nadie lo veía mientras editaba. Pasó a ser el
+componente `AvisoGuardar` (`src/components/admin/ui.tsx`) y se pinta **arriba
+del todo, antes de cualquier formulario**, en todas las pantallas de
+contenido y en Ajustes: *«Los cambios NO se aplican hasta que pulses
+"Guardar" en el bloque que editaste»*. Las pantallas de un solo formulario
+(crear/editar un servicio, por ejemplo) usan una variante que dice «un solo
+botón, al final», porque ahí sí hay un único guardado y no bloques sueltos.
+Uno por pantalla, nunca uno por bloque — repetirlo tantas veces como tarjetas
+hay habría vuelto la pantalla ruidosa.
+
+### 11. Barrido de textos y mensajes de prueba
+
+Revisión final antes de cerrar la iteración: el único texto viejo de cara al
+público que quedaba era el «Más de 5 años» del pie (arreglado en el punto 1).
+No se encontraron mensajes de prueba olvidados en ninguna pantalla. El aviso
+del formulario de contacto que dice que el envío directo «estará disponible
+muy pronto» (botón inhabilitado hasta cargar `CONTACT_SMTP_USER` /
+`CONTACT_SMTP_PASS`, ver la [iteración del 3 de
+agosto](#iteración-del-3-de-agosto-de-2026--el-formulario-envía-el-correo-de-verdad))
+es real y **se queda**: no es un texto de prueba, es el estado actual del
+sitio hasta que GPI cargue esas credenciales.
+
 ## Decisiones técnicas
 
 - **Fallback estático primero**: toda la capa de contenido (`src/lib/content.ts`)
@@ -502,7 +771,14 @@ base de datos ni el panel.
   servidor). Sin la 0007, el inicio y Nosotros muestran los mismos textos y
   fotos desde `src/data/site.ts`, el panel los enseña listos para guardar,
   `saveService` reintenta sin la columna `video` y la tarjeta de visitas no se
-  pinta. El build no depende de la base de datos.
+  pinta. Sin la 0008, los ocho títulos del pulido final —secciones del inicio y
+  cabeceras de página— también salen del respaldo estático de `src/data/site.ts`
+  y `/admin/inicio` / `/admin/paginas` los muestran listos para guardar; a
+  diferencia de las demás migraciones, aquí **no hay ningún reintento
+  especial** porque `home` y `paginas` son claves dentro de `site_settings`
+  (tabla que ya existe desde la 0001), así que el panel guarda esos ocho
+  bloques igual con o sin la 0008 aplicada — la migración solo adelanta la
+  semilla inicial. El build no depende de la base de datos.
 - **El correo tampoco es un requisito para que el sitio funcione**: si faltan
   `CONTACT_SMTP_USER` / `CONTACT_SMTP_PASS`, el formulario cambia solo a su modo
   alternativo (compositor de Gmail en el navegador, programa de correo y

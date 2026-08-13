@@ -9,6 +9,7 @@ import { getJornadaConfig, getMapaHorarios, listJornadas } from "@/lib/admin";
 import { isContentEditorRole, ROLE_LABELS } from "@/lib/roles";
 import { hoyEnColombia } from "@/lib/jornada";
 import { LoginForm } from "./LoginForm";
+import { IrAlPanel } from "./IrAlPanel";
 import { JornadaForm } from "./JornadaForm";
 import { MisJornadas } from "./MisJornadas";
 import { PasswordForm } from "./PasswordForm";
@@ -25,15 +26,35 @@ export const metadata: Metadata = {
 /** Depende de la sesión: nunca se cachea. */
 export const dynamic = "force-dynamic";
 
-export default async function MiCuentaPage() {
+/** Parámetro que fuerza el portal de jornadas aunque tengas panel. */
+const BYPASS_PORTAL = "portal";
+
+export default async function MiCuentaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
   const configured = isSupabaseConfigured();
   const session = configured ? await getSessionProfile() : null;
+  const params = await searchParams;
+  /** `?portal=1` = «quiero el portal de jornadas, no el panel». */
+  const pidePortal = params[BYPASS_PORTAL] !== undefined;
 
-  // Portal de jornadas: lo ve CUALQUIER cuenta activa, sin importar el rol (el
-  // Community Manager también es empleado de GPI, y un admin o un coordinador
-  // puede registrar sus horas si lo necesita). Quien además tiene permisos de
-  // contenido ve arriba el acceso al panel; el resto solo su portal.
   if (session && session.profile.active) {
+    // Quien administra el sitio (admin, coordinador o Community Manager) entra
+    // por «Mi Cuenta» buscando el PANEL: se le lleva allí salvo que pida el
+    // portal a propósito. El redirect lo hace el cliente — ver `IrAlPanel`.
+    if (isContentEditorRole(session.profile.role) && !pidePortal) {
+      return (
+        <IrAlPanel
+          nombre={session.profile.fullName || session.profile.identificador}
+        />
+      );
+    }
+
+    // Portal de jornadas: lo ve CUALQUIER cuenta activa, sin importar el rol
+    // (el Community Manager también es empleado de GPI, y un admin o un
+    // coordinador puede registrar sus horas si lo necesita).
     return <PortalEmpleado profile={session.profile} />;
   }
 

@@ -103,6 +103,7 @@ export async function AprobacionesView({
             Es también la forma de <strong>recalcular</strong> una jornada
             aprobada si el horario del mes estaba mal: la corriges en{" "}
             <Link
+              prefetch={false}
               href="/admin/horarios"
               className="font-semibold text-brand-dark hover:text-brand"
             >
@@ -261,6 +262,7 @@ export async function AprobacionesView({
           Se toman las horas reales de inicio y fin (hora de Colombia). La{" "}
           <strong>jornada ordinaria</strong> de cada día sale del{" "}
           <Link
+            prefetch={false}
             href="/admin/horarios"
             className="font-semibold text-brand-dark hover:text-brand-dark"
           >

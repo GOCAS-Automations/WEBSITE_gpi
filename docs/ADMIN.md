@@ -12,7 +12,7 @@ la gestión de cuentas y el registro de jornadas (horas extra).
 
 ## 1. Aplicar las migraciones en Supabase
 
-Hay **siete** migraciones y se aplican **en orden**:
+Hay **ocho** migraciones y se aplican **en orden**:
 
 | Archivo | Qué añade |
 | --- | --- |
@@ -23,6 +23,7 @@ Hay **siete** migraciones y se aplican **en orden**:
 | `supabase/migrations/0005_proyectos_correo_orden.sql` | Correo del formulario de contacto (`contact.correoFormulario`), página propia por proyecto (`slug`, `gallery`, `details`) y orden de trabajo **opcional** en las jornadas |
 | `supabase/migrations/0006_mensajes_contacto.sql` | Tabla `site_mensajes`: respaldo en base de datos de cada mensaje del formulario de `/contacto` |
 | `supabase/migrations/0007_contenido_paginas.sql` | Contenido editable de las páginas de **inicio** y **Nosotros**, interruptores por sección, **contador de visitas** (`site_visitas`) y **video por servicio** (`site_services.video`) |
+| `supabase/migrations/0008_titulos_paginas.sql` | Títulos que quedaban escritos en el código: sección de servicios, valores y clientes del inicio y su cierre (`site_settings.home`), cabeceras de **Servicios**, **Proyectos** y **Contacto** y el párrafo del **pie de página** (`site_settings.paginas`) |
 
 Para cada una:
 
@@ -163,6 +164,38 @@ verás exactamente lo mismo que ahora, pero ya editable.
 > columna `video`, y la tarjeta del contador de visitas sencillamente no
 > aparece.
 
+### ¿Qué añade la 0008?
+
+| Objeto | Para qué sirve |
+| --- | --- |
+| Cuatro bloques nuevos en `site_settings.home` | `serviciosIntro` (encabezado de «Dos áreas, una misma excelencia»), `valoresIntro` (encabezado de los valores del inicio), `clientes` (encabezado del «Portafolio de clientes») y `cta` (título y descripción de la franja verde de cierre del inicio) |
+| Clave nueva `site_settings.paginas` | La primera pantalla (texto superior, título, descripción, imagen de fondo y su texto alternativo) de **Servicios**, **Proyectos** y **Contacto**, más el párrafo de presentación del **pie de página** |
+| Corrección **«Más de 5 años» → «Más de 15 años»** en el pie | El párrafo del pie vivía escrito en `Footer.tsx` y se había quedado con la antigüedad vieja mientras el resto del sitio ya decía 15. La migración siembra el texto ya corregido y, además, actualiza el texto exacto anterior si alguien ya lo hubiera guardado |
+| Repite, por seguridad, los tres reemplazos «+5 → +15» de la 0007 | Cubre el caso de una base sembrada con la 0001 después de la 0007: las condiciones exigen el texto exacto viejo, así que sobre una base ya corregida no tocan ninguna fila |
+
+Se edita en **dos pantallas**: los cuatro bloques de `home` en `/admin/inicio`
+(que pasa de cuatro a ocho tarjetas) y `paginas` en la pantalla nueva
+**`/admin/paginas`** («Títulos de páginas», dentro de «Contenido del sitio»).
+El **inicio** y **Nosotros** no están en `/admin/paginas`: son páginas enteras
+con su propia pantalla desde la 0007.
+
+> **Nada se pisa.** Los cuatro bloques de `home` se insertan con
+> `v_nuevas || value` (merge de primer nivel: lo que ya exista en `home` gana
+> sobre lo que trae la migración) y `paginas` se inserta completo con
+> `on conflict do nothing` (si la clave ya existiera, la migración no toca
+> nada). Ejecutarla dos veces no cambia nada.
+>
+> Mientras la 0008 no esté aplicada el sitio **se ve exactamente igual**: los
+> ocho textos nuevos salen del respaldo estático de `src/data/site.ts` (son los
+> mismos) y `/admin/inicio` y `/admin/paginas` muestran esos mismos valores
+> listos para guardar. A diferencia del video de servicios (una columna nueva
+> de verdad), `home` y `paginas` son **claves dentro de `site_settings`**, tabla
+> que ya existe desde la 0001: guardar desde el panel crea la fila con
+> `upsert` aunque la 0008 nunca se aplique, así que estos ocho bloques en
+> realidad **no dependen de la migración** para poder editarse — la 0008 solo
+> adelanta la semilla inicial y corrige el «+5 años» del pie sin que nadie
+> tenga que tocar cada campo a mano.
+
 ### Si el bloque del usuario admin de la 0001 falla
 
 Algunas versiones de Supabase no permiten insertar directamente en `auth.users`.
@@ -290,24 +323,41 @@ Cada usuario tiene un rol en `profiles`. Esto es lo que puede hacer cada uno:
 empleado, pero **no** puede crear administradores ni editar, restablecer la
 contraseña o eliminar la cuenta de un administrador. Eso solo lo hace un admin.
 
-² Desde julio de 2026, **cualquier cuenta activa** ve su portal de jornadas en
-`/mi-cuenta` (registrar jornada + mis jornadas). Quien además tiene acceso al
-panel ve arriba un botón **"Ir al panel"**. El Community Manager también es
-empleado de GPI, así que registra sus horas como cualquier otra persona.
+² Desde julio de 2026, **cualquier cuenta activa** tiene su portal de jornadas
+(registrar jornada + mis jornadas): el empleado lo ve directo en `/mi-cuenta`, y
+quien además tiene acceso al panel llega ahí con "Registrar mi jornada" o en
+`/mi-cuenta?portal=1` (ver más abajo). Arriba del portal ve un botón **"Ir al
+panel"**. El Community Manager también es empleado de GPI, así que registra sus
+horas como cualquier otra persona.
 
 ### A dónde aterriza cada rol al iniciar sesión
 
 | Rol | Pantalla que ve al ingresar | Cómo llega a la otra |
 | --- | --- | --- |
-| **Administrador** y **Coordinador** | **`/admin`** — el panel es su pantalla principal de trabajo | Botón **"Registrar mi jornada"** en la barra superior del panel (y un enlace igual en el dashboard) |
-| **Community Manager** | `/mi-cuenta` — su portal de jornadas | Banda **"Ir al panel"** arriba del portal |
+| **Administrador**, **Coordinador** y **Community Manager** | **`/admin`** — el panel es su pantalla principal de trabajo | Botón **"Registrar mi jornada"** en la barra superior del panel (y un enlace igual en el dashboard), que lleva a `/mi-cuenta?portal=1` |
 | **Empleado** | `/mi-cuenta` — su portal de jornadas | No tiene panel |
 
 El aterrizaje lo decide el **formulario de ingreso** (`src/app/mi-cuenta/LoginForm.tsx`)
-según el rol; **no** es un redirect del servidor. Es decir: `/mi-cuenta` visitado
-directamente **sigue mostrando el portal de jornadas a todos los roles**, incluidos
-admin y coordinador, que es donde cambian su contraseña y registran sus propias
-horas. Nadie queda encerrado en una sola pantalla.
+según el rol; **no** es un redirect del servidor. Hasta el 12 de agosto solo admin y
+coordinador aterrizaban en `/admin`; desde el **pulido final** el Community Manager
+se unió a ellos: los tres roles que pueden editar contenido (`is_content_editor()`)
+entran directo al panel, y solo el **empleado** se queda en su portal de jornadas.
+
+> **«Mi Cuenta» también rebota al panel (pulido final).** Antes, `/mi-cuenta`
+> visitado directamente **seguía mostrando el portal de jornadas a todos los
+> roles**, incluidos admin y coordinador. Ahora, si una cuenta con rol de
+> contenido ya tiene sesión iniciada y entra a `/mi-cuenta` —por ejemplo pulsando
+> el enlace "Mi Cuenta" del menú público—, ve una pantalla breve *"Abriendo tu
+> panel…"* y salta sola a `/admin`. Lo hace `src/app/mi-cuenta/IrAlPanel.tsx` con
+> un redirect de **cliente** (`router.replace("/admin")`), por la misma razón de
+> siempre: `src/proxy.ts` ya manda `/admin` → `/mi-cuenta` cuando no ve sesión, y
+> un `redirect()` de servidor en `/mi-cuenta` cerraría el círculo con cualquier
+> cookie a medio refrescar. **El portal de jornadas no desapareció**: sigue
+> disponible para esas cuentas en **`/mi-cuenta?portal=1`** —el parámetro que pide
+> explícitamente el portal en vez del panel—, que es a donde apuntan hoy el botón
+> "Registrar mi jornada" del panel y el enlace del dashboard. El empleado no nota
+> ningún cambio: sigue viendo su portal directamente en `/mi-cuenta`. Nadie queda
+> encerrado en una sola pantalla.
 
 Reglas adicionales que aplica el servidor:
 
@@ -702,6 +752,17 @@ idéntico, `/admin/inicio` y `/admin/nosotros` muestran esos mismos valores
 listos para guardar, guardar un servicio reintenta sin la columna `video`, y la
 tarjeta del contador de visitas no se pinta.
 
+Y para la 0008: los ocho títulos nuevos —sección de servicios, valores y
+clientes del inicio, cierre del inicio, y las cabeceras de Servicios, Proyectos,
+Contacto y el pie— también están **duplicados a propósito** en
+`src/data/site.ts`. La diferencia con la 0007 es que aquí no hay ninguna
+columna nueva que pueda faltar: `home` y `paginas` son claves dentro de
+`site_settings`, tabla que ya existe desde la 0001, así que `/admin/inicio` y
+`/admin/paginas` **guardan sin ningún reintento especial** aunque la 0008
+nunca se aplique — la migración solo adelanta la semilla y corrige el «+5
+años» del pie de una vez, en vez de que alguien tenga que escribir esos ocho
+textos a mano desde el panel.
+
 **Renderizado:** las páginas usan ISR con `revalidate = 300` (5 minutos) y,
 además, cada vez que guardas en `/admin` se llama a
 `revalidatePath("/", "layout")` —y, al tocar un proyecto, también a
@@ -712,16 +773,26 @@ inmediato.
 
 ## 10. Qué se puede editar desde `/admin`
 
+Desde el **pulido final** del 12 de agosto, las ocho primeras filas de esta
+tabla —de «Página de inicio» a «Valores»— viven agrupadas detrás de una sola
+entrada del menú, **Contenido del sitio** (`/admin/contenido`): un índice con
+una tarjeta por pantalla, en el mismo orden en que un visitante recorre el
+sitio. **Ninguna URL cambió**: `/admin/servicios` sigue siendo
+`/admin/servicios`, y cualquier enlace guardado sigue funcionando igual —lo
+único que cambió es cómo se llega ahí desde el menú (ver *Navegación del
+panel*, al final de esta sección).
+
 | Sección | Quién | Qué permite |
 | --- | --- | --- |
-| **Página de inicio** | contenido | Primera pantalla (hero), bloque «Quiénes somos» con sus puntos, foto y cifras, banda oscura, y qué secciones del inicio se ven |
+| **Página de inicio** | contenido | Primera pantalla (hero), bloque «Quiénes somos» con sus puntos, foto y cifras, título de la sección de servicios, título de los valores, banda oscura, título del portafolio de clientes, cierre de la página y qué secciones del inicio se ven |
 | **Página Nosotros** | contenido | Primera pantalla, Quiénes Somos, Misión, Visión, galería de aliados, línea de tiempo, título de los valores, video de YouTube, texto de cierre y qué secciones se ven |
+| **Títulos de páginas** | contenido | La primera pantalla (cabecera) de Servicios, Proyectos y Contacto, y el párrafo de presentación del pie de página |
 | **Servicios** | contenido | CRUD completo: título, título de menú, slug, categoría, icono, orden, visibilidad, resumen, descripción, ítems, portada, galería, **video de YouTube** y SEO |
 | **Proyectos** | contenido | CRUD: título, cliente, **dirección web (slug)**, categoría, descripción corta, **descripción larga**, imagen, **galería**, orden y visibilidad. Cada proyecto tiene su propia página en `/proyectos/<slug>` |
 | **Clientes** | contenido | CRUD: nombre, logo, sitio web, orden y visibilidad |
 | **FAQ** | contenido | CRUD de preguntas y respuestas (alimentan el marcado FAQPage) + visibilidad |
 | **Valores** | contenido | CRUD de valores corporativos + visibilidad |
-| **Contacto y ajustes** | contenido | Dirección, coordenadas, teléfonos/WhatsApp, correos, **correo del formulario de contacto**, redes, horario, mapa y el interruptor global de los valores |
+| **Ajustes** (título de la pantalla: «Contacto y ajustes») | contenido | Dirección, coordenadas, teléfonos/WhatsApp, correos, **correo del formulario de contacto**, redes, horario, mapa y el interruptor global de los valores |
 | **Equipo** | managers | Cuentas del portal: crear, editar, roles, activar/desactivar, contraseñas y eliminación |
 | **Horarios** | managers | Horario laboral de cada mes (base de la jornada ordinaria y de las horas extra) |
 | **Jornadas** | managers | Revisión de jornadas con desglose de horas: aprobar, rechazar, volver a pendiente y **eliminar** + tablero de métricas |
@@ -732,8 +803,9 @@ coordinador*
 ### Las páginas generales se editan desde su propia pantalla
 
 Antes, el hero del inicio, las cifras y el video vivían mezclados en «Contacto y
-ajustes», y el resto de los textos de Nosotros estaban escritos en el código.
-Desde la migración 0007 hay **una pantalla por página**:
+ajustes», y el resto de los textos de Nosotros y las cabeceras de las demás
+páginas estaban escritos en el código. Desde las migraciones 0007 y 0008 hay
+**una pantalla por página**:
 
 **`/admin/inicio` — Página de inicio**
 
@@ -742,7 +814,33 @@ Desde la migración 0007 hay **una pantalla por página**:
 | Qué se ve en la página de inicio | Interruptores de «Quiénes somos y cifras» y de la banda de clientes |
 | Primera pantalla | Etiqueta superior, título en dos partes, descripción, imagen de fondo con su texto alternativo y los dos botones |
 | Quiénes somos y cifras | Texto superior, título, descripción, puntos con visto verde, foto de apoyo, **las cifras** y el botón |
+| Título de la sección de servicios *(0008)* | Texto superior, título y descripción del encabezado que presenta las dos tarjetas grandes (Servicios Industriales / Ambientales) |
+| Título de los valores en el inicio *(0008)* | Texto superior, título y descripción (opcional) del encabezado que presenta los valores en el inicio |
 | Banda oscura del inicio | Texto superior, mensaje, palabra destacada y botón |
+| Título del portafolio de clientes *(0008)* | Texto superior, título y descripción del encabezado de la banda de logos |
+| Cierre de la página *(0008)* | Título y descripción de la franja verde final («¿Listo para optimizar sus procesos?») |
+
+> Los cuatro bloques marcados *(0008)* son nuevos del pulido final: antes esos
+> encabezados estaban escritos directamente en el TSX de cada sección de la
+> página. `/admin/inicio` pasó de cuatro a **ocho tarjetas**, cada una con su
+> propio botón de guardar, en el mismo orden en que se ven en la página.
+
+**`/admin/paginas` — Títulos de páginas** *(nueva, migración 0008)*
+
+Vive dentro de «Contenido del sitio», pero no es una página completa como el
+inicio o Nosotros: son solo las **cabeceras** —la banda oscura con foto de
+fondo, el título grande y el párrafo que abren cada página— de las páginas que
+no tienen pantalla propia, más el pie.
+
+| Tarjeta | Qué edita |
+| --- | --- |
+| Página Servicios | Texto superior, título, descripción e imagen de fondo (con su texto alternativo) de la cabecera de `/servicios` |
+| Página Proyectos | Lo mismo, para la cabecera de `/proyectos` |
+| Página Contacto | Lo mismo, para la cabecera de `/contacto` |
+| Pie de página | El párrafo de presentación que acompaña al logo abajo del todo, en **todas** las páginas del sitio |
+
+> El **inicio** y **Nosotros** no están en esta pantalla porque tienen la suya
+> propia (arriba y abajo), con muchos más bloques que una sola cabecera.
 
 **`/admin/nosotros` — Página Nosotros**
 
@@ -791,8 +889,21 @@ solo. Cómo funciona, de principio a fin:
    `service_role`.
 3. La función suma 1 a la fila del día de hoy en `site_visitas` (una fila por
    día).
-4. La página de inicio lee la **suma** de todas las filas y la muestra con
-   separador de miles.
+4. La página de inicio y Nosotros, que son estáticas con ISR, traen en su HTML
+   la **suma** de todas las filas hasta el último `revalidate` (cada 5 minutos)
+   y la muestran con separador de miles.
+5. **Desde el pulido final, el número se corrige solo al momento de abrir la
+   página.** Al montarse en el navegador, la tarjeta (`VisitCounter`) pide el
+   total en vivo a **`GET /api/visita`** (lectura de solo consulta, sin caché)
+   y reemplaza la cifra **únicamente si cambió**, para no provocar un parpadeo.
+
+> **Por qué se añadió el paso 5.** Antes la cifra dependía solo del HTML
+> estático: GPI abría el sitio, generaba una visita nueva y todavía veía el
+> número de antes durante los siguientes minutos, hasta el próximo
+> `revalidate`. Volver dinámicas las páginas de inicio y Nosotros por una cifra
+> de vanidad habría sido tirar el ISR de todo el sitio a la basura; en cambio,
+> el HTML sigue siendo estático (rápido, cacheable) y solo esta tarjeta pide su
+> propio dato fresco al navegador, una vez, al cargar.
 
 Detalles pensados a propósito:
 
@@ -800,14 +911,16 @@ Detalles pensados a propósito:
   contarlos inflaría la cifra con la propia empresa.
 - **Una visita por sesión del navegador**, no por página: recorrer el sitio
   entero cuenta como una sola visita. Quien vuelve otro día suma otra.
-- **La cifra se refresca cada 5 minutos**, igual que el resto del contenido
-  (ISR). Leerla en vivo obligaría a generar el inicio en cada petición y haría
-  el sitio más lento a cambio de nada.
-- **El navegador no puede inflarla**: la función de base de datos solo la puede
-  ejecutar el servidor. Si se hubiera expuesto a la clave anónima —que es
-  pública por diseño— cualquiera la subiría en bucle desde la consola.
+- **El navegador no puede inflarla**: solo el **servidor** puede sumar
+  (`POST`, con la clave `service_role`); si se hubiera expuesto esa función a
+  la clave anónima —que es pública por diseño— cualquiera la subiría en bucle
+  desde la consola del navegador. La lectura en vivo (`GET`) sí usa el cliente
+  anónimo, pero solo para **consultar**: se apoya en la política
+  `site_visitas_select_public` de la migración 0007, que permite `select` y
+  nada más.
 - **Si la 0007 no está aplicada, la tarjeta no aparece.** Mostrar «0 visitas» se
-  leería como un sitio que nadie visita, que es peor que no mostrar nada.
+  leería como un sitio que nadie visita, que es peor que no mostrar nada. Y sin
+  la tarjeta no hay nada que refrescar en vivo tampoco.
 
 ### Un video de YouTube por servicio
 
@@ -824,6 +937,13 @@ En `/admin/servicios` → cualquier servicio → bloque **«Video del servicio
 - **Mostrar el video**: apagarlo lo esconde del sitio pero **conserva** el
   enlace y los textos en el panel.
 - **Para quitarlo**: se borra el enlace y se guarda.
+
+> **Empieza apagado por defecto (pulido final).** En un servicio sin video
+> guardado, el interruptor **«Mostrar el video»** ahora aparece en **No
+> visible**. Antes aparecía como «Mostrar» sobre campos completamente vacíos, y
+> GPI creyó que ya había un video publicado cuando no lo había — la página
+> pública nunca mostró nada sin URL, pero el panel sí sugería lo contrario. Hay
+> que encenderlo a propósito una vez que el enlace esté listo para publicarse.
 
 El video se muestra al final de la página del servicio, con el mismo reproductor
 diferido que la página Nosotros: la portada es una imagen y YouTube solo se
@@ -878,14 +998,33 @@ Siempre se muestra una vista previa.
 ### Navegación del panel
 
 - Barra superior siempre visible con el rol de la sesión, **Registrar mi
-  jornada** (lleva a `/mi-cuenta`), **Ver sitio** y **Cerrar sesión**.
-- Menú lateral en escritorio y tabs desplazables en móvil, con la sección activa
-  resaltada. El orden sigue al del sitio: **Página de inicio**, **Página
-  Nosotros**, Servicios, Proyectos, Clientes, FAQ, Valores y Contacto y ajustes.
-  Las secciones internas (Equipo, Horarios, Jornadas) solo aparecen para
+  jornada** (lleva a `/mi-cuenta?portal=1`, el portal de jornadas), **Ver
+  sitio** y **Cerrar sesión**.
+- **Menú de seis entradas** (pulido final), en escritorio como columna a la
+  izquierda y en móvil como tabs desplazables, con la sección activa
+  resaltada: **Dashboard · Contenido del sitio · Equipo · Horarios · Jornadas ·
+  Ajustes**. Las tres internas (Equipo, Horarios, Jornadas) solo aparecen para
   managers.
-- Cada sección tiene breadcrumb y botón **← Volver al dashboard**; los
-  formularios de crear/editar añaden **← Volver a [sección]**.
+- **Contenido del sitio** (`/admin/contenido`) es el hub que reemplazó a las
+  ocho entradas sueltas de antes: un índice con una tarjeta por pantalla
+  —Página de inicio, Página Nosotros, Títulos de páginas, Servicios,
+  Proyectos, Clientes, FAQ y Valores—, en el mismo orden en que un visitante
+  recorre el sitio. El menú tenía **doce** entradas y se leía como un
+  inventario; ahora tiene **seis**.
+- **Ninguna URL cambió.** `/admin/servicios` sigue siendo `/admin/servicios`:
+  reagrupar el menú no tocó ninguna ruta. Estar en cualquiera de las ocho
+  pantallas de contenido marca «Contenido del sitio» como activo (la lista de
+  rutas que hace ese reconocimiento es `RUTAS_CONTENIDO`, en
+  `src/lib/admin-types.ts`, compartida entre el menú y el propio hub).
+- La entrada que antes se llamaba «Contacto y ajustes» se llama ahora
+  **Ajustes** en el menú; la pantalla en sí conserva su título «Contacto y
+  ajustes».
+- Cada sección tiene breadcrumb y botón **← Volver**; dentro de «Contenido del
+  sitio» ese botón dice **← Volver a Contenido del sitio**, y los formularios
+  de crear/editar añaden además **← Volver a [sección]**.
+- El **Dashboard** de `/admin` se reorganizó igual, en dos grupos: «Gestión
+  interna» (Equipo, Horarios, Jornadas — solo managers) y «El sitio web»
+  (Contenido del sitio, Contacto y ajustes).
 
 ---
 

@@ -1,4 +1,4 @@
-import { AdminPageHeader } from "@/components/admin/ui";
+import { AdminPageHeader, AvisoGuardar } from "@/components/admin/ui";
 import { AdminForm } from "@/components/admin/AdminForm";
 import { ServiceFormFields } from "../ServiceFormFields";
 import { saveService } from "../../actions";
@@ -13,10 +13,13 @@ export default function NuevoServicioPage() {
         backLabel="Volver a Servicios"
         breadcrumb={[
           { label: "Panel", href: "/admin" },
+          { label: "Contenido del sitio", href: "/admin/contenido" },
           { label: "Servicios", href: "/admin/servicios" },
           { label: "Nuevo" },
         ]}
       />
+
+      <AvisoGuardar unico />
 
       <AdminForm
         action={saveService}

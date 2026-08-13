@@ -95,6 +95,7 @@ export default async function AdminEmpleadosPage({
         </button>
         {busqueda !== "" && (
           <Link
+            prefetch={false}
             href="/admin/empleados"
             className="text-sm font-semibold text-graphite transition-colors hover:text-brand-dark"
           >
@@ -167,6 +168,7 @@ export default async function AdminEmpleadosPage({
               </div>
 
               <Link
+                prefetch={false}
                 href={`/admin/empleados/${cuenta.id}`}
                 className="inline-flex items-center gap-1.5 rounded-full bg-ink px-3.5 py-2 text-xs font-semibold text-white transition-colors hover:bg-ink-soft"
               >

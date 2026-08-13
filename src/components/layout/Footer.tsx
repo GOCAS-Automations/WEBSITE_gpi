@@ -32,7 +32,7 @@ export function Footer({
   settings: SiteSettings;
   services: Service[];
 }) {
-  const { contact } = settings;
+  const { contact, paginas } = settings;
   const featured = services.slice(0, 6);
 
   return (
@@ -48,11 +48,11 @@ export function Footer({
               height={69}
               className="h-14 w-auto sm:h-16"
             />
+            {/* Editable desde /admin/paginas (clave `paginas`, migración
+                0008). Antes estaba escrito aquí y decía «Más de 5 años»,
+                que se quedó viejo cuando GPI corrigió su antigüedad. */}
             <p className="mt-5 max-w-sm text-sm leading-relaxed">
-              Empresa de gestión estratégica y ejecución enfocada en generar
-              rentabilidad y cumplimiento, integrando las variables del modelo de
-              negocio de cada organización. Más de 5 años en el sector
-              industrial-ambiental.
+              {paginas.footer.descripcion}
             </p>
             <div className="mt-6 flex items-center gap-3">
               <SocialLink href={contact.social.facebook} label="Facebook de GPI">

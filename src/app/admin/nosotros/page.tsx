@@ -1,6 +1,7 @@
 import { getAdminSettings } from "@/lib/admin";
 import {
   AdminPageHeader,
+  AvisoGuardar,
   AyudaSeccion,
   AYUDA_ALT,
   Card,
@@ -43,19 +44,23 @@ export default async function AdminNosotrosPage() {
       <AdminPageHeader
         title="Página Nosotros"
         description="Todo el contenido de la página Nosotros: presentación, misión y visión, galería, línea de tiempo, video y textos de cierre."
+        backHref="/admin/contenido"
+        backLabel="Volver a Contenido del sitio"
         breadcrumb={[
           { label: "Panel", href: "/admin" },
+          { label: "Contenido del sitio", href: "/admin/contenido" },
           { label: "Página Nosotros" },
         ]}
       />
 
-      <AyudaSeccion title="Cómo se usa esta pantalla" className="mb-6">
-        Cada bloque se guarda <strong>por separado</strong>, con su propio
-        botón, y lo que guardes se ve en el sitio en pocos minutos. Los{" "}
-        <strong>valores corporativos</strong> y las{" "}
-        <strong>preguntas frecuentes</strong> que aparecen en esta página se
-        editan en sus propias secciones del panel: aquí solo están los títulos
-        que los presentan.
+      <AvisoGuardar />
+
+      <AyudaSeccion title="Qué se edita aquí" className="mb-6">
+        Los bloques están en el <strong>mismo orden</strong> en que se ven en la
+        página. Los <strong>valores corporativos</strong> y las{" "}
+        <strong>preguntas frecuentes</strong> que aparecen en esta página son
+        listas y se editan en sus propias secciones del panel: aquí solo están
+        los títulos que los presentan.
       </AyudaSeccion>
 
       <div className="space-y-6">

@@ -74,6 +74,7 @@ export default async function AdminHorariosPage({
       {/* ---------------- Navegación de meses ---------------- */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-white px-4 py-3 shadow-soft">
         <Link
+          prefetch={false}
           href={enlace(anterior)}
           className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold text-ink-soft transition-colors hover:border-brand hover:text-brand-dark"
         >
@@ -86,6 +87,7 @@ export default async function AdminHorariosPage({
         </p>
 
         <Link
+          prefetch={false}
           href={enlace(siguiente)}
           className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold text-ink-soft transition-colors hover:border-brand hover:text-brand-dark"
         >
@@ -106,6 +108,7 @@ export default async function AdminHorariosPage({
         cerraste no se mueven. Si una jornada aprobada quedó mal porque el
         horario estaba equivocado, corrige el horario y luego, en{" "}
         <Link
+          prefetch={false}
           href="/admin/jornadas"
           className="font-semibold text-brand-dark hover:text-brand"
         >

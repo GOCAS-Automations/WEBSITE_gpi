@@ -3,23 +3,20 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
+import { PuntoDeCarga } from "./PuntoDeCarga";
 import { isManagerRole, ROLE_LABELS, type UserRole } from "@/lib/roles";
 import {
-  Cog,
-  Photo,
-  Handshake,
-  Home,
-  Info,
-  Shield,
+  Gauge,
   Sliders,
   LogOut,
   ArrowRight,
+  Layers,
   User,
-  Users,
   Clock,
   ClockPlus,
   Calendar,
 } from "@/lib/icons";
+import { RUTAS_CONTENIDO } from "@/lib/admin-types";
 
 interface AdminSection {
   href: string;
@@ -29,26 +26,43 @@ interface AdminSection {
   exact?: boolean;
   /** true = solo para managers (admin | coordinador). */
   managerOnly?: boolean;
+  /**
+   * Rutas adicionales que dejan esta entrada marcada como activa. Es lo que
+   * hace que estar en `/admin/servicios` ilumine «Contenido del sitio»: las
+   * URLs de cada sección NO cambiaron, solo se agruparon en el menú.
+   */
+  matches?: readonly string[];
 }
 
 /**
- * Secciones del panel — se usan tanto en el sidebar como en las tabs móviles.
- * Las marcadas `managerOnly` se ocultan a marketing; además cada página vuelve
- * a comprobar el rol en el servidor (`requireManager`), que es la barrera real.
+ * MENÚ DEL PANEL — seis entradas
+ * ==============================
+ * Se usan tanto en el sidebar de escritorio como en las tabs móviles.
+ *
+ * El menú tenía doce entradas y ocho de ellas eran contenido del sitio: la
+ * lista se leía como un inventario, no como un menú. Ahora esas ocho viven
+ * detrás de **Contenido del sitio** (`/admin/contenido`), que es un índice con
+ * tarjetas. **Ninguna URL cambió**: los enlaces guardados, los marcadores del
+ * navegador y los formularios siguen funcionando igual.
+ *
+ * Las marcadas `managerOnly` se ocultan al Community Manager; además cada
+ * página vuelve a comprobar el rol en el servidor (`requireManager`), que es la
+ * barrera real.
  */
 export const adminSections: AdminSection[] = [
-  { href: "/admin", label: "Dashboard", icon: Sliders, exact: true },
-  { href: "/admin/inicio", label: "Página de inicio", icon: Home },
-  { href: "/admin/nosotros", label: "Página Nosotros", icon: Users },
-  { href: "/admin/servicios", label: "Servicios", icon: Cog },
-  { href: "/admin/proyectos", label: "Proyectos", icon: Photo },
-  { href: "/admin/clientes", label: "Clientes", icon: Handshake },
-  { href: "/admin/faq", label: "FAQ", icon: Info },
-  { href: "/admin/valores", label: "Valores", icon: Shield },
-  { href: "/admin/ajustes", label: "Contacto y ajustes", icon: Sliders },
+  // `Gauge` para el Dashboard y `Sliders` para Ajustes: con seis entradas, dos
+  // iconos iguales convierten el menú en una adivinanza.
+  { href: "/admin", label: "Dashboard", icon: Gauge, exact: true },
+  {
+    href: "/admin/contenido",
+    label: "Contenido del sitio",
+    icon: Layers,
+    matches: RUTAS_CONTENIDO,
+  },
   { href: "/admin/empleados", label: "Equipo", icon: User, managerOnly: true },
   { href: "/admin/horarios", label: "Horarios", icon: Calendar, managerOnly: true },
   { href: "/admin/jornadas", label: "Jornadas", icon: Clock, managerOnly: true },
+  { href: "/admin/ajustes", label: "Ajustes", icon: Sliders },
 ];
 
 /** Secciones visibles para un rol concreto. */
@@ -59,8 +73,14 @@ export function sectionsForRole(role: UserRole): AdminSection[] {
 
 function useIsActive() {
   const pathname = usePathname();
-  return (href: string, exact?: boolean) =>
-    exact ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
+  const dentroDe = (href: string) =>
+    pathname === href || pathname.startsWith(`${href}/`);
+
+  return (section: AdminSection) => {
+    if (section.exact) return pathname === section.href;
+    if (dentroDe(section.href)) return true;
+    return (section.matches ?? []).some(dentroDe);
+  };
 }
 
 /**
@@ -68,9 +88,23 @@ function useIsActive() {
  * móvil, y acciones siempre visibles ("Registrar mi jornada", "Ver sitio" y
  * "Cerrar sesión").
  *
- * "Registrar mi jornada" lleva a `/mi-cuenta`: desde julio de 2026 el panel es
- * la pantalla principal de admins y coordinadores, así que necesitan un camino
- * corto —y sin scroll— hacia su propio portal de horas.
+ * "Registrar mi jornada" lleva a `/mi-cuenta?portal=1`: el panel es la pantalla
+ * principal de quien administra, y `/mi-cuenta` a secas ahora rebota al panel
+ * (ver `IrAlPanel`). El parámetro es lo que pide explícitamente el portal de
+ * horas, así que este es el único camino que no da la vuelta.
+ *
+ * `prefetch={false}` EN TODA LA NAVEGACIÓN DEL PANEL
+ * --------------------------------------------------
+ * Todas las rutas de `/admin` son `force-dynamic` y pasan por `src/proxy.ts`,
+ * que refresca la sesión de Supabase. Con el prefetch por defecto, tener el
+ * menú en pantalla dispara media docena de peticiones simultáneas a `/admin/*`,
+ * cada una con su llamada a Supabase y todas compitiendo por canjear el mismo
+ * refresh token. Sin prefetch, cada navegación es una sola petición, en serie.
+ *
+ * Es la pata que hace falta para que `PuntoDeCarga` funcione: `useLinkStatus`
+ * no tiene estado pendiente que mostrar si la ruta ya venía precargada. El
+ * arreglo completo del «se traba» que reportó GPI son tres piezas —esta,
+ * `PuntoDeCarga` y `app/admin/loading.tsx`, donde está el diagnóstico—.
  */
 export function AdminShell({
   identificador,
@@ -109,7 +143,8 @@ export function AdminShell({
             {/* Quien entra al panel también es empleado de GPI: este es su
                 camino de vuelta al portal para registrar sus propias horas. */}
             <Link
-              href="/mi-cuenta"
+              href="/mi-cuenta?portal=1"
+              prefetch={false}
               className="inline-flex items-center gap-1.5 rounded-full border border-brand/40 bg-brand-tint px-4 py-2 text-sm font-semibold text-brand-deep transition-colors hover:border-brand hover:bg-brand/15"
             >
               <ClockPlus className="h-4 w-4" />
@@ -143,12 +178,13 @@ export function AdminShell({
         >
           <ul className="flex gap-1 overflow-x-auto px-4 py-2">
             {secciones.map((section) => {
-              const active = isActive(section.href, section.exact);
+              const active = isActive(section);
               const Icon = section.icon;
               return (
                 <li key={section.href} className="shrink-0">
                   <Link
                     href={section.href}
+                    prefetch={false}
                     aria-current={active ? "page" : undefined}
                     className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-semibold transition-colors ${
                       active
@@ -158,6 +194,7 @@ export function AdminShell({
                   >
                     <Icon className="h-4 w-4" />
                     {section.label}
+                    <PuntoDeCarga className="ml-0.5" />
                   </Link>
                 </li>
               );
@@ -172,12 +209,13 @@ export function AdminShell({
           <nav aria-label="Secciones del panel" className="sticky top-28">
             <ul className="space-y-1">
               {secciones.map((section) => {
-                const active = isActive(section.href, section.exact);
+                const active = isActive(section);
                 const Icon = section.icon;
                 return (
                   <li key={section.href}>
                     <Link
                       href={section.href}
+                      prefetch={false}
                       aria-current={active ? "page" : undefined}
                       className={`flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-colors ${
                         active
@@ -189,21 +227,17 @@ export function AdminShell({
                         className={`h-4 w-4 ${active ? "text-brand-dark" : "text-graphite"}`}
                       />
                       {section.label}
+                      <PuntoDeCarga className="ml-auto" />
                     </Link>
                   </li>
                 );
               })}
             </ul>
 
-            <div className="mt-6 rounded-2xl border border-line bg-white p-4">
-              <p className="text-xs font-bold uppercase tracking-wider text-brand-dark">
-                Recuerda
-              </p>
-              <p className="mt-2 text-xs leading-relaxed text-graphite">
-                Cada bloque se guarda con su propio botón. Lo que guardes se ve
-                en el sitio en pocos minutos.
-              </p>
-            </div>
+            {/* El recordatorio de guardar ya NO vive aquí: quedaba al pie de
+                una columna lateral, fuera de la vista de quien está editando.
+                Ahora es el primer bloque de cada pantalla de contenido
+                (`AvisoGuardar`, en components/admin/ui.tsx). */}
           </nav>
         </aside>
 

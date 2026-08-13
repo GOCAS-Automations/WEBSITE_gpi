@@ -4,6 +4,7 @@ import { Container } from "@/components/ui/Container";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { Reveal } from "@/components/ui/Reveal";
 import { PageHero } from "@/components/sections/PageHero";
+import { GaleriaAliados } from "@/components/sections/GaleriaAliados";
 import { ValueCard } from "@/components/sections/ValueCard";
 import { VisitCounter } from "@/components/sections/VisitCounter";
 import { YouTubeFacade } from "@/components/sections/YouTubeFacade";
@@ -200,23 +201,10 @@ export default async function NosotrosPage() {
               </p>
             </Reveal>
 
+            {/* Con hasta 3 fotos es la franja estática de siempre; a partir de
+                la cuarta pasa a carrusel (ver GaleriaAliados). */}
             <Reveal delay={120} className="p-3 sm:p-4 lg:p-4">
-              <ul className="grid h-full grid-cols-3 gap-3 sm:gap-4">
-                {galeria.fotos.map((foto) => (
-                  <li
-                    key={foto.url}
-                    className="group relative aspect-[3/4] overflow-hidden rounded-2xl shadow-card lg:aspect-auto lg:h-full lg:min-h-[18rem]"
-                  >
-                    <Image
-                      src={foto.url}
-                      alt={foto.alt}
-                      fill
-                      sizes="(max-width: 640px) 33vw, (max-width: 1024px) 30vw, 22vw"
-                      className="object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-                  </li>
-                ))}
-              </ul>
+              <GaleriaAliados fotos={galeria.fotos} />
             </Reveal>
           </div>
         </section>

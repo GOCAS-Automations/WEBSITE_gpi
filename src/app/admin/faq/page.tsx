@@ -1,6 +1,7 @@
 import { listFaqs, type FaqRecord } from "@/lib/admin";
 import {
   AdminPageHeader,
+  AvisoGuardar,
   AyudaSeccion,
   AYUDA_ORDEN,
   AYUDA_VISIBILIDAD,
@@ -61,8 +62,16 @@ export default async function AdminFaqPage() {
       <AdminPageHeader
         title="Preguntas frecuentes"
         description="Las preguntas y respuestas que el visitante despliega al final de la página Nosotros. Lo que guardes se ve en el sitio en pocos minutos."
-        breadcrumb={[{ label: "Panel", href: "/admin" }, { label: "FAQ" }]}
+        backHref="/admin/contenido"
+        backLabel="Volver a Contenido del sitio"
+        breadcrumb={[
+          { label: "Panel", href: "/admin" },
+          { label: "Contenido del sitio", href: "/admin/contenido" },
+          { label: "FAQ" },
+        ]}
       />
+
+      <AvisoGuardar />
 
       <AyudaSeccion className="mb-6">
         Google también las lee y puede mostrarlas en sus resultados, así que vale

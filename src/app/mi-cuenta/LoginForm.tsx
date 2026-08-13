@@ -11,15 +11,18 @@
  *
  * A DÓNDE SE ATERRIZA TRAS INGRESAR
  * ---------------------------------
- * · **Administrador y coordinador** → directo a `/admin`: el panel es su
- *   pantalla principal de trabajo (ahí aprueban jornadas, editan horarios y
- *   contenido). Desde el panel siempre pueden volver con "Registrar mi jornada".
- * · **Community Manager y empleado** → se quedan en `/mi-cuenta`, su portal de
- *   jornadas; quien tiene permisos de contenido ve arriba "Ir al panel".
+ * · **Quien administra el sitio** (administrador, coordinador y Community
+ *   Manager) → directo a `/admin`: el panel es su pantalla principal de trabajo.
+ *   Desde el panel vuelven al portal con "Registrar mi jornada".
+ * · **Empleado** → se queda en `/mi-cuenta`, su portal de jornadas.
  *
- * OJO: esto es solo el aterrizaje del ingreso. `/mi-cuenta` visitado
- * directamente SIGUE mostrando el portal de jornadas para cualquier rol —ahí
- * cambian su contraseña y registran sus horas—, así que nadie queda encerrado.
+ * El Community Manager entró aquí en el pulido final: como el resto de roles con
+ * panel, lo que hace al ingresar es editar el contenido del sitio, no registrar
+ * horas.
+ *
+ * OJO: esto es solo el aterrizaje del ingreso. `/mi-cuenta?portal=1` SIGUE
+ * mostrando el portal de jornadas para cualquier rol —ahí cambian su contraseña
+ * y registran sus horas—, así que nadie queda encerrado.
  */
 
 import Link from "next/link";
@@ -27,7 +30,7 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 import { credencialDeAcceso } from "@/lib/usuarios";
-import { isManagerRole, normalizeRole } from "@/lib/roles";
+import { isContentEditorRole, normalizeRole } from "@/lib/roles";
 import { Lock, User, ArrowRight } from "@/lib/icons";
 
 const inputClass =
@@ -89,9 +92,10 @@ export function LoginForm() {
       return;
     }
 
-    // Managers (admin y coordinador): el panel es su pantalla principal.
-    // El resto se queda aquí, en su portal de jornadas.
-    if (isManagerRole(normalizeRole(profile?.role))) {
+    // Quien puede editar el contenido (admin, coordinador y Community
+    // Manager): el panel es su pantalla principal. El empleado se queda aquí,
+    // en su portal de jornadas.
+    if (isContentEditorRole(normalizeRole(profile?.role))) {
       router.replace("/admin");
       router.refresh();
       return;

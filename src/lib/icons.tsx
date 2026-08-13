@@ -163,6 +163,14 @@ export const Photo = (p: IconProps) => (
   </Base>
 );
 
+/** Capas apiladas: el conjunto de páginas del sitio («Contenido del sitio»). */
+export const Layers = (p: IconProps) => (
+  <Base {...p}>
+    <path d="m12 3 9 5-9 5-9-5 9-5Z" />
+    <path d="m3 13 9 5 9-5" />
+  </Base>
+);
+
 export const Info = (p: IconProps) => (
   <Base {...p}>
     <circle cx="12" cy="12" r="9" />

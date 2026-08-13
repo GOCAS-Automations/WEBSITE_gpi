@@ -1,6 +1,7 @@
 import { listValues, type ValueRecord } from "@/lib/admin";
 import {
   AdminPageHeader,
+  AvisoGuardar,
   AyudaSeccion,
   AYUDA_ORDEN,
   AYUDA_VISIBILIDAD,
@@ -74,8 +75,16 @@ export default async function AdminValoresPage() {
       <AdminPageHeader
         title="Valores corporativos"
         description="Los principios de GPI que se muestran en el inicio y en la página Nosotros. Lo que guardes se ve en el sitio en pocos minutos."
-        breadcrumb={[{ label: "Panel", href: "/admin" }, { label: "Valores" }]}
+        backHref="/admin/contenido"
+        backLabel="Volver a Contenido del sitio"
+        breadcrumb={[
+          { label: "Panel", href: "/admin" },
+          { label: "Contenido del sitio", href: "/admin/contenido" },
+          { label: "Valores" },
+        ]}
       />
+
+      <AvisoGuardar />
 
       <AyudaSeccion className="mb-6">
         Se ven como tarjetas con icono, en el orden que indiques.{" "}

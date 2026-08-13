@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getServiceRecord } from "@/lib/admin";
-import { AdminPageHeader } from "@/components/admin/ui";
+import { AdminPageHeader, AvisoGuardar } from "@/components/admin/ui";
 import { AdminForm, DeleteForm } from "@/components/admin/AdminForm";
 import { ServiceFormFields } from "../ServiceFormFields";
 import { saveService, deleteService } from "../../actions";
@@ -25,11 +25,13 @@ export default async function EditarServicioPage({
         backLabel="Volver a Servicios"
         breadcrumb={[
           { label: "Panel", href: "/admin" },
+          { label: "Contenido del sitio", href: "/admin/contenido" },
           { label: "Servicios", href: "/admin/servicios" },
           { label: "Editar" },
         ]}
         action={
           <Link
+            prefetch={false}
             href={`/servicios/${service.slug}`}
             target="_blank"
             className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold text-ink-soft transition-colors hover:border-brand hover:text-brand-dark"
@@ -39,6 +41,8 @@ export default async function EditarServicioPage({
           </Link>
         }
       />
+
+      <AvisoGuardar unico />
 
       <AdminForm
         action={saveService}

@@ -11,6 +11,7 @@ import type {
   HeroSettings,
   HomeSettings,
   NosotrosSettings,
+  PaginasSettings,
   VisibilitySettings,
   YouTubeSettings,
 } from "@/data/site";
@@ -153,8 +154,36 @@ export interface AdminSettings {
   youtube: YouTubeSettings;
   home: HomeSettings;
   nosotros: NosotrosSettings;
+  paginas: PaginasSettings;
   visibility: VisibilitySettings;
 }
+
+/* ------------------------------------------------------------------ */
+/* Agrupación del menú del panel                                       */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Las secciones que viven dentro de «Contenido del sitio» (`/admin/contenido`).
+ *
+ * Vive aquí, en un módulo puro, por la MISMA razón que
+ * `JORNADA_FILTRO_ESTADOS`: lo leen a la vez el `AdminShell` (que es
+ * `"use client"`, para marcar la entrada activa) y el hub (Server Component,
+ * para pintar las tarjetas). Un valor exportado desde un módulo de cliente no
+ * se puede leer en el servidor.
+ *
+ * **Las URLs no cambiaron con la reorganización del menú**: esta lista solo
+ * dice qué rutas cuelgan del hub.
+ */
+export const RUTAS_CONTENIDO = [
+  "/admin/inicio",
+  "/admin/nosotros",
+  "/admin/paginas",
+  "/admin/servicios",
+  "/admin/proyectos",
+  "/admin/clientes",
+  "/admin/faq",
+  "/admin/valores",
+] as const;
 
 /* ------------------------------------------------------------------ */
 /* Cuentas del equipo (`profiles`)                                     */

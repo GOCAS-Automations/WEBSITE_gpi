@@ -113,7 +113,10 @@
 @media (min-width: 1024px) {
   :root {
     --nav-gap: 1rem;
-    --nav-pill-h: 4.75rem;
+    /* 5rem = 80 px. Creció 4 px respecto de las 4.75rem originales para que el
+       logo pueda subir a 64 px (h-16) conservando 8 px de aire arriba y abajo:
+       GPI pidió el logo lo más grande posible sin engordar la píldora. */
+    --nav-pill-h: 5rem;
   }
 }
 

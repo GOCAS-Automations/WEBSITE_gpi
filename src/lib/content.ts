@@ -38,6 +38,8 @@ import {
   type HeroSettings,
   type HomeSettings,
   type NosotrosSettings,
+  type PaginaHero,
+  type PaginasSettings,
   type SiteSettings,
   type VisibilitySettings,
   type YouTubeSettings,
@@ -58,6 +60,8 @@ export type {
   YouTubeSettings,
   HomeSettings,
   NosotrosSettings,
+  PaginaHero,
+  PaginasSettings,
   VisibilitySettings,
   SiteSettings,
 };

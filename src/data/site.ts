@@ -107,6 +107,38 @@ export interface HomeQuienesSomos {
 
 export interface HomeSettings {
   quienesSomos: HomeQuienesSomos;
+  /** Encabezado de la sección de servicios («Dos áreas, una misma excelencia»). */
+  serviciosIntro: SeccionIntro;
+  /** Encabezado de los valores en el inicio. */
+  valoresIntro: SeccionIntro;
+  /** Encabezado del portafolio de clientes. */
+  clientes: SeccionIntro;
+  /** Franja verde de cierre del inicio. */
+  cta: { titulo: string; descripcion: string };
+}
+
+/* ------------------------------------------------------------------ */
+/* Cabeceras de las demás páginas (clave `paginas`)                    */
+/* ------------------------------------------------------------------ */
+
+/** Primera pantalla de una página interior (`PageHero`). */
+export interface PaginaHero {
+  eyebrow: string;
+  titulo: string;
+  descripcion: string;
+  imagen: ImagenContenido;
+}
+
+/**
+ * Textos que no pertenecen a ninguna de las dos páginas grandes: las cabeceras
+ * de Servicios, Proyectos y Contacto, y el párrafo de presentación del pie de
+ * página. Antes estaban escritos en cada `page.tsx`.
+ */
+export interface PaginasSettings {
+  servicios: PaginaHero;
+  proyectos: PaginaHero;
+  contacto: PaginaHero;
+  footer: { descripcion: string };
 }
 
 /* ------------------------------------------------------------------ */
@@ -226,6 +258,7 @@ export interface SiteSettings {
   youtube: YouTubeSettings;
   home: HomeSettings;
   nosotros: NosotrosSettings;
+  paginas: PaginasSettings;
   visibility: VisibilitySettings;
 }
 
@@ -315,6 +348,71 @@ export const homeDefaults: HomeSettings = {
     stats: STATS_QUIENES_SOMOS.map((s) => ({ ...s })),
     ctaLabel: "Conócenos",
     ctaHref: "/nosotros",
+  },
+  serviciosIntro: {
+    eyebrow: "Nuestros servicios",
+    titulo: "Dos áreas, una misma excelencia",
+    descripcion:
+      "Cubrimos las necesidades de los procesos industriales y acompañamos el cumplimiento y la gestión ambiental de su empresa.",
+  },
+  valoresIntro: {
+    eyebrow: "Nuestros valores",
+    titulo: "Los principios que guían cada proyecto",
+    descripcion: "",
+  },
+  clientes: {
+    eyebrow: "Clientes",
+    titulo: "Portafolio de clientes",
+    descripcion:
+      "Nos respalda el trabajo realizado junto a compañías de distintos sectores.",
+  },
+  cta: {
+    titulo: "¿Listo para optimizar sus procesos?",
+    descripcion:
+      "Cuéntenos su necesidad y le presentamos una propuesta a la medida de su proceso y su presupuesto.",
+  },
+};
+
+/**
+ * Cabeceras de Servicios, Proyectos y Contacto + presentación del pie.
+ *
+ * «Más de 15 años» (no «5»): GPI corrigió su antigüedad el 12 de agosto de 2026
+ * y el pie de página se había quedado con el texto viejo.
+ */
+export const paginasDefaults: PaginasSettings = {
+  servicios: {
+    eyebrow: "Servicios",
+    titulo: "Soluciones industriales y ambientales a la medida",
+    descripcion:
+      "Integramos diferentes disciplinas para optimizar sus procesos y acompañar el cumplimiento normativo de su empresa. Estos son nuestros servicios.",
+    imagen: {
+      url: "/images/servicios/s1.jpg",
+      alt: "Planta industrial con estructuras metálicas y tuberías",
+    },
+  },
+  proyectos: {
+    eyebrow: "Proyectos",
+    titulo: "Proyectos que respaldan nuestra experiencia",
+    descripcion:
+      "Una muestra del trabajo ejecutado junto a nuestros clientes en el sector industrial y ambiental.",
+    imagen: {
+      url: "/images/proyectos/13a.jpg",
+      alt: "Planta piloto industrial con tanques y tuberías",
+    },
+  },
+  contacto: {
+    eyebrow: "Contacto",
+    titulo: "Hablemos de tu proyecto",
+    descripcion:
+      "Estamos en Cali y atendemos el suroccidente colombiano. Escríbenos y te responderemos con una propuesta a la medida.",
+    imagen: {
+      url: "/images/slides/1.jpg",
+      alt: "Equipo de GPI en trabajo de campo",
+    },
+  },
+  footer: {
+    descripcion:
+      "Empresa de gestión estratégica y ejecución enfocada en generar rentabilidad y cumplimiento, integrando las variables del modelo de negocio de cada organización. Más de 15 años en el sector industrial-ambiental.",
   },
 };
 
@@ -470,6 +568,7 @@ export const siteSettingsDefaults: SiteSettings = {
   youtube: youtubeDefaults,
   home: homeDefaults,
   nosotros: nosotrosDefaults,
+  paginas: paginasDefaults,
   visibility: visibilityDefaults,
 };
 
@@ -615,17 +714,25 @@ export function normalizarYouTube(value: unknown): YouTubeSettings {
  * que unas cifras que GPI hubiera editado desde el panel NO se pierdan al
  * estrenar la pantalla nueva.
  */
+/** Encabezado de sección (`eyebrow` + título + descripción), o el respaldo. */
+function seccionIntro(value: unknown, respaldo: SeccionIntro): SeccionIntro {
+  const entrada = isRecord(value) ? value : {};
+  return {
+    eyebrow: texto(entrada.eyebrow, respaldo.eyebrow),
+    titulo: texto(entrada.titulo, respaldo.titulo),
+    descripcion: texto(entrada.descripcion, respaldo.descripcion),
+  };
+}
+
 export function normalizarHome(value: unknown, statsLegado?: StatItem[]): HomeSettings {
   const base = homeDefaults.quienesSomos;
   const respaldoStats =
     statsLegado && statsLegado.length > 0 ? statsLegado : base.stats;
 
-  if (!isRecord(value)) {
-    return { quienesSomos: { ...base, stats: respaldoStats.map((s) => ({ ...s })) } };
-  }
-
-  const qs = isRecord(value.quienesSomos) ? value.quienesSomos : {};
+  const entrada = isRecord(value) ? value : {};
+  const qs = isRecord(entrada.quienesSomos) ? entrada.quienesSomos : {};
   const bullets = listaTextos(qs.bullets);
+  const cta = isRecord(entrada.cta) ? entrada.cta : {};
 
   return {
     quienesSomos: {
@@ -639,6 +746,44 @@ export function normalizarHome(value: unknown, statsLegado?: StatItem[]): HomeSe
       stats: stats(qs.stats, respaldoStats),
       ctaLabel: texto(qs.ctaLabel, base.ctaLabel),
       ctaHref: texto(qs.ctaHref, base.ctaHref),
+    },
+    // Bloques de la migración 0008: mientras no esté aplicada las claves no
+    // existen y cada una cae en el texto que la página traía escrito.
+    serviciosIntro: seccionIntro(entrada.serviciosIntro, homeDefaults.serviciosIntro),
+    valoresIntro: seccionIntro(entrada.valoresIntro, homeDefaults.valoresIntro),
+    clientes: seccionIntro(entrada.clientes, homeDefaults.clientes),
+    cta: {
+      titulo: texto(cta.titulo, homeDefaults.cta.titulo),
+      descripcion: texto(cta.descripcion, homeDefaults.cta.descripcion),
+    },
+  };
+}
+
+/** Cabecera de una página interior (título, descripción e imagen de fondo). */
+function paginaHero(value: unknown, respaldo: PaginaHero): PaginaHero {
+  const entrada = isRecord(value) ? value : {};
+  return {
+    eyebrow: texto(entrada.eyebrow, respaldo.eyebrow),
+    titulo: texto(entrada.titulo, respaldo.titulo),
+    descripcion: texto(entrada.descripcion, respaldo.descripcion),
+    imagen: imagen(entrada.imagen, respaldo.imagen),
+  };
+}
+
+/**
+ * Cabeceras de Servicios, Proyectos y Contacto + presentación del pie
+ * (clave `paginas`, migración 0008).
+ */
+export function normalizarPaginas(value: unknown): PaginasSettings {
+  const entrada = isRecord(value) ? value : {};
+  const footer = isRecord(entrada.footer) ? entrada.footer : {};
+
+  return {
+    servicios: paginaHero(entrada.servicios, paginasDefaults.servicios),
+    proyectos: paginaHero(entrada.proyectos, paginasDefaults.proyectos),
+    contacto: paginaHero(entrada.contacto, paginasDefaults.contacto),
+    footer: {
+      descripcion: texto(footer.descripcion, paginasDefaults.footer.descripcion),
     },
   };
 }
@@ -754,6 +899,7 @@ export function normalizarSettings(map: Map<string, unknown>): SiteSettings {
     // `excellence`, que es donde vivían: nada de lo editado se pierde.
     home: normalizarHome(map.get("home"), excellence.stats),
     nosotros: normalizarNosotros(map.get("nosotros")),
+    paginas: normalizarPaginas(map.get("paginas")),
     visibility: normalizarVisibility(map.get("visibility")),
   };
 }

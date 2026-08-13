@@ -20,7 +20,13 @@ export default async function AdminServiciosPage() {
       <AdminPageHeader
         title="Servicios"
         description="Aquí editas los servicios que ofrece GPI: sus textos, sus imágenes y el orden en que aparecen. Lo que guardes se ve en el sitio en pocos minutos."
-        breadcrumb={[{ label: "Panel", href: "/admin" }, { label: "Servicios" }]}
+        backHref="/admin/contenido"
+        backLabel="Volver a Contenido del sitio"
+        breadcrumb={[
+          { label: "Panel", href: "/admin" },
+          { label: "Contenido del sitio", href: "/admin/contenido" },
+          { label: "Servicios" },
+        ]}
         action={
           <PrimaryLink href="/admin/servicios/nuevo">
             <Plus className="h-4 w-4" />
@@ -82,6 +88,7 @@ export default async function AdminServiciosPage() {
 
                 <div className="flex flex-wrap items-center gap-2">
                   <Link
+                    prefetch={false}
                     href={`/servicios/${service.slug}`}
                     target="_blank"
                     className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3.5 py-2 text-xs font-semibold text-graphite transition-colors hover:border-brand hover:text-brand-dark"
@@ -90,6 +97,7 @@ export default async function AdminServiciosPage() {
                     <ArrowRight className="h-3.5 w-3.5" />
                   </Link>
                   <Link
+                    prefetch={false}
                     href={`/admin/servicios/${service.id}`}
                     className="inline-flex items-center gap-1.5 rounded-full bg-ink px-3.5 py-2 text-xs font-semibold text-white transition-colors hover:bg-ink-soft"
                   >

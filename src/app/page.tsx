@@ -172,9 +172,9 @@ export default async function HomePage() {
           <Reveal>
             <SectionHeading
               align="center"
-              eyebrow="Nuestros servicios"
-              title="Dos áreas, una misma excelencia"
-              description="Cubrimos las necesidades de los procesos industriales y acompañamos el cumplimiento y la gestión ambiental de su empresa."
+              eyebrow={home.serviciosIntro.eyebrow}
+              title={home.serviciosIntro.titulo}
+              description={home.serviciosIntro.descripcion}
             />
           </Reveal>
           <div className="mt-12 grid gap-6 lg:grid-cols-2">
@@ -239,8 +239,9 @@ export default async function HomePage() {
             <Reveal>
               <SectionHeading
                 align="center"
-                eyebrow="Nuestros valores"
-                title="Los principios que guían cada proyecto"
+                eyebrow={home.valoresIntro.eyebrow}
+                title={home.valoresIntro.titulo}
+                description={home.valoresIntro.descripcion || undefined}
               />
             </Reveal>
             <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -289,16 +290,17 @@ export default async function HomePage() {
 
       {/* ---------------- CLIENTES ----------------
           Título aprobado por GPI el 12 ago 2026 (punto 4 del informe:
-          «Portafolio de clientes», con los logos a color). */}
+          «Portafolio de clientes», con los logos a color) y editable desde
+          /admin/inicio desde la migración 0008. */}
       {showClients && (
         <section className="py-20 sm:py-24">
           <Container>
             <Reveal>
               <SectionHeading
                 align="center"
-                eyebrow="Clientes"
-                title="Portafolio de clientes"
-                description="Nos respalda el trabajo realizado junto a compañías de distintos sectores."
+                eyebrow={home.clientes.eyebrow}
+                title={home.clientes.titulo}
+                description={home.clientes.descripcion || undefined}
               />
             </Reveal>
             <Reveal className="mt-12">
@@ -309,7 +311,11 @@ export default async function HomePage() {
       )}
 
       {/* ---------------- CTA FINAL ---------------- */}
-      <CtaBand contact={contact} />
+      <CtaBand
+        contact={contact}
+        title={home.cta.titulo}
+        description={home.cta.descripcion}
+      />
     </>
   );
 }

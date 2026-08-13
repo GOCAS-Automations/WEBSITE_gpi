@@ -1,6 +1,7 @@
 import { getAdminSettings } from "@/lib/admin";
 import {
   AdminPageHeader,
+  AvisoGuardar,
   AyudaSeccion,
   AYUDA_ALT,
   Card,
@@ -16,7 +17,11 @@ import { ETIQUETA_VISITAS } from "@/data/site";
 import {
   saveExcellenceSettings,
   saveHeroSettings,
+  saveHomeClientes,
+  saveHomeCta,
   saveHomeQuienesSomos,
+  saveHomeServiciosIntro,
+  saveHomeValoresIntro,
   saveVisibilityInicio,
 } from "../actions";
 
@@ -39,21 +44,24 @@ export default async function AdminInicioPage() {
     <>
       <AdminPageHeader
         title="Página de inicio"
-        description="Los textos y las imágenes de la portada del sitio: la primera pantalla, «Quiénes somos» con sus cifras y la banda oscura."
+        description="Los textos y las imágenes de la portada del sitio, de arriba abajo: primera pantalla, «Quiénes somos», títulos de servicios, valores y clientes, banda oscura y cierre."
+        backHref="/admin/contenido"
+        backLabel="Volver a Contenido del sitio"
         breadcrumb={[
           { label: "Panel", href: "/admin" },
+          { label: "Contenido del sitio", href: "/admin/contenido" },
           { label: "Página de inicio" },
         ]}
       />
 
-      <AyudaSeccion title="Cómo se usa esta pantalla" className="mb-6">
-        Cada bloque se guarda <strong>por separado</strong>, con su propio
-        botón: si cambias solo el título, pulsa el botón de ese bloque y ya. Lo
-        que guardes se ve en el sitio en pocos minutos. Los{" "}
-        <strong>servicios</strong>, los <strong>proyectos</strong>, los{" "}
-        <strong>logos de clientes</strong> y los <strong>valores</strong> que
-        también aparecen en el inicio se editan en sus propias secciones del
-        panel.
+      <AvisoGuardar />
+
+      <AyudaSeccion title="Qué se edita aquí" className="mb-6">
+        Los bloques están en el <strong>mismo orden</strong> en que se ven en la
+        página. Los <strong>servicios</strong>, los <strong>proyectos</strong>,
+        los <strong>logos de clientes</strong> y los <strong>valores</strong>{" "}
+        que aparecen en el inicio son listas y se editan en sus propias
+        secciones: aquí solo están los títulos que los presentan.
       </AyudaSeccion>
 
       <div className="space-y-6">
@@ -228,6 +236,85 @@ export default async function AdminInicioPage() {
           </AdminForm>
         </Card>
 
+        {/* ---------------- Encabezado de los servicios (0008) ---------------- */}
+        <Card>
+          <CardTitle
+            title="Título de la sección de servicios"
+            description="El encabezado centrado que presenta las dos tarjetas grandes (Servicios Industriales y Servicios Ambientales) en el inicio."
+          />
+          <AdminForm
+            action={saveHomeServiciosIntro}
+            submitLabel="Guardar título de servicios"
+          >
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field
+                scope="servicios"
+                label="Texto superior"
+                name="eyebrow"
+                defaultValue={home.serviciosIntro.eyebrow}
+                placeholder="Nuestros servicios"
+                hint="El rótulo pequeño en verde que va encima del título."
+              />
+              <Field
+                scope="servicios"
+                label="Título"
+                name="titulo"
+                defaultValue={home.serviciosIntro.titulo}
+                placeholder="Dos áreas, una misma excelencia"
+              />
+            </div>
+            <TextArea
+              scope="servicios"
+              label="Descripción"
+              name="descripcion"
+              rows={2}
+              defaultValue={home.serviciosIntro.descripcion}
+            />
+            <AyudaSeccion>
+              Los <strong>servicios</strong> en sí (sus textos, imágenes y
+              orden) se editan en la sección <strong>Servicios</strong> del
+              panel: aquí solo está el encabezado que los presenta.
+            </AyudaSeccion>
+          </AdminForm>
+        </Card>
+
+        {/* ---------------- Encabezado de los valores (0008) ---------------- */}
+        <Card>
+          <CardTitle
+            title="Título de los valores en el inicio"
+            description="El encabezado del bloque de valores corporativos de la página de inicio. La página Nosotros tiene el suyo, aparte."
+          />
+          <AdminForm
+            action={saveHomeValoresIntro}
+            submitLabel="Guardar título de valores"
+          >
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field
+                scope="valores"
+                label="Texto superior"
+                name="eyebrow"
+                defaultValue={home.valoresIntro.eyebrow}
+                placeholder="Nuestros valores"
+              />
+              <Field
+                scope="valores"
+                label="Título"
+                name="titulo"
+                defaultValue={home.valoresIntro.titulo}
+                placeholder="Los principios que guían cada proyecto"
+              />
+            </div>
+            <TextArea
+              scope="valores"
+              label="Descripción (opcional)"
+              name="descripcion"
+              rows={2}
+              defaultValue={home.valoresIntro.descripcion}
+              hint="En el inicio va vacía a propósito: el bloque se lee mejor con solo el título. Si escribes algo, aparece debajo."
+            />
+          </AdminForm>
+        </Card>
+
         {/* ---------------- Banda EXCELENCIA ---------------- */}
         <Card>
           <CardTitle
@@ -270,6 +357,72 @@ export default async function AdminInicioPage() {
             <AyudaSeccion>
               Las <strong>cifras</strong> ya no se editan aquí: viven en el
               bloque «Quiénes somos y cifras» de arriba, que es donde se ven.
+            </AyudaSeccion>
+          </AdminForm>
+        </Card>
+
+        {/* ---------------- Portafolio de clientes (0008) ---------------- */}
+        <Card>
+          <CardTitle
+            title="Título del portafolio de clientes"
+            description="El encabezado de la banda de logos de empresas, casi al final del inicio."
+          />
+          <AdminForm action={saveHomeClientes} submitLabel="Guardar título de clientes">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field
+                scope="clientes"
+                label="Texto superior"
+                name="eyebrow"
+                defaultValue={home.clientes.eyebrow}
+                placeholder="Clientes"
+              />
+              <Field
+                scope="clientes"
+                label="Título"
+                name="titulo"
+                defaultValue={home.clientes.titulo}
+                placeholder="Portafolio de clientes"
+              />
+            </div>
+            <TextArea
+              scope="clientes"
+              label="Descripción"
+              name="descripcion"
+              rows={2}
+              defaultValue={home.clientes.descripcion}
+            />
+            <AyudaSeccion>
+              Los <strong>logos</strong> se añaden y se ordenan en la sección{" "}
+              <strong>Clientes</strong> del panel. Para quitar la banda entera,
+              usa el interruptor «Clientes» del primer bloque de esta pantalla.
+            </AyudaSeccion>
+          </AdminForm>
+        </Card>
+
+        {/* ---------------- Cierre del inicio (0008) ---------------- */}
+        <Card>
+          <CardTitle
+            title="Cierre de la página"
+            description="La franja verde del final que invita a contactar a GPI, con los botones «Contáctanos» y «WhatsApp»."
+          />
+          <AdminForm action={saveHomeCta} submitLabel="Guardar cierre">
+            <Field
+              scope="cta"
+              label="Título"
+              name="titulo"
+              defaultValue={home.cta.titulo}
+              placeholder="¿Listo para optimizar sus procesos?"
+            />
+            <TextArea
+              scope="cta"
+              label="Descripción"
+              name="descripcion"
+              rows={2}
+              defaultValue={home.cta.descripcion}
+            />
+            <AyudaSeccion>
+              El número de WhatsApp de los botones sale de{" "}
+              <strong>Ajustes</strong> → «Datos de contacto».
             </AyudaSeccion>
           </AdminForm>
         </Card>

@@ -63,6 +63,7 @@ export function AdminForm({
 
         {backHref && (
           <Link
+            prefetch={false}
             href={backHref}
             className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-5 py-2.5 text-sm font-semibold text-ink-soft transition-colors hover:border-brand hover:text-brand-dark"
           >

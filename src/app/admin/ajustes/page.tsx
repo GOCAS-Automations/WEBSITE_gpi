@@ -1,6 +1,7 @@
 import { getAdminSettings } from "@/lib/admin";
 import {
   AdminPageHeader,
+  AvisoGuardar,
   AyudaSeccion,
   Card,
   CardTitle,
@@ -38,14 +39,13 @@ export default async function AdminAjustesPage() {
         ]}
       />
 
-      <AyudaSeccion title="Cómo se usa esta pantalla" className="mb-6">
-        Aquí están los datos que se repiten en <strong>todo</strong> el sitio:
-        dirección, teléfonos, correos, redes, el mapa y el buzón al que llega el
-        formulario de contacto. Cada bloque se guarda{" "}
-        <strong>por separado</strong>, con su propio botón, y lo que guardes se
-        ve en el sitio en pocos minutos. Los textos e imágenes de cada página se
-        editan en <strong>Página de inicio</strong> y{" "}
-        <strong>Página Nosotros</strong>.
+      <AvisoGuardar />
+
+      <AyudaSeccion title="Qué se edita aquí" className="mb-6">
+        Los datos que se repiten en <strong>todo</strong> el sitio: dirección,
+        teléfonos, correos, redes, el mapa y el buzón al que llega el
+        formulario de contacto. Los textos e imágenes de cada página se editan
+        en <strong>Contenido del sitio</strong>.
       </AyudaSeccion>
 
       <div className="mb-6 flex flex-wrap items-center gap-x-6 gap-y-2">

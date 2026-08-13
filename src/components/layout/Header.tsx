@@ -111,10 +111,15 @@ export function Header({ services }: { services: Service[] }) {
             aria-label="GPI — Inicio"
           >
             {/*
+              TAMAÑO: el logo ocupa el máximo que cabe en la píldora sin
+              tocar los bordes — 44 / 48 / 64 px de alto contra una píldora de
+              64 px (móvil) y 80 px (escritorio, ver `--nav-pill-h`). Quedan
+              10 px de aire arriba y abajo en móvil y 8 px en escritorio.
+
               RENDIMIENTO: el archivo original es de 3300×1875 px (685 KB). Sin
               `sizes`, el navegador asume `100vw` y descarga el candidato del
               srcset para el ancho completo de la pantalla… para pintar un logo
-              de ~99 px. `sizes` le dice el tamaño real de maquetación (alto ×
+              de ~113 px. `sizes` le dice el tamaño real de maquetación (alto ×
               1.76 de relación de aspecto) y `width`/`height` solo fijan esa
               relación, así que baja el candidato pequeño.
             */}
@@ -123,9 +128,9 @@ export function Header({ services }: { services: Service[] }) {
               alt="GPI — Optimización de Procesos Industriales y Ambientales"
               width={352}
               height={200}
-              sizes="(min-width: 1024px) 99px, (min-width: 640px) 78px, 71px"
+              sizes="(min-width: 1024px) 113px, (min-width: 640px) 85px, 78px"
               priority
-              className="h-10 w-auto sm:h-11 lg:h-14"
+              className="h-11 w-auto sm:h-12 lg:h-16"
             />
           </Link>
 

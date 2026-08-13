@@ -149,7 +149,7 @@ export function ServiceFormFields({ service }: { service?: ServiceRecord }) {
       <Card>
         <CardTitle
           title="Video del servicio (YouTube)"
-          description="Opcional. Si pegas un enlace de YouTube, el video se muestra al final de la página de este servicio."
+          description="Opcional, y apagado por defecto. Si pegas un enlace de YouTube y enciendes el interruptor de abajo, el video se muestra al final de la página de este servicio."
         />
         <div className="space-y-4">
           <AyudaSeccion>{AYUDA_VIDEO_SERVICIO}</AyudaSeccion>
@@ -174,11 +174,18 @@ export function ServiceFormFields({ service }: { service?: ServiceRecord }) {
             defaultValue={service?.video?.descripcion}
             placeholder="Una frase que cuente qué se ve en el video."
           />
+          {/*
+            EMPIEZA APAGADO cuando el servicio no tiene video guardado.
+            Antes el interruptor decía «Mostrar» sobre un bloque de campos
+            vacíos, y GPI leía que el servicio ya tenía un video publicado que
+            no encontraba por ninguna parte. Con video guardado se respeta lo
+            que haya decidido quien edita.
+          */}
           <Switch
             label="Mostrar el video"
             name="video_visible"
-            defaultChecked={service?.video?.visible ?? true}
-            hint="Apagarlo lo esconde del sitio pero conserva el enlace y los textos aquí."
+            defaultChecked={service?.video?.visible ?? false}
+            hint="Enciéndelo cuando el enlace de arriba esté listo para publicarse. Apagarlo esconde el video del sitio pero conserva el enlace y los textos aquí."
           />
         </div>
       </Card>

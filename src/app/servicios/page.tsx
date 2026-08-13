@@ -32,15 +32,17 @@ export const revalidate = 300;
 export default async function ServiciosPage() {
   const [services, settings] = await Promise.all([getServices(), getSettings()]);
   const categories = getServiceCategories();
+  // Cabecera editable desde /admin/paginas (clave `paginas`, migración 0008).
+  const cabecera = settings.paginas.servicios;
 
   return (
     <>
       <PageHero
-        eyebrow="Servicios"
-        title="Soluciones industriales y ambientales a la medida"
-        description="Integramos diferentes disciplinas para optimizar sus procesos y acompañar el cumplimiento normativo de su empresa. Estos son nuestros servicios."
-        image="/images/servicios/s1.jpg"
-        imageAlt="Planta industrial con estructuras metálicas y tuberías"
+        eyebrow={cabecera.eyebrow}
+        title={cabecera.titulo}
+        description={cabecera.descripcion}
+        image={cabecera.imagen.url}
+        imageAlt={cabecera.imagen.alt}
         breadcrumbs={[{ label: "Inicio", href: "/" }, { label: "Servicios" }]}
       />
 

@@ -1,6 +1,7 @@
 import { listProjects, type ProjectRecord } from "@/lib/admin";
 import {
   AdminPageHeader,
+  AvisoGuardar,
   AyudaSeccion,
   AYUDA_ALT,
   AYUDA_ORDEN,
@@ -116,13 +117,20 @@ export default async function AdminProyectosPage() {
       <AdminPageHeader
         title="Proyectos"
         description="Los trabajos ya realizados que se muestran, con su foto, en la página Proyectos del sitio. Lo que guardes se ve en el sitio en pocos minutos."
-        breadcrumb={[{ label: "Panel", href: "/admin" }, { label: "Proyectos" }]}
+        backHref="/admin/contenido"
+        backLabel="Volver a Contenido del sitio"
+        breadcrumb={[
+          { label: "Panel", href: "/admin" },
+          { label: "Contenido del sitio", href: "/admin/contenido" },
+          { label: "Proyectos" },
+        ]}
       />
 
+      <AvisoGuardar />
+
       <AyudaSeccion className="mb-6">
-        Cada proyecto se guarda por separado con su propio botón{" "}
-        <strong>Guardar proyecto</strong>. Además de la tarjeta, cada uno tiene
-        su <strong>propia página</strong> en el sitio (
+        Además de la tarjeta, cada proyecto tiene su{" "}
+        <strong>propia página</strong> en el sitio (
         <code className="rounded bg-white px-1 py-0.5 text-xs">
           /proyectos/…
         </code>

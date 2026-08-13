@@ -38,7 +38,9 @@ export const metadata: Metadata = {
 export const revalidate = 300;
 
 export default async function ContactoPage() {
-  const { contact } = await getSettings();
+  const { contact, paginas } = await getSettings();
+  // Cabecera editable desde /admin/paginas (clave `paginas`, migración 0008).
+  const cabecera = paginas.contacto;
 
   /**
    * ¿El servidor puede enviar el correo por sí mismo?
@@ -52,11 +54,11 @@ export default async function ContactoPage() {
   return (
     <>
       <PageHero
-        eyebrow="Contacto"
-        title="Hablemos de tu proyecto"
-        description="Estamos en Cali y atendemos el suroccidente colombiano. Escríbenos y te responderemos con una propuesta a la medida."
-        image="/images/slides/1.jpg"
-        imageAlt="Equipo de GPI en trabajo de campo"
+        eyebrow={cabecera.eyebrow}
+        title={cabecera.titulo}
+        description={cabecera.descripcion}
+        image={cabecera.imagen.url}
+        imageAlt={cabecera.imagen.alt}
         breadcrumbs={[{ label: "Inicio", href: "/" }, { label: "Contacto" }]}
       />
 

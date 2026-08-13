@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { ETIQUETA_VISITAS } from "@/data/site";
 import type { Visitas } from "@/lib/content";
 import { Eye } from "@/lib/icons";
@@ -12,6 +15,19 @@ import { Eye } from "@/lib/icons";
  * NO se edita desde el panel a propósito: lo cuenta el sitio solo. Y devuelve
  * `null` cuando la tabla no existe (migración 0007 sin aplicar), porque enseñar
  * "0 visitas" se lee como un sitio que nadie visita — peor que no enseñar nada.
+ *
+ * EL NÚMERO SE REFRESCA EN EL NAVEGADOR
+ * -------------------------------------
+ * Las páginas que la muestran son estáticas con ISR de 5 minutos, así que el
+ * total que viene en el HTML puede estar viejo — GPI notó que su propia visita
+ * no aparecía. La cifra servida se pinta igual (no hay hueco ni "cargando…") y,
+ * al montar, se pide el total en vivo a `GET /api/visita`.
+ *
+ * Dos detalles que evitan que se vea feo:
+ *   · Solo se llama si el servidor dijo `disponible`. Si la migración está
+ *     pendiente, la tarjeta no existe y no hay nada que refrescar.
+ *   · El estado solo se actualiza **si el número cambió**. Igualar un valor a sí
+ *     mismo provocaría un repintado y, con él, un parpadeo gratuito.
  */
 export function VisitCounter({
   visitas,
@@ -20,7 +36,37 @@ export function VisitCounter({
   visitas: Visitas;
   className?: string;
 }) {
-  if (!visitas.disponible) return null;
+  const [total, setTotal] = useState(visitas.total);
+  const [formateado, setFormateado] = useState(visitas.formateado);
+
+  const servidas = visitas.total;
+  const disponible = visitas.disponible;
+
+  useEffect(() => {
+    if (!disponible) return;
+
+    // `cancelado` evita escribir en un componente ya desmontado si el visitante
+    // navega mientras la petición está en vuelo.
+    let cancelado = false;
+
+    void fetch("/api/visita", { cache: "no-store" })
+      .then((respuesta) => (respuesta.ok ? respuesta.json() : null))
+      .then((datos: Visitas | null) => {
+        if (cancelado || !datos?.disponible) return;
+        if (typeof datos.total !== "number" || datos.total === servidas) return;
+        setTotal(datos.total);
+        setFormateado(datos.formateado);
+      })
+      .catch(() => {
+        /* Silencio a propósito: la cifra del servidor sigue en pantalla. */
+      });
+
+    return () => {
+      cancelado = true;
+    };
+  }, [disponible, servidas]);
+
+  if (!disponible) return null;
 
   return (
     <div
@@ -30,14 +76,19 @@ export function VisitCounter({
         <Eye className="h-6 w-6" />
       </span>
       <div className="min-w-0">
-        <p className="text-3xl font-extrabold leading-none text-brand-deep sm:text-4xl">
-          {visitas.formateado}
+        {/* `aria-live="polite"` para que el lector de pantalla anuncie el
+            número corregido en vez de quedarse con el del HTML inicial. */}
+        <p
+          aria-live="polite"
+          className="text-3xl font-extrabold leading-none text-brand-deep sm:text-4xl"
+        >
+          {formateado}
         </p>
         {/* Concordancia: con una sola visita la etiqueta va en singular, que si
             no se lee «1 visitas al sitio web». La constante compartida sigue
             siendo la del plural (es la que describe la tarjeta en el panel). */}
         <p className="mt-1.5 text-sm leading-snug text-graphite">
-          {visitas.total === 1 ? "visita al sitio web" : ETIQUETA_VISITAS}
+          {total === 1 ? "visita al sitio web" : ETIQUETA_VISITAS}
         </p>
       </div>
     </div>

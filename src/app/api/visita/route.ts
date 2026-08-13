@@ -34,6 +34,13 @@
 
 import { headers } from "next/headers";
 import { getServiceRoleSupabase } from "@/lib/supabase/admin";
+import { getVisitas } from "@/lib/content";
+
+/**
+ * Nunca se cachea: la mitad de la gracia de este endpoint es que el número que
+ * devuelve sea el de este segundo, no el del último build.
+ */
+export const dynamic = "force-dynamic";
 
 /** Una IP no vuelve a sumar hasta pasada esta ventana. */
 const VENTANA_MS = 30 * 60 * 1000;
@@ -95,4 +102,41 @@ export async function POST(): Promise<Response> {
   }
 
   return SIN_CONTENIDO;
+}
+
+/* ------------------------------------------------------------------ */
+/* Lectura en vivo del total                                           */
+/* ------------------------------------------------------------------ */
+
+/**
+ * `GET /api/visita` → `{ total, formateado, disponible }`.
+ *
+ * POR QUÉ EXISTE
+ * --------------
+ * El inicio y Nosotros son páginas estáticas con ISR (`revalidate = 300`), así
+ * que el número que llega en el HTML puede tener hasta cinco minutos. GPI abre
+ * su sitio, cuenta la visita que acaba de hacer y ve la cifra de antes: parece
+ * roto aunque no lo esté.
+ *
+ * La alternativa era volver dinámicas las dos páginas para refrescar una cifra
+ * de vanidad, tirando por la borda el ISR de todo el sitio. En vez de eso, el
+ * HTML sigue siendo estático y `VisitCounter` pide el total AQUÍ al montarse,
+ * ya en el navegador: el visitante ve un número al instante (el del build) y,
+ * una décima después, el de verdad.
+ *
+ * Solo LEE: sumar sigue siendo cosa del `POST`, que va con la clave
+ * service-role. La lectura usa el cliente anónimo, al que la política
+ * `site_visitas_select_public` de la migración 0007 ya le permite consultar la
+ * tabla.
+ */
+export async function GET(): Promise<Response> {
+  const visitas = await getVisitas();
+
+  return Response.json(visitas, {
+    headers: {
+      // Ni el navegador ni el CDN de Vercel deben guardarse esta respuesta:
+      // cachearla anularía justo lo que se quiere conseguir.
+      "Cache-Control": "no-store, max-age=0",
+    },
+  });
 }

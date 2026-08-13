@@ -2,21 +2,14 @@ import Link from "next/link";
 import { getContentCounts, getTeamCounts } from "@/lib/admin";
 import { requireContentEditor } from "@/lib/supabase/auth";
 import { isManagerRole, ROLE_DESCRIPTIONS, ROLE_LABELS } from "@/lib/roles";
-import { AyudaSeccion } from "@/components/admin/ui";
+import { AyudaSeccion, SeccionCard } from "@/components/admin/ui";
 import {
-  Cog,
-  Photo,
-  Handshake,
-  Home,
-  Info,
-  Shield,
+  Layers,
   Sliders,
   User,
-  Users,
   Clock,
   ClockPlus,
   Calendar,
-  ArrowRight,
 } from "@/lib/icons";
 
 export default async function AdminDashboardPage() {
@@ -28,71 +21,22 @@ export default async function AdminDashboardPage() {
     manager ? getTeamCounts() : Promise.resolve({ people: 0, pending: 0 }),
   ]);
 
-  // Cada tarjeta lleva UNA frase que dice, en lenguaje llano, qué se administra
-  // ahí y en qué parte del sitio se ve.
-  const contenido = [
+  /**
+   * El dashboard refleja el menú, y el menú se agrupó: las ocho pantallas de
+   * contenido dejaron de ser ocho tarjetas sueltas y viven detrás de una sola,
+   * «Contenido del sitio». Enseñar aquí un índice distinto del menú lateral era
+   * pedirle a GPI que aprendiera dos organizaciones de lo mismo.
+   */
+  const sitio = [
     {
-      href: "/admin/inicio",
-      label: "Página de inicio",
-      icon: Home,
-      count: null,
-      unit: "",
+      href: "/admin/contenido",
+      label: "Contenido del sitio",
+      icon: Layers,
+      count: counts.services + counts.projects + counts.clients,
+      unit: "elementos",
       description:
-        "La portada del sitio: la primera pantalla con su foto, el bloque «Quiénes somos» con las cifras y la banda oscura.",
-    },
-    {
-      href: "/admin/nosotros",
-      label: "Página Nosotros",
-      icon: Users,
-      count: null,
-      unit: "",
-      description:
-        "La historia de GPI: presentación, misión y visión, galería de aliados, línea de tiempo, video y textos de cierre.",
-    },
-    {
-      href: "/admin/servicios",
-      label: "Servicios",
-      icon: Cog,
-      count: counts.services,
-      unit: "servicios",
-      description:
-        "Los servicios que ofrece GPI: sus textos, imágenes, video, lista de alcances y el orden en que aparecen en el menú y en la página Servicios.",
-    },
-    {
-      href: "/admin/proyectos",
-      label: "Proyectos",
-      icon: Photo,
-      count: counts.projects,
-      unit: "proyectos",
-      description:
-        "Los trabajos ya realizados que se muestran, con su foto, en la página Proyectos.",
-    },
-    {
-      href: "/admin/clientes",
-      label: "Clientes",
-      icon: Handshake,
-      count: counts.clients,
-      unit: "logos",
-      description:
-        "Los logos de clientes que desfilan en la página de inicio, con el enlace opcional a su sitio web.",
-    },
-    {
-      href: "/admin/faq",
-      label: "Preguntas frecuentes",
-      icon: Info,
-      count: counts.faqs,
-      unit: "preguntas",
-      description:
-        "Las preguntas y respuestas que el visitante despliega al final de la página Nosotros.",
-    },
-    {
-      href: "/admin/valores",
-      label: "Valores corporativos",
-      icon: Shield,
-      count: counts.values,
-      unit: "valores",
-      description:
-        "Los principios de la empresa, con su icono, que se muestran en el inicio y en la página Nosotros.",
+        "Todo lo que se ve en gpiprofesionales.com: la página de inicio, Nosotros, los títulos de las demás páginas, los servicios, los proyectos, los logos de clientes, las preguntas frecuentes y los valores.",
+      destacada: true,
     },
     {
       href: "/admin/ajustes",
@@ -149,11 +93,13 @@ export default async function AdminDashboardPage() {
           {ROLE_DESCRIPTIONS[profile.role]}
         </p>
         {/* El panel es la pantalla principal de quien administra, pero también
-            es empleado de GPI: este es el atajo a su propio portal de horas. */}
+            es empleado de GPI: este es el atajo a su propio portal de horas.
+            `?portal=1` es lo que pide el portal en vez del panel. */}
         <p className="mt-3 text-sm text-graphite">
           ¿Vas a registrar tus propias horas?{" "}
           <Link
-            href="/mi-cuenta"
+            href="/mi-cuenta?portal=1"
+            prefetch={false}
             className="inline-flex items-center gap-1 font-semibold text-brand-dark transition-colors hover:text-brand-deep"
           >
             <ClockPlus className="h-4 w-4" />
@@ -169,7 +115,7 @@ export default async function AdminDashboardPage() {
           </h2>
           <div className="grid gap-4 sm:grid-cols-2">
             {gestion.map((section) => (
-              <SectionCard key={section.href} {...section} destacada />
+              <SeccionCard key={section.href} {...section} destacada />
             ))}
           </div>
         </section>
@@ -177,11 +123,11 @@ export default async function AdminDashboardPage() {
 
       <section>
         <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-graphite">
-          Contenido del sitio
+          El sitio web
         </h2>
         <div className="grid gap-4 sm:grid-cols-2">
-          {contenido.map((section) => (
-            <SectionCard key={section.href} {...section} />
+          {sitio.map((section) => (
+            <SeccionCard key={section.href} {...section} />
           ))}
         </div>
       </section>
@@ -192,10 +138,11 @@ export default async function AdminDashboardPage() {
           Antes de empezar
         </h2>
         <div className="grid gap-4 lg:grid-cols-3">
-          <AyudaSeccion title="Los cambios se ven en minutos">
-            Cada bloque se guarda con su propio botón. En cuanto guardas, el
-            sitio público se actualiza; si no lo ves, recarga la página al cabo
-            de un par de minutos.
+          <AyudaSeccion title="Guarda bloque a bloque">
+            Cada tarjeta de las pantallas de contenido tiene{" "}
+            <strong>su propio botón de guardar</strong>: los cambios no se
+            aplican hasta que lo pulsas. Al guardar, el sitio público se
+            actualiza en pocos minutos.
           </AyudaSeccion>
 
           <AyudaSeccion title="Ocultar no es eliminar">
@@ -214,55 +161,5 @@ export default async function AdminDashboardPage() {
         </div>
       </section>
     </>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-
-function SectionCard({
-  href,
-  label,
-  icon: Icon,
-  count,
-  unit,
-  description,
-  destacada = false,
-}: {
-  href: string;
-  label: string;
-  icon: (props: { className?: string }) => React.ReactNode;
-  count: number | null;
-  unit: string;
-  description: string;
-  destacada?: boolean;
-}) {
-  return (
-    <Link
-      href={href}
-      className={`group flex flex-col rounded-2xl border bg-white p-5 shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-card ${
-        destacada ? "border-brand/30" : "border-line"
-      }`}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-brand-tint text-brand-deep transition-colors group-hover:bg-brand-deep group-hover:text-white">
-          <Icon className="h-5 w-5" />
-        </span>
-        {count !== null && (
-          <span className="rounded-full bg-mist px-3 py-1 text-xs font-semibold text-graphite">
-            {count} {unit}
-          </span>
-        )}
-      </div>
-      <h3 className="mt-4 text-base font-bold text-ink group-hover:text-brand-dark">
-        {label}
-      </h3>
-      <p className="mt-1.5 flex-1 text-sm leading-relaxed text-graphite">
-        {description}
-      </p>
-      <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-dark">
-        Administrar
-        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-      </span>
-    </Link>
   );
 }

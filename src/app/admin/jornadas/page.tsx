@@ -66,6 +66,7 @@ export default async function AdminJornadasPage({
             return (
               <li key={p.value}>
                 <Link
+                  prefetch={false}
                   href={
                     p.value === "aprobaciones"
                       ? "/admin/jornadas"

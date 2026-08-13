@@ -29,15 +29,17 @@ export const revalidate = 300;
 
 export default async function ProyectosPage() {
   const [projects, settings] = await Promise.all([getProjects(), getSettings()]);
+  // Cabecera editable desde /admin/paginas (clave `paginas`, migración 0008).
+  const cabecera = settings.paginas.proyectos;
 
   return (
     <>
       <PageHero
-        eyebrow="Proyectos"
-        title="Proyectos que respaldan nuestra experiencia"
-        description="Una muestra del trabajo ejecutado junto a nuestros clientes en el sector industrial y ambiental."
-        image="/images/proyectos/13a.jpg"
-        imageAlt="Planta piloto industrial con tanques y tuberías"
+        eyebrow={cabecera.eyebrow}
+        title={cabecera.titulo}
+        description={cabecera.descripcion}
+        image={cabecera.imagen.url}
+        imageAlt={cabecera.imagen.alt}
         breadcrumbs={[{ label: "Inicio", href: "/" }, { label: "Proyectos" }]}
       />
 

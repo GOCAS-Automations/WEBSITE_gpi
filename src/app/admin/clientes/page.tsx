@@ -1,6 +1,7 @@
 import { listClients, type ClientRecord } from "@/lib/admin";
 import {
   AdminPageHeader,
+  AvisoGuardar,
   AyudaSeccion,
   AYUDA_ORDEN,
   AYUDA_VISIBILIDAD,
@@ -66,12 +67,20 @@ export default async function AdminClientesPage() {
       <AdminPageHeader
         title="Clientes"
         description="Los logos de clientes que se muestran en la página de inicio. Lo que guardes se ve en el sitio en pocos minutos."
-        breadcrumb={[{ label: "Panel", href: "/admin" }, { label: "Clientes" }]}
+        backHref="/admin/contenido"
+        backLabel="Volver a Contenido del sitio"
+        breadcrumb={[
+          { label: "Panel", href: "/admin" },
+          { label: "Contenido del sitio", href: "/admin/contenido" },
+          { label: "Clientes" },
+        ]}
       />
 
+      <AvisoGuardar />
+
       <AyudaSeccion className="mb-6">
-        Cada cliente se guarda por separado con su propio botón{" "}
-        <strong>Guardar cliente</strong>. {AYUDA_VISIBILIDAD}
+        Los logos se muestran centrados en la banda «Portafolio de clientes» de
+        la página de inicio, en el orden que indiques. {AYUDA_VISIBILIDAD}
       </AyudaSeccion>
 
       <div className="space-y-5">
