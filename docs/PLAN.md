@@ -803,6 +803,62 @@ de aplicación en grupos de 4); en un buzón de dominio la contraseña puede lle
 espacios de verdad y solo se recortan los extremos. Pasos exactos en
 `docs/ADMIN.md` §13 → *Con buzón del dominio (cPanel de GoDaddy)*.
 
+## Iteración del 13 de agosto de 2026 — imágenes al bucket de Supabase
+
+Regla nueva del cliente: ninguna imagen de **contenido** puede referenciar
+rutas del repositorio (`/images/...`). Se migraron los **53 archivos** de
+`public/images/` que el sitio usaba como contenido al bucket público
+`site-images` y se reescribieron sus **53 referencias** en la base de datos
+(11 servicios, 4 proyectos, 5 clientes y las claves `hero`, `home`, `nosotros`
+y `paginas` de `site_settings`). Verificado: 0 referencias `/images/` en la
+base de datos. No hizo falta ninguna migración SQL nueva: es una migración de
+datos, no de esquema.
+
+- **Bucket organizado en seis carpetas** con nombres kebab-case que se leen
+  solos: `inicio/`, `nosotros/`, `servicios/`, `proyectos/`, `clientes/` y
+  `cabeceras/` (la foto de fondo de cada cabecera de página). Las imágenes que
+  el propio cliente ya había subido desde el panel se conservan con su nombre
+  de siempre (`<marca-de-tiempo>-<archivo>`), sin tocar. Bucket final: **67
+  archivos, 15,5 MB** (66 referenciados; el único suelto es una foto que GPI
+  subió desde el panel y nunca llegó a guardar en ningún campo).
+- **Dos fotos que estaban escritas en el código pasan a ser editables.** Las
+  imágenes de las dos tarjetas grandes de área —«Servicios Industriales» y
+  «Servicios Ambientales», en el inicio y en `/servicios`— eran las dos
+  únicas fotos del sitio sin ninguna pantalla que las cambiara. Se subieron
+  al bucket como `servicios/categoria-industrial.jpg` y
+  `servicios/categoria-ambiental.jpg` (de ahí que el total suba de 51 a 53) y
+  ganaron una tarjeta nueva, **«Fotos de las dos áreas»**, en
+  `/admin/paginas`: solo la foto y el texto alternativo de cada una, el
+  nombre y la descripción del área siguen fijos. Vive en
+  `site_settings.paginas.categorias`; sin ese dato el sitio cae en el
+  respaldo estático, como siempre, y tampoco hizo falta migración SQL.
+- **La galería ya deja subir archivos, no solo pegar un enlace.** Las listas
+  de fotos —galería de un servicio, galería de un proyecto y las fotos de
+  «Más que proveedores, somos aliados estratégicos» en Nosotros— tenían solo
+  el campo de URL; cada fila ganó su propio botón **Subir imagen**, que
+  guarda en la misma carpeta del bucket que la portada de esa pantalla.
+- **`public/images/` no se borra**: sigue siendo el respaldo del modo estático
+  (`src/data/*`) que usa el sitio si Supabase no responde — invisible para el
+  cliente, sin cambios.
+- **Lo que sigue en el código, a propósito** (es *chrome*, no contenido
+  editable): el logo de la barra de navegación y del pie, el favicon y la
+  imagen por defecto para redes sociales (OpenGraph).
+- **Nueva vía recomendada para imágenes externas: Cloudinary.** El campo de
+  imagen del panel ya admitía subir un archivo o pegar una URL; ahora la
+  recomendación oficial para la segunda vía es Cloudinary (plan gratuito) —
+  cuenta → subir foto → pegar la URL `https://res.cloudinary.com/...`. Se
+  sumó `res.cloudinary.com` a `images.remotePatterns` y al `img-src` de la CSP
+  en `next.config.ts`; las URLs de otros servidores se siguen pintando "sin
+  optimizar" para no romper la página, pero pueden quedar bloqueadas por la
+  CSP. Detalle paso a paso en `docs/ADMIN.md`.
+- **La galería de aliados de Nosotros deja de salirse del contenedor.** «Más
+  que proveedores, somos aliados estratégicos» vivía en una caja propia más
+  ancha que el resto de la página; ahora usa el mismo contenedor que
+  Misión/Visión y el texto de arriba —el campo verde pálido sigue yendo de
+  borde a borde, pero el bloque y las fotos empiezan y terminan en la misma
+  línea vertical que las demás secciones—. Verificado en escritorio (1440 px)
+  y móvil (390 px); no cambia nada de cómo se usa el panel.
+
 ## Decisiones técnicas
 
 - **Fallback estático primero**: toda la capa de contenido (`src/lib/content.ts`)

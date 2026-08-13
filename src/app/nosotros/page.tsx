@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Image from "next/image";
+import { ContentImage } from "@/components/ui/ContentImage";
 import { Container } from "@/components/ui/Container";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { Reveal } from "@/components/ui/Reveal";
@@ -127,7 +127,7 @@ export default async function NosotrosPage() {
             <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-14">
               <Reveal className="relative">
                 <div className="relative aspect-[4/3] overflow-hidden rounded-3xl border border-line shadow-card">
-                  <Image
+                  <ContentImage
                     src={quienesSomos.imagen.url}
                     alt={quienesSomos.imagen.alt}
                     fill
@@ -223,10 +223,20 @@ export default async function NosotrosPage() {
           —el mismo recurso que ya usa `CtaBand`— apoyado sobre un campo verde
           muy pálido que nace y muere en blanco. El ojo recorre
           blanco → verde pálido → verde intenso → verde pálido → blanco, y no
-          queda ni una línea recta entre secciones. */}
+          queda ni una línea recta entre secciones.
+
+          ANCHO (corrección del 13 de agosto de 2026): el bloque verde vivía en
+          su propia caja (`max-w-[110rem]` con relleno lateral propio) y por eso
+          se salía por los dos lados respecto a Quiénes somos, Misión y Visión o
+          Valores, que van todas en `Container`. Se leía como un error de
+          maquetación —«sobresale de un margen imaginario»— y lo era. Ahora usa
+          el MISMO `Container` que el resto: el campo verde pálido sigue yendo a
+          sangre (es el fondo de la sección), pero el bloque y las fotos
+          arrancan y terminan en la misma línea vertical que los párrafos de
+          arriba y de abajo. */}
       {showGaleria && (
         <section className="bg-gradient-to-b from-white via-brand-tint to-white py-12 sm:py-16 lg:py-20">
-          <div className="mx-auto max-w-[110rem] px-3 sm:px-5 lg:px-8">
+          <Container>
             <div className="relative isolate grid overflow-hidden rounded-[1.75rem] bg-gradient-to-r from-brand-dark via-brand-dark to-brand-deep shadow-card sm:rounded-[2.25rem] lg:grid-cols-[minmax(0,30rem)_1fr]">
               <Reveal className="relative z-10 rounded-br-[3.5rem] bg-mist px-5 py-12 sm:px-8 sm:py-14 lg:rounded-r-[5rem] lg:py-16 lg:pl-10 lg:pr-16">
                 <span
@@ -247,7 +257,7 @@ export default async function NosotrosPage() {
                 <GaleriaAliados fotos={galeria.fotos} />
               </Reveal>
             </div>
-          </div>
+          </Container>
         </section>
       )}
 

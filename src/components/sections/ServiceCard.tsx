@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Image from "next/image";
+import { ContentImage } from "@/components/ui/ContentImage";
 import type { Service } from "@/data/services";
 import { iconMap, ArrowRight } from "@/lib/icons";
 
@@ -11,7 +11,7 @@ export function ServiceCard({ service }: { service: Service }) {
       className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-white shadow-soft transition-all duration-300 hover:-translate-y-1 hover:border-brand/40 hover:shadow-card"
     >
       <div className="relative aspect-[16/10] overflow-hidden">
-        <Image
+        <ContentImage
           src={service.cover}
           alt={service.coverAlt}
           fill

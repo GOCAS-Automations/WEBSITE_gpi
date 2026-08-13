@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { ContentImage } from "@/components/ui/ContentImage";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ImagenContenido } from "@/data/site";
 import { ChevronDown } from "@/lib/icons";
@@ -62,7 +62,7 @@ function FranjaEstatica({ fotos }: { fotos: ImagenContenido[] }) {
           key={foto.url}
           className="group relative aspect-[3/4] overflow-hidden rounded-2xl shadow-card lg:aspect-auto lg:h-full lg:min-h-[18rem]"
         >
-          <Image
+          <ContentImage
             src={foto.url}
             alt={foto.alt}
             fill
@@ -182,7 +182,7 @@ function Carrusel({ fotos }: { fotos: ImagenContenido[] }) {
             key={foto.url}
             className="group relative aspect-[3/4] w-[calc((100%-0.75rem)/2)] shrink-0 snap-start overflow-hidden rounded-2xl shadow-card sm:w-[calc((100%-2rem)/3)] lg:aspect-auto lg:h-full lg:min-h-[18rem]"
           >
-            <Image
+            <ContentImage
               src={foto.url}
               alt={foto.alt}
               fill

@@ -33,9 +33,18 @@ export const AYUDA_VISIBILIDAD =
 export const AYUDA_ALT =
   "Describe en pocas palabras lo que se ve en la foto. Lo leen en voz alta los programas que usan las personas con discapacidad visual y le sirve a Google para entender la imagen.";
 
-/** Recomendación práctica para subir imágenes. */
+/**
+ * Recomendación práctica para las imágenes.
+ *
+ * Las dos vías funcionan y ninguna es «la de verdad»: subir el archivo lo
+ * guarda en el almacenamiento del propio sitio, y pegar una URL sirve para
+ * imágenes que ya están publicadas en internet. Cloudinary se nombra por su
+ * nombre porque «pega una URL» a secas no le dice nada a quien nunca ha
+ * alojado una imagen, y porque es uno de los servicios que el sitio tiene
+ * autorizados (ver `src/lib/imagenes.ts` y `next.config.ts`).
+ */
 export const AYUDA_IMAGEN =
-  "Sube un archivo desde tu computador o pega el enlace de una imagen. Lo ideal son fotos horizontales (más anchas que altas) y de menos de 1 MB: si pesan mucho, el sitio carga lento.";
+  "Sube la imagen desde tu computador (se guarda en el almacenamiento del sitio) o pega una URL. Recomendación: sube tus imágenes a Cloudinary (cloudinary.com, gratuito) y pega aquí la URL que te da — así tus imágenes quedan organizadas en tu propia cuenta. Lo ideal son fotos horizontales (más anchas que altas) y de menos de 1 MB: si pesan mucho, el sitio carga lento.";
 
 /** Qué hace el bloque de video de un servicio (migración 0007). */
 export const AYUDA_VIDEO_SERVICIO =

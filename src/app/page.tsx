@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Image from "next/image";
+import { ContentImage } from "@/components/ui/ContentImage";
 import type { Metadata } from "next";
 import { Container } from "@/components/ui/Container";
 import { SectionHeading } from "@/components/ui/SectionHeading";
@@ -36,7 +36,7 @@ export default async function HomePage() {
   ]);
   const { hero, excellence, contact, visibility, home } = settings;
   const quienesSomos = home.quienesSomos;
-  const categories = getServiceCategories();
+  const categories = getServiceCategories(settings);
 
   // Secciones que se pueden apagar desde el panel (/admin/inicio y
   // /admin/ajustes). También se ocultan solas si se quedan sin contenido.
@@ -63,7 +63,7 @@ export default async function HomePage() {
         `text-on-photo` para no depender solo del degradado.
       */}
       <section className="under-nav on-dark relative isolate flex min-h-[88vh] items-center overflow-hidden bg-ink">
-        <Image
+        <ContentImage
           src={hero.image}
           alt={hero.imageAlt}
           fill
@@ -185,7 +185,7 @@ export default async function HomePage() {
                 <Reveal key={cat.id} delay={i * 120}>
                   <article className="group relative flex h-full flex-col overflow-hidden rounded-3xl border border-line bg-white shadow-soft transition-all duration-300 hover:shadow-card">
                     <div className="relative aspect-[16/9] overflow-hidden">
-                      <Image
+                      <ContentImage
                         src={cat.image}
                         alt={cat.imageAlt}
                         fill

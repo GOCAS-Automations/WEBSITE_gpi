@@ -103,6 +103,7 @@ function ProjectFields({ project }: { project?: ProjectRecord }) {
       <GalleryField
         label="Galería (opcional)"
         defaultValues={project?.gallery}
+        folder="proyectos"
         hint="Fotos adicionales que se muestran al final de la página del proyecto, en el orden de las filas. A cada una conviene ponerle su texto alternativo."
       />
     </>

@@ -31,7 +31,7 @@ export const revalidate = 300;
 
 export default async function ServiciosPage() {
   const [services, settings] = await Promise.all([getServices(), getSettings()]);
-  const categories = getServiceCategories();
+  const categories = getServiceCategories(settings);
   // Cabecera editable desde /admin/paginas (clave `paginas`, migración 0008).
   const cabecera = settings.paginas.servicios;
 

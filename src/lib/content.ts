@@ -223,9 +223,27 @@ export async function getServicesByCategory(
   return all.filter((s) => s.category === category);
 }
 
-/** Las dos categorías son fijas (industrial / ambiental). */
-export function getServiceCategories(): ServiceCategory[] {
-  return serviceCategories;
+/**
+ * Las dos categorías (industrial / ambiental).
+ *
+ * El nombre, la descripción y el icono son FIJOS: son lo que define a la
+ * categoría y no se editan. La **foto** sí es contenido, y sale de
+ * `settings.paginas.categorias` (editable en `/admin/paginas`); si no se pasan
+ * los ajustes, se usan las del respaldo estático. Así estas dos imágenes
+ * dejan de ser las únicas del sitio que apuntaban al repositorio.
+ */
+export function getServiceCategories(
+  settings?: SiteSettings,
+): ServiceCategory[] {
+  const fotos = settings?.paginas.categorias;
+  if (!fotos) return serviceCategories;
+
+  return serviceCategories.map((categoria) => {
+    const foto = fotos[categoria.id];
+    return foto
+      ? { ...categoria, image: foto.url, imageAlt: foto.alt }
+      : categoria;
+  });
 }
 
 /**

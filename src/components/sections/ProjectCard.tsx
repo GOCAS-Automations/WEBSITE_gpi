@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { ContentImage } from "@/components/ui/ContentImage";
 import Link from "next/link";
 import type { Project } from "@/data/projects";
 import { ArrowRight } from "@/lib/icons";
@@ -19,7 +19,7 @@ export function ProjectCard({ project }: { project: Project }) {
         className="block focus:outline-none"
       >
         <div className="relative aspect-[4/3] overflow-hidden">
-          <Image
+          <ContentImage
             src={project.image}
             alt={project.imageAlt}
             fill

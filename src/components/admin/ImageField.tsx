@@ -1,23 +1,20 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { getBrowserSupabase } from "@/lib/supabase/client";
-import { SITE_IMAGES_BUCKET } from "@/lib/supabase/config";
 import { Upload, Photo } from "@/lib/icons";
+import { esImagenOptimizable } from "@/lib/imagenes";
+import { subirImagenAlBucket } from "./subir-imagen";
 import { AYUDA_IMAGEN, inputClass } from "./ui";
 
-function sanitize(name: string) {
-  return name
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-zA-Z0-9._-]/g, "-")
-    .toLowerCase()
-    .slice(-60);
-}
-
 /**
- * Campo de imagen: el administrador puede pegar una URL externa o una ruta
- * local (`/images/...`), o subir un archivo al bucket público `site-images`.
+ * Campo de imagen: el administrador sube un archivo al bucket público
+ * `site-images` (a la carpeta que indique `folder`) o pega la URL de una
+ * imagen ya publicada en internet — Cloudinary es lo recomendado, ver
+ * `AYUDA_IMAGEN`.
+ *
+ * La vista previa es un `<img>` a secas **a propósito**: acepta cualquier URL
+ * sin pasar por el optimizador de Next, así que una dirección rara se ve rota
+ * en el recuadro pero no rompe la pantalla del panel.
  */
 export function ImageField({
   label,
@@ -39,32 +36,20 @@ export function ImageField({
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  async function handleFile(file: File) {
-    const supabase = getBrowserSupabase();
-    if (!supabase) {
-      setError("Supabase no está configurado.");
-      return;
-    }
+  // Solo avisa de enlaces ya escritos del todo (`https://…`): mientras se
+  // teclea o se pega a medias, cualquier cadena sería «no permitida» y el
+  // aviso parpadearía en cada pulsación.
+  const avisoEnlace =
+    /^https?:\/\/\S+$/i.test(value.trim()) && !esImagenOptimizable(value.trim());
 
+  async function handleFile(file: File) {
     setUploading(true);
     setError(null);
 
-    const path = `${folder}/${Date.now()}-${sanitize(file.name)}`;
-    const { data, error: uploadError } = await supabase.storage
-      .from(SITE_IMAGES_BUCKET)
-      .upload(path, file, { cacheControl: "3600", upsert: false });
+    const resultado = await subirImagenAlBucket(file, folder);
+    if ("error" in resultado) setError(resultado.error);
+    else setValue(resultado.url);
 
-    if (uploadError || !data) {
-      setError(uploadError?.message ?? "No se pudo subir la imagen.");
-      setUploading(false);
-      return;
-    }
-
-    const {
-      data: { publicUrl },
-    } = supabase.storage.from(SITE_IMAGES_BUCKET).getPublicUrl(data.path);
-
-    setValue(publicUrl);
     setUploading(false);
     if (fileRef.current) fileRef.current.value = "";
   }
@@ -98,7 +83,7 @@ export function ImageField({
             required={required}
             value={value}
             onChange={(e) => setValue(e.target.value)}
-            placeholder="/images/... o https://..."
+            placeholder="https://... (o sube un archivo)"
             className={inputClass}
           />
 
@@ -139,6 +124,23 @@ export function ImageField({
           <p className="mt-1.5 text-xs leading-relaxed text-graphite">
             {AYUDA_IMAGEN}
           </p>
+          {/*
+            AVISO DE ENLACE NO PERMITIDO
+            ----------------------------
+            El sitio solo puede MOSTRAR imágenes de su propio almacenamiento y
+            de Cloudinary (lista blanca de `next.config.ts`). Con cualquier
+            otro enlace la página no se rompe —se pinta sin optimizar— pero el
+            navegador bloquea la descarga y el visitante ve un hueco. Sin este
+            aviso, quien edita guardaba tan tranquilo y el problema aparecía
+            después, en el sitio publicado y sin explicación.
+          */}
+          {avisoEnlace && (
+            <p className="mt-1.5 rounded-lg bg-amber-50 px-2.5 py-2 text-xs leading-relaxed text-amber-800">
+              Este enlace no es del almacenamiento del sitio ni de Cloudinary, así
+              que es probable que la imagen no llegue a verse. Sube el archivo con
+              el botón de arriba o publícala en Cloudinary y pega esa dirección.
+            </p>
+          )}
           {error && <p className="mt-1.5 text-xs text-red-600">{error}</p>}
         </div>
       </div>

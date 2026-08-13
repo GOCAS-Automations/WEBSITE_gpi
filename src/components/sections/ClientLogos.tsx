@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { ContentImage } from "@/components/ui/ContentImage";
 import type { Client } from "@/data/clients";
 
 /**
@@ -27,7 +27,7 @@ export function ClientLogos({ clients }: { clients: Client[] }) {
           className="group flex h-24 w-[calc((100%-1rem)/2)] items-center justify-center rounded-2xl border border-line bg-white p-5 shadow-soft transition-all duration-300 hover:-translate-y-1 hover:border-brand/40 hover:shadow-card sm:w-[calc((100%-2rem)/3)] lg:w-[calc((100%-5rem)/6)]"
         >
           <div className="relative h-full w-full">
-            <Image
+            <ContentImage
               src={client.logo}
               alt={`Logo de ${client.name}, cliente de GPI`}
               fill

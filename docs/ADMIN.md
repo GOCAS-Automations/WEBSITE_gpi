@@ -797,7 +797,7 @@ panel*, al final de esta sección).
 | --- | --- | --- |
 | **Página de inicio** | contenido | Primera pantalla (hero), bloque «Quiénes somos» con sus puntos, foto y cifras, título de la sección de servicios, título de los valores, banda oscura, título del portafolio de clientes, cierre de la página y qué secciones del inicio se ven |
 | **Página Nosotros** | contenido | Primera pantalla, Quiénes Somos, Misión, Visión, galería de aliados, línea de tiempo, título de los valores, video de YouTube, texto de cierre y qué secciones se ven |
-| **Cabeceras de páginas y pie del sitio** | contenido | Los textos e imágenes de cabecera de Servicios, Proyectos y Contacto, y la descripción del pie de página |
+| **Cabeceras de páginas y pie del sitio** | contenido | Los textos e imágenes de cabecera de Servicios, Proyectos y Contacto, la descripción del pie de página y las fotos de las tarjetas «Servicios Industriales» / «Servicios Ambientales» |
 | **Servicios** | contenido | CRUD completo: título, título de menú, slug, categoría, icono, orden, visibilidad, resumen, descripción, ítems, portada, galería, **video de YouTube** y SEO |
 | **Proyectos** | contenido | CRUD: título, cliente, **dirección web (slug)**, categoría, descripción corta, **descripción larga**, imagen, **galería**, orden y visibilidad. Cada proyecto tiene su propia página en `/proyectos/<slug>` |
 | **Clientes** | contenido | CRUD: nombre, logo, sitio web, orden y visibilidad |
@@ -841,7 +841,7 @@ páginas estaban escritos en el código. Desde las migraciones 0007 y 0008 hay
 Vive dentro de «Contenido del sitio», pero no es una página completa como el
 inicio o Nosotros: son solo las **cabeceras** —la banda oscura con foto de
 fondo, el título grande y el párrafo que abren cada página— de las páginas que
-no tienen pantalla propia, más el pie.
+no tienen pantalla propia, más el pie y las dos fotos de las tarjetas de área.
 
 | Tarjeta | Qué edita |
 | --- | --- |
@@ -849,6 +849,7 @@ no tienen pantalla propia, más el pie.
 | Página Proyectos | Lo mismo, para la cabecera de `/proyectos` |
 | Página Contacto | Lo mismo, para la cabecera de `/contacto` |
 | Pie de página | El párrafo de presentación que acompaña al logo abajo del todo, en **todas** las páginas del sitio |
+| Fotos de las dos áreas *(nueva, 13 ago 2026)* | La foto (con su texto alternativo) de las tarjetas grandes **«Servicios Industriales»** y **«Servicios Ambientales»**, en el inicio y en `/servicios`. El nombre y la descripción del área siguen fijos: aquí solo se cambia la foto. Botón propio, **«Guardar fotos de las áreas»**. Vive en `site_settings.paginas.categorias`; no depende de ninguna migración SQL — sin ese dato el sitio usa el respaldo estático |
 
 > El **inicio** y **Nosotros** no están en esta pantalla porque tienen la suya
 > propia (arriba y abajo), con muchos más bloques que una sola cabecera.
@@ -997,15 +998,99 @@ En `/admin/proyectos` eso se traduce en tres campos nuevos:
 
 ### Imágenes
 
-En cada campo de imagen puedes:
+En cada campo de imagen del panel hay **dos vías**, ambas válidas:
 
-- **Subir un archivo** → se guarda en el bucket `site-images` de Supabase y el
-  campo se rellena con su URL pública.
-- **Pegar una URL** externa (`https://...`).
-- **Escribir una ruta local** (`/images/servicios/in1.jpg`) para reutilizar las
-  imágenes que ya vienen en `public/images`.
+- **Subir un archivo** → se guarda en el bucket público `site-images` de
+  Supabase, en la carpeta que corresponde a esa pantalla, y el campo se
+  rellena solo con su URL pública.
+- **Pegar una URL** de una imagen ya publicada en internet (`https://...`).
+  Recomendación oficial: **Cloudinary** (ver más abajo).
 
-Siempre se muestra una vista previa.
+Siempre se muestra una vista previa antes de guardar. Las **galerías** —fotos
+adicionales de un servicio, de un proyecto y de «Más que proveedores, somos
+aliados estratégicos» en Nosotros— funcionan igual: cada fila tiene las
+mismas dos vías, con su propio botón **Subir imagen** además del campo de
+URL, y guarda en la misma carpeta del bucket que la portada de esa pantalla.
+
+#### Regla del cliente (13 ago 2026): contenido = bucket o URL externa, nunca `/images/`
+
+Ninguna imagen de **contenido** —servicios, proyectos, clientes y las claves
+`hero`, `home`, `nosotros`, `paginas` de `site_settings`— puede referenciar
+una ruta del repositorio (`/images/...`): esas rutas viven en el código y se
+pierden si el repo cambia sin que nadie lo note desde el panel. Se aplicó de
+una vez el 13 de agosto: se migraron los **53 archivos** de contenido que
+todavía apuntaban a `public/images/` al bucket `site-images` y se
+reescribieron sus **53 referencias** en la base de datos (11 servicios, 4
+proyectos, 5 clientes y las cuatro claves de `site_settings` de arriba).
+Verificado: 0 referencias `/images/` en la base de datos.
+
+> Dos de esos 53 archivos eran fotos que **sí estaban escritas en el
+> código** y no en la base: las imágenes de las dos tarjetas grandes de área
+> («Servicios Industriales» y «Servicios Ambientales», en el inicio y en
+> `/servicios`). Se subieron como `servicios/categoria-industrial.jpg` y
+> `servicios/categoria-ambiental.jpg` y ganaron una tarjeta nueva en
+> `/admin/paginas` (ver más abajo) — antes eran las dos únicas fotos visibles
+> del sitio sin ninguna pantalla que las cambiara.
+
+Lo único que **sí** sigue siendo una ruta del código, a propósito, es lo que
+**no es contenido**: el logo de la barra de navegación y del pie, el favicon
+y la imagen por defecto para redes sociales (OpenGraph). Eso no se edita
+desde el panel.
+
+#### El bucket `site-images`, por carpetas
+
+| Carpeta | Qué guarda |
+| --- | --- |
+| `inicio/` | La foto del hero de la página de inicio y la foto de apoyo de «Quiénes somos» |
+| `nosotros/` | La foto del equipo y las fotos de la galería de aliados |
+| `servicios/` | Portada y galería de cada servicio (`<slug>-portada.jpg`, `<slug>-1.jpg`, `-2.jpg`, `-3.jpg`) y las dos fotos de área: `categoria-industrial.jpg`, `categoria-ambiental.jpg` |
+| `proyectos/` | Foto principal y galería de cada proyecto: `<slug>.jpg`, `<slug>-galeria-N.jpg` |
+| `clientes/` | Logos: `logo-<nombre-del-cliente>.jpg` |
+| `cabeceras/` | La foto de fondo de la cabecera de Servicios, Proyectos, Contacto y Nosotros |
+
+Nombres kebab-case a propósito, para que se lean solos desde el Dashboard de
+Supabase sin tener que abrir cada archivo. Las fotos que el propio cliente
+sube desde el panel se siguen guardando con su nombre de siempre
+(`<marca-de-tiempo>-<archivo>`); no se tocaron en la migración. Bucket final:
+**67 archivos, 15,5 MB** (66 referenciados desde algún campo; el único suelto
+es una foto que GPI subió desde el panel y nunca llegó a guardar en ningún
+campo).
+
+#### Pegar una URL externa: se recomienda Cloudinary
+
+Pegar la URL de un servidor cualquiera funciona —se pinta `unoptimized` para
+que nunca rompa la página—, pero **no es la vía recomendada**: puede quedar
+bloqueada por la política de seguridad del navegador (`img-src` de la CSP en
+`next.config.ts`) si ese servidor no está en la lista blanca. La vía
+recomendada, ya sumada a esa lista blanca, es **Cloudinary**:
+
+1. Crea una cuenta gratis en [cloudinary.com](https://cloudinary.com).
+2. Sube la foto desde su panel.
+3. Copia la URL que empieza por `https://res.cloudinary.com/...` y pégala en
+   el campo de imagen del panel de GPI.
+
+Con Cloudinary la imagen queda **optimizada de verdad** por `next/image` (a
+diferencia de otros servidores externos) y organizada en una cuenta propia de
+GPI. `res.cloudinary.com` está en `images.remotePatterns` y en el `img-src`
+de la CSP de `next.config.ts`.
+
+Para que nadie se entere del problema tarde, el campo de imagen **avisa en el
+momento**: si la dirección pegada no es del bucket ni de Cloudinary, aparece
+un recuadro ámbar debajo diciendo que probablemente no se verá y qué hacer.
+La decisión de optimizar o no vive en `esImagenOptimizable()`
+(`src/lib/imagenes.ts`), que **tiene que ir sincronizada con
+`images.remotePatterns`** de `next.config.ts`: quien toque una lista, que
+toque la otra. Quien pinta las imágenes de contenido es `ContentImage`
+(`src/components/ui/ContentImage.tsx`), no `next/image` a pelo — `next/image`
+directo se reserva para el logo y el resto del *chrome*.
+
+#### Qué pasa con `public/images/`
+
+No se borra: sigue siendo el **respaldo estático** que usa el sitio cuando no
+hay variables de entorno de Supabase o una consulta falla (`src/data/*`, ver
+[§9](#9-cómo-funciona-el-fallback-estático)). Ese respaldo es invisible para
+quien usa el panel — misma regla de siempre, «el sitio nunca depende de que
+la base de datos esté arriba» — y no se edita desde aquí.
 
 ### Navegación del panel
 

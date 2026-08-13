@@ -259,6 +259,7 @@ export default async function AdminNosotrosPage() {
                 src: f.url,
                 alt: f.alt,
               }))}
+              folder="nosotros"
               hint="Lo ideal son tres fotos verticales de trabajo en campo, en el orden de las filas. A cada una conviene ponerle su texto alternativo."
             />
           </AdminForm>

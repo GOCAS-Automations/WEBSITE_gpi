@@ -125,7 +125,7 @@ export default async function AdminInicioPage() {
             <ImageField
               label="Imagen de fondo"
               name="image"
-              folder="hero"
+              folder="inicio"
               required
               defaultValue={hero.image}
               hint="Ocupa toda la primera pantalla, así que conviene una foto horizontal y de buena calidad."

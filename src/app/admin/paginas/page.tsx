@@ -14,6 +14,7 @@ import { ImageField } from "@/components/admin/ImageField";
 import type { PaginaHero } from "@/data/site";
 import type { ActionState } from "@/lib/admin-types";
 import {
+  savePaginaCategorias,
   savePaginaContacto,
   savePaginaFooter,
   savePaginaProyectos,
@@ -91,6 +92,59 @@ export default async function AdminPaginasPage() {
           action={savePaginaContacto}
           valores={paginas.contacto}
         />
+
+        {/* ---------------- Tarjetas de categoría ----------------
+            Las dos fotos grandes de «Servicios Industriales» y «Servicios
+            Ambientales». Salen en el inicio y en /servicios, y hasta el 13 de
+            agosto de 2026 eran las únicas imágenes visibles del sitio que no
+            se podían cambiar desde ningún lado. */}
+        <Card>
+          <CardTitle
+            title="Fotos de las dos áreas"
+            description="Las tarjetas grandes de «Servicios Industriales» y «Servicios Ambientales». Se ven en el inicio y en la página de Servicios."
+          />
+          <AdminForm
+            action={savePaginaCategorias}
+            submitLabel="Guardar fotos de las áreas"
+          >
+            <div className="grid gap-6 sm:grid-cols-2">
+              <div className="space-y-4">
+                <ImageField
+                  label="Servicios Industriales"
+                  name="industrial_url"
+                  folder="servicios"
+                  required
+                  defaultValue={paginas.categorias.industrial.url}
+                  hint="El nombre y la descripción del área son fijos; aquí solo se cambia la foto."
+                />
+                <Field
+                  scope="categoria-industrial"
+                  label="Texto alternativo"
+                  name="industrial_alt"
+                  defaultValue={paginas.categorias.industrial.alt}
+                  hint={AYUDA_ALT}
+                />
+              </div>
+              <div className="space-y-4">
+                <ImageField
+                  label="Servicios Ambientales"
+                  name="ambiental_url"
+                  folder="servicios"
+                  required
+                  defaultValue={paginas.categorias.ambiental.url}
+                  hint="El nombre y la descripción del área son fijos; aquí solo se cambia la foto."
+                />
+                <Field
+                  scope="categoria-ambiental"
+                  label="Texto alternativo"
+                  name="ambiental_alt"
+                  defaultValue={paginas.categorias.ambiental.alt}
+                  hint={AYUDA_ALT}
+                />
+              </div>
+            </div>
+          </AdminForm>
+        </Card>
 
         {/* ---------------- Pie de página ---------------- */}
         <Card>
@@ -173,7 +227,7 @@ function CabeceraDePagina({
         <ImageField
           label="Imagen de fondo"
           name="imagen_url"
-          folder="paginas"
+          folder="cabeceras"
           required
           defaultValue={valores.imagen.url}
           hint="Se ve oscurecida detrás del título: conviene una foto horizontal, de buena calidad y sin texto encima."

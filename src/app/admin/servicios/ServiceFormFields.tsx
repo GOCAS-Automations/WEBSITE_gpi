@@ -141,6 +141,7 @@ export function ServiceFormFields({ service }: { service?: ServiceRecord }) {
           <GalleryField
             label="Galería (opcional)"
             defaultValues={service?.images.gallery}
+            folder="servicios"
             hint="Imágenes adicionales que se muestran al final de la página del servicio, en el orden de las filas. A cada una conviene ponerle su texto alternativo."
           />
         </div>

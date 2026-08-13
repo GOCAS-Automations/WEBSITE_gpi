@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
+import { ContentImage } from "@/components/ui/ContentImage";
 import { notFound } from "next/navigation";
 import { Container } from "@/components/ui/Container";
 import { ButtonLink } from "@/components/ui/Button";
@@ -176,7 +176,7 @@ export default async function ServiceDetailPage({
                         key={img.src}
                         className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-line shadow-soft"
                       >
-                        <Image
+                        <ContentImage
                           src={img.src}
                           alt={img.alt}
                           fill

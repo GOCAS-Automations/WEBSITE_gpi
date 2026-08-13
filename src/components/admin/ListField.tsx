@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { iconMap, Plus, Trash, type IconName } from "@/lib/icons";
-import { inputClass } from "./ui";
+import { useRef, useState } from "react";
+import { iconMap, Plus, Trash, Upload, type IconName } from "@/lib/icons";
+import { subirImagenAlBucket } from "./subir-imagen";
+import { AYUDA_IMAGEN, inputClass } from "./ui";
 
 let counter = 0;
 const nextKey = () => {
@@ -179,14 +180,74 @@ export function PairListField({
 /* Galería: lista de imágenes con URL + texto alternativo              */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Botón «Subir» de una fila de la galería.
+ *
+ * Existe porque la galería antes SOLO aceptaba pegar una URL: para añadir una
+ * foto del computador había que alojarla fuera primero. Ahora sube al bucket
+ * igual que `ImageField` —misma función, misma carpeta— y escribe la URL
+ * pública en la fila.
+ */
+function SubirFoto({
+  folder,
+  onSubida,
+}: {
+  folder: string;
+  onSubida: (url: string) => void;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [subiendo, setSubiendo] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function manejar(file: File) {
+    setSubiendo(true);
+    setError(null);
+
+    const resultado = await subirImagenAlBucket(file, folder);
+    if ("error" in resultado) setError(resultado.error);
+    else onSubida(resultado.url);
+
+    setSubiendo(false);
+    if (fileRef.current) fileRef.current.value = "";
+  }
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => fileRef.current?.click()}
+        disabled={subiendo}
+        className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1.5 text-xs font-semibold text-ink-soft transition-colors hover:border-brand hover:text-brand-dark disabled:opacity-60"
+      >
+        <Upload className="h-3.5 w-3.5" />
+        {subiendo ? "Subiendo…" : "Subir imagen"}
+      </button>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) void manejar(file);
+        }}
+      />
+      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+    </div>
+  );
+}
+
 export function GalleryField({
   label,
   defaultValues,
   hint,
+  folder = "general",
 }: {
   label: string;
   defaultValues?: { src: string; alt: string }[];
   hint?: string;
+  /** Carpeta del bucket donde caen las fotos que se suban desde aquí. */
+  folder?: string;
 }) {
   const [rows, setRows] = useState(() =>
     (defaultValues ?? []).map((value) => ({ key: nextKey(), ...value })),
@@ -214,7 +275,7 @@ export function GalleryField({
               <input
                 name="gallery_src"
                 value={row.src}
-                placeholder="/images/... o https://..."
+                placeholder="https://... (o sube un archivo)"
                 aria-label="URL de la imagen"
                 onChange={(e) =>
                   setRows((prev) =>
@@ -224,6 +285,14 @@ export function GalleryField({
                   )
                 }
                 className={inputClass}
+              />
+              <SubirFoto
+                folder={folder}
+                onSubida={(url) =>
+                  setRows((prev) =>
+                    prev.map((r) => (r.key === row.key ? { ...r, src: url } : r)),
+                  )
+                }
               />
               <input
                 name="gallery_alt"
@@ -264,6 +333,7 @@ export function GalleryField({
       </button>
 
       {hint && <p className="mt-2 text-xs text-graphite">{hint}</p>}
+      <p className="mt-1.5 text-xs leading-relaxed text-graphite">{AYUDA_IMAGEN}</p>
     </div>
   );
 }

@@ -15,6 +15,7 @@
 // Si cambias un texto aquí, cámbialo también allí.
 
 import { contact as staticContact } from "@/data/contact";
+import { serviceCategories } from "@/data/services";
 import { iconMap, type IconName } from "@/lib/icons";
 
 export interface ContactSettings {
@@ -139,6 +140,22 @@ export interface PaginasSettings {
   proyectos: PaginaHero;
   contacto: PaginaHero;
   footer: { descripcion: string };
+  /**
+   * Las fotos de las dos tarjetas grandes de categoría —«Servicios
+   * Industriales» y «Servicios Ambientales»— que salen en el inicio y en
+   * `/servicios`.
+   *
+   * Estaban escritas en `serviceCategories` (`src/data/services.ts`) y eran
+   * las dos ÚNICAS imágenes visibles del sitio que no se podían cambiar desde
+   * el panel: aparecían en la portada, pero no en ninguna pantalla de
+   * `/admin`. Desde el 13 de agosto de 2026 son contenido editable como el
+   * resto (`/admin/paginas`); el texto y el icono de cada categoría siguen
+   * siendo fijos, que es lo que define a la categoría.
+   */
+  categorias: {
+    industrial: ImagenContenido;
+    ambiental: ImagenContenido;
+  };
 }
 
 /* ------------------------------------------------------------------ */
@@ -429,6 +446,18 @@ export const paginasDefaults: PaginasSettings = {
   footer: {
     descripcion:
       "Empresa de gestión estratégica y ejecución enfocada en generar rentabilidad y cumplimiento, integrando las variables del modelo de negocio de cada organización. Más de 15 años en el sector industrial-ambiental.",
+  },
+  // Respaldo estático: las mismas dos fotos que traía `serviceCategories`.
+  // En la base de datos viven apuntando al bucket (ver `docs/ADMIN.md`).
+  categorias: {
+    industrial: {
+      url: serviceCategories[0].image,
+      alt: serviceCategories[0].imageAlt,
+    },
+    ambiental: {
+      url: serviceCategories[1].image,
+      alt: serviceCategories[1].imageAlt,
+    },
   },
 };
 
@@ -815,6 +844,7 @@ function paginaHero(value: unknown, respaldo: PaginaHero): PaginaHero {
 export function normalizarPaginas(value: unknown): PaginasSettings {
   const entrada = isRecord(value) ? value : {};
   const footer = isRecord(entrada.footer) ? entrada.footer : {};
+  const categorias = isRecord(entrada.categorias) ? entrada.categorias : {};
 
   return {
     servicios: paginaHero(entrada.servicios, paginasDefaults.servicios),
@@ -822,6 +852,13 @@ export function normalizarPaginas(value: unknown): PaginasSettings {
     contacto: paginaHero(entrada.contacto, paginasDefaults.contacto),
     footer: {
       descripcion: texto(footer.descripcion, paginasDefaults.footer.descripcion),
+    },
+    categorias: {
+      industrial: imagen(
+        categorias.industrial,
+        paginasDefaults.categorias.industrial,
+      ),
+      ambiental: imagen(categorias.ambiental, paginasDefaults.categorias.ambiental),
     },
   };
 }

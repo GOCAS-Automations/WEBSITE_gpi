@@ -895,6 +895,29 @@ export async function savePaginaFooter(
   });
 }
 
+/**
+ * Fotos de las dos tarjetas de categoría (inicio y `/servicios`).
+ *
+ * Son obligatorias: las tarjetas no tienen un estado «sin foto», el texto va
+ * escrito ENCIMA de la imagen y sin ella quedaría sobre un rectángulo vacío.
+ */
+export async function savePaginaCategorias(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const industrial = imagenDeFormulario(
+    formData,
+    "industrial_url",
+    "industrial_alt",
+  );
+  const ambiental = imagenDeFormulario(formData, "ambiental_url", "ambiental_alt");
+
+  if (industrial.url === "" || ambiental.url === "") {
+    return fail("Las dos fotos de categoría son obligatorias.");
+  }
+  return guardarPaginas({ categorias: { industrial, ambiental } });
+}
+
 /* ------------------------------------------------------------------ */
 /* Página Nosotros (`nosotros`)                                        */
 /* ------------------------------------------------------------------ */

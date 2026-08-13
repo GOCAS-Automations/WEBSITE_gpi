@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { ContentImage } from "@/components/ui/ContentImage";
 import { Container } from "@/components/ui/Container";
 import { Breadcrumbs, type Crumb } from "@/components/ui/Breadcrumbs";
 import { Wave } from "@/components/ui/Wave";
@@ -36,7 +36,7 @@ export function PageHero({
 }: PageHeroProps) {
   return (
     <section className="under-nav on-dark relative isolate overflow-hidden bg-ink">
-      <Image
+      <ContentImage
         src={image}
         alt={imageAlt}
         fill

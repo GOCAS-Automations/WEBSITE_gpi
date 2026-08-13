@@ -58,9 +58,13 @@ const contentSecurityPolicy = [
   "style-src 'self' 'unsafe-inline'",
   "style-src-attr 'unsafe-inline'",
 
-  // Imágenes propias, data:/blob: (previsualización de subidas en /admin) y el
-  // bucket público `site-images` de Supabase.
-  `img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in`,
+  // Imágenes propias, data:/blob: (previsualización de subidas en /admin), el
+  // bucket público `site-images` de Supabase y Cloudinary, que es el servicio
+  // que se le recomienda a GPI para alojar imágenes por su cuenta (ver
+  // `docs/ADMIN.md`). Una URL de otro servidor no rompe nada —se pinta sin
+  // optimizar, ver `src/lib/imagenes.ts`— pero el navegador la bloqueará aquí:
+  // por eso el panel recomienda subir el archivo o usar Cloudinary.
+  `img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in https://res.cloudinary.com`,
 
   // next/font autoaloja las tipografías en /_next/static/media.
   "font-src 'self' data:",
@@ -138,8 +142,21 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["nodemailer"],
 
   images: {
-    // Imágenes subidas desde /admin al bucket público `site-images`.
-    // El hostname del proyecto Supabase es <ref>.supabase.co.
+    /**
+     * HOSTS DE IMAGEN PERMITIDOS
+     * ==========================
+     * Esta lista es la que decide qué imágenes pasan por el optimizador de
+     * Next (`/_next/image`). Tiene que ir SINCRONIZADA con
+     * `HOSTS_IMAGEN_OPTIMIZABLES` de `src/lib/imagenes.ts`, que es lo que
+     * `ContentImage` consulta para no mandar al optimizador una URL que
+     * rechazaría: en desarrollo el rechazo es una excepción que tumba la
+     * página y en producción un 400 que deja la foto rota.
+     *
+     *   · Supabase: el bucket público `site-images`, donde vive TODA la
+     *     imagen de contenido (`<ref>.supabase.co`).
+     *   · Cloudinary: el servicio que se le recomienda a GPI para publicar
+     *     imágenes desde su propia cuenta y pegar aquí el enlace.
+     */
     remotePatterns: [
       {
         protocol: "https",
@@ -150,6 +167,11 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "**.supabase.in",
         pathname: "/storage/v1/object/public/**",
+      },
+      {
+        protocol: "https",
+        hostname: "res.cloudinary.com",
+        pathname: "/**",
       },
     ],
   },
