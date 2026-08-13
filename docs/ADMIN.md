@@ -12,6 +12,12 @@ la gestión de cuentas y el registro de jornadas (horas extra).
 
 ## 1. Aplicar las migraciones en Supabase
 
+> ✅ **Estado actual: las ocho migraciones YA ESTÁN APLICADAS en el proyecto
+> "GPI Project" de Supabase** (se aplicaron y verificaron entre el 27 de julio
+> y el 12 de agosto de 2026). Esta sección NO es una lista de tareas
+> pendientes: es la referencia de qué hace cada migración y el procedimiento
+> por si algún día hubiera que montar el proyecto en un Supabase nuevo.
+
 Hay **ocho** migraciones y se aplican **en orden**:
 
 | Archivo | Qué añade |
