@@ -12,13 +12,13 @@ la gestión de cuentas y el registro de jornadas (horas extra).
 
 ## 1. Aplicar las migraciones en Supabase
 
-> ✅ **Estado actual: las ocho migraciones YA ESTÁN APLICADAS en el proyecto
+> ✅ **Estado actual: las nueve migraciones YA ESTÁN APLICADAS en el proyecto
 > "GPI Project" de Supabase** (se aplicaron y verificaron entre el 27 de julio
-> y el 12 de agosto de 2026). Esta sección NO es una lista de tareas
+> y el 13 de agosto de 2026). Esta sección NO es una lista de tareas
 > pendientes: es la referencia de qué hace cada migración y el procedimiento
 > por si algún día hubiera que montar el proyecto en un Supabase nuevo.
 
-Hay **ocho** migraciones y se aplican **en orden**:
+Hay **nueve** migraciones y se aplican **en orden**:
 
 | Archivo | Qué añade |
 | --- | --- |
@@ -30,6 +30,7 @@ Hay **ocho** migraciones y se aplican **en orden**:
 | `supabase/migrations/0006_mensajes_contacto.sql` | Tabla `site_mensajes`: respaldo en base de datos de cada mensaje del formulario de `/contacto` |
 | `supabase/migrations/0007_contenido_paginas.sql` | Contenido editable de las páginas de **inicio** y **Nosotros**, interruptores por sección, **contador de visitas** (`site_visitas`) y **video por servicio** (`site_services.video`) |
 | `supabase/migrations/0008_titulos_paginas.sql` | Títulos que quedaban escritos en el código: sección de servicios, valores y clientes del inicio y su cierre (`site_settings.home`), cabeceras de **Servicios**, **Proyectos** y **Contacto** y el párrafo del **pie de página** (`site_settings.paginas`) |
+| `supabase/migrations/0009_telefono_mensajes.sql` | Columna `telefono` (opcional) en `site_mensajes`: respaldo del teléfono que ahora pide el formulario de `/contacto` |
 
 Para cada una:
 
@@ -122,7 +123,7 @@ verás exactamente lo mismo que ahora, pero ya editable.
 
 | Objeto | Para qué sirve |
 | --- | --- |
-| Tabla `site_mensajes` | Una copia de cada mensaje del formulario de `/contacto`: `nombre`, `empresa`, `correo`, `mensaje`, `correo_destino`, `enviado` y `created_at` |
+| Tabla `site_mensajes` | Una copia de cada mensaje del formulario de `/contacto`: `nombre`, `empresa`, `correo`, `telefono` (0009, opcional), `mensaje`, `correo_destino`, `enviado` y `created_at` |
 | Política `site_mensajes_select_manager` | **Única** política de la tabla: solo un manager autenticado puede leerla (pensando en una futura bandeja de mensajes en el panel) |
 
 > **Por qué existe:** el formulario envía el correo de verdad, pero un envío
@@ -202,6 +203,22 @@ con su propia pantalla desde la 0007.
 > realidad **no dependen de la migración** para poder editarse — la 0008 solo
 > adelanta la semilla inicial y corrige el «+5 años» del pie sin que nadie
 > tenga que tocar cada campo a mano.
+
+### ¿Qué añade la 0009?
+
+| Objeto | Para qué sirve |
+| --- | --- |
+| Columna `site_mensajes.telefono` | El teléfono que ahora pide el formulario de `/contacto` (obligatorio), como respaldo del que ya viaja dentro del correo |
+
+> La columna es **`nullable`**: los mensajes guardados antes de esta migración
+> no tienen teléfono (el campo no existía todavía en el formulario) y se
+> quedan con `NULL`, no con una cadena vacía.
+>
+> Mientras la 0009 no esté aplicada el sitio **no se rompe**: el formulario
+> sigue pidiendo el teléfono y lo sigue mandando dentro del correo — lo único
+> que falta es el respaldo en la tabla. La server action reintenta el
+> `insert` sin la columna, el mismo patrón que `saveService` con la columna
+> `video` de la 0007.
 
 ### Si el bloque del usuario admin de la 0001 falla
 
@@ -1196,8 +1213,8 @@ Cuando alguien llena el formulario de `/contacto` y pulsa **Enviar mensaje**:
 3. **Envía el correo** al buzón de `/admin/ajustes` → *Correo del formulario de
    contacto*, con:
    - **Asunto**: *"Contacto desde el sitio web — [nombre] ([empresa])"*.
-   - **Cuerpo**: nombre, empresa, correo, fecha en hora de Colombia y el
-     mensaje, en texto plano y en HTML.
+   - **Cuerpo**: nombre, empresa, correo, **teléfono**, fecha en hora de
+     Colombia y el mensaje, en texto plano y en HTML.
    - **Responder-a (`Reply-To`) = el correo del visitante**. Esto es lo más
      útil de todo: al pulsar *Responder* en Gmail, la respuesta le llega
      directamente al prospecto, no a la cuenta de GPI.
@@ -1206,6 +1223,26 @@ Cuando alguien llena el formulario de `/contacto` y pulsa **Enviar mensaje**:
 Antes se abría el programa de correo del visitante (`mailto:`). GPI reportó que
 "no abre nada", que es exactamente lo que ocurre en un computador sin programa
 de correo configurado — la situación de la mayoría de la gente hoy.
+
+### El teléfono es obligatorio (13 ago 2026)
+
+El formulario pide ahora **Nombre\*, Empresa (opcional), Correo electrónico\*,
+Teléfono\* y Mensaje\***, con el teléfono **al lado del correo**, en la misma
+fila de dos columnas (una debajo de otra en pantallas de móvil).
+
+- Acepta dígitos, espacios, `+`, guiones, paréntesis y puntos, y exige entre
+  **7 y 20 dígitos** una vez quitados esos separadores — a propósito laxo,
+  para que pasen por igual un fijo de Cali («602 555 5555»), un celular con
+  indicativo («+57 318 434 1249») o un número internacional. Se valida en el
+  navegador **y** en el servidor; la del servidor es la que manda.
+- Mensajes de error: *"Escribe tu número de teléfono."* si va vacío y *"Ese
+  teléfono no parece válido. Escríbelo con indicativo, por ejemplo: +57 318
+  434 1249"* si no cumple el patrón.
+- El teléfono **llega dentro del correo** que recibe GPI (fila "Teléfono" en
+  la ficha HTML y línea "Teléfono: …" en la versión de texto plano, la misma
+  que usa el enlace de respaldo de Gmail) y se guarda además en
+  `site_mensajes.telefono` (migración 0009). El enlace de WhatsApp no lo
+  repite: quien escribe por ahí ya llega con su número.
 
 ### Desde qué buzón sale el correo: dos opciones
 
@@ -1320,7 +1357,7 @@ variables ni volver a desplegar.
 | Todo bien | *"✅ Tu mensaje fue enviado. Te responderemos pronto al correo que nos dejaste."* |
 | El correo falla pero el mensaje **sí** se guardó en `site_mensajes` | *"✅ Recibimos tu mensaje y ya está en nuestra bandeja."* — es la verdad: GPI lo tiene aunque el correo no saliera, así que no se le molesta con alternativas |
 | El correo falla **y** no se pudo guardar | Mensaje amable + dos alternativas: **Gmail en el navegador** y **WhatsApp** (ya no se ofrece `mailto:` / "programa de correo": GPI probó esa opción y no abre nada en equipos sin cliente de correo configurado) |
-| Las variables `CONTACT_SMTP_*` no están puestas (situación actual, temporal) | El botón principal aparece **inhabilitado** (no se promete un envío que no va a ocurrir) con un aviso pequeño debajo: *"El envío directo desde el sitio estará disponible muy pronto. Mientras tanto, escríbenos por WhatsApp."* La única vía activa en pantalla es **WhatsApp**. Ya no se guarda copia en `site_mensajes` en este caso porque no hay ningún envío que dispare el guardado. En cuanto se carguen las credenciales, este estado desaparece solo |
+| Si las variables `CONTACT_SMTP_*` no estuvieran puestas | El botón principal aparece **inhabilitado** (no se promete un envío que no va a ocurrir) con un aviso pequeño debajo: *"El envío directo desde el sitio estará disponible muy pronto. Mientras tanto, escríbenos por WhatsApp."* La única vía activa en pantalla es **WhatsApp**. Ya no se guarda copia en `site_mensajes` en este caso porque no hay ningún envío que dispare el guardado. En cuanto se carguen las credenciales, este estado desaparece solo — es justo lo que pasó el 13 de agosto de 2026: **las cuatro variables ya están cargadas en Vercel y en `.env.local`, y el envío directo está activo en producción** |
 
 En todos los casos el mensaje **nunca desaparece en silencio**: o sale por
 correo, o queda guardado, o el visitante recibe una vía alternativa clara.
@@ -1349,6 +1386,7 @@ correo, o queda guardado, o el visitante recibe una vía alternativa clara.
 | Tipos y textos compartidos (asunto, cuerpo, límites) | `src/lib/contacto-types.ts` |
 | Formulario y sus tres modos | `src/components/sections/ContactForm.tsx` |
 | Tabla de respaldo | `supabase/migrations/0006_mensajes_contacto.sql` |
+| Columna `telefono` de respaldo | `supabase/migrations/0009_telefono_mensajes.sql` |
 
 > `nodemailer` es la única dependencia nueva del proyecto. Está declarada en
 > `serverExternalPackages` (`next.config.ts`) porque es una librería de Node

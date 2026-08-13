@@ -15,10 +15,12 @@ import {
   CAMPO_ENVIADO,
   CAMPO_MONTADO,
   CAMPO_TRAMPA,
+  ERROR_TELEFONO,
   LIMITES_CONTACTO,
   asuntoContacto,
   cuerpoContacto,
   estadoContactoInicial,
+  esTelefonoValido,
   type CampoContacto,
   type EstadoContacto,
 } from "@/lib/contacto-types";
@@ -93,6 +95,7 @@ export function ContactForm({
     nombre: "",
     empresa: "",
     correo: "",
+    telefono: "",
     mensaje: "",
   });
   const [estado, setEstado] = useState<EstadoContacto>(estadoContactoInicial);
@@ -170,6 +173,9 @@ export function ContactForm({
     else if (!esCorreoValido(form.correo))
       errores.correo =
         "Ese correo no parece válido. Escríbelo completo, por ejemplo: nombre@empresa.com";
+    if (form.telefono.trim() === "")
+      errores.telefono = "Escribe tu número de teléfono.";
+    else if (!esTelefonoValido(form.telefono)) errores.telefono = ERROR_TELEFONO;
     if (form.mensaje.trim() === "")
       errores.mensaje = "Cuéntanos brevemente qué necesitas.";
 
@@ -206,7 +212,13 @@ export function ContactForm({
       const resultado = await enviarMensajeContacto(datos);
       setEstado(resultado);
       if (resultado.estado === "exito") {
-        setForm({ nombre: "", empresa: "", correo: "", mensaje: "" });
+        setForm({
+          nombre: "",
+          empresa: "",
+          correo: "",
+          telefono: "",
+          mensaje: "",
+        });
         formRef.current?.reset();
         // El formulario vuelve a empezar: nueva marca de montaje para que el
         // siguiente mensaje también pase el filtro de tiempo.
@@ -299,26 +311,56 @@ export function ContactForm({
         </div>
       </div>
 
-      <div>
-        <label htmlFor="correo" className="mb-1.5 block text-sm font-semibold text-ink">
-          Correo electrónico <span className="text-brand-dark">*</span>
-        </label>
-        <input
-          id="correo"
-          name="correo"
-          type="email"
-          required
-          aria-required="true"
-          aria-invalid={Boolean(errores.correo)}
-          aria-describedby={errores.correo ? "error-correo" : undefined}
-          autoComplete="email"
-          maxLength={LIMITES_CONTACTO.correo}
-          value={form.correo}
-          onChange={(e) => update("correo", e.target.value)}
-          className={`${inputClass} ${errores.correo ? inputErrorClass : ""}`}
-          placeholder="tucorreo@ejemplo.com"
-        />
-        <ErrorCampo id="error-correo" texto={errores.correo} />
+      {/* Correo y teléfono, la pareja de datos de contacto: los dos son
+          obligatorios y GPI usa el que le quede mejor para responder. */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label htmlFor="correo" className="mb-1.5 block text-sm font-semibold text-ink">
+            Correo electrónico <span className="text-brand-dark">*</span>
+          </label>
+          <input
+            id="correo"
+            name="correo"
+            type="email"
+            required
+            aria-required="true"
+            aria-invalid={Boolean(errores.correo)}
+            aria-describedby={errores.correo ? "error-correo" : undefined}
+            autoComplete="email"
+            maxLength={LIMITES_CONTACTO.correo}
+            value={form.correo}
+            onChange={(e) => update("correo", e.target.value)}
+            className={`${inputClass} ${errores.correo ? inputErrorClass : ""}`}
+            placeholder="tucorreo@ejemplo.com"
+          />
+          <ErrorCampo id="error-correo" texto={errores.correo} />
+        </div>
+        <div>
+          <label htmlFor="telefono" className="mb-1.5 block text-sm font-semibold text-ink">
+            Teléfono <span className="text-brand-dark">*</span>
+          </label>
+          {/* `type="tel"` + `inputMode="tel"` levantan el teclado numérico con
+              `+` y `*` en el móvil; `autocomplete="tel"` deja que el navegador
+              lo rellene. No se usa `pattern`: el navegador mostraría su propio
+              mensaje en inglés y aquí los errores se explican en español. */}
+          <input
+            id="telefono"
+            name="telefono"
+            type="tel"
+            required
+            aria-required="true"
+            aria-invalid={Boolean(errores.telefono)}
+            aria-describedby={errores.telefono ? "error-telefono" : undefined}
+            autoComplete="tel"
+            inputMode="tel"
+            maxLength={LIMITES_CONTACTO.telefono}
+            value={form.telefono}
+            onChange={(e) => update("telefono", e.target.value)}
+            className={`${inputClass} ${errores.telefono ? inputErrorClass : ""}`}
+            placeholder="+57 318 434 1249"
+          />
+          <ErrorCampo id="error-telefono" texto={errores.telefono} />
+        </div>
       </div>
 
       <div>

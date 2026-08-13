@@ -1,8 +1,15 @@
 # Plan del proyecto — Sitio web GPI
 
-Estado al **12 de agosto de 2026**. Este documento existe para que cualquier
-sesión futura (humana o de Claude) arranque con contexto completo sin tener
-que reconstruir el historial desde los commits.
+Estado al **13 de agosto de 2026 (cierre del proyecto)**. Este documento
+existe para que cualquier sesión futura (humana o de Claude) arranque con
+contexto completo sin tener que reconstruir el historial desde los commits.
+
+**El sitio queda terminado en esta fecha**: Fases 1 y 2 completas, las
+**nueve** migraciones aplicadas en el GPI Project, el correo del formulario de
+contacto **activo en producción** y el QA final del sitio pasado. El único
+punto que queda pendiente es **conectar el dominio** `gpiprofesionales.com`
+(Fase 6 de la tabla de abajo — DNS de GoDaddy → Vercel), a la espera de que
+GPI dé la orden.
 
 ## Fases
 
@@ -13,16 +20,17 @@ que reconstruir el historial desde los commits.
 | 3 | Conexión a DB real y prueba end-to-end | ✅ Completa | Migraciones 0001–0004 aplicadas en el GPI Project; 8 cuentas del equipo creadas; testing completo del cliente ejecutado el 30 jul (plan en `docs/PLAN_PRUEBAS.md`). |
 | 4 | Fase 2 del proyecto — Núcleo de horas extra | ✅ Completa | Roles ampliados, CRUD de empleados con cuentas, portal del empleado con registro de jornadas, aprobaciones y visibilidad del contenido. Migraciones 0001 y 0002 **ya aplicadas** en el GPI Project (27 jul 2026); `SUPABASE_SERVICE_ROLE_KEY` configurada en `.env.local`. |
 | 4b | Fase 2 — Tablero de métricas de horas extra | ✅ Completa | `/admin/jornadas?vista=metricas`: 4 KPIs, gráficas Recharts (por día, por empleado, extras, Gantt de turnos), filtros client-side, control semanal contra topes legales, glosario amable y export CSV para nómina. |
-| 4c | Fase 2 — Iteración post-feedback de GPI | ✅ Código listo | Horarios laborales **mes a mes** (`/admin/horarios`), cuentas por **usuario** en vez de correo, y el rol *marketing* pasa a llamarse **Community Manager** (y también registra jornadas). Migración 0003 aplicada. |
-| 4d | Fase 2 — Desglose congelado + ayudas del panel | ✅ Código listo | Al **aprobar** una jornada su desglose de horas se guarda tal cual, con el horario y los recargos que se usaron: los reportes de nómina ya cerrados no cambian si después se corrige un horario. Además, textos de ayuda en todo el panel para usuarios no técnicos. Migración 0004 aplicada. |
+| 4c | Fase 2 — Iteración post-feedback de GPI | ✅ Completa | Horarios laborales **mes a mes** (`/admin/horarios`), cuentas por **usuario** en vez de correo, y el rol *marketing* pasa a llamarse **Community Manager** (y también registra jornadas). Migración 0003 aplicada. |
+| 4d | Fase 2 — Desglose congelado + ayudas del panel | ✅ Completa | Al **aprobar** una jornada su desglose de horas se guarda tal cual, con el horario y los recargos que se usaron: los reportes de nómina ya cerrados no cambian si después se corrige un horario. Además, textos de ayuda en todo el panel para usuarios no técnicos. Migración 0004 aplicada. |
 | 4e | Fase 2 — Ajustes del testing del cliente (30 jul) | ✅ Hecho | El panel pasa a ser la pantalla principal de admin y coordinador, los managers pueden **eliminar** jornadas y los filtros de aprobaciones se aplican al cambiar. **Sin migración nueva.** |
-| 4f | Complementos post-aprobación (31 jul) | ✅ Código listo | Formulario de contacto al **correo corporativo** (editable en Ajustes), **página propia por proyecto** con galería, y **orden de trabajo opcional** en las jornadas. **Falta aplicar la migración 0005.** |
-| 4g | Envío real del formulario de contacto (3 ago) | ✅ Código listo | El formulario pasa de `mailto:` a **envío directo por SMTP de Gmail** desde una server action, con respaldo del mensaje en `site_mensajes` y modo alternativo (Gmail web / programa de correo / WhatsApp). **Falta aplicar la migración 0006** y configurar `CONTACT_SMTP_USER` / `CONTACT_SMTP_PASS`. |
-| 4h | Rediseño y contenido editable total (12 ago) — **capa de datos y panel** | ✅ Código listo | Contenido de **inicio** y **Nosotros** editable desde dos pantallas nuevas del panel y sembrado con los textos oficiales del community manager, **contador de visitas**, **video por servicio** e interruptores por sección. **Falta aplicar la migración 0007.** |
-| 4i | Rediseño y contenido editable total (12 ago) — **pase visual** | ⏳ En curso | El rediseño de las páginas públicas según el prototipo del community manager (línea de tiempo, galería de aliados, misión/visión, menú, opacidad del hero, logos de clientes a color). El contenido ya existe y es editable: falta la estética. |
-| 4j | Pulido final (12 ago) | ✅ Código listo | Últimos títulos editables del inicio y de las cabeceras de página (`/admin/inicio`, `/admin/paginas`), menú del panel agrupado en seis entradas detrás de «Contenido del sitio», «Mi Cuenta» rebota al panel para los roles de contenido, arreglo del bug «el panel se traba» al navegar, y ajustes visuales menores. **Falta aplicar la migración 0008**; el código funciona igual sin ella. |
+| 4f | Complementos post-aprobación (31 jul) | ✅ Completa | Formulario de contacto al **correo corporativo** (editable en Ajustes), **página propia por proyecto** con galería, y **orden de trabajo opcional** en las jornadas. Migración 0005 aplicada. |
+| 4g | Envío real del formulario de contacto (3 ago) | ✅ Completa | El formulario pasa de `mailto:` a **envío directo por SMTP** desde una server action, con respaldo del mensaje en `site_mensajes` y modo alternativo (Gmail web / programa de correo / WhatsApp). Migración 0006 aplicada; las variables `CONTACT_SMTP_*` quedaron configuradas el 13 ago (fila 4k). |
+| 4h | Rediseño y contenido editable total (12 ago) — **capa de datos y panel** | ✅ Completa | Contenido de **inicio** y **Nosotros** editable desde dos pantallas nuevas del panel y sembrado con los textos oficiales del community manager, **contador de visitas**, **video por servicio** e interruptores por sección. Migración 0007 aplicada. |
+| 4i | Rediseño y contenido editable total (12 ago) — **pase visual** | ✅ Completa | El rediseño de las páginas públicas según el prototipo del community manager (línea de tiempo, galería de aliados, misión/visión, menú, opacidad del hero, logos de clientes a color), cerrado a lo largo del pulido final, los ajustes finales del 12 ago y las iteraciones del 13 ago (bucket de imágenes, carrusel de Nosotros con peek). |
+| 4j | Pulido final (12 ago) | ✅ Completa | Últimos títulos editables del inicio y de las cabeceras de página (`/admin/inicio`, `/admin/paginas`), menú del panel agrupado en seis entradas detrás de «Contenido del sitio», «Mi Cuenta» rebota al panel para los roles de contenido, arreglo del bug «el panel se traba» al navegar, y ajustes visuales menores. Migración 0008 aplicada. |
+| 4k | Cierre del proyecto (13 ago) | ✅ Completa | Correo del formulario **activo en producción** con el SMTP Workspace de GoDaddy (`smtpout.secureserver.net:465`); **teléfono obligatorio** en el formulario de contacto, con la migración 0009 **aplicada**; carrusel de la galería de Nosotros sin puntos indicadores; y QA final del sitio. Con esto son **nueve** las migraciones, todas aplicadas. |
 | 5 | Deploy en Vercel desde el repo de GitHub + variables de entorno | ✅ Completa | **https://website-gpi.vercel.app** — despliega solo con cada push a `main`; las 3 env vars configuradas (incl. `SUPABASE_SERVICE_ROLE_KEY` sin prefijo). Verificado en vivo: 7 cabeceras de seguridad, 9 rutas 200, `/admin` protegido. |
-| 6 | Apuntar dominio `gpiprofesionales.com` de GoDaddy → Vercel | ⏳ Pendiente | Al final, cuando el sitio esté aprobado por GPI y desplegado en Vercel. |
+| 6 | Apuntar dominio `gpiprofesionales.com` de GoDaddy → Vercel | ⏳ Pendiente | Único pendiente del proyecto: apuntar el DNS en cuanto GPI dé la orden. |
 | 7 | Extra cotizable aparte: chatbot IA | 💡 Planeado | Claude Haiku 4.5 vía `/api/chat`, con conocimiento del contenido del sitio (servicios, proyectos, contacto) y captura de leads hacia Supabase. No incluido en la cotización actual. |
 
 ## Fase 2 — qué quedó construido (núcleo)
@@ -53,7 +61,8 @@ que reconstruir el historial desde los commits.
 | Menú del panel agrupado en un hub (pulido final) | `/admin/contenido`, `RUTAS_CONTENIDO` en `src/lib/admin-types.ts`, `src/components/admin/AdminShell.tsx` |
 | «Mi Cuenta» rebota al panel para roles de contenido (pulido final) | `src/app/mi-cuenta/IrAlPanel.tsx`, portal en `/mi-cuenta?portal=1` |
 | Arreglo del bug «el panel se traba» (pulido final) | `src/app/admin/loading.tsx`, `src/components/admin/PuntoDeCarga.tsx`, `prefetch={false}` en `AdminShell` |
-| Galería de Nosotros en carrusel con peek desde la 3.ª foto (pulido final + ajuste del 13 ago) | `src/components/sections/GaleriaAliados.tsx` |
+| Galería de Nosotros en carrusel con peek desde la 3.ª foto (pulido final + ajustes del 13 ago: peek y sin puntos) | `src/components/sections/GaleriaAliados.tsx` |
+| Teléfono obligatorio en el formulario de contacto (cierre, 13 ago) | `supabase/migrations/0009_telefono_mensajes.sql`, `src/lib/contacto-types.ts`, `src/components/sections/ContactForm.tsx` |
 
 Flujo completo: **el empleado registra su jornada** en `/mi-cuenta` (con vista
 previa del desglose) → queda **pendiente** → un **coordinador o admin** la ve en
@@ -468,6 +477,12 @@ componentes que ya existían; el prototipo pide más (la línea de tiempo con su
 flecha, la galería con la tarjeta superpuesta, el menú sobre fondo oscuro, la
 opacidad del hero, los logos de clientes a color). Nada de eso necesita tocar la
 base de datos ni el panel.
+
+> **Cerrado.** Este pase visual se completó a lo largo del pulido final del 12
+> de agosto, los ajustes finales del mismo día y las iteraciones del 13 de
+> agosto (migración de imágenes al bucket, carrusel de Nosotros con peek). Ver
+> la fila 4i de la tabla de fases, arriba, y la iteración «cierre del
+> proyecto», más abajo.
 
 ## Iteración del 12 de agosto de 2026 — pulido final
 
@@ -930,6 +945,83 @@ Diagnóstico hecho con pruebas reales al intentar activar el envío desde
   `CONTACT_SMTP_PORT`, `CONTACT_SMTP_USER`, `CONTACT_SMTP_PASS`) en Vercel y
   volver a desplegar.
 
+## Iteración del 13 de agosto de 2026 — cierre del proyecto
+
+Último encargo antes de declarar el sitio terminado: activar el correo en
+producción, sumar el teléfono al formulario de contacto y un repaso de QA de
+punta a punta.
+
+### 1. El correo del formulario queda activo en producción
+
+Las cuatro variables de entorno del SMTP (`CONTACT_SMTP_HOST`,
+`CONTACT_SMTP_PORT`, `CONTACT_SMTP_USER`, `CONTACT_SMTP_PASS`) ya están
+cargadas tanto en Vercel como en `.env.local`, con el host confirmado en la
+iteración anterior: **`smtpout.secureserver.net:465`** (el correo Workspace de
+GoDaddy). El botón «Enviar mensaje» de `/contacto` ya no es una promesa:
+envía de verdad.
+
+### 2. Teléfono obligatorio en el formulario de contacto
+
+GPI pidió poder devolver la llamada a quien escribe, no solo responder por
+correo. El formulario de `/contacto` pasa a pedir **Nombre\*, Empresa
+(opcional), Correo electrónico\*, Teléfono\* y Mensaje\***, con el teléfono
+**al lado del correo**, en la misma fila de dos columnas (una debajo de otra
+en móvil).
+
+- Campo `type="tel"`, `autocomplete="tel"`, `inputMode="tel"`, marcador de
+  posición `+57 318 434 1249`, máximo 30 caracteres.
+- **Validación laxa a propósito**, en el navegador y en el servidor (la del
+  servidor es la que manda): admite dígitos, espacios, `+`, guiones,
+  paréntesis y puntos, y exige entre **7 y 20 dígitos** una vez quitados los
+  separadores. Pasan un fijo de Cali («602 555 5555»), un celular con
+  indicativo («+57 318 434 1249») o un número internacional.
+- Mensajes de error en español: *«Escribe tu número de teléfono.»* si va vacío
+  y *«Ese teléfono no parece válido. Escríbelo con indicativo, por ejemplo:
+  +57 318 434 1249»* si está mal escrito.
+- El teléfono **llega en el correo** que recibe GPI (fila «Teléfono» en la
+  ficha y línea «Teléfono: …» en la versión de texto plano, la misma que usan
+  los enlaces de respaldo de Gmail / programa de correo) y se guarda en
+  `site_mensajes.telefono`.
+- Archivos: `src/components/sections/ContactForm.tsx`,
+  `src/app/contacto/actions.ts`, `src/lib/contacto-types.ts`
+  (`esTelefonoValido`, `ERROR_TELEFONO`, `DIGITOS_TELEFONO` y el límite de 30
+  caracteres) y `src/lib/correo.ts`.
+
+Necesita la **migración 0009**
+(`supabase/migrations/0009_telefono_mensajes.sql`), que añade `telefono text`
+(nullable) a `site_mensajes` — nullable porque los mensajes recibidos antes de
+este cambio no tienen teléfono. **Ya está aplicada** en el GPI Project
+(verificado contra `information_schema.columns`). Como siempre en este
+proyecto, el código funciona igual sin ella: si la columna no existiera
+todavía, la server action reintenta el `insert` sin ella (el mismo patrón que
+`saveService` con la columna `video`) y el teléfono viaja de todos modos
+dentro del correo.
+
+Con la 0009 son **nueve** las migraciones, todas aplicadas.
+
+### 3. El carrusel de la galería de Nosotros pierde los puntos
+
+`src/components/sections/GaleriaAliados.tsx` deja de mostrar la fila de
+puntos indicadores debajo de las fotos, junto con el espacio vertical que
+ocupaba: el bloque termina justo donde terminan las imágenes. Se sigue
+recorriendo con las **flechas**, deslizando con el dedo, con la rueda del
+ratón o con el teclado — todo eso sigue igual. Puramente visual, sin
+migración.
+
+### 4. QA final
+
+Repaso de cierre antes de declarar el sitio terminado: páginas públicas
+revisadas en escritorio y en móvil, sin errores de consola, y el envío del
+formulario de contacto probado de punta a punta (incluido el teléfono nuevo).
+
+### Estado del proyecto
+
+Con este cierre, el sitio queda **terminado**: Fases 1 y 2 completas, las
+nueve migraciones aplicadas, el correo del formulario activo en producción y
+el QA final pasado. El único pendiente es **conectar el dominio**
+`gpiprofesionales.com` (Fase 6 de la tabla de arriba): apuntar el DNS de
+GoDaddy a Vercel cuando GPI dé la orden.
+
 ## Decisiones técnicas
 
 - **Fallback estático primero**: toda la capa de contenido (`src/lib/content.ts`)
@@ -981,7 +1073,11 @@ Diagnóstico hecho con pruebas reales al intentar activar el envío desde
   especial** porque `home` y `paginas` son claves dentro de `site_settings`
   (tabla que ya existe desde la 0001), así que el panel guarda esos ocho
   bloques igual con o sin la 0008 aplicada — la migración solo adelanta la
-  semilla inicial. El build no depende de la base de datos.
+  semilla inicial. Sin la 0009 (hoy ya aplicada), el formulario seguiría
+  pidiendo y enviando el teléfono igual —viaja dentro del correo—, solo que
+  `site_mensajes` se quedaría sin la columna y el `insert` reintentaría sin
+  ella, el mismo patrón que la columna `video` de la 0007. El build no
+  depende de la base de datos.
 - **El correo tampoco es un requisito para que el sitio funcione**: si faltan
   `CONTACT_SMTP_USER` / `CONTACT_SMTP_PASS`, el formulario cambia solo a su modo
   alternativo (compositor de Gmail en el navegador, programa de correo y
@@ -1009,12 +1105,13 @@ Diagnóstico hecho con pruebas reales al intentar activar el envío desde
 
 ## Pendientes del cliente
 
-- **Contraseña de aplicación de Google** ⚠️: para que el formulario de contacto
-  envíe el correo de verdad hace falta generarla en la cuenta
-  `gpi.gerencia1@gmail.com` (verificación en dos pasos →
-  <https://myaccount.google.com/apppasswords>) y cargarla en Vercel como
-  `CONTACT_SMTP_USER` / `CONTACT_SMTP_PASS`. Mientras no esté, el formulario
-  funciona en su modo alternativo. Paso a paso en `docs/ADMIN.md` §13.
+> ✅ El correo del formulario de contacto ya no es un pendiente: desde el 13
+> de agosto de 2026 envía de verdad, en producción, desde el buzón del
+> dominio (`smtpout.secureserver.net`, el correo Workspace de GoDaddy).
+
+- **Conectar el dominio** `gpiprofesionales.com` ⚠️: es el **único** pendiente
+  que le queda al proyecto (Fase 6 de la tabla de arriba). Apuntar el DNS de
+  GoDaddy hacia Vercel cuando GPI dé la orden.
 - **Imágenes**: confirmar/actualizar fotografías de servicios y proyectos si
   GPI quiere reemplazar las heredadas del sitio viejo.
 - **Lista de empleados** (Fase 2): nombres, **usuarios**, cédulas, cargos,

@@ -19,8 +19,8 @@ import { ChevronDown } from "@/lib/icons";
  *     el ancho del panel se veía como un banner desproporcionado; a todo lo
  *     alto pero contenida en anchura queda como una foto de verdad.
  *   · **2 fotos** → la franja estática de siempre, dos columnas iguales. Con
- *     solo dos fotos un carrusel añadiría flechas y puntos que no llevan a
- *     ninguna parte.
+ *     solo dos fotos un carrusel añadiría flechas que no llevan a ninguna
+ *     parte.
  *   · **3 fotos o más** → carrusel horizontal con scroll-snap. El umbral bajó
  *     de 4 a 3: con tres fotos ya cabe un carrusel con «peek» (se alcanza a
  *     ver un pedazo de la tercera asomando por el borde), que es justo la
@@ -35,18 +35,23 @@ import { ChevronDown } from "@/lib/icons";
  * El «1.2» y el «2.2» no son mágicos: son el resultado de fijar cuánto debe
  * asomar la siguiente foto (ver el comentario sobre `calc()` en `Carrusel`).
  *
+ * SIN PUNTOS INDICADORES (13 de agosto de 2026, pedido del cliente): la fila de
+ * puntos debajo de las fotos se retiró junto con el espacio que ocupaba, para
+ * que el bloque termine justo donde terminan las imágenes, igual que la franja
+ * estática. Para recorrer el carrusel quedan las flechas, el gesto táctil, la
+ * rueda del ratón y el teclado — todas las vías que ya existían.
+ *
  * SIN LIBRERÍAS: el desplazamiento es `overflow-x` + `scroll-snap` nativos, así
  * que el gesto táctil y la rueda del ratón funcionan solos y no hay ni un byte
- * de JavaScript de terceros. Las flechas y los puntos únicamente llaman a
- * `scrollTo`.
+ * de JavaScript de terceros. Las flechas únicamente llaman a `scrollTo`.
  *
  * ACCESIBILIDAD:
  *   · El carril es `tabindex=0` con `role="group"`: quien navega con teclado lo
  *     enfoca y lo recorre con las flechas ← → del navegador (comportamiento
  *     nativo de un contenedor desplazable), sin atajos inventados.
- *   · Flechas y puntos son `<button>` de verdad, con `aria-label` que dice a
- *     dónde llevan, y se ocultan del lector de pantalla cuando el contenido ya
- *     es alcanzable con el carril.
+ *   · Las flechas son `<button>` de verdad, con `aria-label` que dice a dónde
+ *     llevan, y se ocultan del lector de pantalla cuando el contenido ya es
+ *     alcanzable con el carril.
  *   · `prefers-reduced-motion`: el desplazamiento pasa de `smooth` a
  *     instantáneo. Nada se mueve solo en ningún caso (no hay reproducción
  *     automática).
@@ -114,32 +119,15 @@ function FranjaEstatica({ fotos }: { fotos: ImagenContenido[] }) {
 /* 3 fotos o más: carrusel con peek                                    */
 /* ------------------------------------------------------------------ */
 
-/**
- * Distancia entre el inicio de una foto y el de la siguiente (ancho + hueco).
- *
- * Se MIDE en el DOM en vez de calcularse: los anchos son porcentuales y cambian
- * con el breakpoint, y el hueco también. Vive fuera del componente porque no
- * necesita nada suyo y así `sincronizar` no tiene que declararlo como
- * dependencia.
- */
-function pasoDe(carril: HTMLElement): number {
-  const items = carril.children;
-  if (items.length < 2) return carril.clientWidth;
-  return (
-    (items[1] as HTMLElement).offsetLeft - (items[0] as HTMLElement).offsetLeft
-  );
-}
-
 function Carrusel({ fotos }: { fotos: ImagenContenido[] }) {
   const carril = useRef<HTMLUListElement>(null);
-  const [indice, setIndice] = useState(0);
   const [alInicio, setAlInicio] = useState(true);
   const [alFinal, setAlFinal] = useState(false);
 
   /**
-   * Estado de las flechas y del punto activo a partir del scroll real del
-   * carril: así siguen siendo correctos cuando el visitante arrastra con el
-   * dedo o usa la rueda, no solo cuando pulsa un botón.
+   * Estado de las flechas a partir del scroll real del carril: así siguen
+   * siendo correctas cuando el visitante arrastra con el dedo o usa la rueda,
+   * no solo cuando pulsa un botón.
    */
   const sincronizar = useCallback(() => {
     const nodo = carril.current;
@@ -148,15 +136,7 @@ function Carrusel({ fotos }: { fotos: ImagenContenido[] }) {
     const maximo = nodo.scrollWidth - nodo.clientWidth;
     setAlInicio(nodo.scrollLeft <= 1);
     setAlFinal(nodo.scrollLeft >= maximo - 1);
-
-    const ancho = pasoDe(nodo);
-    if (ancho <= 0) return;
-
-    // Redondear a la foto más cercana evita que el punto parpadee a mitad de
-    // un arrastre.
-    const actual = Math.round(nodo.scrollLeft / ancho);
-    setIndice(Math.min(Math.max(actual, 0), fotos.length - 1));
-  }, [fotos.length]);
+  }, []);
 
   useEffect(() => {
     sincronizar();
@@ -180,11 +160,6 @@ function Carrusel({ fotos }: { fotos: ImagenContenido[] }) {
     nodo.scrollTo({ left: izquierda, behavior: suave ? "smooth" : "auto" });
   };
 
-  const irA = (posicion: number) => {
-    const nodo = carril.current;
-    if (nodo) desplazar(pasoDe(nodo) * posicion);
-  };
-
   const mover = (direccion: -1 | 1) => {
     const nodo = carril.current;
     if (!nodo) return;
@@ -193,7 +168,17 @@ function Carrusel({ fotos }: { fotos: ImagenContenido[] }) {
   };
 
   return (
-    <div className="relative">
+    /*
+      `lg:h-full` (13 ago 2026, al quitar los puntos): en escritorio la altura
+      del bloque verde la fija el panel de texto de la izquierda, y el carril se
+      quedaba en su altura mínima (18rem). Con los puntos, ese sobrante de verde
+      pasaba medio disimulado; sin ellos quedaba una franja vacía debajo de las
+      fotos. Estirando el carril, las fotos vuelven a terminar donde termina el
+      panel —exactamente lo que ya hacían `FotoUnica` y `FranjaEstatica`, que
+      siempre fueron `h-full`—. Solo desde `lg`, que es donde el bloque se parte
+      en dos columnas; abajo manda el `aspect-[3/4]` de cada foto.
+    */
+    <div className="relative lg:h-full">
       {/*
         SIGUE SIENDO UNA LISTA. La versión anterior le puso `role="group"` para
         nombrar el carrusel y eso rompió la semántica: al cambiarle el rol al
@@ -212,15 +197,17 @@ function Carrusel({ fotos }: { fotos: ImagenContenido[] }) {
         despejar `(k + p) * w + k * g = 100%` → `w = (100% - k·g) / (k + p)`.
           · Móvil: k=1, g=0.75rem (gap-3), p=0.2 → 100%-1·0.75rem entre 1.2.
           · sm+:   k=2, g=1rem (gap-4),    p=0.2 → 100%-2·1rem entre 2.2.
-        Se mide en el DOM (`pasoDe`), no hace falta que el cálculo sea exacto
-        al pixel: solo que el peek se note sin comerse media foto.
+        No hace falta que el cálculo sea exacto al pixel: solo que el peek se
+        note sin comerse media foto. Quien manda al desplazar es `clientWidth`
+        (una pantalla completa por flechazo) y el `scroll-snap`, que alinea la
+        foto más cercana.
       */}
       <ul
         ref={carril}
         onScroll={sincronizar}
         tabIndex={0}
         aria-label={`Fotos del trabajo de GPI en campo (${fotos.length} imágenes). Use las flechas del teclado para recorrerlas.`}
-        className="flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth pb-1 [-ms-overflow-style:none] [scrollbar-width:none] motion-reduce:scroll-auto sm:gap-4 [&::-webkit-scrollbar]:hidden"
+        className="flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth pb-1 [-ms-overflow-style:none] [scrollbar-width:none] motion-reduce:scroll-auto sm:gap-4 lg:h-full [&::-webkit-scrollbar]:hidden"
       >
         {fotos.map((foto) => (
           <li
@@ -238,9 +225,10 @@ function Carrusel({ fotos }: { fotos: ImagenContenido[] }) {
         ))}
       </ul>
 
-      {/* Flechas: discretas, sobre la primera y la última foto. Se desactivan
-          en los extremos en vez de desaparecer, para que la fila de controles
-          no salte de posición. */}
+      {/* Flechas: discretas, sobre la primera y la última foto, y únicos
+          controles visibles del carrusel. En los extremos se desactivan
+          (`disabled` + opacidad 0) en vez de desmontarse, para que la que sigue
+          activa no cambie de sitio. */}
       <Flecha
         direccion="anterior"
         onClick={() => mover(-1)}
@@ -252,22 +240,6 @@ function Carrusel({ fotos }: { fotos: ImagenContenido[] }) {
         deshabilitada={alFinal}
       />
 
-      {/* Puntos indicadores */}
-      <ul className="mt-3 flex justify-center gap-2">
-        {fotos.map((foto, i) => (
-          <li key={`punto-${foto.url}`}>
-            <button
-              type="button"
-              onClick={() => irA(i)}
-              aria-label={`Ver la foto ${i + 1} de ${fotos.length}`}
-              aria-current={i === indice ? "true" : undefined}
-              className={`block h-2.5 rounded-full transition-all duration-300 ${
-                i === indice ? "w-6 bg-white" : "w-2.5 bg-white/50 hover:bg-white/80"
-              }`}
-            />
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }

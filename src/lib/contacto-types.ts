@@ -11,7 +11,12 @@
  */
 
 /** Campos visibles del formulario (los que pueden mostrar un error). */
-export type CampoContacto = "nombre" | "empresa" | "correo" | "mensaje";
+export type CampoContacto =
+  | "nombre"
+  | "empresa"
+  | "correo"
+  | "telefono"
+  | "mensaje";
 
 export type ErroresContacto = Partial<Record<CampoContacto, string>>;
 
@@ -60,8 +65,53 @@ export const LIMITES_CONTACTO = {
   nombre: 120,
   empresa: 140,
   correo: 200,
+  /**
+   * 30 caracteres dan de sobra para el número más largo que se escribe en
+   * Colombia con separadores («+57 (602) 555 5555») sin dejar sitio a que
+   * alguien use el campo como segundo mensaje.
+   */
+  telefono: 30,
   mensaje: 4000,
 } as const;
+
+/* ------------------------------------------------------------------ */
+/* Teléfono                                                            */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Caracteres admitidos en un número de teléfono: dígitos y los separadores que
+ * la gente escribe de verdad (espacios, `+`, guiones, paréntesis y puntos).
+ * Todo lo demás —letras, comas, saltos de línea— se rechaza.
+ */
+const CARACTERES_TELEFONO = /^[0-9+()\-.\s]+$/;
+
+/** Cantidad de DÍGITOS aceptada una vez quitados los separadores. */
+export const DIGITOS_TELEFONO = { minimo: 7, maximo: 20 } as const;
+
+/**
+ * ¿Parece un teléfono? Validación DELIBERADAMENTE LAXA.
+ *
+ * El formulario lo llena gente de todo tipo y el objetivo es poder devolver la
+ * llamada, no imponer un formato: tienen que pasar tanto un fijo de Cali
+ * («602 555 5555») como un celular con indicativo («+57 318 434 1249») o un
+ * número internacional. Por eso solo se comprueban dos cosas: que no haya
+ * caracteres raros y que la cantidad de dígitos sea razonable. Un teléfono
+ * escrito con un dígito de menos no lo detecta ninguna expresión regular; para
+ * eso está el correo, que se valida aparte.
+ */
+export function esTelefonoValido(valor: string): boolean {
+  const limpio = valor.trim();
+  if (limpio === "" || !CARACTERES_TELEFONO.test(limpio)) return false;
+
+  const digitos = limpio.replace(/\D/g, "").length;
+  return (
+    digitos >= DIGITOS_TELEFONO.minimo && digitos <= DIGITOS_TELEFONO.maximo
+  );
+}
+
+/** Mensaje único para un teléfono mal escrito (mismo texto en las dos mitades). */
+export const ERROR_TELEFONO =
+  "Ese teléfono no parece válido. Escríbelo con indicativo, por ejemplo: +57 318 434 1249";
 
 /**
  * Nombres de los campos anti-robot. Están aquí para que el formulario y la
@@ -102,7 +152,13 @@ export function asuntoContacto(nombre: string, empresa: string): string {
  * URLs `mailto:` lo codifican como `%0D%0A`.
  */
 export function cuerpoContacto(
-  datos: { nombre: string; empresa: string; correo: string; mensaje: string },
+  datos: {
+    nombre: string;
+    empresa: string;
+    correo: string;
+    telefono: string;
+    mensaje: string;
+  },
   opciones: { salto?: string; fecha?: string } = {},
 ): string {
   const salto = opciones.salto ?? "\n";
@@ -110,6 +166,10 @@ export function cuerpoContacto(
     `Nombre: ${datos.nombre.trim()}`,
     datos.empresa.trim() ? `Empresa: ${datos.empresa.trim()}` : null,
     `Correo: ${datos.correo.trim()}`,
+    // El teléfono es obligatorio en el formulario, pero esta función también
+    // arma los enlaces de respaldo mientras la persona escribe: si todavía no
+    // lo ha puesto, la línea sencillamente no sale.
+    datos.telefono.trim() ? `Teléfono: ${datos.telefono.trim()}` : null,
     opciones.fecha ? `Fecha: ${opciones.fecha}` : null,
     "",
     "Mensaje:",

@@ -49,6 +49,8 @@ export interface DatosContacto {
   empresa: string;
   /** Correo del visitante: destino del `Reply-To`. */
   correo: string;
+  /** Teléfono del visitante. Obligatorio en el formulario desde el 13/08/2026. */
+  telefono: string;
   mensaje: string;
 }
 
@@ -177,6 +179,7 @@ function cuerpoHtml(datos: DatosContacto, fecha: string): string {
         ${fila("Nombre", datos.nombre)}
         ${datos.empresa ? fila("Empresa", datos.empresa) : ""}
         ${fila("Correo", datos.correo)}
+        ${datos.telefono ? fila("Teléfono", datos.telefono) : ""}
         ${fila("Fecha", fecha)}
       </table>
       <div style="border-top:1px solid #e3e7e5;padding-top:18px;">${parrafos}</div>
@@ -235,6 +238,9 @@ export async function enviarCorreoContacto(
   const nombre = cabeceraSegura(datos.nombre);
   const empresa = cabeceraSegura(datos.empresa);
   const correo = cabeceraSegura(datos.correo);
+  // El teléfono no viaja en ninguna cabecera, pero se limpia igual que los
+  // demás: un salto de línea colado ahí ensuciaría la ficha del correo.
+  const telefono = cabeceraSegura(datos.telefono);
   const fecha = fechaColombia();
 
   try {
@@ -248,11 +254,14 @@ export async function enviarCorreoContacto(
       // clic, no a su propia cuenta de gerencia.
       replyTo: `"${nombre.replace(/"/g, "'")}" <${correo}>`,
       subject: asuntoContacto(nombre, empresa),
-      text: cuerpoContacto({ nombre, empresa, correo, mensaje: datos.mensaje }, {
-        salto: "\r\n",
+      text: cuerpoContacto(
+        { nombre, empresa, correo, telefono, mensaje: datos.mensaje },
+        { salto: "\r\n", fecha },
+      ),
+      html: cuerpoHtml(
+        { nombre, empresa, correo, telefono, mensaje: datos.mensaje },
         fecha,
-      }),
-      html: cuerpoHtml({ nombre, empresa, correo, mensaje: datos.mensaje }, fecha),
+      ),
     });
   } finally {
     // El transporte abre un socket con el servidor de correo; en serverless

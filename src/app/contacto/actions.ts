@@ -64,8 +64,10 @@ import {
   CAMPO_ENVIADO,
   CAMPO_MONTADO,
   CAMPO_TRAMPA,
+  ERROR_TELEFONO,
   LIMITES_CONTACTO,
   MS_MINIMOS_DILIGENCIADO,
+  esTelefonoValido,
   type ErroresContacto,
   type EstadoContacto,
 } from "@/lib/contacto-types";
@@ -156,6 +158,7 @@ interface DatosMensaje {
   nombre: string;
   empresa: string;
   correo: string;
+  telefono: string;
   mensaje: string;
 }
 
@@ -179,11 +182,34 @@ function faltaTablaMensajes(error: {
 }
 
 /**
+ * ¿El error viene de que la COLUMNA `telefono` todavía no existe (migración
+ * 0009 sin aplicar)?
+ *
+ * Mismo patrón que `saveService` con la columna `video`: se intenta guardar
+ * todo y, si la columna nueva no está, se reintenta sin ella. El mensaje queda
+ * igualmente respaldado —solo que sin el teléfono en la tabla, que de todos
+ * modos viaja dentro del correo.
+ *
+ * 42703 = undefined_column (Postgres) · PGRST204 = columna ausente del caché de
+ * esquema de PostgREST.
+ */
+function faltaColumnaTelefono(error: {
+  code?: string | null;
+  message?: string | null;
+}): boolean {
+  const code = error.code ?? "";
+  if (code === "42703" || code === "PGRST204") return true;
+  return /telefono/i.test(error.message ?? "");
+}
+
+/**
  * Para no repetir el mismo aviso en cada mensaje: se anota una vez por
  * proceso. No es un error —el sitio funciona igual— pero quien mire los
  * registros de Vercel merece saber por qué no hay respaldo de los mensajes.
  */
 let avisadaTablaFaltante = false;
+/** Igual, para la columna `telefono` de la 0009. */
+let avisadaColumnaTelefono = false;
 
 /**
  * Guarda el mensaje y devuelve el id de la fila, o `null` si no se pudo
@@ -201,19 +227,32 @@ async function guardarMensaje(
   const supabase = getServiceRoleSupabase();
   if (!supabase) return null;
 
+  const fila = {
+    nombre: datos.nombre,
+    empresa: datos.empresa === "" ? null : datos.empresa,
+    correo: datos.correo,
+    mensaje: datos.mensaje,
+    correo_destino: correoDestino,
+    enviado: false,
+  };
+
+  const insertar = (valores: Record<string, unknown>) =>
+    supabase.from("site_mensajes").insert(valores).select("id").single();
+
   try {
-    const { data, error } = await supabase
-      .from("site_mensajes")
-      .insert({
-        nombre: datos.nombre,
-        empresa: datos.empresa === "" ? null : datos.empresa,
-        correo: datos.correo,
-        mensaje: datos.mensaje,
-        correo_destino: correoDestino,
-        enviado: false,
-      })
-      .select("id")
-      .single();
+    let { data, error } = await insertar({ ...fila, telefono: datos.telefono });
+
+    // Migración 0009 sin aplicar: se guarda el mensaje sin el teléfono en vez
+    // de perder el respaldo entero. El teléfono sigue llegando en el correo.
+    if (error && faltaColumnaTelefono(error)) {
+      if (!avisadaColumnaTelefono) {
+        avisadaColumnaTelefono = true;
+        console.warn(
+          "[contacto] La columna site_mensajes.telefono no existe todavía (migración 0009 pendiente): los mensajes se guardan sin el teléfono, que igual viaja en el correo.",
+        );
+      }
+      ({ data, error } = await insertar(fila));
+    }
 
     if (error) {
       if (faltaTablaMensajes(error)) {
@@ -274,6 +313,7 @@ export async function enviarMensajeContacto(
   const nombre = texto(formData, "nombre");
   const empresa = texto(formData, "empresa");
   const correo = texto(formData, "correo");
+  const telefono = texto(formData, "telefono");
   const mensaje = texto(formData, "mensaje");
 
   const errores: ErroresContacto = {};
@@ -291,6 +331,15 @@ export async function enviarMensajeContacto(
   else if (!esCorreoValido(correo))
     errores.correo =
       "Ese correo no parece válido. Escríbelo completo, por ejemplo: nombre@empresa.com";
+
+  // Teléfono OBLIGATORIO desde el 13/08/2026: GPI prefiere devolver la llamada
+  // antes que abrir un hilo de correos. La comprobación es laxa a propósito
+  // (ver `esTelefonoValido`): tienen que pasar un fijo de Cali y un celular con
+  // indicativo internacional por igual.
+  if (telefono === "") errores.telefono = "Escribe tu número de teléfono.";
+  else if (telefono.length > LIMITES_CONTACTO.telefono)
+    errores.telefono = `El teléfono no puede pasar de ${LIMITES_CONTACTO.telefono} caracteres.`;
+  else if (!esTelefonoValido(telefono)) errores.telefono = ERROR_TELEFONO;
 
   if (mensaje === "") errores.mensaje = "Cuéntanos brevemente qué necesitas.";
   else if (mensaje.length > LIMITES_CONTACTO.mensaje)
@@ -310,7 +359,7 @@ export async function enviarMensajeContacto(
 
   // El destinatario sale de los ajustes del SERVIDOR, jamás del formulario.
   const { contact } = await getSettings();
-  const datos: DatosMensaje = { nombre, empresa, correo, mensaje };
+  const datos: DatosMensaje = { nombre, empresa, correo, telefono, mensaje };
 
   const idMensaje = await guardarMensaje(datos, contact.correoFormulario);
 
