@@ -251,8 +251,8 @@ export default async function NosotrosPage() {
                 </p>
               </Reveal>
 
-              {/* Con hasta 3 fotos es la franja estática de siempre; a partir de
-                  la cuarta pasa a carrusel (ver GaleriaAliados). */}
+              {/* Con 1 o 2 fotos es la franja estática; desde la 3.ª pasa a
+                  carrusel con peek de la siguiente foto (ver GaleriaAliados). */}
               <Reveal delay={120} className="p-3 sm:p-4 lg:p-4">
                 <GaleriaAliados fotos={galeria.fotos} />
               </Reveal>

@@ -9,17 +9,31 @@ import { ChevronDown } from "@/lib/icons";
  * GALERÍA DE «ALIADOS ESTRATÉGICOS» (página Nosotros)
  * ===================================================
  * La franja de fotos de la banda verde. El panel deja añadir tantas fotos como
- * GPI quiera, y con cuatro o más la rejilla fija de tres columnas las encogía
- * hasta volverlas sellos.
+ * GPI quiera, y una rejilla fija las encogía o las apachurraba según cuántas
+ * hubiera.
  *
- * DECISIÓN — dos maquetaciones, un solo componente:
+ * DECISIÓN — tres maquetaciones, un solo componente (rediseño del 13 de
+ * agosto de 2026, a pedido del cliente):
  *
- *   · **Hasta 3 fotos** → la franja estática de siempre, pixel por pixel. Es el
- *     caso real de GPI hoy y el diseño que el community manager aprobó; meterlo
- *     en un carrusel añadiría flechas y puntos que no llevan a ninguna parte.
- *   · **De 4 en adelante** → carrusel horizontal con scroll-snap. Las fotos
- *     conservan su tamaño, aparecen las flechas y los puntos, y se ve que hay
- *     más contenido a la derecha.
+ *   · **1 foto** → centrada, con un ancho máximo moderado. Estirarla a todo
+ *     el ancho del panel se veía como un banner desproporcionado; a todo lo
+ *     alto pero contenida en anchura queda como una foto de verdad.
+ *   · **2 fotos** → la franja estática de siempre, dos columnas iguales. Con
+ *     solo dos fotos un carrusel añadiría flechas y puntos que no llevan a
+ *     ninguna parte.
+ *   · **3 fotos o más** → carrusel horizontal con scroll-snap. El umbral bajó
+ *     de 4 a 3: con tres fotos ya cabe un carrusel con «peek» (se alcanza a
+ *     ver un pedazo de la tercera asomando por el borde), que es justo la
+ *     señal visual de que hay más contenido para deslizar.
+ *
+ * CUÁNTAS FOTOS SE VEN A LA VEZ (antes 3 fijas, ahora con peek):
+ *   · Escritorio (≥640px): ~2.2 fotos por vista — dos completas más un asomo
+ *     de la siguiente. Antes eran 3 apretadas; con 2 completas cada foto
+ *     respira más ancha, y el peek le queda de todos modos.
+ *   · Móvil (<640px): ~1.2 fotos por vista — una completa más un asomo.
+ *
+ * El «1.2» y el «2.2» no son mágicos: son el resultado de fijar cuánto debe
+ * asomar la siguiente foto (ver el comentario sobre `calc()` en `Carrusel`).
  *
  * SIN LIBRERÍAS: el desplazamiento es `overflow-x` + `scroll-snap` nativos, así
  * que el gesto táctil y la rueda del ratón funcionan solos y no hay ni un byte
@@ -38,17 +52,38 @@ import { ChevronDown } from "@/lib/icons";
  *     automática).
  */
 
-/** Cuántas fotos caben a la vez: a partir de aquí ya no es una franja fija. */
-const MAXIMO_FRANJA = 3;
+/** A partir de aquí ya no es una franja fija, sino un carrusel con peek. */
+const MINIMO_CARRUSEL = 3;
 
 export function GaleriaAliados({ fotos }: { fotos: ImagenContenido[] }) {
   if (fotos.length === 0) return null;
-  if (fotos.length <= MAXIMO_FRANJA) return <FranjaEstatica fotos={fotos} />;
+  if (fotos.length === 1) return <FotoUnica foto={fotos[0]} />;
+  if (fotos.length < MINIMO_CARRUSEL) return <FranjaEstatica fotos={fotos} />;
   return <Carrusel fotos={fotos} />;
 }
 
 /* ------------------------------------------------------------------ */
-/* Hasta 3 fotos: la franja de siempre                                 */
+/* 1 sola foto: centrada, sin estirarla a todo el ancho                */
+/* ------------------------------------------------------------------ */
+
+function FotoUnica({ foto }: { foto: ImagenContenido }) {
+  return (
+    <div className="flex h-full items-center justify-center">
+      <div className="group relative aspect-[3/4] w-full max-w-xs overflow-hidden rounded-2xl shadow-card sm:max-w-sm lg:aspect-auto lg:h-full lg:max-w-md lg:min-h-[18rem]">
+        <ContentImage
+          src={foto.url}
+          alt={foto.alt}
+          fill
+          sizes="(max-width: 1024px) 60vw, 26rem"
+          className="object-cover transition-transform duration-500 group-hover:scale-105"
+        />
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* 2 fotos: la franja de siempre, dos columnas iguales                 */
 /* ------------------------------------------------------------------ */
 
 function FranjaEstatica({ fotos }: { fotos: ImagenContenido[] }) {
@@ -66,7 +101,7 @@ function FranjaEstatica({ fotos }: { fotos: ImagenContenido[] }) {
             src={foto.url}
             alt={foto.alt}
             fill
-            sizes="(max-width: 640px) 33vw, (max-width: 1024px) 30vw, 22vw"
+            sizes="(max-width: 1023px) 48vw, 22vw"
             className="object-cover transition-transform duration-500 group-hover:scale-105"
           />
         </li>
@@ -76,7 +111,7 @@ function FranjaEstatica({ fotos }: { fotos: ImagenContenido[] }) {
 }
 
 /* ------------------------------------------------------------------ */
-/* 4 fotos o más: carrusel                                             */
+/* 3 fotos o más: carrusel con peek                                    */
 /* ------------------------------------------------------------------ */
 
 /**
@@ -169,6 +204,16 @@ function Carrusel({ fotos }: { fotos: ImagenContenido[] }) {
         `tabIndex={0}` es obligatorio, no decorativo: un contenedor desplazable
         que no se puede enfocar no se puede recorrer con el teclado
         (WCAG 2.1.1; es la regla `scrollable-region-focusable` de axe).
+
+        ANCHO DE CADA FOTO — de dónde salen 1.2 y 2.2:
+        con `k` fotos completas visibles y un gap `g` entre ellas (incluido el
+        que separa la última foto completa de la que asoma), el ancho `w` de
+        cada foto que dibuja un peek de una fracción `p` de sí misma sale de
+        despejar `(k + p) * w + k * g = 100%` → `w = (100% - k·g) / (k + p)`.
+          · Móvil: k=1, g=0.75rem (gap-3), p=0.2 → 100%-1·0.75rem entre 1.2.
+          · sm+:   k=2, g=1rem (gap-4),    p=0.2 → 100%-2·1rem entre 2.2.
+        Se mide en el DOM (`pasoDe`), no hace falta que el cálculo sea exacto
+        al pixel: solo que el peek se note sin comerse media foto.
       */}
       <ul
         ref={carril}
@@ -180,13 +225,13 @@ function Carrusel({ fotos }: { fotos: ImagenContenido[] }) {
         {fotos.map((foto) => (
           <li
             key={foto.url}
-            className="group relative aspect-[3/4] w-[calc((100%-0.75rem)/2)] shrink-0 snap-start overflow-hidden rounded-2xl shadow-card sm:w-[calc((100%-2rem)/3)] lg:aspect-auto lg:h-full lg:min-h-[18rem]"
+            className="group relative aspect-[3/4] w-[calc((100%-0.75rem)/1.2)] shrink-0 snap-start overflow-hidden rounded-2xl shadow-card sm:w-[calc((100%-2rem)/2.2)] lg:aspect-auto lg:h-full lg:min-h-[18rem]"
           >
             <ContentImage
               src={foto.url}
               alt={foto.alt}
               fill
-              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 30vw, 22vw"
+              sizes="(max-width: 639px) 85vw, (max-width: 1023px) 45vw, 26vw"
               className="object-cover transition-transform duration-500 group-hover:scale-105"
             />
           </li>

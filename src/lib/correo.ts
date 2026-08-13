@@ -23,10 +23,10 @@
  *   · **Gmail** (`smtp.gmail.com:465`) — el valor por defecto, que es lo que se
  *     montó en agosto de 2026 con `gpi.gerencia1@gmail.com` y una **contraseña
  *     de aplicación** de 16 caracteres.
- *   · **Buzón del dominio** (`mail.gpiprofesionales.com:465`) — el correo
- *     corporativo de cPanel/GoDaddy. Ahí `CONTACT_SMTP_PASS` es la contraseña
- *     normal del buzón y el remitente sale del propio dominio, que es mejor
- *     para la entregabilidad.
+ *   · **Buzón del dominio** (`smtpout.secureserver.net:465`) — el correo
+ *     Workspace de GoDaddy, donde viven los buzones del dominio. Ahí
+ *     `CONTACT_SMTP_PASS` es la contraseña normal del buzón y el remitente
+ *     sale del propio dominio, que es mejor para la entregabilidad.
  *
  * Se cambia de uno a otro poniendo `CONTACT_SMTP_HOST` y volviendo a desplegar.
  *
@@ -58,7 +58,7 @@ export interface DatosContacto {
 
 /** Servidor por defecto: el que se montó primero. Mantiene la compatibilidad. */
 const HOST_POR_DEFECTO = "smtp.gmail.com";
-/** Puerto por defecto: SMTPS, el que usan tanto Gmail como cPanel. */
+/** Puerto por defecto: SMTPS, el que usan tanto Gmail como GoDaddy. */
 const PUERTO_POR_DEFECTO = 465;
 
 /** Nombre del servidor SMTP, del entorno o el de Gmail. */
@@ -88,7 +88,7 @@ function credenciales(): { user: string; pass: string } | null {
   // rechaza: se quitan para que copiar y pegar tal cual funcione.
   //
   // OJO: eso SOLO vale para Gmail. En un buzón del dominio la contraseña la
-  // elige quien crea la cuenta en cPanel y puede llevar espacios de verdad;
+  // elige quien administra el buzón y puede llevar espacios de verdad;
   // borrárselos convertiría un problema de configuración en un fallo de login
   // imposible de diagnosticar. Fuera de Gmail solo se recortan los extremos,
   // que es lo que suele sobrar al pegar en un formulario.

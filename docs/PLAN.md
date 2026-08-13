@@ -53,7 +53,7 @@ que reconstruir el historial desde los commits.
 | Menú del panel agrupado en un hub (pulido final) | `/admin/contenido`, `RUTAS_CONTENIDO` en `src/lib/admin-types.ts`, `src/components/admin/AdminShell.tsx` |
 | «Mi Cuenta» rebota al panel para roles de contenido (pulido final) | `src/app/mi-cuenta/IrAlPanel.tsx`, portal en `/mi-cuenta?portal=1` |
 | Arreglo del bug «el panel se traba» (pulido final) | `src/app/admin/loading.tsx`, `src/components/admin/PuntoDeCarga.tsx`, `prefetch={false}` en `AdminShell` |
-| Galería de Nosotros en carrusel desde la 4.ª foto (pulido final) | `src/components/sections/GaleriaAliados.tsx` |
+| Galería de Nosotros en carrusel con peek desde la 3.ª foto (pulido final + ajuste del 13 ago) | `src/components/sections/GaleriaAliados.tsx` |
 
 Flujo completo: **el empleado registra su jornada** en `/mi-cuenta` (con vista
 previa del desglose) → queda **pendiente** → un **coordinador o admin** la ve en
@@ -552,11 +552,11 @@ Componente nuevo `src/components/sections/GaleriaAliados.tsx`. La franja de
 hasta volverlas sellos en cuanto GPI subía una cuarta o quinta imagen, porque
 la rejilla estaba pensada para tres.
 
-- **Con hasta 3 fotos se ve exactamente como hoy**: la franja estática de
-  siempre, pixel por pixel. Es el caso real de GPI y el diseño que aprobó el
-  community manager; meterlo en un carrusel habría añadido flechas y puntos
-  que no llevan a ninguna parte.
-- **A partir de la 4.ª foto** se convierte en carrusel: scroll-snap horizontal
+- **Con 1 o 2 fotos es una franja estática**: 1 foto queda centrada con ancho
+  moderado (no estirada a todo el panel); 2 fotos, dos columnas iguales. Con
+  tan pocas fotos, un carrusel añadiría flechas y puntos que no llevan a
+  ninguna parte.
+- **Desde la 3.ª foto** se convierte en carrusel: scroll-snap horizontal
   **nativo** (sin librerías, ni un byte de JavaScript de terceros), flechas ←
   → discretas que se deshabilitan en los extremos en vez de desaparecer (para
   que la fila de controles no salte de posición), puntos indicadores, y
@@ -568,6 +568,19 @@ la rejilla estaba pensada para tres.
   `role="group"` al `<ul>` para nombrar el carrusel le rompía la semántica a
   sus `<li>` (quedaban «huérfanos» y axe los marcaba); la solución fue dejar el
   rol de lista intacto y nombrar con `aria-label` en su lugar.
+
+  **Ajuste del 13 de agosto de 2026 (peek):** con 3 fotos en fila cada imagen
+  quedaba «apachurrada» horizontalmente, así que se bajó a **2 fotos completas
+  por vista** en vez de 3, y el umbral del carrusel bajó de la 4.ª foto a la
+  **3.ª**. Además, el carrusel ahora deja «asomar» un pedazo de la siguiente
+  foto por el borde derecho (**peek**) como señal visual de que hay más
+  contenido para deslizar: ~2.2 fotos visibles en escritorio (2 completas +
+  20 % de la 3.ª) y ~1.2 en móvil (1 completa + 20 % de la 2.ª). El ancho de
+  cada foto sale de un `calc()` con esa proporción, medido en el DOM para el
+  cálculo del paso del carrusel (no hace falta que sea exacto al pixel).
+  Verificado con Playwright en 1440×900 (peek real de ~49 px sobre 576 px de
+  carril, ≈20 % de la 3.ª foto) y 390×844 (peek de ~52 px sobre 326 px,
+  también ≈20 %), sin scroll horizontal ni errores de consola.
 
 ### 5. «Mi Cuenta» lleva al panel
 
@@ -796,12 +809,13 @@ otro puerto negocia STARTTLS). Lo que enciende el envío directo **no cambia**:
 `smtpContactoConfigurado()` sigue siendo USER + PASS.
 
 Con esto GPI puede enviar desde `xperea@gpiprofesionales.com` a través de
-`mail.gpiprofesionales.com:465` (cPanel de GoDaddy), que es mejor para la
-entregabilidad que salir desde una cuenta de Gmail. Detalle fino: el borrado de
-espacios de la contraseña **solo se aplica a Gmail** (viene de sus contraseñas
-de aplicación en grupos de 4); en un buzón de dominio la contraseña puede llevar
+`smtpout.secureserver.net:465` (el correo Workspace de GoDaddy, donde viven
+los buzones del dominio — no el cPanel), que es mejor para la entregabilidad
+que salir desde una cuenta de Gmail. Detalle fino: el borrado de espacios de
+la contraseña **solo se aplica a Gmail** (viene de sus contraseñas de
+aplicación en grupos de 4); en un buzón de dominio la contraseña puede llevar
 espacios de verdad y solo se recortan los extremos. Pasos exactos en
-`docs/ADMIN.md` §13 → *Con buzón del dominio (cPanel de GoDaddy)*.
+`docs/ADMIN.md` §13 → *Con buzón del dominio (correo Workspace de GoDaddy)*.
 
 ## Iteración del 13 de agosto de 2026 — imágenes al bucket de Supabase
 
@@ -858,6 +872,63 @@ datos, no de esquema.
   borde a borde, pero el bloque y las fotos empiezan y terminan en la misma
   línea vertical que las demás secciones—. Verificado en escritorio (1440 px)
   y móvil (390 px); no cambia nada de cómo se usa el panel.
+
+## Iteración del 13 de agosto de 2026 — galería de aliados con peek
+
+Pedido puntual del cliente sobre `src/components/sections/GaleriaAliados.tsx`
+justo después de alinearla al contenedor (ver iteración anterior): con 3 fotos
+en fila (el caso real de GPI hoy) cada foto quedaba «apachurrada»
+horizontalmente, y con el carrusel activándose recién en la 4.ª foto no había
+ninguna pista visual de que se pudiera deslizar hasta que hubiera una cuarta.
+
+- **2 fotos completas por vista en vez de 3.** Menos fotos por fila, cada una
+  más ancha — se nota sobre todo en escritorio, donde antes el `aspect-auto`
+  las dejaba muy angostas comparadas con su altura.
+- **El carrusel se activa desde la 3.ª foto** (antes la 4.ª). Con 1 sola foto
+  queda centrada con un ancho máximo moderado (`max-w-md`, no estirada a todo
+  el panel); con 2, la franja estática de dos columnas de siempre.
+- **Peek**: con 3 fotos o más, el carrusel deja asomar un pedazo de la
+  siguiente por el borde derecho —~20 % de su ancho— como señal de que hay
+  más contenido para deslizar. En escritorio equivale a ~2.2 fotos visibles
+  (2 completas + el asomo de la 3.ª); en móvil, ~1.2 (1 completa + el asomo de
+  la 2.ª). El ancho de cada foto es un `calc()` en Tailwind
+  (`(100% - k·gap) / (k + peek)`, con `k` fotos completas y `peek = 0.2`); se
+  explica con la cuenta completa en un comentario del propio componente.
+- Verificado con Playwright (build de producción, `next start`) en 1440×900 y
+  390×844 contra el contenido real de Supabase (3 fotos): el bloque de la
+  galería sigue exactamente alineado al `Container` (x=176→1264 en 1440,
+  x=20→370 en 390), el peek mide ~20 % de la 3.ª foto en ambos anchos, la
+  flecha «siguiente» desplaza el carril de verdad (198 px en escritorio,
+  clamps al final del scroll; 274 px en móvil, ajustado al snap de la
+  siguiente foto), sin scroll horizontal y sin errores de consola. Los casos
+  de 1 y 2 fotos —que la base real no ejercita hoy— se probaron aparte con una
+  ruta temporal y datos de prueba, y se borraron al terminar.
+- Sin migración: es un cambio puramente visual sobre datos que ya existían.
+
+## Iteración del 13 de agosto de 2026 — SMTP: el buzón del dominio vive en Workspace, no en el cPanel
+
+Diagnóstico hecho con pruebas reales al intentar activar el envío desde
+`xperea@gpiprofesionales.com`:
+
+- **Síntoma**: `mail.gpiprofesionales.com:465` (Exim del cPanel) rechazaba el
+  login del buzón con `535 Incorrect authentication data`, con la contraseña
+  correcta (la misma del webmail).
+- **Causa**: los registros MX de `gpiprofesionales.com` apuntan a
+  `smtp.secureserver.net` / `mailstore1.secureserver.net` — los buzones
+  (`xperea@`, `ycamacho@`) viven en el **correo Workspace de GoDaddy** (Web-Based
+  Email, una plataforma separada del hosting), no en el cPanel. El cPanel nunca
+  tuvo esas cuentas de correo, por eso rechazaba cualquier contraseña.
+- **Solución**: el servidor correcto es **`smtpout.secureserver.net`, puerto
+  `465`** (SMTPS). Probado con las credenciales reales de
+  `xperea@gpiprofesionales.com`: `verify()` en OK y envío real aceptado (`250
+  mail accepted for delivery`), dos correos de prueba entregados. La contraseña
+  es la normal del buzón (la del webmail de GoDaddy, no la del cPanel); se
+  restablece desde la cuenta de GoDaddy, no desde el cPanel. Solo se probó el
+  puerto 465 en ese host (el 587 queda sin verificar).
+- **Estado**: `.env.local` ya quedó actualizado con el host correcto. Pendiente
+  solo cargar las cuatro variables (`CONTACT_SMTP_HOST`,
+  `CONTACT_SMTP_PORT`, `CONTACT_SMTP_USER`, `CONTACT_SMTP_PASS`) en Vercel y
+  volver a desplegar.
 
 ## Decisiones técnicas
 

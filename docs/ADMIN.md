@@ -232,7 +232,7 @@ cp .env.example .env.local
 NEXT_PUBLIC_SUPABASE_URL=https://xxxxxxxxxxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOi...
 SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOi...
-CONTACT_SMTP_HOST=mail.gpiprofesionales.com
+CONTACT_SMTP_HOST=smtpout.secureserver.net
 CONTACT_SMTP_PORT=465
 CONTACT_SMTP_USER=xperea@gpiprofesionales.com
 CONTACT_SMTP_PASS=la-contraseña-del-buzón
@@ -976,9 +976,9 @@ contacto"** (valor inicial `gpi.gerencia1@gmail.com`).
 
 **Cómo se envía, técnicamente:** el servidor manda el correo por SMTP en cuanto
 el visitante pulsa el botón, y además guarda una copia del mensaje en la base de
-datos. Puede salir del **buzón del dominio** (`mail.gpiprofesionales.com`) o de
-una cuenta de Gmail. Todo el detalle —qué poner en cada caso, dónde van las
-variables y qué pasa si faltan— está en
+datos. Puede salir del **buzón del dominio** (`smtpout.secureserver.net`, el
+correo Workspace de GoDaddy) o de una cuenta de Gmail. Todo el detalle —qué
+poner en cada caso, dónde van las variables y qué pasa si faltan— está en
 [§13 · Correo del formulario de contacto](#13-correo-del-formulario-de-contacto--envío-directo).
 
 ### Los proyectos tienen su propia página
@@ -1215,7 +1215,7 @@ entorno, así que sirven los dos escenarios **sin tocar una línea de código**:
 | | Buzón del dominio (recomendado) | Cuenta de Gmail |
 | --- | --- | --- |
 | Dirección que envía | `xperea@gpiprofesionales.com` | `gpi.gerencia1@gmail.com` |
-| Servidor | `mail.gpiprofesionales.com` | `smtp.gmail.com` (por defecto) |
+| Servidor | `smtpout.secureserver.net` | `smtp.gmail.com` (por defecto) |
 | Contraseña | La normal del buzón | Una **contraseña de aplicación** aparte |
 | Ventaja | El correo sale del propio dominio: menos riesgo de spam | No hace falta el hosting de GoDaddy |
 
@@ -1223,20 +1223,24 @@ Lo que **enciende** el envío directo sigue siendo lo mismo de siempre:
 `CONTACT_SMTP_USER` y `CONTACT_SMTP_PASS`. `CONTACT_SMTP_HOST` y
 `CONTACT_SMTP_PORT` son opcionales y solo hacen falta para salirse de Gmail.
 
-#### Con buzón del dominio (cPanel de GoDaddy)
+#### Con buzón del dominio (correo Workspace de GoDaddy)
 
 Es la opción recomendada: el mensaje sale de `@gpiprofesionales.com`, que es la
-dirección que el visitante espera ver.
+dirección que el visitante espera ver. Ojo: estos buzones (`xperea@`,
+`ycamacho@`) **no viven en el cPanel del hosting**, sino en el correo
+Workspace de GoDaddy (los registros MX del dominio apuntan a
+`secureserver.net`) — es una plataforma de correo aparte, con su propia
+cuenta y su propio servidor de salida.
 
 1. **Ten a mano la contraseña del buzón.** Es la misma con la que se entra al
-   webmail. Si no se recuerda: cPanel de GoDaddy → **Cuentas de correo** →
-   *Administrar* sobre `xperea@gpiprofesionales.com` → **Nueva contraseña** →
-   *Actualizar configuración de correo electrónico*.
+   webmail de GoDaddy (`email.godaddy.com`), no la del cPanel. Si no se
+   recuerda: entra a la cuenta de GoDaddy → **Correo electrónico** →
+   *Administrar* sobre `xperea@gpiprofesionales.com` → restablecer contraseña.
    ⚠️ Cambiarla ahí obliga a volver a escribirla en el celular y en Outlook, si
    el buzón está configurado en algún programa.
-2. **Confirma el servidor de salida.** En cPanel, *Cuentas de correo* →
-   **Conectar dispositivos** muestra los datos exactos. Para GPI son:
-   - Servidor (SMTP): `mail.gpiprofesionales.com`
+2. **Confirma el servidor de salida.** Para GPI son (confirmado con envío real
+   de prueba):
+   - Servidor (SMTP): `smtpout.secureserver.net`
    - Puerto: **465** con SSL/TLS
    - Usuario: la dirección **completa** (`xperea@gpiprofesionales.com`), no solo
      `xperea`
@@ -1247,10 +1251,13 @@ dirección que el visitante espera ver.
    correo del visitante.
 
 > **Si no llega nada:** casi siempre es la contraseña (se copió con un espacio
-> al final o se cambió en cPanel y no en Vercel) o el usuario escrito sin el
-> `@gpiprofesionales.com`. El puerto 587 también sirve si el 465 diera
-> problemas: se cambia `CONTACT_SMTP_PORT` a `587` y se vuelve a desplegar; el
-> sitio negocia STARTTLS solo.
+> al final o se cambió en la cuenta de GoDaddy y no en Vercel), el usuario
+> escrito sin el `@gpiprofesionales.com`, o el servidor equivocado — apuntar a
+> `mail.gpiprofesionales.com` (el cPanel) da `535 Incorrect authentication
+> data` porque ese buzón no existe ahí, solo en Workspace. El puerto 587
+> también sirve si el 465 diera problemas: se cambia `CONTACT_SMTP_PORT` a
+> `587` y se vuelve a desplegar; el sitio negocia STARTTLS solo (sin probar
+> en este host — solo se confirmó el 465).
 
 #### Con Gmail: cómo generar la contraseña de aplicación (una sola vez)
 
@@ -1277,8 +1284,8 @@ valores por defecto ya son los de Gmail.
 **En el computador (desarrollo)** — en `.env.local`:
 
 ```bash
-# Buzón del dominio (cPanel de GoDaddy)
-CONTACT_SMTP_HOST=mail.gpiprofesionales.com
+# Buzón del dominio (correo Workspace de GoDaddy)
+CONTACT_SMTP_HOST=smtpout.secureserver.net
 CONTACT_SMTP_PORT=465
 CONTACT_SMTP_USER=xperea@gpiprofesionales.com
 CONTACT_SMTP_PASS=la-contraseña-del-buzón
@@ -1296,7 +1303,7 @@ qué formulario mostrar.
 
 | Variable | Qué es | ¿Obligatoria? |
 | --- | --- | --- |
-| `CONTACT_SMTP_HOST` | Servidor de salida (`mail.gpiprofesionales.com`) | No — por defecto `smtp.gmail.com` |
+| `CONTACT_SMTP_HOST` | Servidor de salida (`smtpout.secureserver.net`) | No — por defecto `smtp.gmail.com` |
 | `CONTACT_SMTP_PORT` | Puerto (`465` con SSL; `587` con STARTTLS) | No — por defecto `465` |
 | `CONTACT_SMTP_USER` | El buzón **desde el que sale** el correo, dirección completa | **Sí** |
 | `CONTACT_SMTP_PASS` | Su contraseña (con Gmail, la de aplicación de 16 letras) | **Sí** |
