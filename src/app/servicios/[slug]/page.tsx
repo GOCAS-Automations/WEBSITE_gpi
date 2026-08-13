@@ -194,8 +194,12 @@ export default async function ServiceDetailPage({
                   cuando la URL no es de YouTube o cuando está oculto: aquí
                   basta con preguntar si existe. */}
               {service.video && (
-                <div className="mt-10">
-                  <h3 className="text-lg font-bold text-ink">
+                <div className="mt-10 rounded-3xl border border-line bg-mist p-5 shadow-soft sm:p-7">
+                  <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-brand-deep">
+                    <span className="h-px w-6 bg-current" aria-hidden="true" />
+                    Video del servicio
+                  </span>
+                  <h3 className="mt-3 text-xl font-bold text-ink">
                     {service.video.titulo || "Video del servicio"}
                   </h3>
                   {service.video.descripcion !== "" && (
@@ -203,7 +207,7 @@ export default async function ServiceDetailPage({
                       {service.video.descripcion}
                     </p>
                   )}
-                  <div className="mt-4">
+                  <div className="mt-5">
                     <YouTubeFacade
                       id={service.video.id}
                       title={service.video.titulo || service.title}

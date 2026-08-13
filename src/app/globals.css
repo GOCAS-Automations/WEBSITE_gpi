@@ -91,6 +91,54 @@
 }
 
 /* ============================================================
+   NAV flotante (píldora)
+
+   La barra dejó de ser una franja pegada al borde: ahora es una
+   píldora blanca que flota sobre el contenido. Su alto y su
+   separación del borde viven aquí, en variables, porque hay dos
+   piezas que TIENEN que cuadrar al pixel:
+
+     · el hueco que la barra ocupa en el flujo (`.nav-shell`), y
+     · lo que los heroes se suben para pasar por debajo (`.under-nav`).
+
+   Si se tocan a mano en dos sitios distintos acaban desalineadas;
+   con `--nav-h` derivada por `calc()` es imposible.
+   ============================================================ */
+:root {
+  --nav-gap: 0.75rem;
+  --nav-pill-h: 4rem;
+  --nav-h: calc(var(--nav-gap) + var(--nav-pill-h));
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --nav-gap: 1rem;
+    --nav-pill-h: 4.75rem;
+  }
+}
+
+/* Envoltura de la barra: transparente y solo tan alta como la píldora. */
+.nav-shell {
+  padding-top: var(--nav-gap);
+}
+
+.nav-pill {
+  height: var(--nav-pill-h);
+}
+
+/**
+ * Heroes: se deslizan por debajo de la píldora (margen negativo) y
+ * recuperan el espacio como relleno, para que el texto nunca quede
+ * tapado. Las páginas sin hero (portal, panel, 404) no lo usan y
+ * conservan el fondo blanco alrededor de la píldora, que es justo lo
+ * que pidió el prototipo para diferenciarla del blanco de la página.
+ */
+.under-nav {
+  margin-top: calc(-1 * var(--nav-h));
+  padding-top: var(--nav-h);
+}
+
+/* ============================================================
    Base
    ============================================================ */
 html {
@@ -111,9 +159,9 @@ body {
   color: #fff;
 }
 
-/* Anclas con header sticky */
+/* Anclas con la píldora flotante encima */
 :target {
-  scroll-margin-top: 6rem;
+  scroll-margin-top: calc(var(--nav-h) + 1.5rem);
 }
 
 h1,
@@ -261,6 +309,18 @@ main:focus-visible {
   .skip-link:focus-visible {
     transform: translateY(0) !important;
   }
+}
+
+/**
+ * Texto blanco sobre fotografía.
+ *
+ * Los heroes se aclararon a propósito (la foto tenía que verse), así que el
+ * texto pierde el colchón que le daba el oscurecido fuerte. Esta sombra
+ * devuelve el contraste local contra las zonas claras de la imagen sin volver a
+ * apagar la foto. No sustituye al degradado: lo acompaña.
+ */
+.text-on-photo {
+  text-shadow: 0 1px 2px rgba(9, 12, 9, 0.5), 0 4px 18px rgba(9, 12, 9, 0.35);
 }
 
 /* Utilidad: patrón sutil de puntos para bandas de marca */

@@ -34,9 +34,11 @@ export function Breadcrumbs({
   const styles =
     tone === "light"
       ? {
-          link: "text-white/60 hover:text-brand-light",
-          current: "text-white/85",
-          separator: "text-white/35",
+          // Al aclararse los heroes (rediseño 12 ago 2026) el blanco al 60 %
+          // se quedaba corto sobre las zonas claras de la foto.
+          link: "text-white/80 hover:text-brand-light",
+          current: "text-white/95",
+          separator: "text-white/50",
         }
       : {
           link: "text-ink-soft hover:text-brand-dark",

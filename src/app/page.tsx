@@ -8,6 +8,8 @@ import { Reveal } from "@/components/ui/Reveal";
 import { ValueCard } from "@/components/sections/ValueCard";
 import { ClientLogos } from "@/components/sections/ClientLogos";
 import { CtaBand } from "@/components/sections/CtaBand";
+import { VisitCounter } from "@/components/sections/VisitCounter";
+import { Wave } from "@/components/ui/Wave";
 import {
   getClients,
   getServiceCategories,
@@ -16,7 +18,6 @@ import {
   getValues,
   getVisitas,
 } from "@/lib/content";
-import { ETIQUETA_VISITAS } from "@/data/site";
 import { iconMap, ArrowRight, Check } from "@/lib/icons";
 
 export const metadata: Metadata = {
@@ -44,24 +45,24 @@ export default async function HomePage() {
   const showClients = visibility.clientsSection && clients.length > 0;
 
   /**
-   * Las cifras editables más, al final, el contador de visitas.
-   *
-   * El contador NO se edita en el panel a propósito: lo cuenta el sitio solo.
-   * Y solo aparece cuando la tabla existe (migración 0007 aplicada): mostrar
-   * "0 visitas" se leería como un sitio que nadie visita, que es peor que no
-   * mostrar nada.
+   * Tono de las olas: cada corte se pinta con el color de la sección que viene
+   * después, y las secciones son opcionales. Se calcula aquí para que apagar
+   * una sección desde el panel no deje una ola blanca sobre fondo gris.
    */
-  const stats = [
-    ...quienesSomos.stats,
-    ...(visitas.disponible
-      ? [{ value: visitas.formateado, label: ETIQUETA_VISITAS }]
-      : []),
-  ];
+  const olaHero = showQuienesSomos ? "white" : "mist";
+  const olaExcelencia = showValues ? "white" : "mist";
 
   return (
     <>
       {/* ---------------- HERO ---------------- */}
-      <section className="on-dark relative isolate flex min-h-[88vh] items-center overflow-hidden bg-ink">
+      {/*
+        OSCURECIDO (petición 3 del informe del 12 ago 2026): la foto tenía
+        encima un degradado del 90 % y no se veía. Ahora va un velo uniforme
+        suave + un degradado que solo carga a la izquierda, que es donde vive el
+        texto; el lado derecho deja la fotografía a la vista. El titular suma
+        `text-on-photo` para no depender solo del degradado.
+      */}
+      <section className="under-nav on-dark relative isolate flex min-h-[88vh] items-center overflow-hidden bg-ink">
         <Image
           src={hero.image}
           alt={hero.imageAlt}
@@ -70,24 +71,26 @@ export default async function HomePage() {
           sizes="100vw"
           className="object-cover object-center"
         />
-        <div className="absolute inset-0 bg-gradient-to-br from-ink/90 via-ink/72 to-brand-dark/70" />
+        <div className="absolute inset-0 bg-ink/15" aria-hidden="true" />
         <div
-          className="absolute inset-0 bg-gradient-to-t from-ink/80 via-transparent to-transparent"
+          className="absolute inset-0 bg-gradient-to-r from-ink/75 via-ink/30 to-brand-deep/10"
           aria-hidden="true"
         />
-        <Container className="relative py-24">
+        <div
+          className="absolute inset-0 bg-gradient-to-t from-ink/50 via-transparent to-transparent"
+          aria-hidden="true"
+        />
+        <Container className="relative z-20 pb-32 pt-16 sm:pb-36 lg:pb-44">
           <div className="max-w-3xl animate-fade-up">
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-white backdrop-blur">
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/15 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-white backdrop-blur">
               <span className="h-1.5 w-1.5 rounded-full bg-brand-light" aria-hidden="true" />
               {hero.badge}
             </span>
-            <h1 className="mt-6 text-4xl font-extrabold leading-[1.05] text-white sm:text-6xl">
+            <h1 className="text-on-photo mt-6 text-4xl font-extrabold leading-[1.05] text-white sm:text-6xl">
               {hero.titleLead}{" "}
-              <span className="bg-gradient-to-r from-brand-light to-brand bg-clip-text text-transparent">
-                {hero.titleHighlight}
-              </span>
+              <span className="text-brand-light">{hero.titleHighlight}</span>
             </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-white/85 sm:text-xl">
+            <p className="text-on-photo mt-6 max-w-2xl text-lg leading-relaxed text-white/90 sm:text-xl">
               {hero.description}
             </p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
@@ -101,13 +104,17 @@ export default async function HomePage() {
             </div>
           </div>
         </Container>
+        <Wave tone={olaHero} gradientId="gpi-wave-hero-inicio" />
       </section>
 
       {/* ---------------- INTRO / QUIÉNES SOMOS ---------------- */}
+      {/* Maquetación del prototipo (punto 5 del informe): texto y viñetas a la
+          izquierda; a la derecha las cifras en rejilla 2×2 y, debajo y a todo
+          el ancho, el recuadro del contador de visitas. */}
       {showQuienesSomos && (
-        <section className="py-20 sm:py-24">
+        <section className="pb-20 pt-14 sm:pb-24 sm:pt-16">
           <Container>
-            <div className="grid items-center gap-12 lg:grid-cols-2">
+            <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
               <Reveal>
                 <SectionHeading
                   eyebrow={quienesSomos.eyebrow}
@@ -115,7 +122,7 @@ export default async function HomePage() {
                   description={quienesSomos.descripcion}
                 />
                 {quienesSomos.bullets.length > 0 && (
-                  <ul className="mt-6 space-y-3">
+                  <ul className="mt-7 space-y-3.5">
                     {quienesSomos.bullets.map((point) => (
                       <li key={point} className="flex items-start gap-3">
                         <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-tint text-brand-deep">
@@ -139,12 +146,12 @@ export default async function HomePage() {
               </Reveal>
 
               <Reveal delay={120} className="grid grid-cols-2 gap-4">
-                {stats.map((stat) => (
+                {quienesSomos.stats.map((stat) => (
                   <div
                     key={stat.label}
-                    className="rounded-2xl border border-line bg-mist p-6 shadow-soft"
+                    className="rounded-2xl border border-line bg-mist p-5 shadow-soft transition-all duration-300 hover:-translate-y-1 hover:border-brand/40 hover:shadow-card sm:p-6"
                   >
-                    <p className="text-4xl font-extrabold text-brand-dark">
+                    <p className="text-3xl font-extrabold text-brand-dark sm:text-4xl">
                       {stat.value}
                     </p>
                     <p className="mt-2 text-sm leading-snug text-graphite">
@@ -152,6 +159,7 @@ export default async function HomePage() {
                     </p>
                   </div>
                 ))}
+                <VisitCounter visitas={visitas} className="col-span-2" />
               </Reveal>
             </div>
           </Container>
@@ -247,13 +255,20 @@ export default async function HomePage() {
       )}
 
       {/* ---------------- BANDA EXCELENCIA ---------------- */}
-      <section className="on-dark relative isolate overflow-hidden bg-ink py-20 sm:py-24">
+      {/* Segundo corte de ola del inicio: la sección clara entra en la banda
+          oscura sin línea dura. */}
+      <section className="on-dark relative isolate overflow-hidden bg-ink pb-20 pt-28 sm:pb-24 sm:pt-36 lg:pt-44">
         <div className="bg-dot-grid absolute inset-0 opacity-40" aria-hidden="true" />
         <div
           className="absolute -right-24 top-1/2 h-96 w-96 -translate-y-1/2 rounded-full bg-brand/20 blur-3xl"
           aria-hidden="true"
         />
-        <Container className="relative">
+        <Wave
+          position="top"
+          tone={olaExcelencia}
+          gradientId="gpi-wave-excelencia"
+        />
+        <Container className="relative z-20">
           <div className="mx-auto max-w-3xl text-center">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand-light">
               {excellence.eyebrow}
@@ -272,7 +287,9 @@ export default async function HomePage() {
         </Container>
       </section>
 
-      {/* ---------------- CLIENTES ---------------- */}
+      {/* ---------------- CLIENTES ----------------
+          Título aprobado por GPI el 12 ago 2026 (punto 4 del informe:
+          «Portafolio de clientes», con los logos a color). */}
       {showClients && (
         <section className="py-20 sm:py-24">
           <Container>
@@ -280,7 +297,7 @@ export default async function HomePage() {
               <SectionHeading
                 align="center"
                 eyebrow="Clientes"
-                title="Empresas que confían en GPI"
+                title="Portafolio de clientes"
                 description="Nos respalda el trabajo realizado junto a compañías de distintos sectores."
               />
             </Reveal>

@@ -16,6 +16,14 @@ const mainNav = [
   { label: "Contacto", href: "/contacto" },
 ];
 
+/**
+ * Barra de navegación: píldora blanca flotante (prototipo del 12 ago 2026).
+ *
+ * La envoltura `.nav-shell` es transparente y solo ocupa el alto de la píldora
+ * (ver `--nav-h` en globals.css); los heroes se suben por debajo con
+ * `.under-nav`, así la barra "flota" sobre la foto oscura y, en las páginas de
+ * fondo blanco, se distingue por la sombra y el borde.
+ */
 export function Header({ services }: { services: Service[] }) {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
@@ -74,227 +82,248 @@ export function Header({ services }: { services: Service[] }) {
   const ariaCurrent = (href: string) =>
     isActive(href) ? ("page" as const) : undefined;
 
+  /**
+   * El enlace activo es una píldora verde con texto blanco, como en el mockup.
+   * `brand-dark` de fondo da 4.74:1 con el blanco: cumple AA para texto normal.
+   */
+  const linkClasses = (href: string) =>
+    `rounded-full px-3.5 py-2 text-sm font-semibold transition-colors ${
+      isActive(href)
+        ? "bg-brand-dark text-white"
+        : "text-ink-soft hover:bg-brand-tint hover:text-brand-deep"
+    }`;
+
   const byCategory = (id: Service["category"]) =>
     services.filter((s) => s.category === id);
 
   return (
-    <header
-      className={`sticky top-0 z-50 bg-white transition-shadow duration-300 ${
-        scrolled ? "shadow-[0_4px_20px_-12px_rgba(21,24,27,0.35)]" : ""
-      } border-b border-line`}
-    >
-      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 sm:px-6 lg:px-8 lg:h-24">
-        {/* Logo */}
-        <Link href="/" className="flex shrink-0 items-center" aria-label="GPI — Inicio">
-          {/*
-            RENDIMIENTO: el archivo original es de 3300×1875 px (685 KB). Sin
-            `sizes`, el navegador asume `100vw` y descarga el candidato del
-            srcset para el ancho completo de la pantalla… para pintar un logo de
-            ~113 px. `sizes` le dice el tamaño real de maquetación y `width`/
-            `height` solo fijan la relación de aspecto (1.76:1), así que ahora
-            baja el candidato pequeño.
-          */}
-          <Image
-            src="/images/logo.png"
-            alt="GPI — Optimización de Procesos Industriales y Ambientales"
-            width={352}
-            height={200}
-            sizes="(min-width: 1024px) 113px, (min-width: 640px) 85px, 78px"
-            priority
-            className="h-11 w-auto sm:h-12 lg:h-16"
-          />
-        </Link>
+    <header className="nav-shell pointer-events-none sticky top-0 z-50 px-4 sm:px-6 lg:px-8">
+      <div className="pointer-events-auto relative mx-auto max-w-6xl">
+        <div
+          className={`nav-pill flex items-center justify-between gap-2 rounded-full border border-line/80 bg-white/95 pl-4 pr-2 backdrop-blur-md transition-shadow duration-300 sm:pl-5 sm:pr-3 ${
+            scrolled ? "shadow-card" : "shadow-soft"
+          }`}
+        >
+          {/* Logo */}
+          <Link
+            href="/"
+            className="flex shrink-0 items-center"
+            aria-label="GPI — Inicio"
+          >
+            {/*
+              RENDIMIENTO: el archivo original es de 3300×1875 px (685 KB). Sin
+              `sizes`, el navegador asume `100vw` y descarga el candidato del
+              srcset para el ancho completo de la pantalla… para pintar un logo
+              de ~99 px. `sizes` le dice el tamaño real de maquetación (alto ×
+              1.76 de relación de aspecto) y `width`/`height` solo fijan esa
+              relación, así que baja el candidato pequeño.
+            */}
+            <Image
+              src="/images/logo.png"
+              alt="GPI — Optimización de Procesos Industriales y Ambientales"
+              width={352}
+              height={200}
+              sizes="(min-width: 1024px) 99px, (min-width: 640px) 78px, 71px"
+              priority
+              className="h-10 w-auto sm:h-11 lg:h-14"
+            />
+          </Link>
 
-        {/* Navegación de escritorio */}
-        <nav className="hidden items-center gap-1 lg:flex" aria-label="Principal">
-          {mainNav.map((item) =>
-            item.hasDropdown ? (
-              /**
-               * Disclosure híbrido: se abre con el ratón (onMouseEnter) y con el
-               * teclado (onFocus, porque `focus` burbujea como `focusin` en
-               * React). `aria-expanded`/`aria-controls` describen el estado real.
-               */
-              <div
-                key={item.href}
-                className="relative"
-                onMouseEnter={() => setServicesOpen(true)}
-                onMouseLeave={() => setServicesOpen(false)}
-                onFocus={() => setServicesOpen(true)}
-                onBlur={(event) => {
-                  if (!event.currentTarget.contains(event.relatedTarget as Node)) {
-                    setServicesOpen(false);
-                  }
-                }}
-              >
-                <Link
-                  href={item.href}
-                  aria-current={ariaCurrent(item.href)}
-                  aria-expanded={servicesOpen}
-                  aria-controls="mega-menu-servicios"
-                  className={`flex items-center gap-1 rounded-full px-3.5 py-2 text-sm font-semibold transition-colors ${
-                    isActive(item.href)
-                      ? "text-brand-dark"
-                      : "text-ink-soft hover:text-brand-dark"
-                  }`}
+          {/* Navegación de escritorio */}
+          <nav
+            className="hidden flex-1 items-center justify-center gap-1 lg:flex"
+            aria-label="Principal"
+          >
+            {mainNav.map((item) =>
+              item.hasDropdown ? (
+                /**
+                 * Disclosure híbrido: se abre con el ratón (onMouseEnter) y con
+                 * el teclado (onFocus, porque `focus` burbujea como `focusin` en
+                 * React). `aria-expanded`/`aria-controls` describen el estado
+                 * real.
+                 */
+                <div
+                  key={item.href}
+                  className="relative"
+                  onMouseEnter={() => setServicesOpen(true)}
+                  onMouseLeave={() => setServicesOpen(false)}
+                  onFocus={() => setServicesOpen(true)}
+                  onBlur={(event) => {
+                    if (!event.currentTarget.contains(event.relatedTarget as Node)) {
+                      setServicesOpen(false);
+                    }
+                  }}
                 >
-                  {item.label}
-                  <ChevronDown
-                    className={`h-4 w-4 transition-transform duration-200 ${
-                      servicesOpen ? "rotate-180" : ""
-                    }`}
-                  />
-                </Link>
-                <MegaMenu services={services} open={servicesOpen} />
-              </div>
-            ) : (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-current={ariaCurrent(item.href)}
-                className={`rounded-full px-3.5 py-2 text-sm font-semibold transition-colors ${
-                  isActive(item.href)
-                    ? "text-brand-dark"
-                    : "text-ink-soft hover:text-brand-dark"
-                }`}
-              >
-                {item.label}
-              </Link>
-            ),
-          )}
-        </nav>
-
-        <div className="flex items-center gap-2">
-          {/* Acceso discreto al portal */}
-          <Link
-            href="/mi-cuenta"
-            aria-current={
-              isActive("/mi-cuenta") || isActive("/admin") ? "page" : undefined
-            }
-            className={`hidden items-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium transition-colors lg:inline-flex ${
-              isActive("/mi-cuenta") || isActive("/admin")
-                ? "text-brand-dark"
-                : "text-graphite hover:text-brand-dark"
-            }`}
-          >
-            <User className="h-4 w-4" />
-            Mi Cuenta
-          </Link>
-
-          <Link
-            href="/contacto"
-            className="hidden rounded-full bg-brand-dark px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-deep hover:shadow-card lg:inline-flex"
-          >
-            Contáctanos
-          </Link>
-
-          {/* Botón menú móvil */}
-          <button
-            ref={menuButtonRef}
-            type="button"
-            onClick={() => setMobileOpen((v) => !v)}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-ink transition-colors hover:bg-mist lg:hidden"
-            aria-label={mobileOpen ? "Cerrar menú" : "Abrir menú"}
-            aria-expanded={mobileOpen}
-            aria-controls="menu-movil"
-          >
-            {mobileOpen ? <Close className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
-        </div>
-      </div>
-
-      {/* Menú móvil */}
-      {mobileOpen && (
-        <div id="menu-movil" className="lg:hidden">
-          <div className="max-h-[calc(100dvh-5rem)] overflow-y-auto border-t border-line bg-white px-5 pb-8 pt-2">
-            <nav className="flex flex-col" aria-label="Móvil">
-              {mainNav.map((item) =>
-                item.hasDropdown ? (
-                  <div key={item.href} className="border-b border-line/70">
-                    <div className="flex items-center justify-between">
-                      <Link
-                        href={item.href}
-                        onClick={closeMobile}
-                        aria-current={ariaCurrent(item.href)}
-                        className="flex-1 py-3.5 text-base font-semibold text-ink"
-                      >
-                        {item.label}
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={() => setMobileServices((v) => !v)}
-                        aria-label={
-                          mobileServices
-                            ? "Ocultar lista de servicios"
-                            : "Mostrar lista de servicios"
-                        }
-                        aria-expanded={mobileServices}
-                        aria-controls="menu-movil-servicios"
-                        className="p-2 text-graphite"
-                      >
-                        <ChevronDown
-                          className={`h-5 w-5 transition-transform ${
-                            mobileServices ? "rotate-180" : ""
-                          }`}
-                        />
-                      </button>
-                    </div>
-                    {mobileServices && (
-                      <div id="menu-movil-servicios" className="pb-3">
-                        {serviceCategories.map((cat) => (
-                          <div key={cat.id} className="mb-2">
-                            <p className="px-1 py-1.5 text-xs font-bold uppercase tracking-wider text-brand-dark">
-                              {cat.name}
-                            </p>
-                            {byCategory(cat.id).map((svc) => (
-                              <Link
-                                key={svc.slug}
-                                href={`/servicios/${svc.slug}`}
-                                onClick={closeMobile}
-                                className="block rounded-lg px-1 py-2 text-sm text-graphite hover:text-brand-dark"
-                              >
-                                {svc.navTitle}
-                              </Link>
-                            ))}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ) : (
                   <Link
-                    key={item.href}
                     href={item.href}
-                    onClick={closeMobile}
                     aria-current={ariaCurrent(item.href)}
-                    className="border-b border-line/70 py-3.5 text-base font-semibold text-ink"
+                    aria-expanded={servicesOpen}
+                    aria-controls="mega-menu-servicios"
+                    className={`flex items-center gap-1 ${linkClasses(item.href)}`}
                   >
                     {item.label}
+                    <ChevronDown
+                      className={`h-4 w-4 transition-transform duration-200 ${
+                        servicesOpen ? "rotate-180" : ""
+                      }`}
+                    />
                   </Link>
-                ),
-              )}
-              <Link
-                href="/mi-cuenta"
-                onClick={closeMobile}
-                aria-current={
-                  isActive("/mi-cuenta") || isActive("/admin") ? "page" : undefined
-                }
-                className="flex items-center gap-2 border-b border-line/70 py-3.5 text-base font-semibold text-graphite"
-              >
-                <User className="h-5 w-5" />
-                Mi Cuenta
-              </Link>
-            </nav>
+                  <MegaMenu services={services} open={servicesOpen} />
+                </div>
+              ) : (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={ariaCurrent(item.href)}
+                  className={linkClasses(item.href)}
+                >
+                  {item.label}
+                </Link>
+              ),
+            )}
+          </nav>
+
+          <div className="flex shrink-0 items-center gap-1.5">
+            {/* Acceso discreto al portal */}
+            <Link
+              href="/mi-cuenta"
+              aria-current={
+                isActive("/mi-cuenta") || isActive("/admin") ? "page" : undefined
+              }
+              className={`hidden items-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium transition-colors lg:inline-flex ${
+                isActive("/mi-cuenta") || isActive("/admin")
+                  ? "text-brand-deep"
+                  : "text-graphite hover:text-brand-deep"
+              }`}
+            >
+              <User className="h-4 w-4" />
+              Mi Cuenta
+            </Link>
+
             <Link
               href="/contacto"
-              onClick={closeMobile}
-              className="mt-5 flex items-center justify-center gap-2 rounded-full bg-brand-dark px-6 py-3.5 text-base font-semibold text-white shadow-soft"
+              className="hidden rounded-full bg-brand-dark px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-deep hover:shadow-card lg:inline-flex"
             >
               Contáctanos
-              <ArrowRight className="h-5 w-5" />
             </Link>
+
+            {/* Botón menú móvil */}
+            <button
+              ref={menuButtonRef}
+              type="button"
+              onClick={() => setMobileOpen((v) => !v)}
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full text-ink transition-colors hover:bg-mist lg:hidden"
+              aria-label={mobileOpen ? "Cerrar menú" : "Abrir menú"}
+              aria-expanded={mobileOpen}
+              aria-controls="menu-movil"
+            >
+              {mobileOpen ? <Close className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
           </div>
         </div>
-      )}
+
+        {/* Menú móvil: se despliega DESDE la píldora, con el mismo lenguaje
+            redondeado. Sale del flujo para que el hero no se mueva al abrirlo. */}
+        {mobileOpen && (
+          <div
+            id="menu-movil"
+            className="absolute inset-x-0 top-full z-50 mt-2 lg:hidden"
+          >
+            <div className="max-h-[calc(100dvh-var(--nav-h)-1.5rem)] overflow-y-auto rounded-3xl border border-line bg-white px-5 pb-6 pt-2 shadow-card">
+              <nav className="flex flex-col" aria-label="Móvil">
+                {mainNav.map((item) =>
+                  item.hasDropdown ? (
+                    <div key={item.href} className="border-b border-line/70">
+                      <div className="flex items-center justify-between">
+                        <Link
+                          href={item.href}
+                          onClick={closeMobile}
+                          aria-current={ariaCurrent(item.href)}
+                          className={`flex-1 py-3.5 text-base font-semibold ${
+                            isActive(item.href) ? "text-brand-deep" : "text-ink"
+                          }`}
+                        >
+                          {item.label}
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => setMobileServices((v) => !v)}
+                          aria-label={
+                            mobileServices
+                              ? "Ocultar lista de servicios"
+                              : "Mostrar lista de servicios"
+                          }
+                          aria-expanded={mobileServices}
+                          aria-controls="menu-movil-servicios"
+                          className="rounded-full p-2 text-graphite"
+                        >
+                          <ChevronDown
+                            className={`h-5 w-5 transition-transform ${
+                              mobileServices ? "rotate-180" : ""
+                            }`}
+                          />
+                        </button>
+                      </div>
+                      {mobileServices && (
+                        <div id="menu-movil-servicios" className="pb-3">
+                          {serviceCategories.map((cat) => (
+                            <div key={cat.id} className="mb-2">
+                              <p className="px-1 py-1.5 text-xs font-bold uppercase tracking-wider text-brand-deep">
+                                {cat.name}
+                              </p>
+                              {byCategory(cat.id).map((svc) => (
+                                <Link
+                                  key={svc.slug}
+                                  href={`/servicios/${svc.slug}`}
+                                  onClick={closeMobile}
+                                  className="block rounded-xl px-2 py-2 text-sm text-graphite transition-colors hover:bg-mist hover:text-brand-deep"
+                                >
+                                  {svc.navTitle}
+                                </Link>
+                              ))}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={closeMobile}
+                      aria-current={ariaCurrent(item.href)}
+                      className={`border-b border-line/70 py-3.5 text-base font-semibold ${
+                        isActive(item.href) ? "text-brand-deep" : "text-ink"
+                      }`}
+                    >
+                      {item.label}
+                    </Link>
+                  ),
+                )}
+                <Link
+                  href="/mi-cuenta"
+                  onClick={closeMobile}
+                  aria-current={
+                    isActive("/mi-cuenta") || isActive("/admin") ? "page" : undefined
+                  }
+                  className="flex items-center gap-2 border-b border-line/70 py-3.5 text-base font-semibold text-graphite"
+                >
+                  <User className="h-5 w-5" />
+                  Mi Cuenta
+                </Link>
+              </nav>
+              <Link
+                href="/contacto"
+                onClick={closeMobile}
+                className="mt-5 flex items-center justify-center gap-2 rounded-full bg-brand-dark px-6 py-3.5 text-base font-semibold text-white shadow-soft"
+              >
+                Contáctanos
+                <ArrowRight className="h-5 w-5" />
+              </Link>
+            </div>
+          </div>
+        )}
+      </div>
     </header>
   );
 }
@@ -309,11 +338,11 @@ function MegaMenu({ services, open }: { services: Service[]; open: boolean }) {
     <div
       id="mega-menu-servicios"
       aria-label="Servicios de GPI"
-      className={`absolute left-1/2 top-full z-50 w-[640px] -translate-x-1/2 pt-3 transition-all duration-200 ${
+      className={`absolute left-1/2 top-full z-50 w-[640px] -translate-x-1/2 pt-4 transition-all duration-200 ${
         open ? "visible opacity-100" : "invisible opacity-0"
       }`}
     >
-      <div className="overflow-hidden rounded-2xl border border-line bg-white shadow-card">
+      <div className="overflow-hidden rounded-3xl border border-line bg-white shadow-card">
         <div className="grid grid-cols-2 gap-1 p-3">
           {serviceCategories.map((cat) => {
             const CatIcon = iconMap[cat.icon];
@@ -321,7 +350,7 @@ function MegaMenu({ services, open }: { services: Service[]; open: boolean }) {
               <div key={cat.id} className="p-2">
                 <div className="mb-1 flex items-center gap-2 px-2">
                   <CatIcon className="h-4 w-4 text-brand-dark" />
-                  <span className="text-xs font-bold uppercase tracking-wider text-brand-dark">
+                  <span className="text-xs font-bold uppercase tracking-wider text-brand-deep">
                     {cat.name}
                   </span>
                 </div>

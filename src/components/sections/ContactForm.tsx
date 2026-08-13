@@ -400,7 +400,7 @@ export function ContactForm({
           target="_blank"
           rel="noopener noreferrer"
           data-testid="whatsapp"
-          className="inline-flex items-center gap-1.5 font-semibold text-brand-dark underline underline-offset-2 transition-colors hover:text-brand-deep"
+          className="inline-flex items-center gap-1.5 font-semibold text-brand-deep underline underline-offset-2 transition-colors hover:text-ink"
         >
           <WhatsApp className="h-4 w-4" />
           Escribirnos por WhatsApp
@@ -441,7 +441,7 @@ export function ContactForm({
                 target="_blank"
                 rel="noopener noreferrer"
                 data-testid="gmail-alternativa"
-                className="font-semibold text-brand-dark underline underline-offset-2 hover:text-brand-deep"
+                className="font-semibold text-brand-deep underline underline-offset-2 hover:text-ink"
               >
                 Enviarlo desde Gmail
               </a>{" "}

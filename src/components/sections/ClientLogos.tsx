@@ -1,13 +1,21 @@
 import Image from "next/image";
 import type { Client } from "@/data/clients";
 
+/**
+ * Portafolio de clientes.
+ *
+ * Los logos van SIEMPRE a color (petición de GPI del 12 ago 2026): antes se
+ * pintaban en escala de grises al 80 % y solo recuperaban su color al pasar el
+ * ratón, algo que en móvil no ocurre nunca. El hover ahora resalta la tarjeta
+ * (elevación y sombra), no el color.
+ */
 export function ClientLogos({ clients }: { clients: Client[] }) {
   return (
     <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
       {clients.map((client) => (
         <li
           key={client.name}
-          className="group flex h-24 items-center justify-center rounded-2xl border border-line bg-white p-5 shadow-soft transition-all duration-300 hover:-translate-y-1 hover:shadow-card"
+          className="group flex h-24 items-center justify-center rounded-2xl border border-line bg-white p-5 shadow-soft transition-all duration-300 hover:-translate-y-1 hover:border-brand/40 hover:shadow-card"
         >
           <div className="relative h-full w-full">
             <Image
@@ -15,7 +23,7 @@ export function ClientLogos({ clients }: { clients: Client[] }) {
               alt={`Logo de ${client.name}, cliente de GPI`}
               fill
               sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 15vw"
-              className="object-contain opacity-80 grayscale transition duration-300 group-hover:opacity-100 group-hover:grayscale-0"
+              className="object-contain transition-transform duration-300 group-hover:scale-105"
             />
           </div>
         </li>
