@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Informe técnico del sitio web — GPI</title>
 <meta name="author" content="GOCAS Automations">
-<meta name="description" content="Informe técnico del sitio web de GPI — Grupo de Profesionales en Ingeniería GPI S.A.S. Descripción del sitio, alineación con el plan de diseño y evidencia medida de los 8 frentes de la ficha técnica. Julio de 2026.">
+<meta name="description" content="Informe técnico del sitio web de GPI — Grupo de Profesionales en Ingeniería GPI S.A.S. Descripción del sitio terminado, alineación con el plan de diseño y evidencia medida de los 8 frentes de la ficha técnica. Agosto de 2026.">
 <style>
   :root{
     --verde:#3dae2b;
@@ -331,7 +331,7 @@
     .indice > ol > li > a{ color:var(--tinta); }
     .tabla-wrap{ overflow:visible; }
     h2,h3{ break-after:avoid; page-break-after:avoid; }
-    .caja,.flujo,.kpi,table.keep,tbody tr,.contacto-cierre{
+    .caja,.flujo,.kpi,table.keep,tbody tr,.contacto-cierre,ul.check > li{
       break-inside:avoid;
       page-break-inside:avoid;
     }
@@ -382,9 +382,9 @@
   <div class="kicker">Grupo de Profesionales en Ingeniería GPI S.A.S</div>
   <h1>Informe técnico<br><span>del sitio web</span></h1>
   <div class="regla"></div>
-  <p class="sub">gpiprofesionales.com — nueva plataforma web</p>
+  <p class="sub">gpiprofesionales.com — plataforma web terminada</p>
   <p class="pie">
-    Julio de 2026<br>
+    Agosto de 2026<br>
     Elaborado por <strong>GOCAS Automations</strong> para GPI
   </p>
 </div>
@@ -420,22 +420,27 @@
   <p class="lead">GPI cuenta hoy con una plataforma web nueva, construida desde cero para
   reemplazar el sitio que la empresa tenía en GoDaddy. Este informe describe qué se
   construyó, muestra cómo respeta y lleva más lejos el plan de diseño que ya existía, y
-  responde —con evidencia medida el 28 de julio de 2026— los ocho frentes de la ficha
-  técnica de validación.</p>
+  responde —con evidencia medida el 13 de agosto de 2026, fecha de cierre del proyecto— los
+  ocho frentes de la ficha técnica de validación.</p>
 
-  <p>El sitio está <strong>en línea en un entorno de prueba</strong>, listo para conectar el
-  dominio <strong>gpiprofesionales.com</strong> en cuanto GPI dé el visto bueno tras la
-  revisión conjunta. Incluye el sitio público, un panel de administración para que GPI edite
-  su propio contenido, y un portal interno para el registro de jornadas y horas extra del
-  equipo. Todo el código está terminado y probado; lo que resta es la aprobación de
-  contenidos pendientes y el cambio de dominio, detallado en el capítulo 5.</p>
+  <p>El sitio está <strong>terminado y funcionando en producción</strong>
+  (<code>https://website-gpi.vercel.app</code>), a la espera de conectar el dominio
+  definitivo <strong>gpiprofesionales.com</strong> —el único punto que queda pendiente del
+  proyecto— en cuanto GPI dé la orden. Ese cambio de dominio <strong>no afecta el correo de
+  la empresa</strong>: los buzones siguen en el correo Workspace de GoDaddy, con sus mismos
+  registros. Incluye el sitio público con <strong>todo su contenido editable</strong> —textos
+  e imágenes de cada página—, un formulario de contacto que <strong>envía el correo real</strong>
+  al buzón corporativo, y un portal interno para el registro de jornadas y horas extra del
+  equipo. Todo el código está terminado, probado y en producción; lo único que resta es la
+  conexión del dominio, detallada en el capítulo 5.</p>
 
   <div class="kpi-grid">
-    <div class="kpi"><span class="tag">Lighthouse</span><b>100 / 100 / 100 / 100</b>
-      Rendimiento, Accesibilidad, Buenas prácticas y SEO — los 4 medidos en el build de
-      producción, no en desarrollo.</div>
+    <div class="kpi"><span class="tag">Lighthouse</span><b>98 / 100 / 100 / 100</b>
+      Rendimiento, Accesibilidad, Buenas prácticas y SEO — promedio en escritorio sobre
+      <strong>producción</strong>, 4 páginas, medido el 13 de agosto de 2026 (detalle en el
+      capítulo 4).</div>
     <div class="kpi"><span class="tag">Accesibilidad</span><b>0 violaciones</b>
-      Auditoría axe-core (WCAG 2.1 A+AA) en 8 páginas del sitio.</div>
+      Auditoría axe-core (WCAG 2.1 A+AA) en 8 páginas del sitio, sobre producción.</div>
     <div class="kpi"><span class="tag">Compatibilidad</span><b>0 errores</b>
       En los tres motores de navegador: Chromium, Firefox 148 y WebKit (Safari) 26.4.</div>
     <div class="kpi"><span class="tag">Seguridad</span><b>0/7 → 7/7</b>
@@ -456,11 +461,12 @@
   <p class="lead">La plataforma tiene tres partes: el sitio que ve cualquier visitante, el
   panel donde GPI edita su propio contenido, y Mi Cuenta, el portal interno del equipo.</p>
 
-  <h2 id="s3-1">El sitio público — 16 páginas</h2>
+  <h2 id="s3-1">El sitio público — 20 páginas</h2>
   <ul class="check">
-    <li><strong>Inicio</strong>, con los valores corporativos, un resumen de servicios y los
-      logos de clientes.</li>
-    <li><strong>Nosotros</strong>, con la presentación de la empresa y preguntas frecuentes.</li>
+    <li><strong>Inicio</strong>, con los valores corporativos, un resumen de servicios, los
+      logos de clientes a color y un contador de visitas en vivo.</li>
+    <li><strong>Nosotros</strong>, con la presentación de la empresa, la línea de tiempo de la
+      compañía, la galería de aliados estratégicos en carrusel y preguntas frecuentes.</li>
     <li><strong>Servicios</strong>: un centro (hub) que organiza las dos líneas de negocio
       —Industriales y Ambientales— y <strong>11 páginas individuales</strong>, una por
       servicio: Automatización y Control, Sistemas Eléctricos, Seguridad de Maquinaria,
@@ -468,16 +474,29 @@
       Mantenimiento y Proyectos (línea Industrial); Gestión Ambiental Empresarial,
       Cumplimiento Legal Ambiental, Gestión Urbanística, Recurso Hídrico e
       ISO 14001:2015 (línea Ambiental).</li>
-    <li><strong>Proyectos</strong>, con los trabajos realizados por GPI.</li>
+    <li><strong>Proyectos</strong>: un portafolio con los trabajos realizados por GPI y
+      <strong>4 páginas individuales</strong>, una por proyecto, cada una con su propia
+      galería y una dirección web fácil de compartir.</li>
     <li><strong>Contacto</strong>, con los datos oficiales de la empresa, un mapa de Google
-      Maps embebido y un formulario que envía el mensaje directo a WhatsApp.</li>
+      Maps embebido y un formulario —nombre, empresa (opcional), correo, teléfono y
+      mensaje— que <strong>envía el correo real</strong> al buzón corporativo de GPI (hoy
+      <code>xperea@gpiprofesionales.com</code>, editable desde el panel), con WhatsApp como
+      alternativa.</li>
   </ul>
+  <p>Además, cada servicio puede llevar su propio <strong>video de YouTube</strong> —igual que
+  Nosotros—, ambos opcionales y ocultables desde el panel sin perder el enlace guardado.</p>
 
   <h2 id="s3-2">El panel de administración (<code>/admin</code>)</h2>
-  <p>GPI puede editar su propio contenido sin depender de un tercero ni tocar código:
-  servicios, proyectos, logos de clientes, preguntas frecuentes, valores corporativos, datos
-  de contacto, y la <strong>visibilidad</strong> de secciones completas del sitio (se pueden
-  ocultar sin perder la información, para volver a mostrarlas cuando se necesite).</p>
+  <p>GPI puede editar <strong>absolutamente todo el contenido</strong> del sitio sin depender
+  de un tercero ni tocar código: servicios, proyectos, logos de clientes, preguntas
+  frecuentes, valores corporativos, datos de contacto, los textos e imágenes del inicio y de
+  Nosotros, las cabeceras de cada página y el pie del sitio, y la <strong>visibilidad</strong>
+  de secciones completas (se pueden ocultar sin perder la información, para volver a
+  mostrarlas cuando se necesite). Cada imagen se puede <strong>subir desde el computador</strong>
+  o pegar el enlace de un servicio externo (se recomienda Cloudinary, de plan gratuito): las
+  imágenes ya no viven en el código, sino en el almacenamiento del propio proyecto. El menú
+  del panel se organiza en seis secciones claras, con un centro de «Contenido del sitio» que
+  agrupa las ocho pantallas de edición.</p>
 
   <h2 id="s3-3">Mi Cuenta (<code>/mi-cuenta</code>)</h2>
   <p>Portal interno para el equipo de GPI, con inicio de sesión por <strong>usuario</strong>
@@ -526,8 +545,8 @@
           <td>Arquitectura propuesta: Inicio, Nosotros, Servicios Industriales, Servicios
             Ambientales, Casos de Éxito, Clientes, Contacto</td>
           <td><span class="si">✓ Cubierta en su totalidad</span> — los «casos de éxito» viven
-            en la sección Proyectos, y los clientes aparecen tanto en el inicio como en su
-            propia sección.</td>
+            en la sección Proyectos, cada uno con su propia página y galería, y los clientes
+            aparecen tanto en el inicio como en su propia sección, con sus logos a color.</td>
         </tr>
         <tr>
           <td>Posible línea de Obras Civiles</td>
@@ -549,9 +568,18 @@
   moderna con una base de datos gestionada, en lugar de páginas HTML sueltas— le da a GPI
   capacidades que antes no tenía, explicadas aquí en términos de negocio:</p>
   <ul class="check">
-    <li><strong>Autonomía total</strong>: GPI edita su propio contenido —servicios,
-      proyectos, clientes, preguntas frecuentes, datos de contacto— desde un panel privado y
-      protegido, sin depender de un tercero ni de conocimientos técnicos.</li>
+    <li><strong>Autonomía total</strong>: GPI edita absolutamente todo su contenido —textos e
+      imágenes de cada página, servicios, proyectos, clientes, preguntas frecuentes, valores,
+      datos de contacto— desde un panel privado y protegido, sin depender de un tercero ni de
+      conocimientos técnicos.</li>
+    <li><strong>Rediseño visual conjunto</strong>: en agosto de 2026 el sitio incorporó el
+      prototipo que el propio community manager de GPI preparó para Nosotros —menú flotante
+      tipo píldora, transiciones suaves entre secciones, línea de tiempo de la empresa,
+      galería de aliados en carrusel y logos de clientes a color— sin perder nada de lo ya
+      construido.</li>
+    <li><strong>Formulario de contacto que envía correo real</strong>, con respaldo automático
+      de cada mensaje en la base de datos y protección contra spam sin depender de ningún
+      servicio de terceros.</li>
     <li><strong>Portal interno de jornadas y horas extra</strong>, con aprobaciones y un
       tablero de métricas para nómina: una necesidad operativa que surgió durante el
       proyecto y que la plataforma ya resuelve, sin costo ni herramienta adicional.</li>
@@ -560,7 +588,8 @@
       corresponde — una capa de seguridad y orden que antes no existía.</li>
     <li><strong>Una base para crecer</strong>: la misma tecnología que hoy sirve el sitio
       permite, más adelante y si GPI lo decide, conectar otras herramientas (nómina, CRM,
-      un asistente de atención) sin tener que rehacer el sitio desde cero.</li>
+      un asistente de atención con inteligencia artificial) sin tener que rehacer el sitio
+      desde cero.</li>
   </ul>
 </section>
 
@@ -569,10 +598,10 @@
   <h1 class="cap"><span class="num">4.</span> Los 8 frentes de la ficha técnica</h1>
 
   <p class="lead">Este capítulo responde, uno por uno, los ocho frentes de la ficha de
-  validación técnica del community manager. Todas las cifras corresponden a una
-  <strong>auditoría realizada el 28 de julio de 2026</strong> sobre el <em>build de
-  producción</em> del sitio —la misma versión optimizada que verá el usuario final—, no
-  sobre el entorno de desarrollo.</p>
+  validación técnica del community manager. Las cifras de este capítulo corresponden a una
+  <strong>nueva auditoría realizada el 13 de agosto de 2026</strong>, directamente sobre
+  <strong>producción</strong> (<code>https://website-gpi.vercel.app</code>) —la misma versión
+  que ve el usuario final—, no sobre el entorno de desarrollo.</p>
 
   <h2 id="s5-1"><span class="num">4.1</span> Funcionalidad</h2>
   <p>Que cada página, cada botón y cada enlace del sitio hagan exactamente lo que deben
@@ -583,12 +612,13 @@
     <table>
       <thead><tr><th>Verificación</th><th>Resultado</th></tr></thead>
       <tbody>
-        <tr><td>Rutas probadas</td><td class="si">7 de 7 responden HTTP 200 («página encontrada y cargada»)</td></tr>
-        <tr><td>Errores en la consola del navegador</td><td class="si">0</td></tr>
-        <tr><td>Carga de imágenes</td><td class="si">100 % cargan correctamente</td></tr>
+        <tr><td>Páginas públicas probadas</td><td class="si">20 de 20 responden HTTP 200 («página encontrada y cargada»)</td></tr>
+        <tr><td><code>/admin</code> sin sesión iniciada</td><td class="si">Redirige a la pantalla de ingreso, como debe ser</td></tr>
+        <tr><td>Errores en la consola del navegador</td><td class="si">0, en 5 páginas × 3 motores de navegador</td></tr>
+        <tr><td>Carga de imágenes</td><td class="si">100 % cargan correctamente (51 imágenes verificadas)</td></tr>
         <tr><td>Mapa de Google Maps (Contacto)</td><td class="si">Funcional</td></tr>
-        <tr><td>Video institucional embebido (YouTube)</td><td class="si">Funcional</td></tr>
-        <tr><td>Formulario de contacto</td><td class="si">Conectado y envía el mensaje a WhatsApp</td></tr>
+        <tr><td>Video institucional y video por servicio (YouTube)</td><td class="si">Disponibles: opcionales y ocultables desde el panel, se activan al cargar un enlace</td></tr>
+        <tr><td>Formulario de contacto</td><td class="si">Envía el correo real al buzón corporativo, con WhatsApp como alternativa</td></tr>
         <tr><td>Enlace a «Recurso Hídrico» (daba error 404 en el sitio anterior)</td><td class="si">Funcional</td></tr>
       </tbody>
     </table>
@@ -607,8 +637,10 @@
         <tr><td>1024 px</td><td>Tableta horizontal / laptop pequeño</td><td class="c si">0</td><td class="c si">0</td></tr>
         <tr><td>1440 px</td><td>Computador de escritorio</td><td class="c si">0</td><td class="c si">0</td></tr>
       </tbody>
-      <caption>7 páginas representativas × 4 anchos de pantalla = <strong>28 combinaciones probadas</strong>,
-      0 con desplazamiento horizontal y 0 con texto solapado.</caption>
+      <caption>7 páginas representativas × 4 anchos de pantalla = <strong>28 combinaciones
+      probadas de nuevo el 13 de agosto de 2026 sobre producción</strong>: 0 con
+      desplazamiento horizontal. La revisión visual de textos solapados se hizo sobre
+      capturas de pantalla de las mismas páginas.</caption>
     </table>
   </div>
 
@@ -620,23 +652,26 @@
     <table>
       <thead><tr><th>Motor / navegador</th><th class="c">Errores de consola</th><th class="c">Violaciones de seguridad</th><th class="c">Imágenes y estilos cargados</th></tr></thead>
       <tbody>
-        <tr><td>Chromium (Chrome, Edge)</td><td class="c si">0</td><td class="c si">0</td><td class="c si">100 %</td></tr>
+        <tr><td>Chromium 147 (Chrome, Edge)</td><td class="c si">0</td><td class="c si">0</td><td class="c si">100 %</td></tr>
         <tr><td>Firefox 148</td><td class="c si">0</td><td class="c si">0</td><td class="c si">100 %</td></tr>
         <tr><td>WebKit 26.4 (Safari)</td><td class="c si">0</td><td class="c si">0</td><td class="c si">100 %</td></tr>
       </tbody>
+      <caption>5 páginas × 3 motores = 15 combinaciones, verificadas de nuevo el 13 de
+      agosto de 2026 directamente sobre producción.</caption>
     </table>
   </div>
 
   <h2 id="s5-4"><span class="num">4.4</span> Accesibilidad</h2>
   <p>Que cualquier persona pueda usar el sitio, incluidas quienes navegan solo con teclado o
   usan un lector de pantalla. Se hizo un análisis automatizado con la herramienta de
-  referencia del sector (axe-core, contra las normas WCAG 2.1 niveles A y AA) y una revisión
+  referencia del sector (axe-core, contra las normas WCAG 2.1 niveles A y AA) —repetido sobre
+  producción el 13 de agosto de 2026, después del rediseño visual de agosto— y una revisión
   manual de navegación por teclado y contraste de color.</p>
   <div class="tabla-wrap">
     <table>
       <thead><tr><th>Verificación</th><th>Resultado</th></tr></thead>
       <tbody>
-        <tr><td>Análisis axe-core (WCAG 2.1 A+AA), 8 páginas</td><td class="si">0 violaciones (se detectaron y corrigieron 3 de contraste durante la auditoría)</td></tr>
+        <tr><td>Análisis axe-core (WCAG 2.1 A+AA), 8 páginas</td><td class="si">0 violaciones — repetido el 13 de agosto de 2026 sobre producción (la auditoría original, del 28 de julio, había detectado y corregido 3 de contraste)</td></tr>
         <tr><td>Lighthouse — Accesibilidad</td><td class="si">100 / 100</td></tr>
         <tr><td>Contraste del texto de marca sobre blanco</td><td class="si">De 2.88:1 (insuficiente) a 4.74:1 (cumple AA)</td></tr>
         <tr><td>Contraste de rótulos sobre fondo suave</td><td class="si">6.17:1 (cumple AA)</td></tr>
@@ -680,7 +715,7 @@
     <table>
       <thead><tr><th style="width:22%">Cabecera</th><th style="width:30%">Valor</th><th>Qué protege</th></tr></thead>
       <tbody>
-        <tr><td>Content-Security-Policy</td><td>Lista blanca de orígenes: el propio sitio, la base de datos de GPI, el mapa de Google y YouTube sin cookies</td><td>Evita cargar scripts o contenido desde sitios ajenos no autorizados</td></tr>
+        <tr><td>Content-Security-Policy</td><td>Lista blanca de orígenes: el propio sitio, la base de datos de GPI, Cloudinary (imágenes externas), el mapa de Google y YouTube sin cookies</td><td>Evita cargar scripts o contenido desde sitios ajenos no autorizados</td></tr>
         <tr><td>Strict-Transport-Security</td><td>2 años (63 072 000 s)</td><td>Obliga al navegador a usar siempre HTTPS con este dominio</td></tr>
         <tr><td>X-Content-Type-Options</td><td>nosniff</td><td>Evita que el navegador reinterprete un archivo como un tipo distinto al declarado</td></tr>
         <tr><td>X-Frame-Options</td><td>SAMEORIGIN</td><td>Impide incrustar el sitio dentro de una página ajena (anti-clickjacking)</td></tr>
@@ -692,7 +727,8 @@
   </div>
   <div class="caja tip">
     <span class="titulo">Comparativa</span>
-    <p><strong>Sitio anterior: 0 de 7 cabeceras de seguridad. Sitio nuevo: 7 de 7.</strong>
+    <p><strong>Sitio anterior: 0 de 7 cabeceras de seguridad. Sitio nuevo: 7 de 7</strong>
+    (verificado de nuevo el 13 de agosto de 2026, directamente sobre producción).
     0 violaciones de la política de seguridad registradas en las pruebas con los tres
     navegadores. Además, el sitio maneja sesiones seguras, verifica los permisos de cada rol
     siempre en el servidor —nunca solo en la pantalla— y aplica seguridad a nivel de fila en
@@ -702,27 +738,30 @@
 
   <h2 id="s5-7"><span class="num">4.7</span> Rendimiento</h2>
   <p>Qué tan rápido carga el sitio y qué tan fluido se siente al usarlo. Se midió con
-  Lighthouse —la herramienta de Google de referencia en la industria— sobre el build de
-  producción, en modo escritorio.</p>
+  Lighthouse —la herramienta de Google de referencia en la industria— directamente sobre
+  <strong>producción</strong> (no un build local), en modo escritorio y en modo móvil.</p>
   <div class="tabla-wrap">
     <table>
-      <thead><tr><th>Métrica</th><th>Resultado</th><th>Qué significa</th></tr></thead>
+      <thead><tr><th>Métrica</th><th>Escritorio</th><th>Móvil</th><th>Qué significa</th></tr></thead>
       <tbody>
-        <tr><td>Lighthouse — Rendimiento</td><td class="si">100 / 100</td><td>Calificación global de velocidad y fluidez</td></tr>
-        <tr><td>LCP (contenido principal visible)</td><td class="si">0.7 s</td><td>Tiempo hasta ver lo más importante de la página</td></tr>
-        <tr><td>CLS (estabilidad visual)</td><td class="si">0</td><td>Nada se mueve inesperadamente mientras carga</td></tr>
-        <tr><td>TBT (tiempo bloqueado)</td><td class="si">0 ms</td><td>La página responde de inmediato a clics y toques</td></tr>
-        <tr><td>Peso de JavaScript — páginas públicas</td><td>~194 KB comprimido</td><td>Liviano: carga rápido incluso en conexiones móviles modestas</td></tr>
-        <tr><td>Librería de gráficas del panel (123 KB)</td><td class="si">No se descarga en el sitio público</td><td>Solo se carga dentro del panel, donde realmente se usa</td></tr>
+        <tr><td>Lighthouse — Rendimiento</td><td class="si">98 / 100</td><td class="si">95 / 100</td><td>Calificación global de velocidad y fluidez</td></tr>
+        <tr><td>LCP (contenido principal visible)</td><td class="si">0.7 s</td><td class="si">2.8 s</td><td>Tiempo hasta ver lo más importante de la página</td></tr>
+        <tr><td>CLS (estabilidad visual)</td><td class="si">0</td><td class="si">0</td><td>Nada se mueve inesperadamente mientras carga</td></tr>
+        <tr><td>TBT (tiempo bloqueado)</td><td class="si">0 ms</td><td>100 ms</td><td>La página responde de inmediato a clics y toques</td></tr>
+        <tr><td>Peso total de la página de inicio</td><td colspan="2">388 KiB (~170 KiB de JavaScript)</td><td>Liviano: carga rápido incluso en conexiones móviles modestas</td></tr>
+        <tr><td>Librería de gráficas del panel (Recharts)</td><td colspan="2" class="si">0 KiB de terceros en el sitio público</td><td>Solo se carga dentro del panel, donde realmente se usa</td></tr>
       </tbody>
-      <caption>Medido en 4 rutas: Inicio, Nosotros, Contacto y una página de servicio.</caption>
+      <caption>Medido el 13 de agosto de 2026 directamente sobre producción. Rendimiento en
+      escritorio por página: 98 Inicio, 97 Nosotros, 99 Contacto, 98 una página de servicio
+      (promedio 98). Accesibilidad, Buenas prácticas y SEO: 100/100 en escritorio y en móvil,
+      en las 4 rutas. Móvil medido en Inicio.</caption>
     </table>
   </div>
   <div class="caja nota">
     <span class="titulo">Para tener en cuenta</span>
-    <p>Estas cifras son mediciones de laboratorio en escritorio, con condiciones de red
-    controladas. Sobre el dominio real, una vez conectado, se medirá también la experiencia
-    en dispositivos móviles y con tráfico de usuarios reales.</p>
+    <p>Estas cifras son mediciones de <strong>laboratorio</strong>, en escritorio y en móvil,
+    con condiciones de red controladas. Sobre el dominio real, una vez conectado, se podrá
+    medir también la experiencia con tráfico de usuarios reales (datos de campo).</p>
   </div>
 
   <h2 id="s5-8"><span class="num">4.8</span> SEO y Core Web Vitals</h2>
@@ -734,10 +773,10 @@
       <thead><tr><th>Elemento</th><th>Estado</th></tr></thead>
       <tbody>
         <tr><td>Lighthouse — SEO</td><td class="si">100 / 100</td></tr>
-        <tr><td>Título y descripción únicos por página</td><td class="si">Sí, en las 16 páginas</td></tr>
-        <tr><td>Mapa del sitio (sitemap.xml)</td><td class="si">16 URL registradas</td></tr>
+        <tr><td>Título y descripción únicos por página</td><td class="si">Sí, en las 20 páginas</td></tr>
+        <tr><td>Mapa del sitio (sitemap.xml)</td><td class="si">20 URL registradas</td></tr>
         <tr><td>robots.txt</td><td class="si">Presente</td></tr>
-        <tr><td>Datos estructurados (JSON-LD)</td><td class="si">Organization, LocalBusiness (dirección y horario), migas de pan (BreadcrumbList), Service (uno por servicio) y FAQPage</td></tr>
+        <tr><td>Datos estructurados (JSON-LD)</td><td class="si">Organization, LocalBusiness (dirección y horario), migas de pan (BreadcrumbList), Service (uno por servicio), CreativeWork (uno por proyecto) y FAQPage</td></tr>
         <tr><td>Enlaces canónicos</td><td class="si">Presentes en todas las páginas</td></tr>
         <tr><td>Jerarquía de encabezados</td><td class="si">1 título principal (H1) por página, 0 saltos de nivel</td></tr>
         <tr><td>Páginas privadas (Mi Cuenta, panel)</td><td class="si">Excluidas de los buscadores</td></tr>
@@ -761,8 +800,8 @@
   de mejora continua después del lanzamiento.</p>
 
   <ul class="check">
-    <li>Optimizar aún más las imágenes, migrándolas a formatos modernos (WebP/AVIF) para
-      reducir todavía más el peso de carga.</li>
+    <li>Seguir cuidando el peso de las fotografías originales que suba GPI — el optimizador
+      de imágenes del sitio ya sirve formatos modernos (WebP/AVIF) de forma automática.</li>
     <li>Endurecer la política de scripts (CSP) específicamente en las zonas privadas del
       panel y de Mi Cuenta.</li>
     <li>Medir datos de campo (CrUX/INP) una vez el dominio real tenga tráfico de
@@ -771,18 +810,20 @@
       complemento al análisis automatizado ya realizado.</li>
     <li>Enviar el dominio a la lista de precarga HSTS de los navegadores, una vez se
       confirme que todos sus subdominios (correo, panel de control) sirven HTTPS válido.</li>
-    <li>Definir con GPI los contenidos aún pendientes: la posible línea de Obras Civiles,
-      las cifras oficiales para las estadísticas del sitio, el servicio de Huella de
-      Carbono, y los textos de Misión y Visión.</li>
+    <li>Si GPI lo decide más adelante, sumar la posible línea de <strong>Obras Civiles</strong>
+      y el servicio de <strong>Huella de Carbono</strong> como nuevo contenido — hoy no están
+      publicados porque no hay información confirmada para ellos. Los textos de Misión,
+      Visión y las cifras de la barra de estadísticas ya quedaron definidos y publicados en
+      agosto de 2026.</li>
   </ul>
 
   <h2 id="s6-1">Siguientes pasos</h2>
   <div class="flujo">
-    <div class="paso"><b>1. Revisión conjunta</b>Sesión del viernes con GPI y el community manager sobre este informe y el sitio en vivo.</div>
+    <div class="paso"><b>1. Conectar el dominio</b>Apuntar gpiprofesionales.com (hoy en GoDaddy) al nuevo hosting en cuanto GPI dé la orden. No afecta el correo de la empresa.</div>
     <div class="flecha">→</div>
-    <div class="paso"><b>2. Ajustes</b>Se incorporan los comentarios y contenidos pendientes que resulten de la revisión.</div>
+    <div class="paso"><b>2. Fotos e imágenes finales</b>Cargar las fotografías originales en alta resolución y los logos de clientes que falten — GPI ya puede hacerlo por su cuenta desde el panel.</div>
     <div class="flecha">→</div>
-    <div class="paso"><b>3. Conexión del dominio</b>gpiprofesionales.com se apunta al nuevo hosting y el sitio queda publicado de forma definitiva.</div>
+    <div class="paso"><b>3. Opción futura: chatbot con IA</b>Un asistente entrenado con el contenido del sitio, cotizado aparte, si GPI decide sumarlo más adelante.</div>
   </div>
 </section>
 
@@ -791,8 +832,8 @@
   <h1 class="cap"><span class="num">6.</span> Cierre</h1>
 
   <p>Este informe resume el estado técnico del nuevo sitio web de GPI y la evidencia que lo
-  respalda. Quedamos atentos a la revisión conjunta del viernes para resolver dudas,
-  incorporar ajustes y avanzar hacia la conexión del dominio.</p>
+  respalda. El sitio queda <strong>terminado</strong>: quedamos atentos a la señal de GPI
+  para conectar el dominio y avanzar hacia la publicación definitiva.</p>
 
   <div class="contacto-cierre">
     <h3>GOCAS Automations</h3>
@@ -800,7 +841,7 @@
     <p>cesarxemiliox@gmail.com</p>
   </div>
 
-  <p class="pie-doc">Informe técnico del sitio web de GPI — Julio de 2026<br>
+  <p class="pie-doc">Informe técnico del sitio web de GPI — Agosto de 2026<br>
   Elaborado por GOCAS Automations para Grupo de Profesionales en Ingeniería GPI S.A.S</p>
 </section>
 
