@@ -48,10 +48,10 @@ export default async function AdminContenidoPage() {
     },
     {
       href: "/admin/paginas",
-      label: "Títulos de páginas",
+      label: "Cabeceras de páginas y pie del sitio",
       icon: Layers,
       description:
-        "La primera pantalla de Servicios, Proyectos y Contacto (título, texto y foto de fondo) y el párrafo de presentación del pie de página.",
+        "Los textos e imágenes de cabecera de Servicios, Proyectos y Contacto, y la descripción del pie de página.",
     },
     {
       href: "/admin/servicios",

@@ -499,7 +499,8 @@ cabeceras de las páginas que no son inicio ni Nosotros.
   título, descripción, imagen de fondo y su texto alternativo) de
   **Servicios**, **Proyectos** y **Contacto**, más el párrafo de presentación
   del **pie de página**. Se edita en la pantalla nueva **`/admin/paginas`**
-  («Títulos de páginas»), dentro de «Contenido del sitio». El inicio y
+  («Cabeceras de páginas y pie del sitio»), dentro de «Contenido del sitio».
+  El inicio y
   Nosotros no están aquí a propósito: ya tienen su propia pantalla, con muchos
   más bloques que una sola cabecera.
 - **El pie decía «Más de 5 años»** —quedó escrito directamente en
@@ -605,7 +606,8 @@ contenido: se leía como un inventario, no como un menú.
 - Pasó a **seis**: **Dashboard · Contenido del sitio · Equipo · Horarios ·
   Jornadas · Ajustes**. «Contenido del sitio» es la ruta nueva
   `/admin/contenido`, un índice con tarjetas hacia Página de inicio, Página
-  Nosotros, Títulos de páginas, Servicios, Proyectos, Clientes, Preguntas
+  Nosotros, Cabeceras de páginas y pie del sitio, Servicios, Proyectos,
+  Clientes, Preguntas
   frecuentes y Valores corporativos.
 - **Ninguna URL cambió** (`/admin/servicios` sigue siendo `/admin/servicios`):
   solo se agrupó el menú. Estar en cualquiera de esas ocho pantallas marca
@@ -726,6 +728,80 @@ muy pronto» (botón inhabilitado hasta cargar `CONTACT_SMTP_USER` /
 agosto](#iteración-del-3-de-agosto-de-2026--el-formulario-envía-el-correo-de-verdad))
 es real y **se queda**: no es un texto de prueba, es el estado actual del
 sitio hasta que GPI cargue esas credenciales.
+
+## Ajustes finales del 12 de agosto de 2026 (después del pulido)
+
+Cinco retoques pedidos al revisar el sitio ya desplegado. **Ninguno necesita
+migración**: la única clave nueva (`nosotros.quienesSomos.badge`) se normaliza
+con respaldo estático, igual que todo lo demás.
+
+### 1. Los gadgets del «Quiénes somos», más pequeños y en pareja
+
+El recuadro del contador de visitas tenía el tamaño de una tarjeta de cifras y
+pesaba más que el dato que enseña. Pasó a ser un **chip**: número de 20/24 px y
+12/16 px de relleno, en el inicio y en Nosotros (`VisitCounter`).
+
+En **Nosotros** recupera al lado el sello verde **«+15 / AÑOS DE EXPERIENCIA»**
+del prototipo del community manager (página 3 del PDF del 12 de agosto; allí
+decía «+5», GPI corrigió la cifra a 15). Los dos se apoyan juntos en el borde
+inferior de la foto del equipo, medio dentro y medio fuera: en escritorio
+alineados a la derecha, y en móvil repartiéndose el ancho de la foto —`flex-1`
+solo hasta `sm`— para que no se partan en dos líneas.
+
+El texto del sello es editable en `/admin/nosotros` → *Quiénes Somos*
+(«Sello: cifra» y «Sello: texto»). Vive en `nosotros.quienesSomos.badge`, una
+**subclave nueva sin migración**: cuando no existe manda `nosotrosDefaults`, y
+si existe con la cifra vacía el sello no se pinta (la regla `undefined` ≠ vacío
+de siempre).
+
+### 2. Transiciones de Nosotros
+
+La galería «Más que proveedores…» era una banda verde a sangre: el verde
+saturado aparecía de golpe bajo el blanco de Misión y Visión y desaparecía
+igual de seco antes de la línea de tiempo. Ahora la banda es un **bloque
+redondeado** —el mismo recurso que ya usaba `CtaBand`— apoyado sobre un campo
+verde muy pálido que **nace y muere en blanco**
+(`from-white via-brand-tint to-white`), con espacio generoso arriba y abajo.
+
+Con el mismo criterio, las dos bandas grises de la página (valores y preguntas
+frecuentes) cambian `bg-mist` por la utilidad nueva **`.banda-suave`**
+(`globals.css`): el gris entra y sale en 4 rem de degradado. La fundida es de
+alto **fijo** y empieza y termina en blanco, así que cada sección queda bien sea
+cual sea su vecina — que en este sitio se pueden apagar una a una desde el
+panel. Como consecuencia, la ola del hero de Nosotros ya no necesita calcular su
+color: todas las secciones empiezan en blanco.
+
+### 3. «Títulos de páginas» → «Cabeceras de páginas y pie del sitio»
+
+La pantalla no solo edita títulos: también descripciones, imágenes de cabecera y
+el texto del pie. Se renombró la tarjeta del hub, el título de la pantalla, la
+miga de pan y las menciones de `docs/`. **La URL sigue siendo `/admin/paginas`**:
+renombrar una pantalla no es mover una ruta.
+
+### 4. Logo del nav más grande (tercera vez que lo pide GPI)
+
+De 64 a **80 px** de alto en escritorio (52/56 px en móvil y tableta) y la
+píldora crece con él: `--nav-pill-h` pasa a **6 rem** (96 px) en escritorio y
+4.5 rem (72 px) en móvil, dejando 8-10 px de aire. `--nav-h` y `.under-nav` se
+recalculan solos por `calc()`, así que los héroes siguen cuadrados al pixel. El
+atributo `sizes` sube a 141 px para que el navegador no descargue un candidato
+mayor del necesario.
+
+### 5. SMTP configurable: el formulario puede salir del buzón del dominio
+
+`src/lib/correo.ts` tenía `smtp.gmail.com:465` escrito en el código. Ahora el
+servidor se elige con **`CONTACT_SMTP_HOST`** (por defecto `smtp.gmail.com`) y
+**`CONTACT_SMTP_PORT`** (por defecto `465`; `secure` = puerto 465, y cualquier
+otro puerto negocia STARTTLS). Lo que enciende el envío directo **no cambia**:
+`smtpContactoConfigurado()` sigue siendo USER + PASS.
+
+Con esto GPI puede enviar desde `xperea@gpiprofesionales.com` a través de
+`mail.gpiprofesionales.com:465` (cPanel de GoDaddy), que es mejor para la
+entregabilidad que salir desde una cuenta de Gmail. Detalle fino: el borrado de
+espacios de la contraseña **solo se aplica a Gmail** (viene de sus contraseñas
+de aplicación en grupos de 4); en un buzón de dominio la contraseña puede llevar
+espacios de verdad y solo se recortan los extremos. Pasos exactos en
+`docs/ADMIN.md` §13 → *Con buzón del dominio (cPanel de GoDaddy)*.
 
 ## Decisiones técnicas
 

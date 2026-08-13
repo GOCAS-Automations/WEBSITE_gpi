@@ -120,8 +120,8 @@ verás exactamente lo mismo que ahora, pero ya editable.
 | Política `site_mensajes_select_manager` | **Única** política de la tabla: solo un manager autenticado puede leerla (pensando en una futura bandeja de mensajes en el panel) |
 
 > **Por qué existe:** el formulario envía el correo de verdad, pero un envío
-> puede fallar por cosas ajenas al sitio (la contraseña de aplicación de Google
-> se vence, Gmail corta, el correo cae en spam). El mensaje se guarda **antes**
+> puede fallar por cosas ajenas al sitio (se cambia la contraseña del buzón, el
+> servidor de correo corta, el mensaje cae en spam). Se guarda **antes**
 > de intentar el envío, así que el correo puede fallar pero el prospecto no se
 > pierde. La columna `enviado` distingue los que sí salieron por correo de los
 > que hay que responder a mano.
@@ -175,7 +175,8 @@ verás exactamente lo mismo que ahora, pero ya editable.
 
 Se edita en **dos pantallas**: los cuatro bloques de `home` en `/admin/inicio`
 (que pasa de cuatro a ocho tarjetas) y `paginas` en la pantalla nueva
-**`/admin/paginas`** («Títulos de páginas», dentro de «Contenido del sitio»).
+**`/admin/paginas`** («Cabeceras de páginas y pie del sitio», dentro de
+«Contenido del sitio»).
 El **inicio** y **Nosotros** no están en `/admin/paginas`: son páginas enteras
 con su propia pantalla desde la 0007.
 
@@ -225,12 +226,14 @@ cp .env.example .env.local
 NEXT_PUBLIC_SUPABASE_URL=https://xxxxxxxxxxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOi...
 SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOi...
-CONTACT_SMTP_USER=gpi.gerencia1@gmail.com
-CONTACT_SMTP_PASS=abcdefghijklmnop
+CONTACT_SMTP_HOST=mail.gpiprofesionales.com
+CONTACT_SMTP_PORT=465
+CONTACT_SMTP_USER=xperea@gpiprofesionales.com
+CONTACT_SMTP_PASS=la-contraseña-del-buzón
 ```
 
 **Dónde encontrarlas:** las tres de Supabase, en el Dashboard →
-**Settings** → **API Keys**. Las dos del correo, en la cuenta de Google (ver
+**Settings** → **API Keys**. Las del correo, en el buzón que vaya a enviar (ver
 [§13](#13-correo-del-formulario-de-contacto--envío-directo)).
 
 | Variable | Valor | ¿Secreta? |
@@ -238,8 +241,10 @@ CONTACT_SMTP_PASS=abcdefghijklmnop
 | `NEXT_PUBLIC_SUPABASE_URL` | Campo **Project URL** | No |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Clave **anon** / **publishable** | No |
 | `SUPABASE_SERVICE_ROLE_KEY` | Clave **service_role** | **Sí** |
-| `CONTACT_SMTP_USER` | Cuenta de Gmail desde la que sale el correo del formulario | No |
-| `CONTACT_SMTP_PASS` | **Contraseña de aplicación** de esa cuenta (16 letras) | **Sí** |
+| `CONTACT_SMTP_HOST` | Servidor de salida. **Opcional**: si se deja vacío se usa `smtp.gmail.com` | No |
+| `CONTACT_SMTP_PORT` | Puerto. **Opcional**: si se deja vacío se usa `465` | No |
+| `CONTACT_SMTP_USER` | Buzón desde el que sale el correo del formulario | No |
+| `CONTACT_SMTP_PASS` | Su contraseña (con Gmail, la **contraseña de aplicación** de 16 letras) | **Sí** |
 
 ### Sobre `SUPABASE_SERVICE_ROLE_KEY`
 
@@ -786,7 +791,7 @@ panel*, al final de esta sección).
 | --- | --- | --- |
 | **Página de inicio** | contenido | Primera pantalla (hero), bloque «Quiénes somos» con sus puntos, foto y cifras, título de la sección de servicios, título de los valores, banda oscura, título del portafolio de clientes, cierre de la página y qué secciones del inicio se ven |
 | **Página Nosotros** | contenido | Primera pantalla, Quiénes Somos, Misión, Visión, galería de aliados, línea de tiempo, título de los valores, video de YouTube, texto de cierre y qué secciones se ven |
-| **Títulos de páginas** | contenido | La primera pantalla (cabecera) de Servicios, Proyectos y Contacto, y el párrafo de presentación del pie de página |
+| **Cabeceras de páginas y pie del sitio** | contenido | Los textos e imágenes de cabecera de Servicios, Proyectos y Contacto, y la descripción del pie de página |
 | **Servicios** | contenido | CRUD completo: título, título de menú, slug, categoría, icono, orden, visibilidad, resumen, descripción, ítems, portada, galería, **video de YouTube** y SEO |
 | **Proyectos** | contenido | CRUD: título, cliente, **dirección web (slug)**, categoría, descripción corta, **descripción larga**, imagen, **galería**, orden y visibilidad. Cada proyecto tiene su propia página en `/proyectos/<slug>` |
 | **Clientes** | contenido | CRUD: nombre, logo, sitio web, orden y visibilidad |
@@ -825,7 +830,7 @@ páginas estaban escritos en el código. Desde las migraciones 0007 y 0008 hay
 > página. `/admin/inicio` pasó de cuatro a **ocho tarjetas**, cada una con su
 > propio botón de guardar, en el mismo orden en que se ven en la página.
 
-**`/admin/paginas` — Títulos de páginas** *(nueva, migración 0008)*
+**`/admin/paginas` — Cabeceras de páginas y pie del sitio** *(nueva, migración 0008)*
 
 Vive dentro de «Contenido del sitio», pero no es una página completa como el
 inicio o Nosotros: son solo las **cabeceras** —la banda oscura con foto de
@@ -962,10 +967,11 @@ contacto"** (valor inicial `gpi.gerencia1@gmail.com`).
 - El panel valida que tenga forma de correo; si se deja vacío se conserva el
   valor por defecto, para que el formulario nunca quede sin destinatario.
 
-**Cómo se envía, técnicamente:** el servidor manda el correo por SMTP de Gmail
-en cuanto el visitante pulsa el botón, y además guarda una copia del mensaje en
-la base de datos. Todo el detalle —cómo generar la contraseña de aplicación,
-dónde poner las variables y qué pasa si faltan— está en
+**Cómo se envía, técnicamente:** el servidor manda el correo por SMTP en cuanto
+el visitante pulsa el botón, y además guarda una copia del mensaje en la base de
+datos. Puede salir del **buzón del dominio** (`mail.gpiprofesionales.com`) o de
+una cuenta de Gmail. Todo el detalle —qué poner en cada caso, dónde van las
+variables y qué pasa si faltan— está en
 [§13 · Correo del formulario de contacto](#13-correo-del-formulario-de-contacto--envío-directo).
 
 ### Los proyectos tienen su propia página
@@ -1007,7 +1013,8 @@ Siempre se muestra una vista previa.
   managers.
 - **Contenido del sitio** (`/admin/contenido`) es el hub que reemplazó a las
   ocho entradas sueltas de antes: un índice con una tarjeta por pantalla
-  —Página de inicio, Página Nosotros, Títulos de páginas, Servicios,
+  —Página de inicio, Página Nosotros, Cabeceras de páginas y pie del sitio,
+  Servicios,
   Proyectos, Clientes, FAQ y Valores—, en el mismo orden en que un visitante
   recorre el sitio. El menú tenía **doce** entradas y se leía como un
   inventario; ahora tiene **seis**.
@@ -1035,8 +1042,10 @@ Siempre se muestra una vista previa.
    mismos valores del `.env.local`, marcando **Production**, **Preview** y
    **Development**.
 3. Añade `SUPABASE_SERVICE_ROLE_KEY` **sin** prefijo `NEXT_PUBLIC_`.
-4. Añade `CONTACT_SMTP_USER` y `CONTACT_SMTP_PASS`, también **sin** prefijo
-   `NEXT_PUBLIC_` (ver [§13](#13-correo-del-formulario-de-contacto--envío-directo)).
+4. Añade `CONTACT_SMTP_USER` y `CONTACT_SMTP_PASS` —y, si el buzón no es de
+   Gmail, también `CONTACT_SMTP_HOST` y `CONTACT_SMTP_PORT`—, todas **sin**
+   prefijo `NEXT_PUBLIC_`
+   (ver [§13](#13-correo-del-formulario-de-contacto--envío-directo)).
 5. Vuelve a desplegar (**Redeploy**): las variables `NEXT_PUBLIC_*` se incrustan
    en el build, y la página `/contacto` decide **en el build** si muestra el
    envío directo o el modo alternativo. Guardar las variables sin volver a
@@ -1107,7 +1116,52 @@ Antes se abría el programa de correo del visitante (`mailto:`). GPI reportó qu
 "no abre nada", que es exactamente lo que ocurre en un computador sin programa
 de correo configurado — la situación de la mayoría de la gente hoy.
 
-### Cómo generar la contraseña de aplicación de Google (una sola vez)
+### Desde qué buzón sale el correo: dos opciones
+
+El sitio no está atado a Gmail. El servidor de salida se elige con variables de
+entorno, así que sirven los dos escenarios **sin tocar una línea de código**:
+
+| | Buzón del dominio (recomendado) | Cuenta de Gmail |
+| --- | --- | --- |
+| Dirección que envía | `xperea@gpiprofesionales.com` | `gpi.gerencia1@gmail.com` |
+| Servidor | `mail.gpiprofesionales.com` | `smtp.gmail.com` (por defecto) |
+| Contraseña | La normal del buzón | Una **contraseña de aplicación** aparte |
+| Ventaja | El correo sale del propio dominio: menos riesgo de spam | No hace falta el hosting de GoDaddy |
+
+Lo que **enciende** el envío directo sigue siendo lo mismo de siempre:
+`CONTACT_SMTP_USER` y `CONTACT_SMTP_PASS`. `CONTACT_SMTP_HOST` y
+`CONTACT_SMTP_PORT` son opcionales y solo hacen falta para salirse de Gmail.
+
+#### Con buzón del dominio (cPanel de GoDaddy)
+
+Es la opción recomendada: el mensaje sale de `@gpiprofesionales.com`, que es la
+dirección que el visitante espera ver.
+
+1. **Ten a mano la contraseña del buzón.** Es la misma con la que se entra al
+   webmail. Si no se recuerda: cPanel de GoDaddy → **Cuentas de correo** →
+   *Administrar* sobre `xperea@gpiprofesionales.com` → **Nueva contraseña** →
+   *Actualizar configuración de correo electrónico*.
+   ⚠️ Cambiarla ahí obliga a volver a escribirla en el celular y en Outlook, si
+   el buzón está configurado en algún programa.
+2. **Confirma el servidor de salida.** En cPanel, *Cuentas de correo* →
+   **Conectar dispositivos** muestra los datos exactos. Para GPI son:
+   - Servidor (SMTP): `mail.gpiprofesionales.com`
+   - Puerto: **465** con SSL/TLS
+   - Usuario: la dirección **completa** (`xperea@gpiprofesionales.com`), no solo
+     `xperea`
+3. **Carga las cuatro variables** (abajo, *Dónde se ponen las variables*).
+4. **Vuelve a desplegar en Vercel** y prueba el formulario desde
+   `/contacto`. El correo llega al buzón configurado en `/admin/ajustes`, con el
+   remitente `Sitio web GPI <xperea@gpiprofesionales.com>` y *Responder-a* con el
+   correo del visitante.
+
+> **Si no llega nada:** casi siempre es la contraseña (se copió con un espacio
+> al final o se cambió en cPanel y no en Vercel) o el usuario escrito sin el
+> `@gpiprofesionales.com`. El puerto 587 también sirve si el 465 diera
+> problemas: se cambia `CONTACT_SMTP_PORT` a `587` y se vuelve a desplegar; el
+> sitio negocia STARTTLS solo.
+
+#### Con Gmail: cómo generar la contraseña de aplicación (una sola vez)
 
 ⚠️ **No es la contraseña normal de la cuenta.** Google no deja entrar por SMTP
 con la contraseña de siempre: hay que crear una clave aparte, de 16 letras, que
@@ -1124,13 +1178,23 @@ solo sirve para enviar correo y se puede revocar sin tocar nada más.
    ya**: no se pueden volver a ver. Si se pierden, se borra esa contraseña y se
    crea otra. Los espacios dan igual, el código los quita.
 
+En este caso `CONTACT_SMTP_HOST` y `CONTACT_SMTP_PORT` se dejan **vacíos**: los
+valores por defecto ya son los de Gmail.
+
 ### Dónde se ponen las variables
 
 **En el computador (desarrollo)** — en `.env.local`:
 
 ```bash
-CONTACT_SMTP_USER=gpi.gerencia1@gmail.com
-CONTACT_SMTP_PASS=abcdefghijklmnop
+# Buzón del dominio (cPanel de GoDaddy)
+CONTACT_SMTP_HOST=mail.gpiprofesionales.com
+CONTACT_SMTP_PORT=465
+CONTACT_SMTP_USER=xperea@gpiprofesionales.com
+CONTACT_SMTP_PASS=la-contraseña-del-buzón
+
+# …o Gmail (HOST y PORT vacíos)
+# CONTACT_SMTP_USER=gpi.gerencia1@gmail.com
+# CONTACT_SMTP_PASS=abcdefghijklmnop
 ```
 
 **En Vercel (producción)** — *Settings → Environment Variables*, con esos
@@ -1139,10 +1203,12 @@ prefijo Next.js las incrustaría en el JavaScript que descarga el navegador).
 Después, **Redeploy**: `/contacto` es una página estática y decide en el build
 qué formulario mostrar.
 
-| Variable | Qué es |
-| --- | --- |
-| `CONTACT_SMTP_USER` | La cuenta de Gmail **desde la que sale** el correo |
-| `CONTACT_SMTP_PASS` | Su **contraseña de aplicación** de 16 letras |
+| Variable | Qué es | ¿Obligatoria? |
+| --- | --- | --- |
+| `CONTACT_SMTP_HOST` | Servidor de salida (`mail.gpiprofesionales.com`) | No — por defecto `smtp.gmail.com` |
+| `CONTACT_SMTP_PORT` | Puerto (`465` con SSL; `587` con STARTTLS) | No — por defecto `465` |
+| `CONTACT_SMTP_USER` | El buzón **desde el que sale** el correo, dirección completa | **Sí** |
+| `CONTACT_SMTP_PASS` | Su contraseña (con Gmail, la de aplicación de 16 letras) | **Sí** |
 
 El correo que **recibe** los mensajes no se configura aquí: se cambia desde el
 panel, en `/admin/ajustes` → *Datos de contacto* → **Correo del formulario de

@@ -192,6 +192,22 @@ export default async function AdminNosotrosPage() {
               defaultValue={nosotros.quienesSomos.imagen.alt}
               hint={AYUDA_ALT}
             />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field
+                scope="qs"
+                label="Sello: cifra"
+                name="badge_valor"
+                defaultValue={nosotros.quienesSomos.badge.valor}
+                hint="El recuadro verde que se apoya en la esquina de la foto, junto al contador de visitas. Por ejemplo «+15». Déjalo vacío para no mostrarlo."
+              />
+              <Field
+                scope="qs"
+                label="Sello: texto"
+                name="badge_etiqueta"
+                defaultValue={nosotros.quienesSomos.badge.etiqueta}
+                hint="El rótulo pequeño de debajo de la cifra. Por ejemplo «Años de experiencia»."
+              />
+            </div>
           </AdminForm>
         </Card>
 

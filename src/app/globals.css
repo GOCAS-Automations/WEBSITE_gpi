@@ -106,17 +106,20 @@
    ============================================================ */
 :root {
   --nav-gap: 0.75rem;
-  --nav-pill-h: 4rem;
+  /* 4.5rem = 72 px, para un logo de 52 px con 10 px de aire arriba y abajo. */
+  --nav-pill-h: 4.5rem;
   --nav-h: calc(var(--nav-gap) + var(--nav-pill-h));
 }
 
 @media (min-width: 1024px) {
   :root {
     --nav-gap: 1rem;
-    /* 5rem = 80 px. Creció 4 px respecto de las 4.75rem originales para que el
-       logo pueda subir a 64 px (h-16) conservando 8 px de aire arriba y abajo:
-       GPI pidió el logo lo más grande posible sin engordar la píldora. */
-    --nav-pill-h: 5rem;
+    /* 6rem = 96 px. GPI ha pedido TRES veces el logo más grande: la píldora
+       crece con él en vez de al revés. Con el logo a 80 px (h-20) quedan 8 px
+       de aire arriba y abajo, que es lo justo para que domine la barra sin
+       tocar los bordes. Tocar esta variable mueve sola la altura del hueco
+       (`.nav-shell`) y lo que los heroes se suben (`.under-nav`). */
+    --nav-pill-h: 6rem;
   }
 }
 
@@ -330,4 +333,28 @@ main:focus-visible {
 .bg-dot-grid {
   background-image: radial-gradient(rgba(255, 255, 255, 0.14) 1px, transparent 1px);
   background-size: 22px 22px;
+}
+
+/**
+ * Banda gris con los bordes fundidos (sustituye a `bg-mist` en las secciones
+ * que se apilan una detrás de otra).
+ *
+ * `bg-mist` a secas dibuja una línea recta arriba y otra abajo. Se ven poco
+ * —el gris está a un 3 % del blanco— pero se ven, y en una página que va toda
+ * con esquinas redondeadas y curvas cantan. Aquí el gris entra y sale en 4 rem
+ * de degradado y se queda plano en medio, así que la sección sigue leyéndose
+ * como una banda pero sin ningún corte.
+ *
+ * La fundida es de alto FIJO, no porcentual, y arranca y termina en blanco: la
+ * sección queda bien sea cual sea la de al lado, que en este sitio se pueden
+ * apagar una a una desde el panel.
+ */
+.banda-suave {
+  background-image: linear-gradient(
+    to bottom,
+    #ffffff 0,
+    var(--color-mist) 4rem,
+    var(--color-mist) calc(100% - 4rem),
+    #ffffff 100%
+  );
 }

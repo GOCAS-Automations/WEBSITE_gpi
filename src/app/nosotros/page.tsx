@@ -86,12 +86,14 @@ export default async function NosotrosPage() {
   const showFaq = visibility.faqSection && visibility.nosotrosFaq && faq.length > 0;
 
   /**
-   * La ola del hero se pinta con el color de la sección que viene detrás. Las
-   * dos primeras son blancas; si se apagan las dos, lo siguiente que puede
-   * quedar arriba con fondo propio es la línea de tiempo (blanca) y, ya en el
-   * peor caso, los valores (gris).
+   * La ola del hero se pinta con el color de la sección que viene detrás. Desde
+   * el ajuste de transiciones del 12 de agosto de 2026 **todas** las secciones
+   * de esta página empiezan en blanco: la galería se apoya en un degradado que
+   * nace blanco y las dos bandas grises usan `banda-suave`, que también entra
+   * desde el blanco. Así que la ola es blanca se apague lo que se apague, y no
+   * hay que calcular nada.
    */
-  const olaHero = showQuienesSomos || showMisionVision || showLineaTiempo ? "white" : "mist";
+  const olaHero = "white" as const;
 
   return (
     <>
@@ -110,8 +112,15 @@ export default async function NosotrosPage() {
 
       {/* ---------------- QUIÉNES SOMOS ----------------
           Prototipo: foto del equipo en tarjeta redondeada a la izquierda y, a
-          la derecha, el acento verde + título + párrafos. El contador de
-          visitas acompaña a la foto (punto 6 del informe). */}
+          la derecha, el acento verde + título + párrafos.
+
+          LOS DOS GADGETS DE LA FOTO (página 3 del PDF del community manager):
+          el sello «+15 / AÑOS DE EXPERIENCIA» y el contador de visitas se
+          apoyan juntos en el borde inferior de la foto, medio dentro y medio
+          fuera. En el mockup son dos recuadros a esa misma altura; aquí van en
+          una fila que se alinea a la derecha para no taparle la cara a nadie y
+          que, si no cabe (móviles estrechos), se parte en dos líneas en vez de
+          encogerse. */}
       {showQuienesSomos && (
         <section className="pb-16 pt-14 sm:pb-20 sm:pt-16">
           <Container>
@@ -126,7 +135,24 @@ export default async function NosotrosPage() {
                     className="object-cover"
                   />
                 </div>
-                <VisitCounter visitas={visitas} className="mt-5" />
+                <div className="relative z-10 -mt-7 flex items-stretch gap-3 px-3 sm:-mt-8 sm:justify-end sm:pl-6 sm:pr-5">
+                  {quienesSomos.badge.valor !== "" && (
+                    <p className="flex flex-1 flex-col justify-center rounded-2xl bg-brand-dark px-4 py-3 text-white shadow-card sm:flex-none">
+                      <span className="text-xl font-extrabold leading-none sm:text-2xl">
+                        {quienesSomos.badge.valor}
+                      </span>
+                      {/* Blanco puro sobre `brand-dark` = 4.74:1, que es lo que
+                          WCAG pide para texto pequeño. Nada de `text-white/85`
+                          aquí: rebajaría el blanco por debajo del listón. */}
+                      <span className="mt-1 text-[0.6875rem] font-bold uppercase leading-tight tracking-wider">
+                        {quienesSomos.badge.etiqueta}
+                      </span>
+                    </p>
+                  )}
+                  {/* `flex-1` solo en móvil: los dos gadgets se reparten el
+                      ancho de la foto en vez de partirse en dos líneas. */}
+                  <VisitCounter visitas={visitas} className="flex-1 sm:flex-none" />
+                </div>
               </Reveal>
 
               <Reveal delay={100}>
@@ -181,31 +207,46 @@ export default async function NosotrosPage() {
       )}
 
       {/* ---------------- GALERÍA: MÁS QUE PROVEEDORES ----------------
-          La banda del prototipo: fondo verde a todo el ancho, tarjeta gris con
-          el corte orgánico (esquina derecha muy redondeada) y la franja de
-          fotos a su derecha, a altura completa. En móvil la tarjeta va arriba y
-          las fotos debajo, en rejilla. */}
-      {showGaleria && (
-        <section className="relative isolate overflow-hidden bg-gradient-to-r from-brand-dark via-brand-dark to-brand-deep">
-          <div className="grid lg:grid-cols-[minmax(0,30rem)_1fr]">
-            <Reveal className="relative z-10 rounded-br-[3.5rem] bg-mist px-5 py-12 sm:px-8 sm:py-14 lg:rounded-r-[5rem] lg:py-16 lg:pl-10 lg:pr-16">
-              <span
-                className="block h-1 w-12 rounded-full bg-brand"
-                aria-hidden="true"
-              />
-              <h2 className="mt-5 text-2xl font-extrabold leading-[1.15] text-ink sm:text-3xl">
-                {galeria.titulo}
-              </h2>
-              <p className="mt-4 text-sm leading-relaxed text-graphite">
-                {galeria.descripcion}
-              </p>
-            </Reveal>
+          La banda del prototipo: fondo verde, tarjeta gris con el corte
+          orgánico (esquina derecha muy redondeada) y la franja de fotos a su
+          derecha, a altura completa. En móvil la tarjeta va arriba y las fotos
+          debajo, en rejilla.
 
-            {/* Con hasta 3 fotos es la franja estática de siempre; a partir de
-                la cuarta pasa a carrusel (ver GaleriaAliados). */}
-            <Reveal delay={120} className="p-3 sm:p-4 lg:p-4">
-              <GaleriaAliados fotos={galeria.fotos} />
-            </Reveal>
+          CÓMO ENTRA Y CÓMO SALE (ajuste del 12 de agosto de 2026): la banda
+          iba a sangre y de borde a borde, así que el verde saturado aparecía de
+          golpe justo debajo del blanco de Misión y Visión y desaparecía igual
+          de seco antes de la línea de tiempo — dos cortes rectos en mitad de
+          una página que en todo lo demás va con curvas.
+
+          La solución NO es otra ola (ya hay una en el hero y repetirla aquí
+          cansa), sino **fundarla**: la banda pasa a ser un bloque redondeado
+          —el mismo recurso que ya usa `CtaBand`— apoyado sobre un campo verde
+          muy pálido que nace y muere en blanco. El ojo recorre
+          blanco → verde pálido → verde intenso → verde pálido → blanco, y no
+          queda ni una línea recta entre secciones. */}
+      {showGaleria && (
+        <section className="bg-gradient-to-b from-white via-brand-tint to-white py-12 sm:py-16 lg:py-20">
+          <div className="mx-auto max-w-[110rem] px-3 sm:px-5 lg:px-8">
+            <div className="relative isolate grid overflow-hidden rounded-[1.75rem] bg-gradient-to-r from-brand-dark via-brand-dark to-brand-deep shadow-card sm:rounded-[2.25rem] lg:grid-cols-[minmax(0,30rem)_1fr]">
+              <Reveal className="relative z-10 rounded-br-[3.5rem] bg-mist px-5 py-12 sm:px-8 sm:py-14 lg:rounded-r-[5rem] lg:py-16 lg:pl-10 lg:pr-16">
+                <span
+                  className="block h-1 w-12 rounded-full bg-brand"
+                  aria-hidden="true"
+                />
+                <h2 className="mt-5 text-2xl font-extrabold leading-[1.15] text-ink sm:text-3xl">
+                  {galeria.titulo}
+                </h2>
+                <p className="mt-4 text-sm leading-relaxed text-graphite">
+                  {galeria.descripcion}
+                </p>
+              </Reveal>
+
+              {/* Con hasta 3 fotos es la franja estática de siempre; a partir de
+                  la cuarta pasa a carrusel (ver GaleriaAliados). */}
+              <Reveal delay={120} className="p-3 sm:p-4 lg:p-4">
+                <GaleriaAliados fotos={galeria.fotos} />
+              </Reveal>
+            </div>
           </div>
         </section>
       )}
@@ -323,9 +364,11 @@ export default async function NosotrosPage() {
         </section>
       )}
 
-      {/* ---------------- VALORES ---------------- */}
+      {/* ---------------- VALORES ----------------
+          `banda-suave` en vez de `bg-mist`: el gris se funde con el blanco de
+          arriba y de abajo (ver globals.css). */}
       {showValues && (
-        <section className="bg-mist py-20 sm:py-24">
+        <section className="banda-suave py-20 sm:py-24">
           <Container>
             <Reveal>
               <SectionHeading
@@ -367,7 +410,7 @@ export default async function NosotrosPage() {
 
       {/* ---------------- FAQ ---------------- */}
       {showFaq && (
-        <section className="bg-mist py-20 sm:py-24">
+        <section className="banda-suave py-20 sm:py-24">
           <Container size="narrow">
             <Reveal>
               <SectionHeading

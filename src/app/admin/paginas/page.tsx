@@ -21,13 +21,18 @@ import {
 } from "../actions";
 
 /**
- * TÍTULOS DE PÁGINAS
- * ==================
+ * CABECERAS DE PÁGINAS Y PIE DEL SITIO
+ * ====================================
  * Las cabeceras de **Servicios**, **Proyectos** y **Contacto** —la banda oscura
  * con la foto de fondo, el título grande y el párrafo— estaban escritas en el
  * código de cada página. GPI pidió poder editar «todos esos títulos e
  * información visual relevante», así que pasaron a `site_settings.paginas`
  * (migración 0008), junto con el párrafo de presentación del pie.
+ *
+ * La pantalla se llamaba «Títulos de páginas» y el nombre se quedaba corto: aquí
+ * también se cambian las descripciones, las fotos de fondo y el texto del pie.
+ * **La URL no cambió** (`/admin/paginas`): renombrar una pantalla no es mover
+ * una ruta, y los enlaces que GPI tenga guardados siguen funcionando.
  *
  * El inicio y Nosotros NO están aquí: son páginas enteras y tienen su propia
  * pantalla, con muchos más bloques.
@@ -38,14 +43,14 @@ export default async function AdminPaginasPage() {
   return (
     <>
       <AdminPageHeader
-        title="Títulos de páginas"
-        description="La primera pantalla de Servicios, Proyectos y Contacto, y el texto de presentación del pie de página."
+        title="Cabeceras de páginas y pie del sitio"
+        description="Los textos e imágenes de cabecera de Servicios, Proyectos y Contacto, y la descripción del pie de página."
         backHref="/admin/contenido"
         backLabel="Volver a Contenido del sitio"
         breadcrumb={[
           { label: "Panel", href: "/admin" },
           { label: "Contenido del sitio", href: "/admin/contenido" },
-          { label: "Títulos de páginas" },
+          { label: "Cabeceras de páginas y pie del sitio" },
         ]}
       />
 

@@ -112,14 +112,19 @@ export function Header({ services }: { services: Service[] }) {
           >
             {/*
               TAMAÑO: el logo ocupa el máximo que cabe en la píldora sin
-              tocar los bordes — 44 / 48 / 64 px de alto contra una píldora de
-              64 px (móvil) y 80 px (escritorio, ver `--nav-pill-h`). Quedan
+              tocar los bordes — 52 / 56 / 80 px de alto contra una píldora de
+              72 px (móvil) y 96 px (escritorio, ver `--nav-pill-h`). Quedan
               10 px de aire arriba y abajo en móvil y 8 px en escritorio.
+
+              Es la TERCERA subida que pide GPI: primero 64, luego 80 de
+              píldora, y ahora el logo manda y la píldora se adapta. Si hay que
+              volver a crecer, se suben las dos cosas a la vez —logo y
+              `--nav-pill-h`— o el logo empieza a rozar el borde.
 
               RENDIMIENTO: el archivo original es de 3300×1875 px (685 KB). Sin
               `sizes`, el navegador asume `100vw` y descarga el candidato del
               srcset para el ancho completo de la pantalla… para pintar un logo
-              de ~113 px. `sizes` le dice el tamaño real de maquetación (alto ×
+              de ~141 px. `sizes` le dice el tamaño real de maquetación (alto ×
               1.76 de relación de aspecto) y `width`/`height` solo fijan esa
               relación, así que baja el candidato pequeño.
             */}
@@ -128,9 +133,9 @@ export function Header({ services }: { services: Service[] }) {
               alt="GPI — Optimización de Procesos Industriales y Ambientales"
               width={352}
               height={200}
-              sizes="(min-width: 1024px) 113px, (min-width: 640px) 85px, 78px"
+              sizes="(min-width: 1024px) 141px, (min-width: 640px) 99px, 92px"
               priority
-              className="h-11 w-auto sm:h-12 lg:h-16"
+              className="h-13 w-auto sm:h-14 lg:h-20"
             />
           </Link>
 
@@ -343,7 +348,20 @@ function MegaMenu({ services, open }: { services: Service[]; open: boolean }) {
     <div
       id="mega-menu-servicios"
       aria-label="Servicios de GPI"
-      className={`absolute left-1/2 top-full z-50 w-[640px] -translate-x-1/2 pt-4 transition-all duration-200 ${
+      /**
+       * El relleno superior es el PUENTE por el que viaja el ratón desde el
+       * enlace hasta el panel sin que el menú se cierre, y también lo que lo
+       * separa de la píldora.
+       *
+       * Va medido, no a ojo: el ancla es el enlace «Servicios», que está
+       * centrado en la píldora, así que del borde inferior del enlace al de la
+       * píldora hay (96 − 36) / 2 = 30 px —96 px es `--nav-pill-h` en
+       * escritorio, que es el único sitio donde existe este menú—. Con 40 px el
+       * panel cuelga 10 px por debajo de la píldora, igual que el menú móvil,
+       * en vez de comerse su borde redondeado. Si la píldora vuelve a crecer,
+       * este número sube con ella.
+       */
+      className={`absolute left-1/2 top-full z-50 w-[640px] -translate-x-1/2 pt-10 transition-all duration-200 ${
         open ? "visible opacity-100" : "invisible opacity-0"
       }`}
     >

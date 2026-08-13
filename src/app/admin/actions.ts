@@ -927,6 +927,12 @@ export async function saveNosotrosQuienesSomos(
       titulo,
       parrafos: list(formData, "parrafos"),
       imagen: imagenDeFormulario(formData, "imagen_url", "imagen_alt"),
+      // El sello verde de la esquina de la foto. Se guarda aunque venga vacío:
+      // dejar la cifra en blanco es la forma de quitarlo desde el panel.
+      badge: {
+        valor: text(formData, "badge_valor"),
+        etiqueta: text(formData, "badge_etiqueta"),
+      },
     },
   });
 }

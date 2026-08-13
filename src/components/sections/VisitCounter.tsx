@@ -12,6 +12,12 @@ import { Eye } from "@/lib/icons";
  * aspecto en los dos sitios: es el recuadro verde que el community manager
  * dibujó vacío en el prototipo.
  *
+ * TAMAÑO: es un **chip**, no una tarjeta. La primera versión usaba el tamaño de
+ * las tarjetas de cifras (p-5/p-6, número de 36 px) y GPI lo vio desproporcionado
+ * para un dato que es un guiño, no un titular. Aquí el número baja a 20/24 px y
+ * el recuadro a 12/16 px de relleno, que es justo lo que necesita para convivir
+ * con el sello de años de experiencia en la página Nosotros sin amontonarse.
+ *
  * NO se edita desde el panel a propósito: lo cuenta el sitio solo. Y devuelve
  * `null` cuando la tabla no existe (migración 0007 sin aplicar), porque enseñar
  * "0 visitas" se lee como un sitio que nadie visita — peor que no enseñar nada.
@@ -70,24 +76,24 @@ export function VisitCounter({
 
   return (
     <div
-      className={`flex items-center gap-4 rounded-2xl border border-brand/40 bg-brand-tint p-5 shadow-soft sm:p-6 ${className}`}
+      className={`flex items-center gap-3 rounded-2xl border border-brand/40 bg-brand-tint px-4 py-3 shadow-soft ${className}`}
     >
-      <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-dark text-white shadow-soft">
-        <Eye className="h-6 w-6" />
+      <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-dark text-white shadow-soft">
+        <Eye className="h-[1.125rem] w-[1.125rem]" />
       </span>
       <div className="min-w-0">
         {/* `aria-live="polite"` para que el lector de pantalla anuncie el
             número corregido en vez de quedarse con el del HTML inicial. */}
         <p
           aria-live="polite"
-          className="text-3xl font-extrabold leading-none text-brand-deep sm:text-4xl"
+          className="text-xl font-extrabold leading-none text-brand-deep sm:text-2xl"
         >
           {formateado}
         </p>
         {/* Concordancia: con una sola visita la etiqueta va en singular, que si
             no se lee «1 visitas al sitio web». La constante compartida sigue
             siendo la del plural (es la que describe la tarjeta en el panel). */}
-        <p className="mt-1.5 text-sm leading-snug text-graphite">
+        <p className="mt-0.5 text-xs leading-snug text-graphite">
           {total === 1 ? "visita al sitio web" : ETIQUETA_VISITAS}
         </p>
       </div>

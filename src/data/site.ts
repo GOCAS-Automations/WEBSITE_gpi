@@ -151,11 +151,27 @@ export interface NosotrosHero {
   imagen: ImagenContenido;
 }
 
+/**
+ * El sello verde que se apoya en la esquina de la foto del equipo («+15 / AÑOS
+ * DE EXPERIENCIA»), tal cual lo dibujó el community manager en la página 3 del
+ * PDF del 12 de agosto de 2026 (allí decía «+5»; GPI corrigió la cifra a 15).
+ *
+ * Con `valor` vacío el sello NO se pinta: es la forma de quitarlo desde el panel
+ * sin tener que tocar código.
+ */
+export interface BadgeExperiencia {
+  /** La cifra grande: «+15». */
+  valor: string;
+  /** El rótulo pequeño de debajo: «Años de experiencia». */
+  etiqueta: string;
+}
+
 export interface NosotrosQuienesSomos {
   titulo: string;
   /** Uno o varios párrafos; cada elemento es un `<p>`. */
   parrafos: string[];
   imagen: ImagenContenido;
+  badge: BadgeExperiencia;
 }
 
 export interface NosotrosGaleria {
@@ -436,6 +452,7 @@ export const nosotrosDefaults: NosotrosSettings = {
       url: "/images/cm/foto-equipo-gpi-sede.jpg",
       alt: "Equipo de GPI reunido en la sede de la empresa, frente a la pared con el logo corporativo",
     },
+    badge: { valor: "+15", etiqueta: "Años de experiencia" },
   },
   mision: {
     texto:
@@ -642,6 +659,27 @@ function imagen(value: unknown, respaldo: ImagenContenido): ImagenContenido {
   };
 }
 
+/**
+ * Sello de años de experiencia de la página Nosotros.
+ *
+ * La subclave `badge` NO existe en la migración 0007, así que en la mayoría de
+ * las instalaciones llega `undefined`: ahí manda el respaldo estático. Si la
+ * clave SÍ está y el valor viene vacío es una decisión tomada desde el panel
+ * («no quiero el sello») y se respeta — la regla `undefined` ≠ vacío de toda la
+ * capa de contenido.
+ */
+function badgeExperiencia(
+  value: unknown,
+  respaldo: BadgeExperiencia,
+): BadgeExperiencia {
+  if (!isRecord(value)) return { ...respaldo };
+  return {
+    valor: typeof value.valor === "string" ? value.valor.trim() : respaldo.valor,
+    etiqueta:
+      typeof value.etiqueta === "string" ? value.etiqueta : respaldo.etiqueta,
+  };
+}
+
 function stats(value: unknown, respaldo: StatItem[]): StatItem[] {
   if (!Array.isArray(value)) return respaldo.map((s) => ({ ...s }));
   const limpias = value
@@ -840,6 +878,7 @@ export function normalizarNosotros(value: unknown): NosotrosSettings {
       titulo: texto(qs.titulo, base.quienesSomos.titulo),
       parrafos: parrafos ?? [...base.quienesSomos.parrafos],
       imagen: imagen(qs.imagen, base.quienesSomos.imagen),
+      badge: badgeExperiencia(qs.badge, base.quienesSomos.badge),
     },
     mision: { texto: texto(mision.texto, base.mision.texto) },
     vision: { texto: texto(vision.texto, base.vision.texto) },

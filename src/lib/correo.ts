@@ -1,10 +1,10 @@
 /**
- * ENVÍO DE CORREO — SMTP de Gmail
- * ===============================
+ * ENVÍO DE CORREO — SMTP
+ * ======================
  *
- * ⚠️ MÓDULO SOLO DE SERVIDOR. Lee `CONTACT_SMTP_USER` y `CONTACT_SMTP_PASS` de
- * `process.env`: **nunca** se puede importar desde un Client Component. Lo usa
- * únicamente la server action `src/app/contacto/actions.ts`.
+ * ⚠️ MÓDULO SOLO DE SERVIDOR. Lee `CONTACT_SMTP_*` de `process.env`: **nunca**
+ * se puede importar desde un Client Component. Lo usa únicamente la server
+ * action `src/app/contacto/actions.ts`.
  *
  * POR QUÉ SMTP DIRECTO Y NO UN SERVICIO
  * -------------------------------------
@@ -12,17 +12,32 @@
  * en un computador sin programa de correo configurado, `mailto:` no abre
  * absolutamente nada. Se necesitaba que el botón enviara de verdad.
  *
- * GPI ya tiene la cuenta `gpi.gerencia1@gmail.com`, y Gmail permite enviar por
- * SMTP con una **contraseña de aplicación** de 16 caracteres. Eso resuelve el
- * problema sin contratar un proveedor de correo transaccional, sin cuota
- * mensual y sin meter otro tercero en el proyecto.
+ * Se resolvió con SMTP a pelo: sin proveedor transaccional, sin cuota mensual y
+ * sin meter otro tercero en el proyecto.
+ *
+ * DOS BUZONES POSIBLES, EL MISMO CÓDIGO
+ * -------------------------------------
+ * El servidor se configura por variables de entorno, así que el sitio sirve
+ * para los dos escenarios sin tocar una línea:
+ *
+ *   · **Gmail** (`smtp.gmail.com:465`) — el valor por defecto, que es lo que se
+ *     montó en agosto de 2026 con `gpi.gerencia1@gmail.com` y una **contraseña
+ *     de aplicación** de 16 caracteres.
+ *   · **Buzón del dominio** (`mail.gpiprofesionales.com:465`) — el correo
+ *     corporativo de cPanel/GoDaddy. Ahí `CONTACT_SMTP_PASS` es la contraseña
+ *     normal del buzón y el remitente sale del propio dominio, que es mejor
+ *     para la entregabilidad.
+ *
+ * Se cambia de uno a otro poniendo `CONTACT_SMTP_HOST` y volviendo a desplegar.
  *
  * CÓMO SE COMPORTA SI NO ESTÁ CONFIGURADO
  * ---------------------------------------
  * Igual que el resto del sitio con Supabase: si faltan las variables, nada se
  * rompe. `smtpContactoConfigurado()` devuelve `false`, la página no ofrece el
  * envío directo y el formulario cae en su modo alternativo (compositor de
- * Gmail en el navegador, `mailto:` y WhatsApp).
+ * Gmail en el navegador, `mailto:` y WhatsApp). La condición sigue siendo
+ * exactamente la misma que antes: USUARIO y CONTRASEÑA presentes. El host y el
+ * puerto tienen valor por defecto, así que nunca hacen falta para activarlo.
  */
 
 import nodemailer from "nodemailer";
@@ -41,13 +56,46 @@ export interface DatosContacto {
 /* Configuración                                                       */
 /* ------------------------------------------------------------------ */
 
+/** Servidor por defecto: el que se montó primero. Mantiene la compatibilidad. */
+const HOST_POR_DEFECTO = "smtp.gmail.com";
+/** Puerto por defecto: SMTPS, el que usan tanto Gmail como cPanel. */
+const PUERTO_POR_DEFECTO = 465;
+
+/** Nombre del servidor SMTP, del entorno o el de Gmail. */
+function host(): string {
+  return process.env.CONTACT_SMTP_HOST?.trim() || HOST_POR_DEFECTO;
+}
+
+/**
+ * Puerto SMTP. Un valor que no sea un número se ignora en vez de romper el
+ * envío: es preferible intentarlo por el 465 que devolverle un error al
+ * visitante por una errata en el panel de Vercel.
+ */
+function puerto(): number {
+  const crudo = Number(process.env.CONTACT_SMTP_PORT?.trim());
+  return Number.isInteger(crudo) && crudo > 0 && crudo < 65536
+    ? crudo
+    : PUERTO_POR_DEFECTO;
+}
+
 function credenciales(): { user: string; pass: string } | null {
   const user = process.env.CONTACT_SMTP_USER?.trim();
+  const bruta = process.env.CONTACT_SMTP_PASS;
+  if (!user || !bruta) return null;
+
   // La contraseña de aplicación de Google se muestra en grupos de 4
   // ("abcd efgh ijkl mnop"). Mucha gente la copia con los espacios y Gmail la
-  // rechaza: se quitan aquí para que copiar y pegar tal cual funcione.
-  const pass = process.env.CONTACT_SMTP_PASS?.replace(/\s+/g, "");
-  if (!user || !pass) return null;
+  // rechaza: se quitan para que copiar y pegar tal cual funcione.
+  //
+  // OJO: eso SOLO vale para Gmail. En un buzón del dominio la contraseña la
+  // elige quien crea la cuenta en cPanel y puede llevar espacios de verdad;
+  // borrárselos convertiría un problema de configuración en un fallo de login
+  // imposible de diagnosticar. Fuera de Gmail solo se recortan los extremos,
+  // que es lo que suele sobrar al pegar en un formulario.
+  const gmail = host().toLowerCase().endsWith("gmail.com");
+  const pass = gmail ? bruta.replace(/\s+/g, "") : bruta.trim();
+  if (!pass) return null;
+
   return { user, pass };
 }
 
@@ -167,10 +215,15 @@ export async function enviarCorreoContacto(
   const auth = credenciales();
   if (!auth) throw new Error("El envío de correo no está configurado.");
 
+  const numeroDePuerto = puerto();
+
   const transporte = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 465,
-    secure: true,
+    host: host(),
+    port: numeroDePuerto,
+    // `secure: true` = TLS desde el saludo (SMTPS, puerto 465). Los demás
+    // puertos (587, 25) arrancan en claro y suben a TLS con STARTTLS, que
+    // nodemailer negocia solo cuando `secure` es `false`.
+    secure: numeroDePuerto === 465,
     auth,
     // Sin topes, una función serverless puede quedarse esperando hasta que la
     // mata la plataforma y el visitante no ve ni éxito ni error.
@@ -186,8 +239,9 @@ export async function enviarCorreoContacto(
 
   try {
     await transporte.sendMail({
-      // Gmail reescribe el remitente a la cuenta autenticada pase lo que pase,
-      // así que el `from` usa esa misma dirección con un nombre visible claro.
+      // El remitente es SIEMPRE la cuenta autenticada: Gmail lo reescribe pase
+      // lo que pase, y un servidor de dominio rechaza el mensaje si el `from`
+      // no coincide con el buzón. Lo único que se elige es el nombre visible.
       from: `"Sitio web GPI" <${auth.user}>`,
       to: destinatario,
       // LA CLAVE DE TODO: al responder, GPI le escribe al prospecto de un
@@ -201,7 +255,8 @@ export async function enviarCorreoContacto(
       html: cuerpoHtml({ nombre, empresa, correo, mensaje: datos.mensaje }, fecha),
     });
   } finally {
-    // El transporte abre un socket con Gmail; en serverless conviene cerrarlo.
+    // El transporte abre un socket con el servidor de correo; en serverless
+    // conviene cerrarlo.
     transporte.close();
   }
 }
