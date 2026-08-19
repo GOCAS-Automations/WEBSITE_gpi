@@ -6,10 +6,9 @@ contexto completo sin tener que reconstruir el historial desde los commits.
 
 **El sitio queda terminado en esta fecha**: Fases 1 y 2 completas, las
 **nueve** migraciones aplicadas en el GPI Project, el correo del formulario de
-contacto **activo en producción** y el QA final del sitio pasado. El único
-punto que queda pendiente es **conectar el dominio** `gpiprofesionales.com`
-(Fase 6 de la tabla de abajo — DNS de GoDaddy → Vercel), a la espera de que
-GPI dé la orden.
+contacto **activo en producción** y el QA final del sitio pasado. La Fase 6 —conectar el
+dominio— se completó el **19 de agosto de 2026** con la aprobación de GPI:
+el sitio vive en **https://www.gpiprofesionales.com**.
 
 ## Fases
 
@@ -30,7 +29,7 @@ GPI dé la orden.
 | 4j | Pulido final (12 ago) | ✅ Completa | Últimos títulos editables del inicio y de las cabeceras de página (`/admin/inicio`, `/admin/paginas`), menú del panel agrupado en seis entradas detrás de «Contenido del sitio», «Mi Cuenta» rebota al panel para los roles de contenido, arreglo del bug «el panel se traba» al navegar, y ajustes visuales menores. Migración 0008 aplicada. |
 | 4k | Cierre del proyecto (13 ago) | ✅ Completa | Correo del formulario **activo en producción** con el SMTP Workspace de GoDaddy (`smtpout.secureserver.net:465`); **teléfono obligatorio** en el formulario de contacto, con la migración 0009 **aplicada**; carrusel de la galería de Nosotros sin puntos indicadores; y QA final del sitio. Con esto son **nueve** las migraciones, todas aplicadas. |
 | 5 | Deploy en Vercel desde el repo de GitHub + variables de entorno | ✅ Completa | **https://website-gpi.vercel.app** — despliega solo con cada push a `main`; las 3 env vars configuradas (incl. `SUPABASE_SERVICE_ROLE_KEY` sin prefijo). Verificado en vivo: 7 cabeceras de seguridad, 9 rutas 200, `/admin` protegido. |
-| 6 | Apuntar dominio `gpiprofesionales.com` de GoDaddy → Vercel | ⏳ Pendiente | Único pendiente del proyecto: apuntar el DNS en cuanto GPI dé la orden. |
+| 6 | Apuntar dominio `gpiprofesionales.com` de GoDaddy → Vercel | ✅ Completa | **19 ago 2026** — raíz con A `216.198.79.1` y `www` en CNAME; `www` es el dominio principal (el raíz redirige 308, alineado con sitemap/canónicas); certificado emitido y verificación completa en vivo. MX y SPF del correo intactos. |
 | 7 | Extra cotizable aparte: chatbot IA | 💡 Planeado | Claude Haiku 4.5 vía `/api/chat`, con conocimiento del contenido del sitio (servicios, proyectos, contacto) y captura de leads hacia Supabase. No incluido en la cotización actual. |
 
 ## Fase 2 — qué quedó construido (núcleo)
@@ -1018,9 +1017,38 @@ formulario de contacto probado de punta a punta (incluido el teléfono nuevo).
 
 Con este cierre, el sitio queda **terminado**: Fases 1 y 2 completas, las
 nueve migraciones aplicadas, el correo del formulario activo en producción y
-el QA final pasado. El único pendiente es **conectar el dominio**
-`gpiprofesionales.com` (Fase 6 de la tabla de arriba): apuntar el DNS de
-GoDaddy a Vercel cuando GPI dé la orden.
+el QA final pasado. Y desde el **19 de agosto de 2026** el dominio está
+conectado: el sitio vive en **https://www.gpiprofesionales.com** (ver la
+iteración de lanzamiento). No queda ningún pendiente técnico.
+
+## Iteración del 19 de agosto de 2026 — lanzamiento: dominio conectado
+
+GPI aprobó la entrega y el dominio quedó apuntado el mismo día. Estado
+verificado contra los nameservers autoritativos de GoDaddy y contra el sitio
+en vivo:
+
+- **DNS (GoDaddy)**: raíz `gpiprofesionales.com` con **A `216.198.79.1`**
+  (Vercel) y `www` en **CNAME al raíz**. Los **MX** (`smtp.secureserver.net`,
+  `mailstore1.secureserver.net`) y el **SPF** (`v=spf1 include:secureserver.net -all`)
+  del correo Workspace **no se tocaron**.
+- **Vercel**: tres dominios en el proyecto — `www.gpiprofesionales.com`
+  (**principal**, Production), `gpiprofesionales.com` (redirige **308** a `www`)
+  y `website-gpi.vercel.app`. `www` como principal es deliberado: es lo que
+  declaran `sitemap.ts`, `robots.ts`, las canónicas, el JSON-LD y las OpenGraph
+  desde el primer día.
+- **Certificado**: Let's Encrypt emitido automáticamente (Vercel lo renueva solo).
+- **Verificación en vivo (19 ago)**: raíz→www y http→https en 308; 20/20 rutas
+  del sitemap más `/mi-cuenta`, `/sitemap.xml` y `/robots.txt` en 200; `/admin`
+  en 307 sin sesión; `/api/visita` en 200; 7/7 cabeceras de seguridad; imágenes
+  desde el bucket; formulario con teléfono y envío directo activo; sitemap con
+  las 20 URLs en `www`.
+- **Hosting viejo de GoDaddy** (cPanel «Web Hosting Deluxe»): quedó **sin
+  renovar** — expira el **10 de octubre de 2026** y nada del proyecto depende de
+  él. OJO: el **registro del dominio** y el **correo Workspace** son productos
+  aparte y esos **sí deben seguir renovándose**.
+- **Siguiente paso SEO**: propiedad de dominio en **Google Search Console**
+  (verificación por TXT en el DNS de GoDaddy) y enviar
+  `https://www.gpiprofesionales.com/sitemap.xml`.
 
 ## Decisiones técnicas
 
@@ -1109,9 +1137,10 @@ GoDaddy a Vercel cuando GPI dé la orden.
 > de agosto de 2026 envía de verdad, en producción, desde el buzón del
 > dominio (`smtpout.secureserver.net`, el correo Workspace de GoDaddy).
 
-- **Conectar el dominio** `gpiprofesionales.com` ⚠️: es el **único** pendiente
-  que le queda al proyecto (Fase 6 de la tabla de arriba). Apuntar el DNS de
-  GoDaddy hacia Vercel cuando GPI dé la orden.
+- ~~Conectar el dominio~~ ✅ **hecho el 19 de agosto de 2026** (ver la
+  iteración de lanzamiento): el sitio vive en `https://www.gpiprofesionales.com`.
+  Queda como sugerencia SEO registrar el dominio en **Google Search Console** y
+  enviar el sitemap.
 - **Imágenes**: confirmar/actualizar fotografías de servicios y proyectos si
   GPI quiere reemplazar las heredadas del sitio viejo.
 - **Lista de empleados** (Fase 2): nombres, **usuarios**, cédulas, cargos,
