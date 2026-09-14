@@ -143,8 +143,28 @@ const nextConfig: NextConfig = {
 
   images: {
     /**
-     * HOSTS DE IMAGEN PERMITIDOS
-     * ==========================
+     * OPTIMIZADOR DE IMÁGENES: APAGADO GLOBALMENTE (14 sep 2026)
+     * ==========================================================
+     * El proyecto vive en el plan Hobby de Vercel (sin costo mensual para
+     * GPI) y la cuenta agotó su cupo de transformaciones de imagen: con el
+     * optimizador encendido, `/_next/image` respondería errores al exceder
+     * el cupo y las fotos del sitio se verían rotas. Con `unoptimized` las
+     * imágenes se sirven TAL CUAL desde su origen (el bucket de Supabase o
+     * Cloudinary, que ya entregan archivos de peso razonable): no hay cupo
+     * que agotar y las fotos no se rompen nunca.
+     *
+     * Trade-off asumido: se pierden el WebP/AVIF y el redimensionado
+     * automáticos (páginas algo más pesadas, sobre todo en móvil). Si el
+     * rendimiento volviera a ser prioridad, las salidas son el plan Pro o
+     * servir las fotos grandes desde Cloudinary con transformaciones en la
+     * propia URL (`f_auto,q_auto,w_…`), que optimiza gratis en su CDN.
+     */
+    unoptimized: true,
+
+    /**
+     * HOSTS DE IMAGEN PERMITIDOS (hoy sin efecto: optimizador apagado)
+     * ================================================================
+     * Se conserva tal cual por si el optimizador se reactiva algún día.
      * Esta lista es la que decide qué imágenes pasan por el optimizador de
      * Next (`/_next/image`). Tiene que ir SINCRONIZADA con
      * `HOSTS_IMAGEN_OPTIMIZABLES` de `src/lib/imagenes.ts`, que es lo que

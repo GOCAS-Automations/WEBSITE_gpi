@@ -1050,6 +1050,24 @@ en vivo:
   (verificación por TXT en el DNS de GoDaddy) y enviar
   `https://www.gpiprofesionales.com/sitemap.xml`.
 
+## Iteración del 14 de septiembre de 2026 — optimizador de imágenes apagado
+
+La cuenta Hobby de Vercel (GOCAS) agotó su cupo mensual de **transformaciones
+de imagen**; con el optimizador encendido, `/_next/image` respondería errores
+al exceder el cupo y las fotos del sitio se verían rotas. Decisión:
+
+- `images.unoptimized: true` en `next.config.ts` — **ninguna imagen pasa por
+  el optimizador de Vercel**: se sirven tal cual desde su origen (bucket de
+  Supabase o Cloudinary), así que no hay cupo que agotar y no se rompen nunca.
+- Trade-off asumido: se pierden el WebP/AVIF y el redimensionado automáticos
+  (páginas algo más pesadas, sobre todo en móvil). Si el rendimiento volviera
+  a ser prioridad: plan Pro, o servir las fotos grandes desde Cloudinary con
+  transformaciones en la URL (`f_auto,q_auto,w_…`), que optimiza gratis.
+- `remotePatterns`, `HOSTS_IMAGEN_OPTIMIZABLES` y la lógica condicional de
+  `ContentImage` **se conservan sin tocar** por si el optimizador se reactiva.
+  El aviso ámbar del panel sigue vigente: la **CSP** sí sigue bloqueando
+  imágenes de hosts no permitidos.
+
 ## Decisiones técnicas
 
 - **Fallback estático primero**: toda la capa de contenido (`src/lib/content.ts`)
