@@ -83,9 +83,14 @@ function campo(valor: string | number): string {
   return `"${texto.replace(/"/g, '""')}"`;
 }
 
-/** Horas con coma decimal (así las lee Excel en español). */
+/**
+ * Horas como número con coma decimal (así lo lee Excel en español): 600 min →
+ * "10", 630 → "10,5", 440 → "7,33". En el CSV TODAS las duraciones van así
+ * (pedido de GPI, 16 sep 2026): un "8h 30m" Excel lo trata como texto y no
+ * deja sumar la columna; en pantalla, en cambio, se sigue mostrando "8h 30m".
+ */
 function horasDecimal(minutos: number): string {
-  return (Math.round((minutos / 60) * 100) / 100).toFixed(2).replace(".", ",");
+  return String(Math.round((minutos / 60) * 100) / 100).replace(".", ",");
 }
 
 /**
@@ -129,17 +134,17 @@ function descargarCSV(
       j.ordenTrabajo || SIN_ORDEN_TRABAJO,
       j.inicio,
       j.fin,
-      formatearHoras(j.duracionMin),
-      formatearHoras(j.almuerzoMin),
-      formatearHoras(j.totalMinutos),
+      horasDecimal(j.duracionMin),
+      horasDecimal(j.almuerzoMin),
       horasDecimal(j.totalMinutos),
-      formatearHoras(j.ordinariasMin),
-      formatearHoras(j.extrasMin),
-      formatearHoras(j.extraDiurnaMin),
-      formatearHoras(j.extraNocturnaMin),
-      formatearHoras(j.extraDominicalDiurnaMin),
-      formatearHoras(j.extraDominicalNocturnaMin),
-      formatearHoras(j.nocturnasMin),
+      horasDecimal(j.totalMinutos),
+      horasDecimal(j.ordinariasMin),
+      horasDecimal(j.extrasMin),
+      horasDecimal(j.extraDiurnaMin),
+      horasDecimal(j.extraNocturnaMin),
+      horasDecimal(j.extraDominicalDiurnaMin),
+      horasDecimal(j.extraDominicalNocturnaMin),
+      horasDecimal(j.nocturnasMin),
       j.esDominicalFestivo
         ? j.festivos.length > 0
           ? j.festivos.join(" / ")
