@@ -131,6 +131,47 @@ const securityHeaders = [
   { key: "Content-Security-Policy", value: contentSecurityPolicy },
 ];
 
+/**
+ * REDIRECCIONES DEL SITIO VIEJO (16 sep 2026)
+ * ===========================================
+ * El sitio anterior (GoDaddy) vivió años en este mismo dominio con páginas
+ * `.html` planas, así que Google todavía tiene esas direcciones indexadas y
+ * hay gente que llega a ellas desde los resultados de búsqueda. Sin estas
+ * reglas caen en el 404 del sitio nuevo y, de paso, se pierde el
+ * posicionamiento acumulado de cada URL.
+ *
+ * Se redirige con `permanent: true` (**308**, el equivalente moderno del 301):
+ * le dice a Google que reemplace definitivamente la dirección vieja por la
+ * nueva en su índice, en vez de tratarla como un desvío temporal.
+ *
+ * El mapeo sale de los enlaces reales del sitio viejo, no de suposiciones:
+ * `industrial.html` y `ambiental.html` eran las portadas de cada categoría
+ * (van al hub `/servicios`) y el resto eran páginas de un servicio concreto.
+ * `hidricos.html` ya estaba roto allá (era el enlace 404 del sitio viejo) y se
+ * incluye igual, porque pudo quedar indexado.
+ */
+const REDIRECCIONES_SITIO_VIEJO: Array<[string, string]> = [
+  ["/index.html", "/"],
+  ["/nosotros.html", "/nosotros"],
+  ["/proyectos.html", "/proyectos"],
+  ["/contacto.html", "/contacto"],
+
+  // Portadas de categoría → hub de servicios.
+  ["/industrial.html", "/servicios"],
+  ["/ambiental.html", "/servicios"],
+
+  // Una página por servicio.
+  ["/automatizacion.html", "/servicios/automatizacion-y-control"],
+  ["/electricos.html", "/servicios/sistemas-electricos"],
+  ["/seguridad.html", "/servicios/seguridad-de-maquinaria"],
+  ["/energetico.html", "/servicios/analisis-energetico"],
+  ["/medicion.html", "/servicios/medicion-de-variables"],
+  ["/legal.html", "/servicios/cumplimiento-legal-ambiental"],
+  ["/urbanistica.html", "/servicios/gestion-urbanistica"],
+  ["/hidricos.html", "/servicios/recurso-hidrico"],
+  ["/iso.html", "/servicios/iso-14001"],
+];
+
 const nextConfig: NextConfig = {
   // No anunciar la versión del framework.
   poweredByHeader: false,
@@ -194,6 +235,14 @@ const nextConfig: NextConfig = {
         pathname: "/**",
       },
     ],
+  },
+
+  async redirects() {
+    return REDIRECCIONES_SITIO_VIEJO.map(([source, destination]) => ({
+      source,
+      destination,
+      permanent: true,
+    }));
   },
 
   async headers() {

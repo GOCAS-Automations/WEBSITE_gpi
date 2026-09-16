@@ -1068,6 +1068,24 @@ al exceder el cupo y las fotos del sitio se verían rotas. Decisión:
   El aviso ámbar del panel sigue vigente: la **CSP** sí sigue bloqueando
   imágenes de hosts no permitidos.
 
+## Iteración del 16 de septiembre de 2026 — CSV numérico y URLs del sitio viejo
+
+- **CSV de jornadas**: GPI reportó que las duraciones (`8h 30m`) llegaban a Excel
+  como texto y no se podían sumar. Ahora las once columnas de duración salen
+  como número con coma decimal (`10`, `10,5`, `7,33`) y se quitó la columna
+  «Horas (decimal)», ya redundante: el archivo queda en **19 columnas**. En
+  pantalla las duraciones se siguen mostrando con horas y minutos.
+- **Redirecciones del sitio viejo**: el equipo reportó que desde Google a veces
+  veían el sitio anterior. Diagnóstico: en sus dispositivos era la **caché del
+  navegador** (el sitio viejo no enviaba `Cache-Control` y sus archivos eran de
+  2023, así que los navegadores lo guardaban por meses según su regla
+  heurística), no un problema de DNS — verificado: dominio y `www` apuntan a
+  Vercel, TTL de 1 h, sin registros AAAA sueltos. Al revisarlo apareció algo
+  real y corregible: las **15 páginas `.html` del sitio viejo** siguen
+  indexadas en Google y daban **404**. Se añadieron redirecciones **308** en
+  `redirects()` de `next.config.ts`, con el mapeo tomado de los enlaces reales
+  del sitio viejo. Verificadas las 15 en local antes de desplegar.
+
 ## Decisiones técnicas
 
 - **Fallback estático primero**: toda la capa de contenido (`src/lib/content.ts`)
