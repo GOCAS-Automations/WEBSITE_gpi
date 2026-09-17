@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getContentCounts, getTeamCounts } from "@/lib/admin";
+import { getCalendarioCounts, getContentCounts, getTeamCounts } from "@/lib/admin";
 import { requireContentEditor } from "@/lib/supabase/auth";
 import { isManagerRole, ROLE_DESCRIPTIONS, ROLE_LABELS } from "@/lib/roles";
 import { AyudaSeccion, SeccionCard } from "@/components/admin/ui";
@@ -10,15 +10,17 @@ import {
   Clock,
   ClockPlus,
   Calendar,
+  CalendarCheck,
 } from "@/lib/icons";
 
 export default async function AdminDashboardPage() {
   const { profile } = await requireContentEditor();
   const manager = isManagerRole(profile.role);
 
-  const [counts, team] = await Promise.all([
+  const [counts, team, calendario] = await Promise.all([
     getContentCounts(),
     manager ? getTeamCounts() : Promise.resolve({ people: 0, pending: 0 }),
+    manager ? getCalendarioCounts() : Promise.resolve({ proximos: 0 }),
   ]);
 
   /**
@@ -76,6 +78,15 @@ export default async function AdminDashboardPage() {
       unit: "pendientes",
       description:
         "Las jornadas que registra el equipo, con su desglose de horas, para aprobarlas o rechazarlas; y el tablero con los totales del período.",
+    },
+    {
+      href: "/admin/calendario",
+      label: "Calendario de programación",
+      icon: CalendarCheck,
+      count: calendario.proximos,
+      unit: "por hacer",
+      description:
+        "La agenda interna: actividades con su día, su hora y sus responsables, para cerrarlas como cumplidas, incompletas o aplazadas, con notas de seguimiento.",
     },
   ];
 

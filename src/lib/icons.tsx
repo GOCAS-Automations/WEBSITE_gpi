@@ -233,6 +233,21 @@ export const Calendar = (p: IconProps) => (
   </Base>
 );
 
+/**
+ * Calendario con un visto: el CALENDARIO INTERNO de programación.
+ *
+ * `Calendar` (a secas) ya la usa «Horarios», que es otra cosa —el horario
+ * laboral del mes—: con seis entradas en el menú, dos iconos iguales
+ * convertirían la navegación en una adivinanza.
+ */
+export const CalendarCheck = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M21 11.5V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h6.5" />
+    <path d="M3 10h18M8 3v4M16 3v4" />
+    <path d="m15 18.5 2 2 4-4.5" />
+  </Base>
+);
+
 /** Reloj con flecha: horas extra / tiempo adicional. */
 export const ClockPlus = (p: IconProps) => (
   <Base {...p}>

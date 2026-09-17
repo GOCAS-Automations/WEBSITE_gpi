@@ -15,6 +15,7 @@ import {
   Clock,
   ClockPlus,
   Calendar,
+  CalendarCheck,
 } from "@/lib/icons";
 import { RUTAS_CONTENIDO } from "@/lib/admin-types";
 
@@ -35,8 +36,8 @@ interface AdminSection {
 }
 
 /**
- * MENÚ DEL PANEL — seis entradas
- * ==============================
+ * MENÚ DEL PANEL — siete entradas
+ * ===============================
  * Se usan tanto en el sidebar de escritorio como en las tabs móviles.
  *
  * El menú tenía doce entradas y ocho de ellas eran contenido del sitio: la
@@ -50,8 +51,9 @@ interface AdminSection {
  * barrera real.
  */
 export const adminSections: AdminSection[] = [
-  // `Gauge` para el Dashboard y `Sliders` para Ajustes: con seis entradas, dos
-  // iconos iguales convierten el menú en una adivinanza.
+  // `Gauge` para el Dashboard y `Sliders` para Ajustes: con siete entradas, dos
+  // iconos iguales convierten el menú en una adivinanza. Por lo mismo,
+  // «Horarios» lleva `Calendar` y «Calendario» lleva `CalendarCheck`.
   { href: "/admin", label: "Dashboard", icon: Gauge, exact: true },
   {
     href: "/admin/contenido",
@@ -62,6 +64,12 @@ export const adminSections: AdminSection[] = [
   { href: "/admin/empleados", label: "Equipo", icon: User, managerOnly: true },
   { href: "/admin/horarios", label: "Horarios", icon: Calendar, managerOnly: true },
   { href: "/admin/jornadas", label: "Jornadas", icon: Clock, managerOnly: true },
+  {
+    href: "/admin/calendario",
+    label: "Calendario",
+    icon: CalendarCheck,
+    managerOnly: true,
+  },
   { href: "/admin/ajustes", label: "Ajustes", icon: Sliders },
 ];
 

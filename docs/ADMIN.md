@@ -12,13 +12,13 @@ la gestión de cuentas y el registro de jornadas (horas extra).
 
 ## 1. Aplicar las migraciones en Supabase
 
-> ✅ **Estado actual: las nueve migraciones YA ESTÁN APLICADAS en el proyecto
+> ✅ **Estado actual: las diez migraciones YA ESTÁN APLICADAS en el proyecto
 > "GPI Project" de Supabase** (se aplicaron y verificaron entre el 27 de julio
-> y el 13 de agosto de 2026). Esta sección NO es una lista de tareas
+> de 2026 y el 17 de septiembre de 2026). Esta sección NO es una lista de tareas
 > pendientes: es la referencia de qué hace cada migración y el procedimiento
 > por si algún día hubiera que montar el proyecto en un Supabase nuevo.
 
-Hay **nueve** migraciones y se aplican **en orden**:
+Hay **diez** migraciones y se aplican **en orden**:
 
 | Archivo | Qué añade |
 | --- | --- |
@@ -31,6 +31,7 @@ Hay **nueve** migraciones y se aplican **en orden**:
 | `supabase/migrations/0007_contenido_paginas.sql` | Contenido editable de las páginas de **inicio** y **Nosotros**, interruptores por sección, **contador de visitas** (`site_visitas`) y **video por servicio** (`site_services.video`) |
 | `supabase/migrations/0008_titulos_paginas.sql` | Títulos que quedaban escritos en el código: sección de servicios, valores y clientes del inicio y su cierre (`site_settings.home`), cabeceras de **Servicios**, **Proyectos** y **Contacto** y el párrafo del **pie de página** (`site_settings.paginas`) |
 | `supabase/migrations/0009_telefono_mensajes.sql` | Columna `telefono` (opcional) en `site_mensajes`: respaldo del teléfono que ahora pide el formulario de `/contacto` |
+| `supabase/migrations/0010_calendario.sql` | **Calendario interno**: `eventos`, `evento_responsables` y `evento_notas` con su RLS, y el campo `profiles.apodo` |
 
 Para cada una:
 
@@ -220,6 +221,25 @@ con su propia pantalla desde la 0007.
 > `insert` sin la columna, el mismo patrón que `saveService` con la columna
 > `video` de la 0007.
 
+### ¿Qué añade la 0010?
+
+| Objeto | Para qué sirve |
+| --- | --- |
+| Tabla `eventos` | Las actividades del **calendario interno**: título, descripción, día, hora de inicio y fin, estado y la fecha en la que estaban programadas antes de aplazarse (`fecha_original`) |
+| Tabla `evento_responsables` | Quién responde por cada evento: una cuenta del portal (`profile_id`) **o** una persona externa escrita a mano (`nombre_externo`) |
+| Tabla `evento_notas` | El hilo de seguimiento de cada evento: quién escribió, qué y cuándo |
+| Función `es_responsable_evento(uuid)` | Ayuda a las políticas de RLS a responder «¿esta persona es responsable de ese evento?» sin entrar en recursión |
+| Columna `profiles.apodo` | Nombre corto de la persona («YC») para el calendario y las tablas. **Solo lo cambia un administrador** |
+
+> **Quién ve qué.** El administrador y el coordinador ven y administran todo el
+> calendario. Cualquier otra cuenta activa —incluido el Community Manager— ve
+> **únicamente los eventos en los que figura como responsable**, con sus
+> responsables y sus notas, y puede **añadir notas** ahí desde *Mi Cuenta*. El
+> público (`anon`) no tiene ningún acceso: el calendario nunca sale al sitio.
+>
+> Las notas quedan firmadas con la cuenta de quien las escribe; la base de
+> datos no acepta una nota a nombre de otra persona.
+
 ### Si el bloque del usuario admin de la 0001 falla
 
 Algunas versiones de Supabase no permiten insertar directamente en `auth.users`.
@@ -405,9 +425,9 @@ Solo para **admin** y **coordinador**.
 
 ### Crear una cuenta
 
-1. **Nueva cuenta** → nombre completo, **usuario**, rol, cédula, cargo,
-   teléfono y correo de contacto. Solo el nombre, el usuario y el rol son
-   obligatorios.
+1. **Nueva cuenta** → nombre completo, **usuario**, rol, **apodo**, cédula,
+   cargo, teléfono y correo de contacto. Solo el nombre, el usuario y el rol
+   son obligatorios.
 2. El **usuario** debe ir en minúsculas, sin espacios ni tildes (3 a 32
    caracteres; se permiten números, punto, guion y guion bajo). Es único: si ya
    existe, el panel lo avisa.
@@ -420,6 +440,21 @@ Solo para **admin** y **coordinador**.
 
 > La contraseña no se puede volver a consultar (Supabase guarda solo su hash).
 > Si se pierde, se restablece desde la ficha de la persona.
+
+#### El apodo (solo lo cambia un administrador)
+
+El **apodo** es un nombre corto —«YC» para Yeison Camacho— que el sitio usa
+donde el nombre completo no cabe: las fichas de responsables del calendario, la
+agenda del mes, la tabla de notas y las gráficas por responsable. Donde sí hay
+espacio (el detalle de un evento, el formulario) se muestra el nombre completo
+con el apodo entre paréntesis, y al pasar el mouse siempre sale el nombre
+entero.
+
+- Es **opcional**: sin apodo, en todas partes se sigue viendo el nombre completo.
+- Lo cambia **únicamente el administrador**. El coordinador lo ve, pero en un
+  campo gris que no se puede editar, y el servidor **descarta** el dato si
+  llega desde una cuenta que no es administradora.
+- Se ve en la lista del equipo, junto al nombre, y se puede buscar por él.
 
 ### Gestionar una cuenta
 
@@ -1393,3 +1428,90 @@ correo, o queda guardado, o el visitante recibe una vía alternativa clara.
 > pura y empaquetarla con el resto del código de servidor la rompe.
 - Si subes imágenes a Supabase, `next.config.ts` ya permite optimizar imágenes
   desde `**.supabase.co/storage/v1/object/public/**`.
+
+---
+
+## 14. Calendario interno de programación — `/admin/calendario`
+
+Solo para **admin** y **coordinador** (migración 0010). Es la agenda de trabajo
+de GPI: aquí se programa lo que hay que hacer, con su día, su hora y sus
+responsables, y después se cierra diciendo cómo salió.
+
+La pantalla tiene **tres pestañas** y la pestaña viaja en la dirección, así que
+el enlace se puede compartir por WhatsApp:
+
+| Pestaña | Dirección | Para qué |
+| --- | --- | --- |
+| Calendario | `/admin/calendario` | La cuadrícula del mes y la agenda, para programar y cerrar eventos |
+| Notas | `/admin/calendario?vista=notas` | Todo el seguimiento escrito, con filtros por evento, autor y fechas |
+| Métricas | `/admin/calendario?vista=metricas` | Cuántos eventos se cumplen, cuántos se aplazan y cómo se reparte la carga |
+
+### Programar un evento
+
+1. Pulsa **Nuevo evento** (o el **+** que aparece sobre el día al pasar el
+   mouse: así el formulario abre con esa fecha puesta).
+2. Escribe el **título** —es lo que se lee en la casilla del calendario, así
+   que mejor corto—, el **día**, la **hora de inicio y de fin** y, si hace
+   falta, una **descripción** con el detalle.
+3. Elige los **responsables**:
+   - las **cuentas del portal** se marcan en la lista (hay buscador por nombre
+     y cargo). A esas personas el evento les aparece en *Mi Cuenta → Mis
+     eventos*;
+   - con **«Otro»** se escribe a mano el nombre de alguien sin cuenta (el
+     contacto del cliente, un contratista). Queda registrado como responsable,
+     pero no recibe acceso al sistema. Se pueden agregar varios.
+4. Al guardar, el evento nace **programado**.
+
+### Cerrar un evento
+
+Al abrir un evento (pulsando su ficha en el calendario o en la agenda) salen
+las acciones:
+
+| Acción | Qué significa |
+| --- | --- |
+| **Marcar cumplido** | Se hizo completo. Es el cierre normal |
+| **Marcar incompleto** | No se hizo o quedó a medias, y no se va a reprogramar. Deja una nota explicando qué faltó |
+| **Aplazar a otra fecha** | Se movió: el evento se pasa al día nuevo, queda **aplazado** y el calendario **recuerda para cuándo estaba al principio** |
+| **Volver a programado** | Reabre un evento cerrado por error |
+| **Editar datos** | Cambia título, fecha, horas, descripción o responsables |
+| **Eliminar evento** | Lo borra para siempre, con sus notas |
+
+> **Marcar incompleto NO es eliminar.** Lo primero deja constancia de que la
+> actividad no salió, con sus notas, que es lo que se revisa a fin de mes. Lo
+> segundo hace desaparecer el evento y su historia, y no se puede deshacer:
+> úsalo solo para limpiar eventos de prueba o creados por error. Por eso pide
+> dos confirmaciones.
+
+Los colores del calendario son siempre los mismos: **gris** programado,
+**verde** cumplido, **rojo** incompleto y **ámbar** aplazado. Los **festivos
+nacionales** salen marcados, y son los mismos que usa el cálculo de horas
+extra.
+
+### Las notas
+
+Son el seguimiento de cada evento: qué se hizo, qué faltó o por qué se movió de
+fecha. Las escribe un administrador o un coordinador desde el detalle del
+evento o desde la pestaña **Notas**, y también **cualquier responsable** desde
+su *Mi Cuenta*. Cada nota queda firmada con el nombre de quien la escribió y su
+fecha.
+
+Las notas **no se pintan en la cuadrícula** —convertirían cada casilla en un
+muro de texto—: se leen en la pestaña Notas y dentro de cada evento.
+
+### Lo que ve el equipo — *Mi Cuenta → Mis eventos*
+
+Cada persona ve **solo** los eventos de hoy en adelante en los que figura como
+responsable: el día, la hora, qué hay que hacer, con quién lo comparte y el
+estado. Desde ahí puede **dejar una nota**. No puede crear, editar ni cerrar
+eventos: eso es del administrador y del coordinador.
+
+### Las métricas
+
+El tablero se calcula sobre el **rango de fechas** que elijas (empieza en el mes
+en curso) y muestra: cuántos eventos hubo, cuántos se cumplieron, cuántos
+quedaron incompletos o aplazados, la **tasa de cumplimiento** —de los eventos ya
+cerrados, qué porcentaje salió completo—, el reparto por estado, la **carga por
+responsable** (incluidos los externos) y los eventos con más notas. La gráfica
+**Evolución mensual** es la única que no depende del filtro: muestra siempre el
+año completo, para que se vea la tendencia. Cada bloque tiene su botón
+**Ayuda** con lo que significa cada dato.

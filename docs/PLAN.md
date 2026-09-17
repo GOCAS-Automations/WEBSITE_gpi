@@ -1086,6 +1086,94 @@ al exceder el cupo y las fotos del sitio se verían rotas. Decisión:
   `redirects()` de `next.config.ts`, con el mapeo tomado de los enlaces reales
   del sitio viejo. Verificadas las 15 en local antes de desplegar.
 
+## Iteración del 17 de septiembre de 2026 — calendario interno de programación
+
+Primera de las dos funcionalidades que pidió la gerencia en la reunión del 16 de
+septiembre (la segunda, nómina, va aparte). **Migración 0010 aplicada.**
+
+### 1. Qué se construyó
+
+Un módulo nuevo del panel, **`/admin/calendario`**, solo para managers (admin y
+coordinador), con tres pestañas sobre los mismos datos:
+
+- **Calendario** — cuadrícula mensual **hecha a mano** (sin librerías nuevas: son
+  quince líneas de aritmética de fechas en `src/lib/calendario.ts`), con la
+  semana empezando en lunes, los festivos colombianos que ya usaban las jornadas
+  y los eventos del día como fichas de color. Al lado —o debajo, según el ancho—
+  una **agenda del mes**. El mes viaja en la URL (`?anio=&mes=`).
+- **Notas** — todas las notas de seguimiento en una tabla, de la más reciente a
+  la más antigua, con filtros por evento, autor y rango de fechas, y paginación.
+- **Métricas** — KPIs y Recharts con las piezas del tablero de jornadas
+  (`dashboard-ui`): eventos por estado, evolución mensual, carga por responsable
+  (externos incluidos), tasa de cumplimiento y eventos con más notas.
+
+Un evento tiene título, día, hora de inicio y fin, descripción y varios
+**responsables**, que pueden ser cuentas del portal o personas externas escritas
+a mano con la opción «Otro». Nace **programado** y se cierra como **cumplido** o
+**incompleto**, o se **aplaza** a otra fecha.
+
+### 2. Las decisiones que importan
+
+- **`fecha_original`**: al aplazar por primera vez se guarda el día en el que el
+  evento estaba programado, y no se vuelve a tocar aunque se mueva tres veces.
+  Sin ese dato, mover un evento borraba la historia, que es justo lo que la
+  gerencia quiere poder ver.
+- **Marcar incompleto ≠ eliminar**, con el mismo discurso que «rechazar ≠
+  eliminar» en jornadas: lo primero deja constancia con sus notas, lo segundo
+  borra el evento y su historia. Eliminar pide dos confirmaciones.
+- **Quién ve qué**: los managers ven todo; cualquier otra cuenta activa ve solo
+  los eventos en los que figura como responsable y puede añadirles notas, desde
+  la sección **«Mis eventos»** del portal. El Community Manager **no** es
+  manager: en el calendario se comporta como un empleado.
+- **Las notas no se pintan en la cuadrícula**: convertirían cada casilla en un
+  muro de texto. Se leen en su pestaña y dentro de cada evento.
+
+### 3. El apodo de las cuentas
+
+A mitad de la iteración, GPI pidió un campo **apodo** por cuenta («YC» para
+Yeison Camacho): es lo que se muestra donde el nombre completo no cabe —fichas
+del calendario, agenda, tabla de notas, gráficas por responsable— mientras que
+en el detalle y en el formulario se sigue leyendo «Nombre completo (YC)».
+
+Va en `profiles.apodo` y **solo lo edita un administrador**: al coordinador se le
+muestra en un campo de solo lectura —esconderlo haría pensar que el dato no
+existe— y la server action **descarta** el campo si quien guarda no es
+administrador, aunque manipule el formulario. Verificado en la prueba: con una
+cuenta de coordinador se renombró el campo a mano y se envió «ZZ»; el valor no
+cambió.
+
+### 4. Dos hallazgos de fondo (no eran del calendario)
+
+1. **Un Client Component que importe COMPONENTES de `components/admin/ui.tsx`
+   deja colgadas las server actions de esa pantalla en producción.** El botón se
+   queda en «Guardando…» para siempre aunque el dato ya esté escrito en la base
+   de datos; en desarrollo no se reproduce. `ui.tsx` no lleva `"use client"` y
+   depende de `PuntoDeCarga`, que sí: arrastrarlo al grafo del navegador rompe la
+   respuesta de la acción. Diagnosticado por bisección con `next build` +
+   `next start`. La solución es `components/admin/ui-base.tsx` (`"use client"`)
+   con los campos, insignias, tarjetas y notas de ayuda, reexportado desde
+   `ui.tsx` para no tocar ningún import existente. `JornadasDashboard`,
+   `ReviewActions` y las barras de filtros pasaron también a `ui-base`: el
+   tablero de métricas tenía el mismo defecto latente, invisible solo porque esa
+   vista no ejecuta acciones.
+2. **El portal no podía nombrar a los compañeros.** Las políticas de `profiles`
+   solo dejan a cada quien leer su propia fila, así que en «Mis eventos» los
+   demás responsables aparecían como «Cuenta eliminada». Ahora `mapaDePerfiles()`
+   completa con la clave de servicio lo que la sesión no puede leer, y **solo**
+   nombre, apodo y cargo —ni cédula, ni teléfono, ni correo—, sobre ids que RLS
+   ya autorizó a través de sus eventos.
+
+### 5. Verificación
+
+`npm run lint` y `npm run build` en verde. Prueba de punta a punta contra
+`localhost` con Playwright: crear un evento con dos cuentas y un externo,
+editarlo, dos notas, aplazarlo (con su `fecha_original`), cerrarlo como
+cumplido; un segundo evento marcado incompleto; un tercero eliminado; las
+pestañas de Notas y Métricas reflejando todo; el empleado viendo en su portal
+solo lo suyo, dejando una nota y quedando fuera de `/admin/calendario`; y el
+coordinador sin poder tocar el apodo. Capturas revisadas en 1440 y 390 px, cero
+errores de consola, y todas las filas de prueba borradas al terminar.
+
 ## Decisiones técnicas
 
 - **Fallback estático primero**: toda la capa de contenido (`src/lib/content.ts`)

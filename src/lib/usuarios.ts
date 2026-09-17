@@ -98,6 +98,58 @@ export function identificadorCuenta(perfil: {
   return desdeEmail ?? (perfil.email ?? "");
 }
 
+/* ------------------------------------------------------------------ */
+/* Apodo (migración 0010)                                              */
+/* ------------------------------------------------------------------ */
+
+/**
+ * EL APODO
+ * --------
+ * Nombre corto con el que se identifica a una persona donde el nombre completo
+ * no cabe: las fichas de responsables del calendario, la agenda del mes, la
+ * tabla de notas y las gráficas por responsable. Ejemplo: «Yeison Camacho
+ * Rojas» → «YC».
+ *
+ * Reglas: es OPCIONAL, es corto y **solo lo puede cambiar un administrador**
+ * (se valida en la server action de `/admin/empleados`, no en la interfaz).
+ * Sin apodo no pasa nada: en todas partes se sigue mostrando el nombre
+ * completo.
+ */
+export const APODO_MAX = 12;
+
+/** Deja el apodo en una sola línea y dentro del límite. No fuerza formato. */
+export function normalizarApodo(valor: unknown): string {
+  if (typeof valor !== "string") return "";
+  return valor.replace(/\s+/g, " ").trim().slice(0, APODO_MAX);
+}
+
+/**
+ * Cómo se nombra a una persona donde hay poco espacio: su apodo si lo tiene y,
+ * si no, su nombre completo. El nombre completo se sigue mostrando en el
+ * `title` del elemento, para que nadie se quede con la duda de quién es «YC».
+ */
+export function etiquetaCorta(perfil: {
+  apodo?: string | null;
+  nombre?: string | null;
+  full_name?: string | null;
+}): string {
+  const apodo = typeof perfil.apodo === "string" ? perfil.apodo.trim() : "";
+  if (apodo !== "") return apodo;
+  const nombre = perfil.nombre ?? perfil.full_name ?? "";
+  return typeof nombre === "string" ? nombre : "";
+}
+
+/** «Yeison Camacho Rojas (YC)» — para donde sí cabe todo. */
+export function etiquetaCompleta(perfil: {
+  apodo?: string | null;
+  nombre?: string | null;
+  full_name?: string | null;
+}): string {
+  const nombre = String(perfil.nombre ?? perfil.full_name ?? "");
+  const apodo = typeof perfil.apodo === "string" ? perfil.apodo.trim() : "";
+  return apodo !== "" && apodo !== nombre ? `${nombre} (${apodo})` : nombre;
+}
+
 /** Texto listo para dictar o pegar en WhatsApp al entregar unas credenciales. */
 export function textoCredenciales(usuario: string, password: string): string {
   return `Usuario: ${usuario} · Contraseña: ${password}`;

@@ -203,6 +203,13 @@ export interface ProfileRecord {
   cedula: string | null;
   /** Correo REAL de contacto (informativo; no sirve para iniciar sesión). */
   email_contacto: string | null;
+  /**
+   * Nombre corto para el calendario y las tablas (p. ej. «YC»). `null` si la
+   * persona no tiene apodo —o si la migración 0010 no está aplicada—, y
+   * entonces se muestra el nombre completo. **Solo lo edita un administrador**
+   * (ver `etiquetaCorta()` en `src/lib/usuarios.ts`).
+   */
+  apodo: string | null;
   active: boolean;
   created_at: string | null;
 }

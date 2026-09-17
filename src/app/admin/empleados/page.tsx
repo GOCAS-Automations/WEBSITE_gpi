@@ -41,6 +41,7 @@ export default async function AdminEmpleadosPage({
           p.cedula ?? "",
           p.email_contacto ?? "",
           p.cargo ?? "",
+          p.apodo ?? "",
           ROLE_LABELS[p.role],
         ]
           .join(" ")
@@ -83,7 +84,7 @@ export default async function AdminEmpleadosPage({
           type="search"
           name="q"
           defaultValue={busqueda}
-          placeholder="Buscar por nombre, usuario, cédula o cargo…"
+          placeholder="Buscar por nombre, apodo, usuario, cédula o cargo…"
           aria-label="Buscar cuentas"
           className={`${inputClass} max-w-sm`}
         />
@@ -151,6 +152,13 @@ export default async function AdminEmpleadosPage({
                   )}
                   {cuenta.id === profile.id && (
                     <Badge className="bg-mist text-graphite">Tú</Badge>
+                  )}
+                  {/* El apodo es lo que se ve en el calendario: aquí se
+                      muestra para saber de un vistazo quién tiene cuál. */}
+                  {cuenta.apodo && (
+                    <Badge className="bg-brand-tint text-brand-deep">
+                      Apodo: {cuenta.apodo}
+                    </Badge>
                   )}
                 </div>
                 <p className="mt-1 truncate text-sm text-graphite">

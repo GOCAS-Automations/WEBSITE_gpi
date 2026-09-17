@@ -1,10 +1,25 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { PuntoDeCarga } from "./PuntoDeCarga";
-import { ArrowRight, ChevronDown, Info } from "@/lib/icons";
+import { ArrowRight } from "@/lib/icons";
+import { AyudaSeccion } from "./ui-base";
 
-export const inputClass =
-  "w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm text-ink placeholder:text-graphite/60 transition-colors focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/25";
+/**
+ * SISTEMA DE COMPONENTES DEL PANEL
+ * ================================
+ * Aquí viven los TEXTOS de ayuda reutilizados y las piezas que dependen de
+ * `next/link` (cabecera de sección, tarjetas del hub, botones de volver), que
+ * son para Server Components.
+ *
+ * Los campos, insignias, tarjetas y notas de ayuda se mudaron a `./ui-base`
+ * —que sí lleva `"use client"`— y se REEXPORTAN desde aquí, así que ningún
+ * `import` existente cambió. La razón está explicada a fondo en ese archivo, y
+ * es importante: **un componente de cliente debe importarlas de `./ui-base`,
+ * nunca de aquí**, porque arrastrar este módulo al navegador deja colgadas las
+ * server actions de esa pantalla EN PRODUCCIÓN (el botón se queda en
+ * «Guardando…» aunque el dato ya se haya guardado en la base de datos).
+ */
+export * from "./ui-base";
 
 /* ------------------------------------------------------------------ */
 /* Ayuda para personas no técnicas                                     */
@@ -16,7 +31,6 @@ export const inputClass =
  * Viven aquí (y no repetidos en cada pantalla) para que digan siempre lo mismo.
  * Están escritos en español llano, sin jerga: quien usa el panel no es técnico.
  */
-
 /** Cuánto tarda en verse un cambio en el sitio público. */
 export const AYUDA_PUBLICACION =
   "Lo que guardes aquí se ve en el sitio en pocos minutos.";
@@ -49,6 +63,32 @@ export const AYUDA_IMAGEN =
 /** Qué hace el bloque de video de un servicio (migración 0007). */
 export const AYUDA_VIDEO_SERVICIO =
   "Pega el enlace de YouTube. El video aparece en la página del servicio con su título y descripción; el interruptor «Mostrar el video» empieza apagado: enciéndelo cuando el enlace esté listo para publicarse.";
+
+/* --- Calendario interno (migración 0010) -------------------------- */
+
+/** Para qué sirve el calendario y quién lo ve. */
+export const AYUDA_CALENDARIO =
+  "El calendario es la agenda interna de GPI: aquí se programa lo que hay que hacer, con su día, su hora y sus responsables. Solo lo ven el administrador y el coordinador; cada persona ve únicamente los eventos que le asignaron, en su Mi Cuenta.";
+
+/** Qué significa cada estado de un evento. */
+export const AYUDA_CALENDARIO_ESTADOS =
+  "Todo evento nace «programado». Cuando pase el día, ciérralo: «cumplido» si salió completo, «incompleto» si no salió o quedó a medias, o «aplázalo» a otra fecha si se corrió. Un evento aplazado se mueve al día nuevo y el calendario recuerda para cuándo estaba al principio.";
+
+/** Diferencia entre marcar incompleto y eliminar (mismo espíritu que rechazar ≠ eliminar). */
+export const AYUDA_CALENDARIO_ELIMINAR =
+  "Marcar como incompleto NO es eliminar: lo primero deja constancia de que la actividad no salió, con sus notas; lo segundo borra el evento y su historia para siempre. Elimina solo los eventos de prueba o los creados por error.";
+
+/** Para qué son las notas y quién las escribe. */
+export const AYUDA_CALENDARIO_NOTAS =
+  "Las notas son el seguimiento de cada evento: qué se hizo, qué faltó o por qué se movió de fecha. Las puede escribir un manager o cualquier responsable del evento desde su Mi Cuenta, y quedan firmadas con su nombre y su fecha. No se ven en la cuadrícula del calendario: se leen aquí y dentro de cada evento.";
+
+/** Cómo funcionan los responsables, incluidos los externos. */
+export const AYUDA_CALENDARIO_RESPONSABLES =
+  "Un evento puede tener varios responsables: cuentas del portal —a quienes les aparece en Mi Cuenta y pueden dejar notas— y personas externas (un contratista, el contacto del cliente) cuyo nombre se escribe a mano con la opción «Otro». Los externos quedan registrados, pero no reciben acceso al sistema.";
+
+/** Qué es el apodo de una cuenta y quién puede cambiarlo (migración 0010). */
+export const AYUDA_APODO =
+  "Nombre corto con el que se identifica a la persona en el calendario y en las tablas (por ejemplo, «YC» para Yeison Camacho). Solo lo puede cambiar un administrador; donde hay espacio se sigue mostrando el nombre completo.";
 
 /**
  * Recordatorio de guardar — el aviso que más falta hacía.
@@ -97,361 +137,6 @@ export function AvisoGuardar({
         </>
       )}
     </AyudaSeccion>
-  );
-}
-
-/**
- * Nota de ayuda del panel: un párrafo corto con icono, opcionalmente titulado.
- *
- * `tono="info"` (por defecto) para explicaciones y `tono="aviso"` para lo que
- * conviene leer antes de tocar algo. Es un bloque estático, sin JavaScript:
- * se puede usar en cualquier Server Component.
- */
-export function AyudaSeccion({
-  children,
-  title,
-  tono = "info",
-  className = "",
-}: {
-  children: ReactNode;
-  title?: string;
-  tono?: "info" | "aviso";
-  className?: string;
-}) {
-  const info = tono === "info";
-  return (
-    <div
-      className={`flex items-start gap-2.5 rounded-2xl border px-4 py-3.5 text-sm leading-relaxed sm:px-5 ${
-        info
-          ? "border-line bg-mist/60 text-graphite"
-          : "border-amber-200 bg-amber-50 text-amber-900"
-      } ${className}`}
-    >
-      <Info
-        className={`mt-0.5 h-4 w-4 shrink-0 ${info ? "text-brand-dark" : ""}`}
-      />
-      <div className="min-w-0">
-        {title && (
-          <p className={`font-bold ${info ? "text-ink" : ""}`}>{title}</p>
-        )}
-        <div className={title ? "mt-1" : ""}>{children}</div>
-      </div>
-    </div>
-  );
-}
-
-/**
- * Ayuda desplegable para textos largos: se abre solo si la persona quiere.
- * Usa `<details>`/`<summary>` nativos, así que funciona sin JavaScript y es
- * accesible con teclado sin código extra.
- */
-export function AyudaDesplegable({
-  label,
-  children,
-  className = "",
-}: {
-  /** Lo que se lee cuando está cerrado, p. ej. "¿Qué puede hacer cada rol?". */
-  label: string;
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <details
-      className={`group rounded-2xl border border-line bg-mist/50 px-4 py-3 ${className}`}
-    >
-      <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-semibold text-ink-soft transition-colors hover:text-brand-dark [&::-webkit-details-marker]:hidden">
-        <Info className="h-4 w-4 shrink-0 text-brand-dark" />
-        {label}
-        <ChevronDown className="ml-auto h-4 w-4 shrink-0 transition-transform group-open:rotate-180" />
-      </summary>
-      <div className="mt-3 text-sm leading-relaxed text-graphite">{children}</div>
-    </details>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Campos de formulario                                                */
-/* ------------------------------------------------------------------ */
-
-interface FieldProps {
-  label: string;
-  name: string;
-  defaultValue?: string | number | null;
-  placeholder?: string;
-  required?: boolean;
-  type?: string;
-  hint?: string;
-  className?: string;
-  /**
-   * Prefijo del `id` del campo. Obligatorio cuando una pantalla tiene VARIOS
-   * formularios que reutilizan el mismo `name` (p. ej. «Título» en cada bloque
-   * de la página Nosotros): los `name` pueden repetirse entre formularios, pero
-   * los `id` del documento no, y un `id` duplicado hace que la etiqueta apunte
-   * al campo equivocado para quien navega con lector de pantalla.
-   */
-  scope?: string;
-}
-
-/**
- * Los campos usan `htmlFor`/`id` explícitos (no solo el `<label>` envolvente) y
- * enlazan la ayuda con `aria-describedby`: así el lector de pantalla lee primero
- * la etiqueta y después la ayuda, en vez de mezclarlo todo en el nombre del
- * campo.
- */
-const fieldId = (name: string, scope?: string) =>
-  scope ? `campo-${scope}-${name}` : `campo-${name}`;
-const hintId = (name: string, scope?: string) => `${fieldId(name, scope)}-ayuda`;
-
-export function Field({
-  label,
-  name,
-  defaultValue,
-  placeholder,
-  required,
-  type = "text",
-  hint,
-  className = "",
-  scope,
-}: FieldProps) {
-  return (
-    <div className={`block ${className}`}>
-      <label
-        htmlFor={fieldId(name, scope)}
-        className="mb-1.5 block text-sm font-semibold text-ink"
-      >
-        {label}
-        {required && <span className="text-brand-dark"> *</span>}
-      </label>
-      <input
-        id={fieldId(name, scope)}
-        name={name}
-        type={type}
-        required={required}
-        aria-required={required ? true : undefined}
-        aria-describedby={hint ? hintId(name, scope) : undefined}
-        defaultValue={defaultValue ?? ""}
-        placeholder={placeholder}
-        className={inputClass}
-      />
-      {hint && (
-        <span id={hintId(name, scope)} className="mt-1 block text-xs text-graphite">
-          {hint}
-        </span>
-      )}
-    </div>
-  );
-}
-
-interface TextAreaProps extends Omit<FieldProps, "type"> {
-  rows?: number;
-}
-
-export function TextArea({
-  label,
-  name,
-  defaultValue,
-  placeholder,
-  required,
-  rows = 4,
-  hint,
-  className = "",
-  scope,
-}: TextAreaProps) {
-  return (
-    <div className={`block ${className}`}>
-      <label
-        htmlFor={fieldId(name, scope)}
-        className="mb-1.5 block text-sm font-semibold text-ink"
-      >
-        {label}
-        {required && <span className="text-brand-dark"> *</span>}
-      </label>
-      <textarea
-        id={fieldId(name, scope)}
-        name={name}
-        rows={rows}
-        required={required}
-        aria-required={required ? true : undefined}
-        aria-describedby={hint ? hintId(name, scope) : undefined}
-        defaultValue={defaultValue ?? ""}
-        placeholder={placeholder}
-        className={`${inputClass} resize-y`}
-      />
-      {hint && (
-        <span id={hintId(name, scope)} className="mt-1 block text-xs text-graphite">
-          {hint}
-        </span>
-      )}
-    </div>
-  );
-}
-
-export function Select({
-  label,
-  name,
-  defaultValue,
-  options,
-  hint,
-  className = "",
-  scope,
-}: {
-  label: string;
-  name: string;
-  defaultValue?: string;
-  options: { value: string; label: string }[];
-  hint?: string;
-  className?: string;
-  scope?: string;
-}) {
-  return (
-    <div className={`block ${className}`}>
-      <label
-        htmlFor={fieldId(name, scope)}
-        className="mb-1.5 block text-sm font-semibold text-ink"
-      >
-        {label}
-      </label>
-      <select
-        id={fieldId(name, scope)}
-        name={name}
-        defaultValue={defaultValue}
-        aria-describedby={hint ? hintId(name, scope) : undefined}
-        className={inputClass}
-      >
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-      {hint && (
-        <span id={hintId(name, scope)} className="mt-1 block text-xs text-graphite">
-          {hint}
-        </span>
-      )}
-    </div>
-  );
-}
-
-/**
- * Interruptor visible/oculto.
- *
- * Envía SIEMPRE un valor: un input oculto con "false" y, si está encendido,
- * también el checkbox con "true". Sin el oculto, un checkbox desmarcado no
- * manda nada y el servidor no podría distinguir "apagado" de "no enviado".
- * Del lado del servidor se lee con el helper `bool()` de `admin/actions.ts`.
- */
-export function Switch({
-  label,
-  name,
-  defaultChecked = true,
-  hint,
-  onLabel = "Visible",
-  offLabel = "Oculto",
-}: {
-  label: string;
-  name: string;
-  defaultChecked?: boolean;
-  hint?: string;
-  onLabel?: string;
-  offLabel?: string;
-}) {
-  return (
-    <div>
-      <span className="mb-1.5 block text-sm font-semibold text-ink">{label}</span>
-      <label className="inline-flex cursor-pointer items-center gap-3 rounded-xl border border-line bg-white px-3.5 py-2.5 transition-colors hover:border-brand/50">
-        <input type="hidden" name={name} value="false" />
-        {/* El propio checkbox es el riel del interruptor (appearance-none) y su
-            pseudo-elemento ::before hace de perilla: así los estados dependen
-            solo de :checked, sin JavaScript. */}
-        <input
-          type="checkbox"
-          name={name}
-          value="true"
-          defaultChecked={defaultChecked}
-          className="peer relative h-6 w-11 shrink-0 cursor-pointer appearance-none rounded-full bg-graphite/30 outline-none transition-colors before:absolute before:left-0.5 before:top-0.5 before:h-5 before:w-5 before:rounded-full before:bg-white before:shadow-soft before:transition-transform before:content-[''] checked:bg-brand checked:before:translate-x-5 focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2"
-        />
-        <span className="text-sm font-semibold text-graphite peer-checked:hidden">
-          {offLabel}
-        </span>
-        <span className="hidden text-sm font-semibold text-brand-dark peer-checked:inline">
-          {onLabel}
-        </span>
-      </label>
-      {hint && <p className="mt-1.5 text-xs text-graphite">{hint}</p>}
-    </div>
-  );
-}
-
-/** Etiqueta de estado (publicado/oculto, rol, estado de una jornada…). */
-export function Badge({
-  children,
-  className = "bg-mist text-graphite",
-}: {
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${className}`}
-    >
-      {children}
-    </span>
-  );
-}
-
-/** Badge específico para la visibilidad de un ítem de contenido. */
-export function PublishedBadge({ published }: { published: boolean }) {
-  return (
-    <Badge
-      className={
-        published ? "bg-brand-tint text-brand-deep" : "bg-amber-100 text-amber-800"
-      }
-    >
-      {published ? "Visible" : "Oculto"}
-    </Badge>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Contenedores                                                        */
-/* ------------------------------------------------------------------ */
-
-export function Card({
-  children,
-  className = "",
-}: {
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <div
-      className={`rounded-2xl border border-line bg-white p-5 shadow-soft sm:p-6 ${className}`}
-    >
-      {children}
-    </div>
-  );
-}
-
-export function CardTitle({
-  title,
-  description,
-  action,
-}: {
-  title: string;
-  description?: string;
-  action?: ReactNode;
-}) {
-  return (
-    <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
-      <div>
-        <h2 className="text-lg font-bold text-ink">{title}</h2>
-        {description && (
-          <p className="mt-1 text-sm leading-relaxed text-graphite">{description}</p>
-        )}
-      </div>
-      {action}
-    </div>
   );
 }
 
@@ -623,26 +308,6 @@ export function SeccionCard({
         <PuntoDeCarga className="ml-1" />
       </span>
     </Link>
-  );
-}
-
-export function EmptyState({
-  title,
-  description,
-  action,
-}: {
-  title: string;
-  description: string;
-  action?: ReactNode;
-}) {
-  return (
-    <div className="rounded-2xl border border-dashed border-line bg-mist/60 p-10 text-center">
-      <p className="text-base font-bold text-ink">{title}</p>
-      <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-graphite">
-        {description}
-      </p>
-      {action && <div className="mt-5 flex justify-center">{action}</div>}
-    </div>
   );
 }
 

@@ -1,0 +1,386 @@
+/**
+ * CALENDARIO INTERNO DE PROGRAMACIÓN — tipos y helpers
+ * =====================================================
+ * Módulo PURO (sin `next/headers`, sin Supabase y sin `"use client"`): lo
+ * importan a la vez los Server Components que consultan, las server actions que
+ * escriben y los Client Components que pintan la cuadrícula. Es la misma regla
+ * que ya cumplen `src/lib/admin-types.ts` y `src/lib/roles.ts`: un valor
+ * exportado desde un módulo de cliente no se puede leer en el servidor.
+ *
+ * Las fechas se manejan SIEMPRE como cadenas `YYYY-MM-DD` en hora de Colombia
+ * (`hoyEnColombia()` de `src/lib/jornada.ts`) y las horas como `HH:MM`. Nunca se
+ * construye un `Date` con la zona del navegador para decidir en qué día cae un
+ * evento: eso es lo que hace que una actividad de las 6 a. m. salte al día
+ * anterior según dónde esté abierto el panel.
+ */
+
+import { formatearHora12, nombreFestivo } from "@/lib/jornada";
+import { etiquetaCompleta, etiquetaCorta } from "@/lib/usuarios";
+
+/* ------------------------------------------------------------------ */
+/* Estados                                                             */
+/* ------------------------------------------------------------------ */
+
+export const EVENTO_ESTADOS = [
+  "programado",
+  "cumplido",
+  "incompleto",
+  "aplazado",
+] as const;
+
+export type EventoEstado = (typeof EVENTO_ESTADOS)[number];
+
+/** Estados "abiertos": el evento todavía espera un cierre. */
+export const EVENTO_ESTADOS_ABIERTOS: EventoEstado[] = ["programado", "aplazado"];
+
+export const EVENTO_ESTADO_LABELS: Record<EventoEstado, string> = {
+  programado: "Programado",
+  cumplido: "Cumplido",
+  incompleto: "Incompleto",
+  aplazado: "Aplazado",
+};
+
+/** Qué significa cada estado, en lenguaje llano (ayudas del panel). */
+export const EVENTO_ESTADO_DESCRIPCIONES: Record<EventoEstado, string> = {
+  programado:
+    "Está agendado y todavía no se ha cerrado. Es el estado con el que nace todo evento.",
+  cumplido: "Se hizo completo. Es el cierre normal de una actividad.",
+  incompleto:
+    "Se hizo a medias o no se pudo hacer, y no se va a reprogramar. Deja una nota explicando por qué.",
+  aplazado:
+    "Se movió a otra fecha y sigue abierto. El calendario recuerda para qué día estaba antes.",
+};
+
+/** Clases del badge de estado (mismo lenguaje visual que las jornadas). */
+export const EVENTO_ESTADO_CLASSES: Record<EventoEstado, string> = {
+  programado: "bg-mist text-graphite",
+  cumplido: "bg-brand-tint text-brand-deep",
+  incompleto: "bg-red-100 text-red-700",
+  aplazado: "bg-amber-100 text-amber-800",
+};
+
+/**
+ * Clases del chip que se pinta DENTRO de la cuadrícula del mes: fondo suave y
+ * un filete del color del estado a la izquierda, para que el color se lea de un
+ * vistazo sin convertir el calendario en un semáforo.
+ */
+export const EVENTO_ESTADO_CHIP: Record<EventoEstado, string> = {
+  programado: "border-l-graphite/60 bg-mist text-ink-soft hover:bg-line",
+  cumplido: "border-l-brand bg-brand-tint text-brand-deep hover:bg-brand/15",
+  incompleto: "border-l-red-500 bg-red-50 text-red-700 hover:bg-red-100",
+  aplazado: "border-l-amber-500 bg-amber-50 text-amber-800 hover:bg-amber-100",
+};
+
+/** Color sólido del estado (leyenda, puntos del móvil y gráficas de Recharts). */
+export const EVENTO_ESTADO_COLOR: Record<EventoEstado, string> = {
+  programado: "#6d6e71",
+  cumplido: "#3dae2b",
+  incompleto: "#dc2626",
+  aplazado: "#f59e0b",
+};
+
+/** Normaliza cualquier valor guardado a un estado válido. */
+export function normalizarEstado(value: unknown): EventoEstado {
+  return typeof value === "string" &&
+    (EVENTO_ESTADOS as readonly string[]).includes(value)
+    ? (value as EventoEstado)
+    : "programado";
+}
+
+/* ------------------------------------------------------------------ */
+/* Registros                                                           */
+/* ------------------------------------------------------------------ */
+
+export interface EventoResponsable {
+  id: string;
+  /** `null` cuando el responsable es alguien de fuera de GPI. */
+  profileId: string | null;
+  /** Nombre a mostrar: el de la cuenta, o el que se escribió a mano. */
+  nombre: string;
+  /**
+   * Apodo de la cuenta (migración 0010), p. ej. «YC». `null` en los externos y
+   * en quien no tenga. Es lo que se pinta donde el espacio manda; el nombre
+   * completo se conserva en el `title` del elemento.
+   */
+  apodo: string | null;
+  /** Cargo de la cuenta del portal (vacío en los externos). */
+  cargo: string | null;
+  /** true = persona externa escrita a mano, sin cuenta en el portal. */
+  externo: boolean;
+}
+
+export interface EventoNota {
+  id: string;
+  eventoId: string;
+  autorId: string | null;
+  autorNombre: string;
+  /** Apodo del autor (migración 0010), o `null`. */
+  autorApodo: string | null;
+  texto: string;
+  createdAt: string;
+}
+
+export interface EventoRecord {
+  id: string;
+  titulo: string;
+  descripcion: string | null;
+  /** `YYYY-MM-DD` en hora de Colombia. */
+  fecha: string;
+  /** `HH:MM`. */
+  horaInicio: string;
+  horaFin: string;
+  estado: EventoEstado;
+  /** Fecha del primer aplazamiento, o `null` si nunca se movió. */
+  fechaOriginal: string | null;
+  creadoPor: string | null;
+  creadoPorNombre: string | null;
+  createdAt: string | null;
+  responsables: EventoResponsable[];
+  /** Notas del evento (solo se piden donde se van a mostrar). */
+  notas: EventoNota[];
+  /** Cuántas notas tiene, aunque no se hayan traído. */
+  totalNotas: number;
+}
+
+/** Nota con el contexto de su evento, para la pestaña «Notas». */
+export interface EventoNotaConEvento extends EventoNota {
+  eventoTitulo: string;
+  eventoFecha: string;
+  eventoEstado: EventoEstado;
+}
+
+/* ------------------------------------------------------------------ */
+/* Fechas                                                              */
+/* ------------------------------------------------------------------ */
+
+const MESES = [
+  "enero",
+  "febrero",
+  "marzo",
+  "abril",
+  "mayo",
+  "junio",
+  "julio",
+  "agosto",
+  "septiembre",
+  "octubre",
+  "noviembre",
+  "diciembre",
+] as const;
+
+/** Cabecera de la cuadrícula: la semana empieza en LUNES (uso colombiano). */
+export const DIAS_SEMANA = [
+  { corto: "L", largo: "lunes" },
+  { corto: "M", largo: "martes" },
+  { corto: "X", largo: "miércoles" },
+  { corto: "J", largo: "jueves" },
+  { corto: "V", largo: "viernes" },
+  { corto: "S", largo: "sábado" },
+  { corto: "D", largo: "domingo" },
+] as const;
+
+function dosDigitos(n: number): string {
+  return n < 10 ? `0${n}` : String(n);
+}
+
+/** "2026-09-17" → `{ anio: 2026, mes: 9, dia: 17 }`; `null` si no es una fecha. */
+export function partesFecha(
+  fecha: string,
+): { anio: number; mes: number; dia: number } | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return null;
+  const [anio, mes, dia] = fecha.split("-").map(Number);
+  return { anio, mes, dia };
+}
+
+/** `(2026, 9, 17)` → "2026-09-17". */
+export function armarFecha(anio: number, mes: number, dia: number): string {
+  return `${anio}-${dosDigitos(mes)}-${dosDigitos(dia)}`;
+}
+
+/** "septiembre de 2026" (el título del mes que se está viendo). */
+export function nombreMes(anio: number, mes: number): string {
+  return `${MESES[Math.min(Math.max(mes, 1), 12) - 1]} de ${anio}`;
+}
+
+/** Primer día del mes como `YYYY-MM-DD`. */
+export function primerDiaMes(anio: number, mes: number): string {
+  return armarFecha(anio, mes, 1);
+}
+
+/** Último día del mes como `YYYY-MM-DD`. */
+export function ultimoDiaMes(anio: number, mes: number): string {
+  return armarFecha(anio, mes, new Date(Date.UTC(anio, mes, 0)).getUTCDate());
+}
+
+/** Mes anterior / siguiente, cruzando el cambio de año. */
+export function mesAnterior(anio: number, mes: number) {
+  return mes === 1 ? { anio: anio - 1, mes: 12 } : { anio, mes: mes - 1 };
+}
+export function mesSiguiente(anio: number, mes: number) {
+  return mes === 12 ? { anio: anio + 1, mes: 1 } : { anio, mes: mes + 1 };
+}
+
+/** Suma (o resta) días a una fecha `YYYY-MM-DD` sin tocar zonas horarias. */
+export function sumarDiasFecha(fecha: string, dias: number): string {
+  const p = partesFecha(fecha);
+  if (!p) return fecha;
+  const utc = new Date(Date.UTC(p.anio, p.mes - 1, p.dia + dias));
+  return armarFecha(utc.getUTCFullYear(), utc.getUTCMonth() + 1, utc.getUTCDate());
+}
+
+/** Día de la semana con lunes = 0 … domingo = 6. */
+export function indiceDiaSemana(fecha: string): number {
+  const p = partesFecha(fecha);
+  if (!p) return 0;
+  const dia = new Date(Date.UTC(p.anio, p.mes - 1, p.dia)).getUTCDay();
+  return (dia + 6) % 7;
+}
+
+export interface CeldaCalendario {
+  fecha: string;
+  dia: number;
+  /** false = día de relleno del mes anterior o siguiente. */
+  delMes: boolean;
+  /** true = sábado o domingo. */
+  finDeSemana: boolean;
+  /** Nombre del festivo colombiano, o `null`. */
+  festivo: string | null;
+}
+
+/**
+ * Cuadrícula del mes: semanas completas de lunes a domingo, rellenando los
+ * huecos con los días del mes anterior y del siguiente. Se construye a mano
+ * (sin librerías de calendario) porque son quince líneas y así no entra una
+ * dependencia nueva al bundle del panel.
+ */
+export function construirMes(anio: number, mes: number): CeldaCalendario[][] {
+  const primero = primerDiaMes(anio, mes);
+  const arranque = sumarDiasFecha(primero, -indiceDiaSemana(primero));
+  const total = new Date(Date.UTC(anio, mes, 0)).getUTCDate();
+  const semanas = Math.ceil((indiceDiaSemana(primero) + total) / 7);
+
+  return Array.from({ length: semanas }, (_, s) =>
+    Array.from({ length: 7 }, (_, d) => {
+      const fecha = sumarDiasFecha(arranque, s * 7 + d);
+      const p = partesFecha(fecha)!;
+      return {
+        fecha,
+        dia: p.dia,
+        delMes: p.mes === mes && p.anio === anio,
+        finDeSemana: d >= 5,
+        festivo: nombreFestivo(fecha),
+      };
+    }),
+  );
+}
+
+/** Agrupa los eventos por su fecha, respetando el orden en que vienen. */
+export function agruparPorFecha(
+  eventos: EventoRecord[],
+): Map<string, EventoRecord[]> {
+  const mapa = new Map<string, EventoRecord[]>();
+  for (const evento of eventos) {
+    const lista = mapa.get(evento.fecha);
+    if (lista) lista.push(evento);
+    else mapa.set(evento.fecha, [evento]);
+  }
+  return mapa;
+}
+
+/* ------------------------------------------------------------------ */
+/* Formato                                                             */
+/* ------------------------------------------------------------------ */
+
+/** "08:00" + "10:30" → "8:00 a. m. – 10:30 a. m.". */
+export function formatearRangoHoras(inicio: string, fin: string): string {
+  return `${formatearHora12(inicio)} – ${formatearHora12(fin)}`;
+}
+
+/** Duración del evento en minutos (0 si las horas no se pueden leer). */
+export function duracionEventoMin(inicio: string, fin: string): number {
+  const a = /^(\d{1,2}):(\d{2})/.exec(inicio ?? "");
+  const b = /^(\d{1,2}):(\d{2})/.exec(fin ?? "");
+  if (!a || !b) return 0;
+  const minutos =
+    Number(b[1]) * 60 + Number(b[2]) - (Number(a[1]) * 60 + Number(a[2]));
+  return minutos > 0 ? minutos : 0;
+}
+
+/** Recorta `HH:MM:SS` (lo que devuelve Postgres para `time`) a `HH:MM`. */
+export function recortarHora(valor: unknown): string {
+  if (typeof valor !== "string") return "";
+  const m = /^(\d{1,2}):(\d{2})/.exec(valor);
+  return m ? `${dosDigitos(Number(m[1]))}:${m[2]}` : "";
+}
+
+/** Fecha y hora de una nota: "17/09/2026, 3:42 p. m.". */
+export function formatearMomento(iso: string | null): string {
+  if (!iso) return "";
+  const fecha = new Date(iso);
+  if (Number.isNaN(fecha.getTime())) return "";
+  return new Intl.DateTimeFormat("es-CO", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "America/Bogota",
+  }).format(fecha);
+}
+
+/**
+ * Cómo se nombra a un responsable donde el espacio manda: su apodo si lo tiene
+ * y, si no, su nombre completo. Los externos siempre salen con el nombre que se
+ * escribió a mano (no tienen cuenta, así que no tienen apodo).
+ */
+export function etiquetaResponsable(responsable: EventoResponsable): string {
+  return etiquetaCorta({ apodo: responsable.apodo, nombre: responsable.nombre });
+}
+
+/** «Yeison Camacho Rojas (YC)» — para el detalle, donde sí cabe todo. */
+export function nombreCompletoResponsable(
+  responsable: EventoResponsable,
+): string {
+  return etiquetaCompleta({
+    apodo: responsable.apodo,
+    nombre: responsable.nombre,
+  });
+}
+
+/** Cómo se nombra al conjunto de responsables en una línea (con apodos). */
+export function resumirResponsables(
+  responsables: EventoResponsable[],
+  maximo = 3,
+): string {
+  if (responsables.length === 0) return "Sin responsables asignados";
+  const nombres = responsables.map(etiquetaResponsable);
+  if (nombres.length <= maximo) return nombres.join(", ");
+  return `${nombres.slice(0, maximo).join(", ")} y ${nombres.length - maximo} más`;
+}
+
+/* ------------------------------------------------------------------ */
+/* Límites de los campos                                               */
+/* ------------------------------------------------------------------ */
+
+export const LIMITES_EVENTO = {
+  titulo: 140,
+  descripcion: 2000,
+  nombreExterno: 80,
+  nota: 1500,
+  /** Tope de responsables por evento: evita listas imposibles de leer. */
+  responsables: 30,
+} as const;
+
+/* ------------------------------------------------------------------ */
+/* Opciones de filtro compartidas                                      */
+/* ------------------------------------------------------------------ */
+
+/** Opciones del filtro de estado. `todos` no es un estado real. */
+export const EVENTO_FILTRO_ESTADOS: { value: EventoEstado | "todos"; label: string }[] =
+  [
+    { value: "todos", label: "Todos los estados" },
+    ...EVENTO_ESTADOS.map((e) => ({ value: e, label: EVENTO_ESTADO_LABELS[e] })),
+  ];
+
+/** Filas por página de la tabla de notas. */
+export const NOTAS_POR_PAGINA = 25;

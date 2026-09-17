@@ -5,15 +5,24 @@ import { Container } from "@/components/ui/Container";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { getSessionProfile, type SessionProfile } from "@/lib/supabase/auth";
 import { signOutAction } from "@/lib/session-actions";
-import { getJornadaConfig, getMapaHorarios, listJornadas } from "@/lib/admin";
+import {
+  getJornadaConfig,
+  getMapaHorarios,
+  listEventos,
+  listJornadas,
+} from "@/lib/admin";
 import { isContentEditorRole, ROLE_LABELS } from "@/lib/roles";
 import { hoyEnColombia } from "@/lib/jornada";
 import { LoginForm } from "./LoginForm";
 import { IrAlPanel } from "./IrAlPanel";
 import { JornadaForm } from "./JornadaForm";
 import { MisJornadas } from "./MisJornadas";
+import { MisEventos } from "./MisEventos";
 import { PasswordForm } from "./PasswordForm";
 import { saveJornada, deleteJornada, changeOwnPassword } from "./actions";
+// La acción de las notas vive con el resto del calendario: es la MISMA para el
+// panel y para el portal, y su permiso lo decide RLS (manager o responsable).
+import { agregarNotaEvento } from "@/app/admin/calendario/actions";
 import { Info, Lock, ArrowRight, LogOut, Clock } from "@/lib/icons";
 
 export const metadata: Metadata = {
@@ -132,13 +141,22 @@ export default async function MiCuentaPage({
 /* ------------------------------------------------------------------ */
 
 async function PortalEmpleado({ profile }: { profile: SessionProfile }) {
-  const [jornadas, config, horarios] = await Promise.all([
+  const hoy = hoyEnColombia();
+
+  const [jornadas, config, horarios, eventos] = await Promise.all([
     listJornadas({ employeeId: profile.id, limit: 100 }),
     getJornadaConfig(),
     getMapaHorarios(),
+    // Solo los suyos y solo de hoy en adelante: el portal es para trabajar, no
+    // para consultar el historial del calendario.
+    listEventos({
+      responsableId: profile.id,
+      desde: hoy,
+      conNotas: true,
+      limit: 12,
+    }),
   ]);
 
-  const hoy = hoyEnColombia();
   const conPanel = isContentEditorRole(profile.role);
   const pendientes = jornadas.filter((j) => j.status === "pendiente").length;
   const aprobadas = jornadas.filter((j) => j.status === "aprobada").length;
@@ -223,6 +241,13 @@ async function PortalEmpleado({ profile }: { profile: SessionProfile }) {
             className="bg-red-50 text-red-700"
           />
         </div>
+
+        {/* Mis eventos del calendario interno */}
+        <MisEventos
+          eventos={eventos}
+          agregarNota={agregarNotaEvento}
+          nombrePropio={profile.fullName}
+        />
 
         {/* Registrar jornada */}
         <section className="rounded-2xl border border-line bg-white p-5 shadow-soft sm:p-7">

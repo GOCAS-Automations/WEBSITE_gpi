@@ -39,6 +39,7 @@ import {
   emailDeUsuario,
   esUsuarioValido,
   identificadorCuenta,
+  normalizarApodo,
   normalizarUsuario,
 } from "@/lib/usuarios";
 import type { ActionState, CredentialState } from "@/lib/admin-types";
@@ -101,20 +102,48 @@ function esColumnaDesconocida(mensaje: string): boolean {
   );
 }
 
-/** Campos que solo existen a partir de la migración 0003. */
+/** Campos que solo existen a partir de la migración 0003 (y `apodo`, de la 0010). */
 interface CamposNuevos {
   username?: string | null;
   cedula?: string | null;
   email_contacto?: string | null;
+  apodo?: string | null;
 }
 
-/** Quita los campos de la 0003 de un payload de `profiles`. */
+/** Quita del payload los campos que pueden no existir todavía en `profiles`. */
 function sinCamposNuevos<T extends CamposNuevos>(payload: T) {
   const copia = { ...payload };
   delete copia.username;
   delete copia.cedula;
   delete copia.email_contacto;
+  delete copia.apodo;
   return copia;
+}
+
+/**
+ * EL APODO SOLO LO ESCRIBE UN ADMINISTRADOR
+ * -----------------------------------------
+ * Ni el coordinador ni el Community Manager pueden cambiarlo, aunque manipulen
+ * el formulario: esta función devuelve `undefined` para cualquier otro rol y el
+ * campo NO entra en el payload, así que la fila conserva el apodo que tenía.
+ * La interfaz se lo muestra en un campo de solo lectura, pero la barrera real
+ * es esta.
+ */
+function apodoSiEsAdmin(
+  actorRole: UserRole,
+  formData: FormData,
+): string | null | undefined {
+  if (actorRole !== "admin") return undefined;
+  const valor = normalizarApodo(formData.get("apodo"));
+  return valor === "" ? null : valor;
+}
+
+/** Añade `apodo` al payload solo si quien guarda tiene permiso para tocarlo. */
+function conApodo(
+  payload: Record<string, unknown> & CamposNuevos,
+  apodo: string | null | undefined,
+): Record<string, unknown> & CamposNuevos {
+  return apodo === undefined ? payload : { ...payload, apodo };
 }
 
 /** `upsert` en `profiles` que reintenta sin las columnas de la 0003. */
@@ -243,18 +272,24 @@ export async function createEmployee(
 
   // Red de seguridad: si el trigger `on_auth_user_created` no pudo ejecutarse,
   // el profile se crea/actualiza aquí con el service role.
-  const { error: perfilError } = await upsertPerfil(admin, {
-    id: data.user.id,
-    email,
-    username: usuario,
-    full_name: fullName,
-    role,
-    cedula: textOrNull(formData, "cedula"),
-    email_contacto: emailContacto,
-    cargo: textOrNull(formData, "cargo"),
-    phone: textOrNull(formData, "phone"),
-    active: true,
-  });
+  const { error: perfilError } = await upsertPerfil(
+    admin,
+    conApodo(
+      {
+        id: data.user.id,
+        email,
+        username: usuario,
+        full_name: fullName,
+        role,
+        cedula: textOrNull(formData, "cedula"),
+        email_contacto: emailContacto,
+        cargo: textOrNull(formData, "cargo"),
+        phone: textOrNull(formData, "phone"),
+        active: true,
+      },
+      apodoSiEsAdmin(session.profile.role, formData),
+    ),
+  );
 
   if (perfilError) {
     return fail(
@@ -319,15 +354,22 @@ export async function updateEmployee(
     );
 
   // El usuario NO se puede cambiar: es la identidad de la cuenta en Auth.
-  const { error } = await updatePerfil(session.supabase, id, {
-    full_name: fullName,
-    role: rolNuevo,
-    cedula: textOrNull(formData, "cedula"),
-    email_contacto: emailContacto,
-    cargo: textOrNull(formData, "cargo"),
-    phone: textOrNull(formData, "phone"),
-    active,
-  });
+  const { error } = await updatePerfil(
+    session.supabase,
+    id,
+    conApodo(
+      {
+        full_name: fullName,
+        role: rolNuevo,
+        cedula: textOrNull(formData, "cedula"),
+        email_contacto: emailContacto,
+        cargo: textOrNull(formData, "cargo"),
+        phone: textOrNull(formData, "phone"),
+        active,
+      },
+      apodoSiEsAdmin(session.profile.role, formData),
+    ),
+  );
 
   if (error) return fail(error.message);
 

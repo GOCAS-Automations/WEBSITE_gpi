@@ -3,7 +3,7 @@
 import { useActionState, useState } from "react";
 import { idleState, type ActionState } from "@/lib/admin-types";
 import { AlertTriangle, Check, Close, Info, Trash } from "@/lib/icons";
-import { inputClass } from "@/components/admin/ui";
+import { inputClass } from "@/components/admin/ui-base";
 
 type Accion = (state: ActionState, formData: FormData) => Promise<ActionState>;
 

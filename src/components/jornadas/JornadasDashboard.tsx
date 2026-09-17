@@ -20,7 +20,7 @@ import {
   SIN_ORDEN_TRABAJO,
   type JornadaStatus,
 } from "@/lib/admin-types";
-import { Badge, EmptyState } from "@/components/admin/ui";
+import { Badge, EmptyState } from "@/components/admin/ui-base";
 import {
   fechaColombia,
   formatearFechaNumerica,

@@ -27,7 +27,7 @@ import {
   JORNADA_FILTRO_ESTADOS,
   JORNADA_FILTRO_ESTADO_DEFECTO,
 } from "@/lib/admin-types";
-import { inputClass } from "@/components/admin/ui";
+import { inputClass } from "@/components/admin/ui-base";
 import { FilterX } from "@/lib/icons";
 
 /** Lo que la bandeja arranca por defecto: pendientes de todo el equipo. */

@@ -6,17 +6,29 @@
  * `id` y `sort` — usando el cliente ligado a la sesión del administrador.
  */
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServerSupabase } from "@/lib/supabase/server";
+import { getServiceRoleSupabase } from "@/lib/supabase/admin";
 import { normalizarSettings, siteSettingsDefaults } from "@/data/site";
 import { normalizeRole } from "@/lib/roles";
 import { usuarioDesdeEmail } from "@/lib/usuarios";
 import {
+  hoyEnColombia,
   normalizarContextoCalculo,
   normalizarDesglose,
   normalizarJornadaConfig,
   jornadaConfigDefaults,
   type JornadaConfig,
 } from "@/lib/jornada";
+import {
+  normalizarEstado,
+  recortarHora,
+  type EventoEstado,
+  type EventoNota,
+  type EventoNotaConEvento,
+  type EventoRecord,
+  type EventoResponsable,
+} from "@/lib/calendario";
 import {
   claveMes,
   clonarHorario,
@@ -460,6 +472,9 @@ function rowToProfile(row: Record<string, unknown>): ProfileRecord {
     phone: textoOrNull(row.phone),
     cedula: textoOrNull(row.cedula),
     email_contacto: textoOrNull(row.email_contacto),
+    // `apodo` llega `undefined` si la 0010 no está aplicada: se lee como `null`
+    // y en todas partes se muestra el nombre completo.
+    apodo: textoOrNull(row.apodo),
     active: row.active !== false,
     created_at: typeof row.created_at === "string" ? row.created_at : null,
   };
@@ -652,5 +667,336 @@ export async function getTeamCounts() {
     return { people: people ?? 0, pending: pending ?? 0 };
   } catch {
     return { people: 0, pending: 0 };
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Calendario interno (migración 0010)                                 */
+/* ------------------------------------------------------------------ */
+
+/**
+ * LECTURAS DEL CALENDARIO
+ * -----------------------
+ * Todas usan el cliente ligado a la SESIÓN, así que el alcance lo decide RLS:
+ * un manager ve el calendario completo y cualquier otra cuenta activa solo los
+ * eventos en los que figura como responsable. Aquí no se filtra por rol a mano
+ * (`responsableId` es un filtro de la interfaz, nunca la barrera de seguridad).
+ *
+ * Si Supabase no responde —o si la migración 0010 no estuviera aplicada— todas
+ * devuelven listas vacías y la pantalla muestra su estado vacío en vez de
+ * romperse, igual que el resto del panel.
+ */
+
+/** Nombre y cargo de un puñado de cuentas, en una sola consulta. */
+type PerfilBreve = { nombre: string; apodo: string | null; cargo: string | null };
+
+function aPerfilBreve(p: Record<string, unknown>): [string, PerfilBreve] {
+  return [
+    String(p.id),
+    {
+      nombre: String(p.full_name ?? p.email ?? ""),
+      apodo: textoOrNull(p.apodo),
+      cargo: textoOrNull(p.cargo),
+    },
+  ];
+}
+
+/**
+ * Nombre, apodo y cargo de un puñado de cuentas.
+ *
+ * POR QUÉ COMPLETA CON LA CLAVE DE SERVICIO
+ * -----------------------------------------
+ * Las políticas de `profiles` (migración 0002) dejan que cada persona lea
+ * **solo su propia fila**; las demás son cosa de los managers. Eso está bien
+ * para el panel, pero rompe el portal: un empleado que abre «Mis eventos» tiene
+ * derecho a ver CON QUIÉN comparte la actividad, y con el cliente de su sesión
+ * sus compañeros le llegarían como «Cuenta eliminada».
+ *
+ * Así que lo que la sesión no puede leer se completa en el SERVIDOR con la
+ * clave de servicio, y **solo de esas tres columnas**: nombre, apodo y cargo.
+ * Ni cédula, ni teléfono, ni correo. Los ids que se resuelven no son
+ * arbitrarios: salen de eventos y notas que RLS ya dejó leer a esa persona, así
+ * que no se filtra nada que no le corresponda. Es el mismo criterio con el que
+ * los mensajes de contacto se guardan con esa clave (ver la 0006).
+ *
+ * Sin `SUPABASE_SERVICE_ROLE_KEY` el portal sigue funcionando: los compañeros
+ * aparecen como «Cuenta del equipo» en vez de con su nombre.
+ */
+async function mapaDePerfiles(
+  supabase: SupabaseClient,
+  ids: (string | null)[],
+): Promise<Map<string, PerfilBreve>> {
+  const unicos = [...new Set(ids.filter((id): id is string => Boolean(id)))];
+  if (unicos.length === 0) return new Map();
+
+  // `select("*")` y no una lista de columnas: `apodo` solo existe desde la 0010
+  // y pedirla por nombre rompería la consulta entera si faltara.
+  const { data } = await supabase.from("profiles").select("*").in("id", unicos);
+  const mapa = new Map<string, PerfilBreve>((data ?? []).map(aPerfilBreve));
+
+  const faltantes = unicos.filter((id) => !mapa.has(id));
+  if (faltantes.length === 0) return mapa;
+
+  const servicio = getServiceRoleSupabase();
+  if (!servicio) return mapa;
+
+  try {
+    const { data: extra } = await servicio
+      .from("profiles")
+      .select("id, full_name, email, apodo, cargo")
+      .in("id", faltantes);
+    for (const fila of extra ?? []) {
+      const [id, perfil] = aPerfilBreve(fila);
+      mapa.set(id, perfil);
+    }
+  } catch {
+    // Si falla, los compañeros se muestran con el texto de respaldo.
+  }
+
+  return mapa;
+}
+
+function nombreDePerfil(
+  perfiles: Map<string, PerfilBreve>,
+  id: string | null | undefined,
+): string | null {
+  if (!id) return null;
+  return perfiles.get(id)?.nombre ?? null;
+}
+
+export interface EventoFilters {
+  /** `YYYY-MM-DD` — primer día incluido. */
+  desde?: string;
+  /** `YYYY-MM-DD` — último día incluido. */
+  hasta?: string;
+  estado?: EventoEstado;
+  /** Solo los eventos de esta cuenta (filtro de la interfaz, no de seguridad). */
+  responsableId?: string;
+  /** true = trae también el texto de las notas, no solo cuántas hay. */
+  conNotas?: boolean;
+  limit?: number;
+}
+
+/** Eventos del calendario con sus responsables y, si se piden, sus notas. */
+export async function listEventos(
+  filters: EventoFilters = {},
+): Promise<EventoRecord[]> {
+  const supabase = await getServerSupabase();
+  if (!supabase) return [];
+
+  try {
+    // Filtrar por responsable obliga a resolver antes sus eventos: la relación
+    // vive en otra tabla y no se puede expresar con un `.eq()` sobre `eventos`.
+    let idsDelResponsable: string[] | null = null;
+    if (filters.responsableId) {
+      const { data } = await supabase
+        .from("evento_responsables")
+        .select("evento_id")
+        .eq("profile_id", filters.responsableId);
+      idsDelResponsable = [
+        ...new Set((data ?? []).map((r) => String(r.evento_id))),
+      ];
+      if (idsDelResponsable.length === 0) return [];
+    }
+
+    let query = supabase
+      .from("eventos")
+      .select("*")
+      .order("fecha", { ascending: true })
+      .order("hora_inicio", { ascending: true })
+      .limit(filters.limit ?? 500);
+
+    if (filters.desde) query = query.gte("fecha", filters.desde);
+    if (filters.hasta) query = query.lte("fecha", filters.hasta);
+    if (filters.estado) query = query.eq("estado", filters.estado);
+    if (idsDelResponsable) query = query.in("id", idsDelResponsable);
+
+    const { data, error } = await query;
+    if (error || !data || data.length === 0) return [];
+
+    const ids = data.map((row) => String(row.id));
+
+    const [responsablesRes, notasRes] = await Promise.all([
+      supabase
+        .from("evento_responsables")
+        .select("id, evento_id, profile_id, nombre_externo")
+        .in("evento_id", ids),
+      supabase
+        .from("evento_notas")
+        .select("id, evento_id, autor_id, texto, created_at")
+        .in("evento_id", ids)
+        .order("created_at", { ascending: false }),
+    ]);
+
+    const responsables = responsablesRes.data ?? [];
+    const notas = notasRes.data ?? [];
+
+    const perfiles = await mapaDePerfiles(supabase, [
+      ...data.map((row) => (row.creado_por ? String(row.creado_por) : null)),
+      ...responsables.map((r) => (r.profile_id ? String(r.profile_id) : null)),
+      ...notas.map((n) => (n.autor_id ? String(n.autor_id) : null)),
+    ]);
+
+    const porEvento = new Map<string, EventoResponsable[]>();
+    for (const fila of responsables) {
+      const eventoId = String(fila.evento_id);
+      const profileId = fila.profile_id ? String(fila.profile_id) : null;
+      const perfil = profileId ? perfiles.get(profileId) : undefined;
+      const item: EventoResponsable = {
+        id: String(fila.id),
+        profileId,
+        nombre: profileId
+          ? (perfil?.nombre ?? "Cuenta del equipo")
+          : String(fila.nombre_externo ?? ""),
+        // Los externos no tienen cuenta, así que tampoco apodo.
+        apodo: profileId ? (perfil?.apodo ?? null) : null,
+        cargo: profileId ? (perfil?.cargo ?? null) : null,
+        externo: profileId === null,
+      };
+      const lista = porEvento.get(eventoId);
+      if (lista) lista.push(item);
+      else porEvento.set(eventoId, [item]);
+    }
+
+    const notasPorEvento = new Map<string, EventoNota[]>();
+    for (const fila of notas) {
+      const eventoId = String(fila.evento_id);
+      const autorId = fila.autor_id ? String(fila.autor_id) : null;
+      const item: EventoNota = {
+        id: String(fila.id),
+        eventoId,
+        autorId,
+        autorNombre: nombreDePerfil(perfiles, autorId) ?? "Cuenta eliminada",
+        autorApodo: autorId ? (perfiles.get(autorId)?.apodo ?? null) : null,
+        texto: String(fila.texto ?? ""),
+        createdAt: String(fila.created_at ?? ""),
+      };
+      const lista = notasPorEvento.get(eventoId);
+      if (lista) lista.push(item);
+      else notasPorEvento.set(eventoId, [item]);
+    }
+
+    return data.map((row) => {
+      const id = String(row.id);
+      const delEvento = notasPorEvento.get(id) ?? [];
+      const creadoPor = row.creado_por ? String(row.creado_por) : null;
+      return {
+        id,
+        titulo: String(row.titulo ?? ""),
+        descripcion: textoOrNull(row.descripcion),
+        fecha: String(row.fecha ?? ""),
+        horaInicio: recortarHora(row.hora_inicio),
+        horaFin: recortarHora(row.hora_fin),
+        estado: normalizarEstado(row.estado),
+        fechaOriginal:
+          typeof row.fecha_original === "string" ? row.fecha_original : null,
+        creadoPor,
+        creadoPorNombre: nombreDePerfil(perfiles, creadoPor),
+        createdAt: typeof row.created_at === "string" ? row.created_at : null,
+        responsables: (porEvento.get(id) ?? []).sort((a, b) =>
+          a.nombre.localeCompare(b.nombre, "es"),
+        ),
+        notas: filters.conNotas ? delEvento : [],
+        totalNotas: delEvento.length,
+      } satisfies EventoRecord;
+    });
+  } catch {
+    return [];
+  }
+}
+
+export interface NotaFilters {
+  eventoId?: string;
+  autorId?: string;
+  /** Rango sobre la FECHA DE LA NOTA (no la del evento), en hora de Colombia. */
+  desde?: string;
+  hasta?: string;
+  limit?: number;
+}
+
+/**
+ * Todas las notas visibles, de la más reciente a la más antigua, con su evento
+ * y su autor ya resueltos. Es la fuente de la pestaña «Notas».
+ */
+export async function listNotasEventos(
+  filters: NotaFilters = {},
+): Promise<EventoNotaConEvento[]> {
+  const supabase = await getServerSupabase();
+  if (!supabase) return [];
+
+  try {
+    let query = supabase
+      .from("evento_notas")
+      .select("id, evento_id, autor_id, texto, created_at")
+      .order("created_at", { ascending: false })
+      .limit(filters.limit ?? 1000);
+
+    if (filters.eventoId) query = query.eq("evento_id", filters.eventoId);
+    if (filters.autorId) query = query.eq("autor_id", filters.autorId);
+    // Los filtros de fecha son días completos en hora de Colombia (UTC-5).
+    if (filters.desde)
+      query = query.gte("created_at", `${filters.desde}T00:00:00-05:00`);
+    if (filters.hasta)
+      query = query.lte("created_at", `${filters.hasta}T23:59:59-05:00`);
+
+    const { data, error } = await query;
+    if (error || !data || data.length === 0) return [];
+
+    const eventoIds = [...new Set(data.map((n) => String(n.evento_id)))];
+    const [eventosRes, perfiles] = await Promise.all([
+      supabase.from("eventos").select("id, titulo, fecha, estado").in("id", eventoIds),
+      mapaDePerfiles(
+        supabase,
+        data.map((n) => (n.autor_id ? String(n.autor_id) : null)),
+      ),
+    ]);
+
+    const porId = new Map(
+      (eventosRes.data ?? []).map((e) => [
+        String(e.id),
+        {
+          titulo: String(e.titulo ?? ""),
+          fecha: String(e.fecha ?? ""),
+          estado: normalizarEstado(e.estado),
+        },
+      ]),
+    );
+
+    return data.map((n) => {
+      const eventoId = String(n.evento_id);
+      const evento = porId.get(eventoId);
+      const autorId = n.autor_id ? String(n.autor_id) : null;
+      return {
+        id: String(n.id),
+        eventoId,
+        autorId,
+        autorNombre: nombreDePerfil(perfiles, autorId) ?? "Cuenta eliminada",
+        autorApodo: autorId ? (perfiles.get(autorId)?.apodo ?? null) : null,
+        texto: String(n.texto ?? ""),
+        createdAt: String(n.created_at ?? ""),
+        eventoTitulo: evento?.titulo ?? "Evento eliminado",
+        eventoFecha: evento?.fecha ?? "",
+        eventoEstado: evento?.estado ?? "programado",
+      } satisfies EventoNotaConEvento;
+    });
+  } catch {
+    return [];
+  }
+}
+
+/** Eventos abiertos de hoy en adelante (contador de la tarjeta del dashboard). */
+export async function getCalendarioCounts() {
+  const supabase = await getServerSupabase();
+  if (!supabase) return { proximos: 0 };
+
+  try {
+    const { count } = await supabase
+      .from("eventos")
+      .select("id", { count: "exact", head: true })
+      .gte("fecha", hoyEnColombia())
+      .in("estado", ["programado", "aplazado"]);
+    return { proximos: count ?? 0 };
+  } catch {
+    return { proximos: 0 };
   }
 }

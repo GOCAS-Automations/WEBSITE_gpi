@@ -1,5 +1,6 @@
 import {
   AyudaDesplegable,
+  AYUDA_APODO,
   Badge,
   Field,
   Select,
@@ -12,7 +13,7 @@ import {
   USER_ROLES,
   type UserRole,
 } from "@/lib/roles";
-import { AYUDA_USUARIO } from "@/lib/usuarios";
+import { APODO_MAX, AYUDA_USUARIO } from "@/lib/usuarios";
 import type { ProfileRecord } from "@/lib/admin-types";
 
 /**
@@ -105,6 +106,30 @@ export function EmployeeFields({
             otro es qué puede administrar en el panel.
           </p>
         </AyudaDesplegable>
+
+        {/* APODO — solo lo cambia un administrador.
+            Al coordinador se le muestra igual, pero en un campo aparte que no
+            se envía: esconderlo haría pensar que el dato no existe, y dejarlo
+            editable haría creer que se guardó cuando el servidor lo descarta. */}
+        {actorRole === "admin" ? (
+          <Field
+            label="Apodo (opcional)"
+            name="apodo"
+            defaultValue={profile?.apodo}
+            placeholder="YC"
+            maxLength={APODO_MAX}
+            hint={AYUDA_APODO}
+          />
+        ) : (
+          <Field
+            label="Apodo"
+            name="apodo_solo_lectura"
+            defaultValue={profile?.apodo ?? ""}
+            placeholder="Sin apodo"
+            readOnly
+            hint="Solo un administrador puede cambiar el apodo."
+          />
+        )}
 
         <Field
           label="Cédula (opcional)"
