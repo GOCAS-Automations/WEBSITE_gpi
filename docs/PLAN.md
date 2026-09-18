@@ -1483,10 +1483,12 @@ ajustes que pidió el cliente sobre el aplazamiento de eventos.
   en `package.json`/`package-lock.json` y lo que la nómina había añadido a
   `next.config.ts` (`serverExternalPackages`, `outputFileTracingIncludes`), a
   `src/data/site.ts` y a `/admin/ajustes`.
-- **La migración 0011 se queda aplicada en la base.** Sus tablas existen vacías
+- **Las migraciones 0011 y 0012 se quedan aplicadas en la base.** Sus tablas existen vacías
   y endurecer o borrar nada de eso era innecesario y arriesgado; el día que la
   nómina vuelva, la base ya está lista. El archivo `0011_nomina.sql` viaja con
-  el código en `nomina-wip`.
+  el código en `nomina-wip`, junto con la **0012**, que el mismo día dejó la
+  nómina **solo en manos del administrador** (el coordinador quedó fuera, a
+  pedido de GPI; el detalle está en esa rama).
 - `docs/PRUEBAS_CALENDARIO_NOMINA.md` **se conserva tal cual**: es el plan de
   pruebas con el que se va a probar la nómina cuando se reintegre.
 

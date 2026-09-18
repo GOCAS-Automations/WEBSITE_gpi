@@ -33,10 +33,11 @@ Hay **diez** migraciones y se aplican **en orden**:
 | `supabase/migrations/0009_telefono_mensajes.sql` | Columna `telefono` (opcional) en `site_mensajes`: respaldo del teléfono que ahora pide el formulario de `/contacto` |
 | `supabase/migrations/0010_calendario.sql` | **Calendario interno**: `eventos`, `evento_responsables` y `evento_notas` con su RLS, y el campo `profiles.apodo` |
 
-> La base tiene además una **migración 0011 (nómina) ya aplicada**, con sus
-> tablas vacías. Su archivo **no está en esta rama**: viaja con el código de
-> nómina en `nomina-wip`, porque ese módulo está construido pero **no
-> desplegado** (ver la sección 15). No hay que revertirla.
+> La base tiene además dos migraciones de **nómina ya aplicadas**, con sus
+> tablas vacías: la **0011** (el módulo) y la **0012** (la nómina pasa a ser
+> solo del administrador). Sus archivos **no están en esta rama**: viajan con el
+> código de nómina en `nomina-wip`, porque ese módulo está construido pero **no
+> desplegado** (ver la sección 15). No hay que revertirlas.
 
 Para cada una:
 
@@ -1639,10 +1640,15 @@ nómina aparte, así que el 18 sep 2026 se sacó del árbol desplegable con un
 
 - **El código está íntegro en la rama `nomina-wip`.** Nada se perdió: para
   retomarlo se revierte el revert o se recupera desde esa rama.
-- **La migración `0011_nomina.sql` YA ESTÁ APLICADA** en el GPI Project. Sus
-  tablas existen **vacías** y **no hay que revertirlas**: cuando la nómina
-  vuelva, la base ya está lista. El archivo viaja con el código en `nomina-wip`,
-  así que en esta rama `supabase/migrations/` llega hasta la 0010.
+- **Las migraciones `0011_nomina.sql` y `0012_nomina_solo_admin.sql` YA ESTÁN
+  APLICADAS** en el GPI Project. Sus tablas existen **vacías** y **no hay que
+  revertirlas**: cuando la nómina vuelva, la base ya está lista. La 0012 (18 sep
+  2026) deja la nómina **solo en manos del administrador**, con el coordinador
+  fuera. Los archivos viajan con el código en `nomina-wip`, así que en esta rama
+  `supabase/migrations/` llega hasta la 0010.
+- El **coordinador** conserva todo lo demás (contenido, equipo, horarios,
+  jornadas y el calendario completo) y, cuando la nómina vuelva, verá **solo la
+  suya** en su *Mi Cuenta*.
 - Mientras tanto, el menú del panel **no muestra «Nómina»**, el portal del
   empleado tiene **tres** pestañas (Registrar jornada · Mis eventos · Mi
   contraseña) y las direcciones `/admin/nomina*`, `/admin/nomina/volante/…/pdf`
