@@ -1176,6 +1176,15 @@ errores de consola, y todas las filas de prueba borradas al terminar.
 
 ## Iteración del 17–18 de septiembre de 2026 — sistema de nómina y volante de pago
 
+> ⛔ **CONSTRUIDO PERO NO DESPLEGADO.** Todo lo que describe esta sección
+> existe y funciona, pero **no está en producción**: el 18 de septiembre GPI
+> pidió publicar primero el calendario y seguir probando la nómina aparte, así
+> que el módulo se sacó del árbol desplegable con un `git revert` (ver la
+> última iteración de este documento). **El código —incluida la migración
+> `0011_nomina.sql`— vive íntegro en la rama `nomina-wip`.** La 0011 **ya está
+> aplicada** en el GPI Project: sus tablas existen vacías y **no hay que
+> revertirlas**.
+
 La segunda funcionalidad que pidió la gerencia en la reunión del 16 de
 septiembre: que los administradores vean **automáticamente la nómina
 desglosada** de cada empleado, a partir de las jornadas ya aprobadas,
@@ -1426,6 +1435,11 @@ panel usa `?vista=`:
   del formulario.
 - Enlaces con `prefetch={false}`, como todo el panel.
 
+> **Hoy son TRES pestañas, no cuatro.** «Mi nómina» salió del despliegue junto
+> con el resto del módulo de nómina (ver la última iteración): en producción
+> quedan *Registrar jornada*, *Mis eventos* y *Mi contraseña*, y en el teléfono
+> se ven en **tres columnas** en vez de dos filas de dos.
+
 ### 5. Verificación
 
 `npm run lint` y `npm run build` en verde. Prueba de punta a punta contra
@@ -1446,6 +1460,87 @@ panel usa `?vista=`:
 - Capturas en 1440 y 390 px revisadas como imagen, **cero errores de consola**,
   y todas las filas de prueba borradas al terminar —salvo el «Evento de Prueba»
   de César, que se queda en la base ya consistente—.
+
+## Iteración del 18 de septiembre de 2026 — se despliega solo el calendario (nómina fuera) y dos ajustes de aplazamiento
+
+GPI quiere **publicar ya el calendario** y **no publicar la nómina** hasta
+terminar de probarla. El despliegue se parte en dos y, de paso, entran dos
+ajustes que pidió el cliente sobre el aplazamiento de eventos.
+
+### 1. La nómina sale del árbol desplegable
+
+- Antes de tocar nada se creó la rama de respaldo **`nomina-wip`** sobre el
+  estado completo del trabajo, así que **nada se perdió**.
+- El módulo salió con un **`git revert` del commit de nómina**, no reescribiendo
+  el historial: el revert es reversible (`git revert <hash del revert>` lo trae
+  de vuelta) y deja la trazabilidad intacta.
+- En el mismo commit se ajustó lo que dependía de él: el **portal del empleado**
+  queda con **tres** pestañas (fuera «Mi nómina») y el **menú del panel** vuelve
+  a **siete** entradas (fuera «Nómina»).
+- Se comprobó que no queda ninguna referencia colgada: rutas `/admin/nomina/*` y
+  `/mi-cuenta/volante/*`, `src/lib/nomina.ts`, `src/lib/volante*`,
+  `src/components/nomina/*`, `scripts/pruebas-nomina.mjs`, `@react-pdf/renderer`
+  en `package.json`/`package-lock.json` y lo que la nómina había añadido a
+  `next.config.ts` (`serverExternalPackages`, `outputFileTracingIncludes`), a
+  `src/data/site.ts` y a `/admin/ajustes`.
+- **La migración 0011 se queda aplicada en la base.** Sus tablas existen vacías
+  y endurecer o borrar nada de eso era innecesario y arriesgado; el día que la
+  nómina vuelva, la base ya está lista. El archivo `0011_nomina.sql` viaja con
+  el código en `nomina-wip`.
+- `docs/PRUEBAS_CALENDARIO_NOMINA.md` **se conserva tal cual**: es el plan de
+  pruebas con el que se va a probar la nómina cuando se reintegre.
+
+### 2. No se puede aplazar hacia atrás
+
+Aplazar es **mover hacia adelante**: la fecha nueva tiene que ser **posterior a
+la que el evento tiene ahora**. Antes se podía elegir cualquier día, incluso uno
+anterior, y quedaba un «aplazado» que en realidad adelantaba la actividad.
+
+- En el formulario, el campo de fecha lleva **`min` = el día siguiente al del
+  evento**, así que el propio calendario del navegador no deja elegir antes.
+- En la **server action** se valida igual, porque esconder una opción no es una
+  barrera: `aplazarEvento` rechaza cualquier fecha que no sea posterior a la
+  actual, con un mensaje que explica el porqué y qué hacer en su lugar
+  (*«Aplazar es mover la actividad hacia adelante…»*).
+
+### 3. «Devolver a su fecha original»
+
+Botón nuevo en la ficha del evento, **solo visible cuando el evento tiene fecha
+original** (es decir, cuando alguna vez se aplazó). Deshace el aplazamiento: el
+evento **vuelve a su día original**, se **limpia `fecha_original`** y queda
+**programado**.
+
+- Es la operación inversa de aplazar, y por eso respeta el mismo invariante del
+  calendario: entre los estados abiertos, `aplazado` ⇔ `fecha_original ≠ null`.
+  Si se limpiara la fecha original dejando el evento en *aplazado*, la ficha y
+  el tablero volverían a contradecirse.
+- **Solo aparece en los estados ABIERTOS** (*programado* —que en la práctica
+  nunca tiene fecha original— y *aplazado*). En un evento ya **cerrado**
+  (*cumplido* o *incompleto*) la fecha original es **historia**: dice que se
+  movió y después se cerró. Borrarla reescribiría el pasado y, además, movería
+  de día una actividad que ya se hizo. Para eso está *Reabrir*: primero se
+  reabre y después, si procede, se devuelve a su fecha.
+- La acción nueva (`devolverFechaOriginal`) valida rol de manager, que el evento
+  exista, que **tenga** fecha original y que el estado lo permita, y la interfaz
+  pide confirmación diciendo a qué día vuelve.
+- La matriz estado → acciones de `src/lib/calendario.ts` gana una columna
+  (`devolverFechaOriginal`) y la tabla de `docs/ADMIN.md` se actualizó con ella.
+
+### 4. Verificación
+
+`npm run lint` y `npm run build` en verde **sin nómina**. Con `next start` y
+Playwright contra `localhost`:
+
+- Aplazar a una fecha anterior: rechazado por el formulario **y** por la action
+  al forzarla.
+- Aplazar hacia adelante y **devolver a la fecha original**: en la base, la
+  fecha vuelve, `fecha_original` queda en `null` y el estado es `programado`.
+- `/admin/nomina`, `/admin/nomina/volante/<id>/pdf` y `/mi-cuenta/volante/<id>/pdf`
+  responden **404**; el menú no muestra «Nómina»; el portal muestra **tres**
+  pestañas; el resto del panel y el sitio público, intactos.
+- Capturas en 1440 y 390 px revisadas como imagen y **cero errores de consola**.
+
+---
 
 ## Decisiones técnicas
 
@@ -1556,52 +1651,6 @@ panel usa `?vista=`:
   `coordinador` (aprueban jornadas, gestionan cuentas y editan los horarios del
   mes) frente a **Community Manager** (solo contenido del sitio + sus propias
   jornadas).
-
-### Dudas abiertas de NÓMINA (17–18 sep 2026)
-
-Salen del análisis del Excel `NOMINA_LIQUIDACION.xlsx` y del volante real de
-GPI. Ninguna bloquea el módulo —**todo es configurable desde el panel**—, pero
-conviene cerrarlas antes de liquidar de verdad.
-
-1. **Tarifas de domingo y festivo** ⚠️ *(la más importante: es dinero)*. El
-   Excel de GPI usa 2,15 / 2,15 / 2,65 (festivo ordinario / extra diurna
-   festiva / extra nocturna festiva) sobre el valor hora; la ley vigente y los
-   valores por defecto de la webapp (`jornada_config`) dan 1,80 / 2,05 / 2,55.
-   Además, en el Excel «hora en festivo» y «hora extra diurna en festivo»
-   tienen **el mismo** valor, lo que parece una fórmula copiada. ¿Cuáles son
-   las tres tarifas reales?
-2. **Divisor del valor hora**: el Excel usa `salario / 240` («30 días × 8 h»),
-   anterior a la Ley 2101; GPI ya trabaja 42 h semanales. ¿Se mantiene 240 como
-   convención de nómina o se recalcula?
-3. **Auxilio de transporte 2026**: ¿cuál es el valor mensual vigente que debe
-   quedar por defecto? (El Excel tiene un valor viejo en una fórmula sin usar y
-   valores digitados a mano en las filas reales.)
-4. **«Rotación nocturna»**: se implementó como **recargo aditivo** sobre la
-   hora ordinaria nocturna (la hora ya la paga el salario), que es como lo hace
-   el Excel. ¿GPI lo entiende así, o espera digitar un valor absoluto que
-   reemplace el salario de esas horas?
-5. **Hora ordinaria NOCTURNA en festivo**: no existe como tarifa ni en el Excel
-   ni en el pedido de la gerencia. Se paga como **festivo + rotación nocturna**
-   y se muestra como línea propia. ¿Se acepta o quieren una octava tarifa?
-6. **Período**: el único ejemplo real es quincenal. ¿Alguien se liquida por mes
-   completo? (El módulo soporta los dos.)
-7. **Prima y cesantías**: hoy entran como **campos manuales** del período
-   cuando corresponde pagarlas. ¿Se quiere que el sistema las calcule (proceso
-   semestral/anual aparte) o siguen a cargo del contador?
-8. **NIT y razón social del volante** ⚠️: el comprobante actual imprime
-   **901.638.649-7**, pero en los documentos comerciales del proyecto aparece
-   **901.877.993-0**. Se dejó el del comprobante como valor inicial y es
-   editable en `/admin/ajustes`. **Confirmar cuál es el correcto.**
-9. **«Bono» vs «Bono cumplimiento» vs «Comisiones»**: el Excel usa las tres
-   etiquetas en distintas copias del mismo bloque. ¿Son tres conceptos reales y
-   simultáneos o nombres alternativos según el cargo? (Hoy existen los tres.)
-10. **Préstamos por cuotas**: hoy se digita la cuota de cada período. ¿Hace
-    falta que el sistema lleve el **saldo** del préstamo y lo descuente solo
-    hasta agotarlo?
-11. **Costo patronal**: el módulo liquida lo que se le paga al empleado. Las
-    provisiones (cesantías, intereses, vacaciones, prima) y los aportes
-    patronales (caja, pensión, ARL) que el Excel calcula agregados **no** se
-    construyeron. ¿Se quieren en una fase 2 del módulo?
 
 ## Referencias
 

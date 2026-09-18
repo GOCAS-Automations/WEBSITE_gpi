@@ -1,15 +1,9 @@
 import Link from "next/link";
-import {
-  getCalendarioCounts,
-  getContentCounts,
-  getNominaCounts,
-  getTeamCounts,
-} from "@/lib/admin";
+import { getCalendarioCounts, getContentCounts, getTeamCounts } from "@/lib/admin";
 import { requireContentEditor } from "@/lib/supabase/auth";
 import { isManagerRole, ROLE_DESCRIPTIONS, ROLE_LABELS } from "@/lib/roles";
 import { AyudaSeccion, SeccionCard } from "@/components/admin/ui";
 import {
-  Banknote,
   Layers,
   Sliders,
   User,
@@ -23,11 +17,10 @@ export default async function AdminDashboardPage() {
   const { profile } = await requireContentEditor();
   const manager = isManagerRole(profile.role);
 
-  const [counts, team, calendario, nomina] = await Promise.all([
+  const [counts, team, calendario] = await Promise.all([
     getContentCounts(),
     manager ? getTeamCounts() : Promise.resolve({ people: 0, pending: 0 }),
     manager ? getCalendarioCounts() : Promise.resolve({ proximos: 0 }),
-    manager ? getNominaCounts() : Promise.resolve({ borradores: 0, cerradas: 0 }),
   ]);
 
   /**
@@ -94,15 +87,6 @@ export default async function AdminDashboardPage() {
       unit: "por hacer",
       description:
         "La agenda interna: actividades con su día, su hora y sus responsables, para cerrarlas como cumplidas, incompletas o aplazadas, con notas de seguimiento.",
-    },
-    {
-      href: "/admin/nomina",
-      label: "Nómina",
-      icon: Banknote,
-      count: nomina.borradores,
-      unit: "sin cerrar",
-      description:
-        "Lo que hay que pagarle a cada persona por quincena o por mes: el sueldo, las horas y recargos que salen de las jornadas aprobadas, los bonos y descuentos, y el volante de pago en PDF.",
     },
   ];
 

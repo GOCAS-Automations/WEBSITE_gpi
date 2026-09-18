@@ -12,11 +12,7 @@ import {
 } from "@/components/admin/ui";
 import { AdminForm } from "@/components/admin/AdminForm";
 import { PairListField } from "@/components/admin/ListField";
-import {
-  saveContactSettings,
-  saveEmpresaSettings,
-  saveVisibilitySettings,
-} from "../actions";
+import { saveContactSettings, saveVisibilitySettings } from "../actions";
 
 /**
  * CONTACTO Y AJUSTES
@@ -30,7 +26,7 @@ import {
  * que antes vivían aquí.
  */
 export default async function AdminAjustesPage() {
-  const { contact, empresa, visibility } = await getAdminSettings();
+  const { contact, visibility } = await getAdminSettings();
 
   return (
     <>
@@ -158,51 +154,6 @@ export default async function AdminAjustesPage() {
               hint="En Google Maps: Compartir → Insertar un mapa → copiar la URL del atributo src."
             />
             <Field label="URL del sitio" name="siteUrl" defaultValue={contact.siteUrl} />
-          </AdminForm>
-        </Card>
-
-        {/* ---------------- Datos de la empresa (nómina) ---------------- */}
-        <Card>
-          <CardTitle
-            title="Datos de la empresa para nómina"
-            description="Lo que se imprime en el encabezado del volante de pago (el comprobante de nómina de cada empleado). No se muestran en el sitio público."
-          />
-          <AdminForm action={saveEmpresaSettings} submitLabel="Guardar datos de la empresa">
-            <AyudaSeccion tono="aviso" title="El NIT está pendiente de confirmar">
-              El comprobante que GPI usa hoy imprime el NIT{" "}
-              <strong>901.638.649-7</strong>, pero en los documentos comerciales
-              del proyecto aparece <strong>901.877.993-0</strong>. Se dejó el del
-              comprobante como valor inicial: <strong>confírmalo</strong> y, si
-              hay que corregirlo, cámbialo aquí — se aplica a los volantes que se
-              generen desde ese momento.
-            </AyudaSeccion>
-
-            <Field
-              label="Razón social"
-              name="razonSocial"
-              defaultValue={empresa.razonSocial}
-              hint="Tal como debe aparecer en el encabezado del comprobante."
-            />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field
-                label="NIT"
-                name="nit"
-                defaultValue={empresa.nit}
-                hint="Con puntos de miles y guion antes del dígito de verificación: 901.638.649-7."
-              />
-              <Field
-                label="Ciudad"
-                name="ciudad"
-                defaultValue={empresa.ciudad}
-                hint="Opcional. Aparece bajo el NIT."
-              />
-            </div>
-            <Field
-              label="Nota al pie del volante"
-              name="notaVolante"
-              defaultValue={empresa.notaVolante}
-              hint="Opcional. Una línea corta al pie del comprobante, por ejemplo para qué se entrega."
-            />
           </AdminForm>
         </Card>
 

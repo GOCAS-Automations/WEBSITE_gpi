@@ -12,13 +12,13 @@ la gestión de cuentas y el registro de jornadas (horas extra).
 
 ## 1. Aplicar las migraciones en Supabase
 
-> ✅ **Estado actual: las once migraciones YA ESTÁN APLICADAS en el proyecto
+> ✅ **Estado actual: las diez migraciones YA ESTÁN APLICADAS en el proyecto
 > "GPI Project" de Supabase** (se aplicaron y verificaron entre el 27 de julio
-> de 2026 y el 18 de septiembre de 2026). Esta sección NO es una lista de tareas
+> de 2026 y el 17 de septiembre de 2026). Esta sección NO es una lista de tareas
 > pendientes: es la referencia de qué hace cada migración y el procedimiento
 > por si algún día hubiera que montar el proyecto en un Supabase nuevo.
 
-Hay **once** migraciones y se aplican **en orden**:
+Hay **diez** migraciones y se aplican **en orden**:
 
 | Archivo | Qué añade |
 | --- | --- |
@@ -32,7 +32,11 @@ Hay **once** migraciones y se aplican **en orden**:
 | `supabase/migrations/0008_titulos_paginas.sql` | Títulos que quedaban escritos en el código: sección de servicios, valores y clientes del inicio y su cierre (`site_settings.home`), cabeceras de **Servicios**, **Proyectos** y **Contacto** y el párrafo del **pie de página** (`site_settings.paginas`) |
 | `supabase/migrations/0009_telefono_mensajes.sql` | Columna `telefono` (opcional) en `site_mensajes`: respaldo del teléfono que ahora pide el formulario de `/contacto` |
 | `supabase/migrations/0010_calendario.sql` | **Calendario interno**: `eventos`, `evento_responsables` y `evento_notas` con su RLS, y el campo `profiles.apodo` |
-| `supabase/migrations/0011_nomina.sql` | **Nómina**: `nomina_config_mensual` (salario y tarifas por empleado y mes) y `nomina_liquidaciones` (la nómina de un período, con su cálculo congelado), más los datos de la empresa para el volante (`site_settings.empresa`) |
+
+> La base tiene además una **migración 0011 (nómina) ya aplicada**, con sus
+> tablas vacías. Su archivo **no está en esta rama**: viaja con el código de
+> nómina en `nomina-wip`, porque ese módulo está construido pero **no
+> desplegado** (ver la sección 15). No hay que revertirla.
 
 Para cada una:
 
@@ -240,26 +244,6 @@ con su propia pantalla desde la 0007.
 >
 > Las notas quedan firmadas con la cuenta de quien las escribe; la base de
 > datos no acepta una nota a nombre de otra persona.
-
-### ¿Qué añade la 0011?
-
-| Objeto | Para qué sirve |
-| --- | --- |
-| Tabla `nomina_config_mensual` | El **salario**, el auxilio de transporte, las **siete tarifas por hora** y los porcentajes de salud y pensión de un empleado **en un mes**. Se copia sola del mes anterior, igual que `horarios_mensuales` |
-| Tabla `nomina_liquidaciones` | La nómina de un empleado **en un período** (quincena 1, quincena 2 o mes completo): días liquidados, conceptos manuales, estado (`borrador` → `cerrada` → `pagada`) y el **snapshot congelado** del cálculo |
-| Clave `site_settings.empresa` | Razón social, NIT y ciudad que se imprimen en el **volante de pago**. Se editan en `/admin/ajustes` |
-
-> **Quién ve qué.** El administrador y el coordinador administran toda la
-> nómina. El **empleado** ve **únicamente sus propias liquidaciones y solo
-> cuando están cerradas o pagadas**, para descargar su volante desde *Mi
-> Cuenta*; nunca ve un borrador ni la nómina de nadie más, y no puede escribir.
-> El público (`anon`) no tiene ningún acceso: es el dato más sensible del
-> sistema.
-
-> **El NIT está pendiente de confirmar.** El comprobante que GPI usa hoy
-> imprime **901.638.649-7**, pero en los documentos comerciales del proyecto
-> aparece **901.877.993-0**. Se dejó el del comprobante como valor inicial y es
-> editable en `/admin/ajustes` → *Datos de la empresa para nómina*.
 
 ### Si el bloque del usuario admin de la 0001 falla
 
@@ -549,7 +533,7 @@ portal debajo del botón **"Ir al panel"**.
 
 #### El portal está en pestañas (18 sep 2026)
 
-El portal ya no es una sola página larga: son **cuatro pestañas**, y la pestaña
+El portal ya no es una sola página larga: son **tres pestañas**, y la pestaña
 viaja en la dirección —igual que en el panel—, así que el enlace se puede
 compartir.
 
@@ -557,21 +541,24 @@ compartir.
 | --- | --- | --- |
 | **Registrar jornada** *(la que abre por defecto)* | `/mi-cuenta` | El resumen de pendientes/aprobadas/rechazadas, el formulario y el historial «Mis jornadas» |
 | **Mis eventos** | `/mi-cuenta?seccion=eventos` | Los eventos del calendario asignados, de hoy en adelante, con la caja para dejar notas |
-| **Mi nómina** | `/mi-cuenta?seccion=nomina` | Las liquidaciones ya cerradas o pagadas y el volante para descargar |
 | **Mi contraseña** | `/mi-cuenta?seccion=clave` | Cambiar la contraseña |
 
-En el teléfono las pestañas se ven en **dos filas de dos**, con el nombre corto
-(*Jornada · Eventos · Nómina · Contraseña*). Cada una lleva un contador: las
-jornadas que están esperando revisión, los eventos asignados y los volantes
-disponibles. Quien no tenga eventos o volantes ve un mensaje explicando qué va a
-aparecer ahí, no una pestaña en blanco.
+En el teléfono las pestañas se ven en **tres columnas**, con el nombre corto
+(*Jornada · Eventos · Contraseña*). Las dos primeras llevan un contador: las
+jornadas que están esperando revisión y los eventos asignados. Quien no tenga
+eventos ve un mensaje explicando qué va a aparecer ahí, no una pestaña en
+blanco.
+
+> Hubo una cuarta pestaña, **«Mi nómina»**, que salió del despliegue junto con
+> el resto del módulo de nómina y sigue viva en la rama `nomina-wip`
+> (ver la sección 15).
 
 > **Al cambiar de pestaña se pierde lo que estuvieras escribiendo** en el
 > formulario de jornada. Regístrala primero y después mira lo demás.
 
 El `?portal=1` de siempre —«quiero el portal aunque tenga panel»— **sigue
 funcionando igual** y se conserva al cambiar de pestaña
-(`/mi-cuenta?portal=1&seccion=nomina`).
+(`/mi-cuenta?portal=1&seccion=eventos`).
 
 En la pestaña **Registrar jornada**:
 
@@ -1197,11 +1184,13 @@ la base de datos esté arriba» — y no se edita desde aquí.
 - Barra superior siempre visible con el rol de la sesión, **Registrar mi
   jornada** (lleva a `/mi-cuenta?portal=1`, el portal de jornadas), **Ver
   sitio** y **Cerrar sesión**.
-- **Menú de seis entradas** (pulido final), en escritorio como columna a la
-  izquierda y en móvil como tabs desplazables, con la sección activa
-  resaltada: **Dashboard · Contenido del sitio · Equipo · Horarios · Jornadas ·
-  Ajustes**. Las tres internas (Equipo, Horarios, Jornadas) solo aparecen para
-  managers.
+- **Menú de siete entradas** (eran seis hasta que la 0010 añadió el
+  calendario), en escritorio como columna a la izquierda y en móvil como tabs
+  desplazables, con la sección activa resaltada: **Dashboard · Contenido del
+  sitio · Equipo · Horarios · Jornadas · Calendario · Ajustes**. Las cuatro
+  internas (Equipo, Horarios, Jornadas, Calendario) solo aparecen para
+  managers. **No hay entrada «Nómina»**: ese módulo está construido pero fuera
+  del despliegue (sección 15).
 - **Contenido del sitio** (`/admin/contenido`) es el hub que reemplazó a las
   ocho entradas sueltas de antes: un índice con una tarjeta por pantalla
   —Página de inicio, Página Nosotros, Cabeceras de páginas y pie del sitio,
@@ -1620,142 +1609,23 @@ uno había, que es justo lo que se quiere mirar a fin de mes.
 
 ---
 
-## 15. Nómina — `/admin/nomina`
+## 15. Nómina — construida, NO desplegada
 
-Solo para **admin** y **coordinador** (migración 0011). Aquí se calcula, persona
-por persona y período por período, **lo que hay que pagarle a cada empleado**:
-el sueldo, las horas y recargos que salen **solos** de las jornadas ya
-aprobadas, y los bonos y descuentos que el administrador digita.
+El **sistema de nómina y volante de pago** (`/admin/nomina`, la pestaña *Mi
+nómina* del portal y el volante en PDF) está **terminado, pero fuera del
+despliegue**. GPI pidió publicar primero el calendario y seguir probando la
+nómina aparte, así que el 18 sep 2026 se sacó del árbol desplegable con un
+`git revert`.
 
-La pantalla tiene **tres pestañas** y la pestaña viaja en la dirección:
-
-| Pestaña | Dirección | Para qué |
-| --- | --- | --- |
-| Liquidación | `/admin/nomina` | El período en curso, persona por persona, con su desglose y su volante |
-| Configuración | `/admin/nomina?vista=configuracion` | Salario, tarifas por hora y aportes de cada empleado, mes a mes |
-| Tablero | `/admin/nomina?vista=tablero` | Totales por período, reparto por concepto y por persona, e historial |
-
-### El orden de trabajo (importante)
-
-1. **Aprueba las jornadas** del período en *Jornadas*. Solo las aprobadas se
-   pagan: si queda alguna pendiente, la pantalla lo avisa y sus horas **no**
-   entran.
-2. **Configura** el salario y las tarifas de cada persona para ese mes
-   (pestaña *Configuración*). Solo hace falta la primera vez: el mes siguiente
-   se copia solo.
-3. **Crea las liquidaciones** del período (botón **Liquidar todos**, o una a
-   una desde el detalle).
-4. **Revisa el desglose** de cada persona y digita lo que no sale de las
-   jornadas: bonificación, auxilios, comisiones, prima, vacaciones, bono de
-   cumplimiento, otros devengados, préstamos y otros descuentos.
-5. **Cierra** la liquidación. Ahí queda **congelada**.
-6. **Marca pagada** cuando se gire, con su fecha, y **descarga el volante**.
-
-### Lo que hay que entender del cálculo
-
-- **El salario básico ya paga las horas ordinarias diurnas.** Se muestran en el
-  desglose para cuadrar el total de horas, pero **no se suman aparte**.
-- Las **siete tarifas son pesos por hora que se pagan ADEMÁS** del salario:
-
-  | Tarifa | Qué paga |
-  | --- | --- |
-  | Hora de rotación diurna | La hora normal. Es la **referencia** con la que se calculan las demás; no se paga aparte |
-  | Rotación nocturna | **Recargo** por cada hora ordinaria trabajada de noche (la hora ya la cubre el salario) |
-  | Hora extra diurna | Valor completo de cada hora extra de día |
-  | Hora extra nocturna | Valor completo de cada hora extra de noche |
-  | Hora en domingo o festivo | Hora ordinaria trabajada en domingo o festivo |
-  | Hora extra diurna en festivo | Hora extra en domingo o festivo, de día |
-  | Hora extra nocturna en festivo | Hora extra en domingo o festivo, de noche |
-
-- La **hora ordinaria NOCTURNA en festivo** no tiene tarifa propia: se paga
-  como **hora en festivo + rotación nocturna**, y aparece como **línea propia**
-  en el desglose y en el volante para que se pueda auditar.
-- **Sueldo del período** = `salario / 30 × días liquidados`. Es la convención
-  colombiana de nómina (mes de 30 días fijos): una quincena completa son **15
-  días**, tenga el mes 28 o 31. El **auxilio de transporte** se escribe
-  **mensual completo** y se reparte con la misma regla.
-- **Salud y pensión** (4 % y 4 % por defecto, configurables) se calculan sobre
-  `sueldo del período + horas y recargos`. **No** incluyen el auxilio de
-  transporte ni los bonos.
-- Todo se paga en **pesos enteros**, redondeando línea por línea, así que el
-  volante **cuadra al sumarlo a mano**.
-
-### Los valores sugeridos
-
-Al escribir el salario, el formulario propone las siete tarifas con
-`salario ÷ 240 × un factor`, usando los factores del Excel que GPI usa hoy. El
-botón **«Usar los valores sugeridos»** las escribe todas; después se puede
-corregir cualquiera.
-
-> ⚠️ **Las tres tarifas de domingo y festivo están pendientes de confirmar con
-> la gerencia.** En el Excel actual, «hora en festivo» y «hora extra diurna en
-> festivo» tienen **el mismo** valor, lo que parece una fórmula copiada; por eso
-> la extra festiva se sugiere con el valor de ley. Si eso deja una hora extra
-> valiendo menos que una ordinaria, el formulario lo **avisa en ámbar**. Los
-> números que quedan son los que el administrador escriba: el sistema no impone
-> ninguno.
-
-### Borrador, cerrada, pagada
-
-| Estado | Qué significa |
-| --- | --- |
-| **Borrador** | Se puede editar y **se recalcula sola**: si apruebas otra jornada o corriges una tarifa, la cifra cambia. Todavía no es definitiva |
-| **Cerrada** | El cálculo quedó **congelado**. Cambiar después un horario, una tarifa o una jornada **ya no la altera** |
-| **Pagada** | Cerrada y ya girada, con su **fecha de pago** |
-
-> **Reabrir NO es eliminar.** *Reabrir* devuelve la liquidación a borrador y
-> borra el cálculo congelado: es el mecanismo para **corregir y volver a
-> cerrar**, igual que devolver una jornada a pendiente. *Eliminar* hace
-> desaparecer la liquidación y su volante para siempre.
-
-Es la misma filosofía del **desglose congelado** de las jornadas (migración
-0004): una nómina ya cerrada no puede moverse porque después alguien corrija un
-horario del mes.
-
-### El volante de pago (PDF)
-
-Se descarga desde el detalle de cada persona (**Descargar volante**), desde el
-historial del tablero y desde el *Mi Cuenta* del propio empleado. Es un PDF de
-verdad: se guarda, se imprime y se envía por correo o WhatsApp.
-
-Lleva el logo de GPI, la **razón social y el NIT** que estén en
-`/admin/ajustes`, el empleado con su cédula y su cargo, el **período con fechas
-reales**, la fecha de pago, la tabla de **devengados** —con la cantidad de horas
-y el valor por hora de cada concepto—, la de **descuentos**, los totales, el
-**neto a pagar** destacado y las dos firmas (*Recibí conforme* / *Firma
-autorizada*). Si la liquidación todavía está en borrador, el documento sale
-**marcado como BORRADOR**.
-
-El archivo se llama `volante_<usuario>_<período>.pdf`, por ejemplo
-`volante_scordoba_2026-08-Q2.pdf`.
-
-### El CSV del período
-
-El botón **Exportar CSV** baja todo el período: una fila por persona con los
-días, el sueldo, **las horas de cada concepto**, los totales, los descuentos y
-el neto. Igual que el CSV de jornadas, usa `;` como separador, lleva BOM UTF-8 y
-**todos los números van con coma decimal**, así que Excel en español los suma
-sin retocar nada.
-
-### El tablero
-
-Muestra, sobre el filtro elegido (persona, año, tipo de período y estado): el
-**neto pagado** —solo de liquidaciones cerradas o pagadas—, el total devengado,
-lo que costaron las horas y cuántas liquidaciones hay sin cerrar; la **nómina
-por período** de los últimos doce; el **reparto por concepto** y el **neto por
-persona**; y el **historial** completo con enlace al volante de cada
-liquidación. Cada bloque tiene su botón **Ayuda**.
-
-### Lo que ve el equipo — *Mi Cuenta → Mi nómina*
-
-En la pestaña **Mi nómina** del portal (`/mi-cuenta?seccion=nomina`), cada
-persona ve **solo sus** liquidaciones y **solo cuando están cerradas o
-pagadas**: el período, el neto, el estado, la fecha de pago y el botón para
-descargar su comprobante. Los borradores no aparecen, a propósito: sus cifras
-todavía pueden cambiar.
-
-### Datos de la empresa para el volante
-
-Se editan en **`/admin/ajustes`** → *Datos de la empresa para nómina*: razón
-social, NIT, ciudad y una línea opcional al pie del comprobante. No salen al
-sitio público.
+- **El código está íntegro en la rama `nomina-wip`.** Nada se perdió: para
+  retomarlo se revierte el revert o se recupera desde esa rama.
+- **La migración `0011_nomina.sql` YA ESTÁ APLICADA** en el GPI Project. Sus
+  tablas existen **vacías** y **no hay que revertirlas**: cuando la nómina
+  vuelva, la base ya está lista. El archivo viaja con el código en `nomina-wip`,
+  así que en esta rama `supabase/migrations/` llega hasta la 0010.
+- Mientras tanto, el menú del panel **no muestra «Nómina»**, el portal del
+  empleado tiene **tres** pestañas (Registrar jornada · Mis eventos · Mi
+  contraseña) y las direcciones `/admin/nomina*`, `/admin/nomina/volante/…/pdf`
+  y `/mi-cuenta/volante/…/pdf` responden **404**.
+- El manual completo del módulo vive en la rama de respaldo; el plan de pruebas
+  sigue aquí, en `docs/PRUEBAS_CALENDARIO_NOMINA.md`.

@@ -286,15 +286,6 @@ export const ClipboardList = (p: IconProps) => (
   </Base>
 );
 
-/** Billete: sección «Nómina» del panel y el volante de pago. */
-export const Banknote = (p: IconProps) => (
-  <Base {...p}>
-    <rect x="2.5" y="6" width="19" height="12" rx="2" />
-    <circle cx="12" cy="12" r="2.5" />
-    <path d="M6 9.5v5M18 9.5v5" />
-  </Base>
-);
-
 /** Casa: sección «Página de inicio» del panel. */
 export const Home = (p: IconProps) => (
   <Base {...p}>

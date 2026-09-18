@@ -180,21 +180,7 @@ const nextConfig: NextConfig = {
   // puramente de Node: abre sockets TLS y carga módulos con `require`
   // dinámico. Empaquetarla con el resto del código de servidor la rompe, así
   // que se deja fuera del bundle y se carga con el `require` nativo.
-  // `@react-pdf/renderer` genera el volante de nómina en PDF. Como nodemailer,
-  // es una librería de Node (fuentes, streams, `require` dinámico) que hay que
-  // dejar fuera del bundle para que funcione en la función de servidor.
-  serverExternalPackages: ["nodemailer", "@react-pdf/renderer"],
-
-  /**
-   * El volante de nómina lee el logo de `public/images/logo-volante.png` con
-   * `fs` en tiempo de ejecución (`src/lib/volante.tsx`). El trazado automático
-   * de Next no puede adivinar esa ruta, así que se declara: sin esto el archivo
-   * no viaja con la función en Vercel y el PDF saldría sin logo.
-   */
-  outputFileTracingIncludes: {
-    "/admin/nomina/volante/[id]/pdf": ["./public/images/logo-volante.png"],
-    "/mi-cuenta/volante/[id]/pdf": ["./public/images/logo-volante.png"],
-  },
+  serverExternalPackages: ["nodemailer"],
 
   images: {
     /**
