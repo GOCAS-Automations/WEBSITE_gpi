@@ -29,6 +29,13 @@ interface AdminSection {
   /** true = solo para managers (admin | coordinador). */
   managerOnly?: boolean;
   /**
+   * true = solo para el ADMINISTRADOR. Es más estricto que `managerOnly`: deja
+   * fuera también al coordinador. Hoy solo lo usa «Nómina» (pedido de GPI, 18
+   * sep 2026: el coordinador no administra la nómina, solo ve la suya en su
+   * Mi Cuenta).
+   */
+  adminOnly?: boolean;
+  /**
    * Rutas adicionales que dejan esta entrada marcada como activa. Es lo que
    * hace que estar en `/admin/servicios` ilumine «Contenido del sitio»: las
    * URLs de cada sección NO cambiaron, solo se agruparon en el menú.
@@ -71,14 +78,19 @@ export const adminSections: AdminSection[] = [
     icon: CalendarCheck,
     managerOnly: true,
   },
-  { href: "/admin/nomina", label: "Nómina", icon: Banknote, managerOnly: true },
+  // Nómina es la única entrada `adminOnly`: ni el coordinador ni el Community
+  // Manager la ven. El coordinador sigue viendo SU propia nómina en Mi Cuenta.
+  { href: "/admin/nomina", label: "Nómina", icon: Banknote, adminOnly: true },
   { href: "/admin/ajustes", label: "Ajustes", icon: Sliders },
 ];
 
 /** Secciones visibles para un rol concreto. */
 export function sectionsForRole(role: UserRole): AdminSection[] {
   const manager = isManagerRole(role);
-  return adminSections.filter((s) => !s.managerOnly || manager);
+  const admin = role === "admin";
+  return adminSections.filter(
+    (s) => (!s.managerOnly || manager) && (!s.adminOnly || admin),
+  );
 }
 
 function useIsActive() {

@@ -1447,6 +1447,52 @@ panel usa `?vista=`:
   y todas las filas de prueba borradas al terminar —salvo el «Evento de Prueba»
   de César, que se queda en la base ya consistente—.
 
+## Iteración del 18 de septiembre de 2026 — la nómina queda solo para el administrador
+
+> Esta sección describe trabajo que vive en la rama **`nomina-wip`**, junto con
+> el resto del módulo de nómina. En `main` la nómina está fuera del despliegue.
+
+GPI revisó los permisos del rol **coordinador** y pidió dos cosas opuestas:
+
+1. **Abrirle el «Apodo»** de las cuentas (antes solo del administrador). Eso
+   toca `/admin/empleados`, no la nómina, así que vive en **`main`**.
+2. **Cerrarle la nómina.** El coordinador aprueba jornadas y lleva el
+   calendario, pero **no liquida la nómina de nadie**: de la nómina ve *solo la
+   suya*, como cualquier empleado. Eso es lo que hay aquí.
+
+### Las tres capas del cambio
+
+| Capa | Qué se hizo |
+| --- | --- |
+| **RLS** (migración **0012**, ya aplicada) | Las políticas de `nomina_config_mensual` y las de escritura y lectura-total de `nomina_liquidaciones` pasan de `is_manager()` a `is_admin_activo()`. `nomina_liquidaciones_select_propia` **no se toca**: es la que deja a cada quien ver su volante |
+| **Servidor** | `requireAdmin()` en `/admin/nomina`, `getAdminOrNull()` en las ocho server actions y en `GET /admin/nomina/volante/[id]/pdf`. `GET /mi-cuenta/volante/[id]/pdf` sigue igual: valida que quien pide sea el **dueño** |
+| **Navegación** | La entrada «Nómina» del menú es `adminOnly` (campo nuevo de `AdminSection`, más estricto que `managerOnly`) y la tarjeta del dashboard solo se añade para admin |
+
+### Por qué `is_admin_activo()` y no `is_admin()` a secas
+
+`public.is_admin()` (migración 0001) comprueba el rol pero **no** que la cuenta
+siga activa; `public.is_manager()` (0002) sí. Cambiar una por otra habría
+endurecido el rol y, al mismo tiempo, **aflojado** la exigencia de cuenta
+activa: un administrador desactivado habría conservado acceso a la nómina desde
+la API con un token válido. Por eso la 0012 crea `is_admin_activo()`, que es
+`is_admin()` **más** la comprobación de `active`, con la misma forma que
+`is_manager()`. `is_admin()` no se toca: lo usan las políticas de contenido.
+
+### Estado y reintegración
+
+- **La migración 0012 ya está aplicada** en el GPI Project, aunque `main` no
+  lleve el código de nómina: solo endurece permisos sobre tablas vacías.
+- Esta rama es `main` **antes** del revert de la nómina más este commit. No
+  incluye lo que entró en `main` después (los ajustes de aplazamiento del
+  calendario ni el apodo para el coordinador).
+- **Para reintegrar**: en `main`, revertir el revert (`git revert <hash del
+  revert>`) para recuperar el módulo, y después traer este commit
+  (`git cherry-pick`) para que llegue ya con los permisos correctos.
+- Queda **pendiente de probar a fondo** el módulo completo con el plan de
+  `docs/PRUEBAS_CALENDARIO_NOMINA.md` cuando se decida desplegarlo.
+
+---
+
 ## Decisiones técnicas
 
 - **Fallback estático primero**: toda la capa de contenido (`src/lib/content.ts`)

@@ -9,10 +9,13 @@
  *
  * QUIÉN PUEDE QUÉ
  * ---------------
- * **Todo esto es solo para MANAGERS** (admin y coordinador: los mismos que
- * aprueban jornadas). Se comprueba aquí, en el servidor, además de las
- * políticas RLS de la migración 0011. El empleado no escribe nunca su nómina:
- * solo puede LEER sus liquidaciones ya cerradas o pagadas.
+ * **Todo esto es solo para el ADMINISTRADOR.** Hasta el 18 sep 2026 era para
+ * managers (admin y coordinador); GPI pidió cerrarlo: el coordinador aprueba
+ * jornadas y lleva el calendario, pero NO administra la nómina — ve únicamente
+ * **la suya**, como cualquier empleado, en `/mi-cuenta?seccion=nomina`. Se
+ * comprueba aquí, en el servidor (`getAdminOrNull`), además de las políticas
+ * RLS —`is_admin_activo()` desde la migración 0012—. Ningún empleado escribe
+ * nunca su nómina: solo puede LEER sus liquidaciones ya cerradas o pagadas.
  *
  * CERRAR ≠ PAGAR ≠ ELIMINAR
  * -------------------------
@@ -35,7 +38,7 @@
  */
 
 import { revalidatePath } from "next/cache";
-import { getManagerOrNull } from "@/lib/supabase/auth";
+import { getAdminOrNull } from "@/lib/supabase/auth";
 import {
   getLiquidacion,
   getNominaConfig,
@@ -62,7 +65,7 @@ import type { ActionState } from "@/lib/admin-types";
 const SIN_PERMISO: ActionState = {
   status: "error",
   message:
-    "Tu sesión expiró o tu cuenta no tiene permisos para administrar la nómina. Solo un administrador o un coordinador puede hacerlo.",
+    "Tu sesión expiró o tu cuenta no tiene permisos para administrar la nómina. Solo un ADMINISTRADOR puede hacerlo: el coordinador ve su propia nómina en Mi Cuenta, pero no liquida la de nadie.",
 };
 
 const ok = (message: string): ActionState => ({ status: "success", message });
@@ -180,7 +183,7 @@ export async function saveNominaConfig(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const session = await getManagerOrNull();
+  const session = await getAdminOrNull();
   if (!session) return SIN_PERMISO;
 
   const employeeId = text(formData, "employee_id");
@@ -244,7 +247,7 @@ export async function crearLiquidacion(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const session = await getManagerOrNull();
+  const session = await getAdminOrNull();
   if (!session) return SIN_PERMISO;
 
   const periodo = leerPeriodo(formData);
@@ -297,7 +300,7 @@ export async function liquidarTodos(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const session = await getManagerOrNull();
+  const session = await getAdminOrNull();
   if (!session) return SIN_PERMISO;
 
   const periodo = leerPeriodo(formData);
@@ -408,7 +411,7 @@ export async function guardarConceptos(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const session = await getManagerOrNull();
+  const session = await getAdminOrNull();
   if (!session) return SIN_PERMISO;
 
   const id = text(formData, "id");
@@ -465,7 +468,7 @@ export async function cerrarLiquidacion(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const session = await getManagerOrNull();
+  const session = await getAdminOrNull();
   if (!session) return SIN_PERMISO;
 
   const id = text(formData, "id");
@@ -546,7 +549,7 @@ export async function marcarPagada(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const session = await getManagerOrNull();
+  const session = await getAdminOrNull();
   if (!session) return SIN_PERMISO;
 
   const id = text(formData, "id");
@@ -583,7 +586,7 @@ export async function reabrirLiquidacion(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const session = await getManagerOrNull();
+  const session = await getAdminOrNull();
   if (!session) return SIN_PERMISO;
 
   const id = text(formData, "id");
@@ -621,7 +624,7 @@ export async function eliminarLiquidacion(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const session = await getManagerOrNull();
+  const session = await getAdminOrNull();
   if (!session) return SIN_PERMISO;
 
   const id = text(formData, "id");
