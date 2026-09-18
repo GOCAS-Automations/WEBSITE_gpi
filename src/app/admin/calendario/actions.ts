@@ -28,6 +28,20 @@
  * tocar: si un evento se mueve tres veces, sigue diciendo para cuándo estaba
  * previsto al principio, que es la pregunta que hace la gerencia.
  *
+ * QUÉ SE PUEDE HACER EN CADA ESTADO
+ * ---------------------------------
+ * La matriz vive en `src/lib/calendario.ts` (`accionesDisponibles`), y la
+ * comprueban a la vez la interfaz —que solo pinta los botones con sentido— y
+ * ESTAS ACTIONS, que rechazan lo demás con un mensaje que explica qué hacer.
+ * Ocultar un botón no es una barrera: quien reenvíe el formulario a mano tiene
+ * que toparse con la misma regla.
+ *
+ * El invariante que sostienen entre las dos: **un evento abierto que ya se
+ * movió de fecha es `aplazado`, nunca `programado`** (ver el comentario largo
+ * de `src/lib/calendario.ts`). Antes, reabrir un evento aplazado lo dejaba en
+ * `programado` conservando `fecha_original`: la pantalla decía «se aplazó» y el
+ * tablero lo contaba como programado.
+ *
  * Los mensajes están escritos para personas no técnicas: dicen qué pasó y qué
  * hacer, sin jerga.
  */
@@ -36,7 +50,11 @@ import { revalidatePath } from "next/cache";
 import { getActiveSession, getManagerOrNull } from "@/lib/supabase/auth";
 import {
   EVENTO_ESTADOS,
+  EVENTO_ESTADO_LABELS,
   LIMITES_EVENTO,
+  accionesDisponibles,
+  estadoAbierto,
+  normalizarEstado,
   type EventoEstado,
 } from "@/lib/calendario";
 import type { ActionState } from "@/lib/admin-types";
@@ -213,10 +231,13 @@ export async function saveEvento(
 /* ------------------------------------------------------------------ */
 
 /**
- * Marca el evento como cumplido, incompleto o lo devuelve a programado.
+ * Marca el evento como cumplido o incompleto, o lo REABRE.
  *
- * Reabrir NO borra `fecha_original`: que un evento vuelva a estar abierto no
- * cambia el hecho de que en su día se movió de fecha.
+ * Reabrir NO borra `fecha_original` —que un evento vuelva a estar abierto no
+ * cambia el hecho de que en su día se movió de fecha— y por eso mismo **no
+ * siempre devuelve a `programado`**: un evento que ya se aplazó vuelve a
+ * `aplazado`, que es el estado abierto que le corresponde. El formulario manda
+ * `estado=programado` («reabrir») y aquí se traduce al estado real.
  */
 export async function cambiarEstadoEvento(
   _prev: ActionState,
@@ -228,17 +249,49 @@ export async function cambiarEstadoEvento(
   const id = text(formData, "id");
   if (!id) return fail("Falta el identificador del evento.");
 
-  const estado = text(formData, "estado") as EventoEstado;
-  if (!(EVENTO_ESTADOS as readonly string[]).includes(estado))
+  const pedido = text(formData, "estado") as EventoEstado;
+  if (!(EVENTO_ESTADOS as readonly string[]).includes(pedido))
     return fail("Ese estado no existe.");
-  if (estado === "aplazado")
+  if (pedido === "aplazado")
     return fail(
       "Para aplazar un evento usa el botón «Aplazar»: hay que indicar la nueva fecha.",
     );
 
+  /* Se lee el evento ANTES de tocarlo: la decisión depende de en qué estado
+     está y de si alguna vez se movió de fecha. */
+  const { data: actual, error: errorLectura } = await session.supabase
+    .from("eventos")
+    .select("estado, fecha_original")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (errorLectura) return fail(errorLectura.message);
+  if (!actual)
+    return fail("Ese evento ya no existe. Recarga la página, por favor.");
+
+  const estadoActual = normalizarEstado(actual.estado);
+  const fechaOriginal =
+    typeof actual.fecha_original === "string" && actual.fecha_original
+      ? actual.fecha_original
+      : null;
+  const permitido = accionesDisponibles({ estado: estadoActual, fechaOriginal });
+
+  // «Reabrir»: el estado real depende de si el evento ya se había movido.
+  const destino: EventoEstado =
+    pedido === "programado" ? estadoAbierto(fechaOriginal) : pedido;
+
+  if (pedido === "programado" && !permitido.reabrir)
+    return fail(
+      `«Reabrir» es para eventos ya cerrados, y este está ${EVENTO_ESTADO_LABELS[estadoActual].toLowerCase()}: sigue abierto, no hay nada que reabrir.`,
+    );
+  if (pedido === "cumplido" && !permitido.cumplido)
+    return fail("Ese evento ya está marcado como cumplido.");
+  if (pedido === "incompleto" && !permitido.incompleto)
+    return fail("Ese evento ya está marcado como incompleto.");
+
   const { data, error } = await session.supabase
     .from("eventos")
-    .update({ estado })
+    .update({ estado: destino })
     .eq("id", id)
     .select("id");
 
@@ -247,13 +300,15 @@ export async function cambiarEstadoEvento(
     return fail("Ese evento ya no existe. Recarga la página, por favor.");
 
   revalidar();
-  const mensajes: Record<string, string> = {
+  const mensajes: Record<EventoEstado, string> = {
     cumplido: "Evento marcado como cumplido.",
     incompleto:
       "Evento marcado como incompleto. Deja una nota explicando qué faltó: es lo que va a leer quien revise el mes.",
-    programado: "El evento volvió a quedar programado.",
+    programado: "El evento volvió a quedar programado: pendiente por hacer.",
+    aplazado:
+      "El evento volvió a quedar abierto. Como ya se había movido de fecha, queda como APLAZADO (pendiente por hacer, pero en un día distinto al original).",
   };
-  return ok(mensajes[estado] ?? "Estado actualizado.");
+  return ok(mensajes[destino]);
 }
 
 /* ------------------------------------------------------------------ */
@@ -276,13 +331,27 @@ export async function aplazarEvento(
 
   const { data: actual, error: errorLectura } = await session.supabase
     .from("eventos")
-    .select("fecha, fecha_original")
+    .select("fecha, fecha_original, estado")
     .eq("id", id)
     .maybeSingle();
 
   if (errorLectura) return fail(errorLectura.message);
   if (!actual)
     return fail("Ese evento ya no existe. Recarga la página, por favor.");
+
+  /* Barrera de la matriz (ver `accionesDisponibles`): lo que ya se HIZO no se
+     aplaza. Se comprueba aquí y no solo escondiendo el botón. */
+  const estadoActual = normalizarEstado(actual.estado);
+  if (
+    !accionesDisponibles({
+      estado: estadoActual,
+      fechaOriginal:
+        typeof actual.fecha_original === "string" ? actual.fecha_original : null,
+    }).aplazar
+  )
+    return fail(
+      "Ese evento ya está marcado como CUMPLIDO: una actividad que ya se hizo no se aplaza. Si en realidad no se hizo, reábrelo o márcalo como incompleto y después muévelo de fecha.",
+    );
 
   const fechaActual = String(actual.fecha ?? "");
   if (nuevaFecha === fechaActual)

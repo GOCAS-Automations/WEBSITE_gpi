@@ -72,7 +72,7 @@ export const AYUDA_CALENDARIO =
 
 /** Qué significa cada estado de un evento. */
 export const AYUDA_CALENDARIO_ESTADOS =
-  "Todo evento nace «programado». Cuando pase el día, ciérralo: «cumplido» si salió completo, «incompleto» si no salió o quedó a medias, o «aplázalo» a otra fecha si se corrió. Un evento aplazado se mueve al día nuevo y el calendario recuerda para cuándo estaba al principio.";
+  "Todo evento nace «programado». Cuando pase el día, ciérralo: «cumplido» si salió completo, «incompleto» si no salió o quedó a medias, o «aplázalo» a otra fecha si se corrió. Un evento aplazado se mueve al día nuevo, sigue pendiente por hacer y el calendario recuerda para cuándo estaba al principio. Cada evento muestra solo los botones que tienen sentido en su estado: uno ya cumplido no se aplaza (si en realidad no se hizo, reábrelo primero), y «Reabrir» solo aparece en los ya cerrados. Reabrir un evento que alguna vez se movió lo devuelve a «aplazado», no a «programado»: sigue abierto, pero en un día distinto al original.";
 
 /** Diferencia entre marcar incompleto y eliminar (mismo espíritu que rechazar ≠ eliminar). */
 export const AYUDA_CALENDARIO_ELIMINAR =

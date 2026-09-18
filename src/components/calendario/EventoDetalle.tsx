@@ -11,6 +11,26 @@
  * «Incompleto» deja constancia de que la actividad no salió y conserva sus
  * notas; «Eliminar» borra el evento y su historia. Por eso eliminar pasa por
  * dos barreras (desplegar el aviso rojo y confirmar en el navegador).
+ *
+ * QUÉ BOTONES SE PINTAN (matriz estado → acciones)
+ * ------------------------------------------------
+ * | Estado       | Cumplido | Incompleto | Reabrir | Aplazar | Editar | Eliminar |
+ * | ------------ | :------: | :--------: | :-----: | :-----: | :----: | :------: |
+ * | programado   |    Sí    |     Sí     |   no    |   Sí    |   Sí   |    Sí    |
+ * | aplazado     |    Sí    |     Sí     |   no    |   Sí    |   Sí   |    Sí    |
+ * | cumplido     |    no    |     Sí     |   Sí    |   NO    |   Sí   |    Sí    |
+ * | incompleto   |    Sí    |     no     |   Sí    |   Sí    |   Sí   |    Sí    |
+ *
+ * Lo decide `accionesDisponibles()` de `src/lib/calendario.ts`, que es LA MISMA
+ * función que usan las server actions para rechazar lo que no tiene sentido:
+ * esconder un botón no es una barrera, solo evita el error. Los dos casos que
+ * importan: un evento **cumplido no se aplaza** (ya se hizo) y un evento que
+ * sigue abierto **no se reabre** (ya lo está).
+ *
+ * «Reabrir» no siempre devuelve a *programado*: si el evento ya se movió alguna
+ * vez (`fechaOriginal`), vuelve a *aplazado*, que es el estado abierto que le
+ * corresponde. Así lo que dice esta ficha y lo que cuenta el tablero de
+ * métricas nunca se contradicen.
  */
 
 import { useActionState, useEffect, useState } from "react";
@@ -33,6 +53,7 @@ import {
   EVENTO_ESTADO_CLASSES,
   EVENTO_ESTADO_DESCRIPCIONES,
   EVENTO_ESTADO_LABELS,
+  accionesDisponibles,
   formatearMomento,
   formatearRangoHoras,
   nombreCompletoResponsable,
@@ -63,6 +84,10 @@ export function EventoDetalle({
   onEditar: () => void;
   onCerrar: () => void;
 }) {
+  // Matriz estado → acciones (ver la cabecera del archivo). La misma función la
+  // aplican las server actions, así que esto solo evita el error, no lo impide.
+  const permitido = accionesDisponibles(evento);
+
   return (
     <div className="space-y-6">
       {/* ---------------- Cabecera ---------------- */}
@@ -87,13 +112,21 @@ export function EventoDetalle({
           </p>
         </div>
 
+        {/* Se movió de fecha alguna vez. Si el evento sigue ABIERTO, su estado
+            es «Aplazado» (invariante del calendario); si ya se cerró, esto es
+            historia: se movió y después se cumplió o quedó incompleto. */}
         {evento.fechaOriginal && (
           <p className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm leading-relaxed text-amber-900">
             <Info className="mt-0.5 h-4 w-4 shrink-0" />
             <span>
               Este evento estaba programado para el{" "}
               <strong>{formatearFechaLarga(evento.fechaOriginal)}</strong> y se
-              aplazó.
+              aplazó
+              {evento.estado === "cumplido" || evento.estado === "incompleto"
+                ? `; después se cerró como ${EVENTO_ESTADO_LABELS[
+                    evento.estado
+                  ].toLowerCase()}.`
+                : "."}
             </span>
           </p>
         )}
@@ -157,7 +190,7 @@ export function EventoDetalle({
           </h3>
 
           <div className="flex flex-wrap gap-2">
-            {evento.estado !== "cumplido" && (
+            {permitido.cumplido && (
               <BotonEstado
                 action={acciones.cambiarEstado}
                 id={evento.id}
@@ -169,7 +202,7 @@ export function EventoDetalle({
                 icono={<Check className="h-4 w-4" />}
               />
             )}
-            {evento.estado !== "incompleto" && (
+            {permitido.incompleto && (
               <BotonEstado
                 action={acciones.cambiarEstado}
                 id={evento.id}
@@ -181,14 +214,25 @@ export function EventoDetalle({
                 icono={<Close className="h-4 w-4" />}
               />
             )}
-            {evento.estado !== "programado" && (
+            {/* «Reabrir» solo aparece sobre un evento YA CERRADO, y su etiqueta
+                dice a dónde vuelve: a «programado» si nunca se movió, o a
+                «aplazado» si ya se había movido de fecha. */}
+            {permitido.reabrir && (
               <BotonEstado
                 action={acciones.cambiarEstado}
                 id={evento.id}
                 estado="programado"
-                etiqueta="Volver a programado"
+                etiqueta={
+                  permitido.estadoAlReabrir === "aplazado"
+                    ? "Reabrir (queda aplazado)"
+                    : "Reabrir (queda programado)"
+                }
                 pendienteEtiqueta="Reabriendo…"
-                confirmacion={`¿Reabrir «${evento.titulo}»?\n\nVuelve a quedar pendiente por hacer.`}
+                confirmacion={
+                  permitido.estadoAlReabrir === "aplazado"
+                    ? `¿Reabrir «${evento.titulo}»?\n\nVuelve a quedar pendiente por hacer. Como este evento ya se movió de fecha alguna vez, queda en estado APLAZADO: sigue abierto, pero en un día distinto al que tenía al principio.`
+                    : `¿Reabrir «${evento.titulo}»?\n\nVuelve a quedar PROGRAMADO, es decir, pendiente por hacer.`
+                }
                 className="border border-line bg-white text-ink-soft hover:border-brand hover:text-brand-dark"
               />
             )}
@@ -202,10 +246,20 @@ export function EventoDetalle({
             </button>
           </div>
 
-          <FormularioAplazar
-            action={acciones.aplazar}
-            evento={evento}
-          />
+          {/* Aplazar: todo menos lo que ya se hizo. Cuando no se puede, en vez
+              de dejar un hueco mudo se explica por qué y qué hacer. */}
+          {permitido.aplazar ? (
+            <FormularioAplazar action={acciones.aplazar} evento={evento} />
+          ) : (
+            <p className="flex items-start gap-2 rounded-xl border border-line bg-mist/70 px-4 py-2.5 text-xs leading-relaxed text-graphite">
+              <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <span>
+                Un evento <strong>cumplido</strong> no se aplaza: ya se hizo. Si
+                en realidad no se hizo, <strong>reábrelo</strong> o márcalo como{" "}
+                <strong>incompleto</strong> y después muévelo a otra fecha.
+              </span>
+            </p>
+          )}
 
           <div className="border-t border-line pt-3">
             <BotonEliminar
@@ -328,7 +382,11 @@ function FormularioAplazar({
         className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-800 transition-colors hover:bg-amber-100"
       >
         <Calendar className="h-4 w-4" />
-        {abierto ? "Cancelar aplazamiento" : "Aplazar a otra fecha"}
+        {abierto
+          ? "Cancelar aplazamiento"
+          : evento.estado === "incompleto"
+            ? "Reprogramar a otra fecha"
+            : "Aplazar a otra fecha"}
       </button>
 
       {abierto && (
@@ -352,10 +410,13 @@ function FormularioAplazar({
             className="w-full rounded-xl border border-amber-200 bg-white px-3.5 py-2.5 text-sm text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/25"
           />
           <p className="text-xs leading-relaxed text-amber-900">
-            El evento se mueve a ese día y queda <strong>aplazado</strong>.
+            El evento se mueve a ese día y queda <strong>aplazado</strong>
+            {evento.estado === "incompleto"
+              ? ": deja de estar cerrado y vuelve a quedar pendiente por hacer en la fecha nueva."
+              : "."}
             {evento.fechaOriginal
-              ? " Ya estaba aplazado, así que se conserva la fecha original que ya tenía."
-              : " Se guarda la fecha de hoy como su fecha original, para que quede constancia de que se movió."}
+              ? ` Ya se había movido antes, así que conserva su fecha original (${formatearFechaLarga(evento.fechaOriginal)}).`
+              : ` Se guarda el ${formatearFechaLarga(evento.fecha)} como su fecha original, para que quede constancia de que se movió.`}
           </p>
           {state.status === "error" && state.message && (
             <p role="alert" className="text-sm font-semibold text-red-600">

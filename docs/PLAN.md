@@ -1280,6 +1280,173 @@ importes borraba el **punto decimal** (un `<input type="number">` manda
 se quedaba mostrando el de la primera acción usada («liquidación creada») aunque
 después se cerrara o se pagara.
 
+## Iteración del 18 de septiembre de 2026 — pruebas del cliente: estados del calendario, acciones por estado y portal en pestañas
+
+César probó el calendario en local y reportó tres cosas. Las tres quedaron
+resueltas. **Sin migración nueva**: la corrección de datos fue un `update`
+puntual, no un cambio de esquema.
+
+### 1. El fallo de las métricas: la pantalla y el tablero se contradecían
+
+**Lo que se veía**: creó un evento, lo marcó cumplido, lo devolvió a programado
+y lo aplazó. En la ficha se leía el aviso ámbar «estaba programado para el … y
+se aplazó», pero el tablero no lo contaba entre los aplazados.
+
+**La causa real** (confirmada en la base y reproducida en local): la señal
+visual de aplazamiento sale de `fecha_original`, mientras que las métricas
+cuentan por `estado`, y **el botón «Volver a programado» escribía
+`estado = 'programado'` conservando `fecha_original`**. Un evento que se aplaza
+y después se reabre quedaba diciendo dos cosas a la vez. El evento de César
+estaba exactamente así en la base: `fecha = 2026-09-19`,
+`fecha_original = 2026-09-18`, `estado = 'programado'`.
+
+**El invariante que cierra el agujero** (documentado en `src/lib/calendario.ts`):
+
+> Un evento **abierto** que ya se movió de fecha es **`aplazado`**, nunca
+> `programado`. Es decir: entre los estados abiertos,
+> `estado = 'aplazado'` ⇔ `fecha_original ≠ null`.
+
+Los estados **cerrados** (`cumplido`, `incompleto`) sí pueden llevar
+`fecha_original`: ahí es historia («se movió y luego se hizo»), no una
+afirmación sobre el presente.
+
+De ahí salen tres cambios concretos:
+
+- **Reabrir devuelve al estado abierto que corresponde**: `programado` si el
+  evento nunca se movió, `aplazado` si ya se había movido. Lo decide el
+  servidor; el formulario sigue mandando `estado=programado` («reabrir») y
+  `cambiarEstadoEvento` lo traduce.
+- **El botón lo dice**: «Reabrir (queda programado)» o «Reabrir (queda
+  aplazado)», y la confirmación lo explica en una frase.
+- **Los datos existentes se normalizaron** con
+  `update eventos set estado='aplazado' where fecha_original is not null and estado='programado'`
+  (Management API). El «Evento de Prueba» de César **no se borró**: quedó en la
+  base, ya consistente, para que lo vea corregido.
+
+### 2. Auditoría completa del tablero de métricas
+
+Se montó un conjunto de eventos de prueba con **números conocidos** (cuatro
+estados, responsables internos y externos, notas repartidas, eventos fuera del
+rango y uno aplazado de un mes a otro) y se verificó número por número contra lo
+que pinta la pantalla. Todo cuadró tras los ajustes; lo que cambió:
+
+- **Los KPI pasaron de cuatro a seis** y cada estado tiene el suyo:
+  *Eventos del período · Cumplidos · Incompletos · Aplazados · Programados ·
+  Tasa de cumplimiento*. Desaparece «Incompletos y aplazados», que escondía dos
+  cosas distintas en un mismo número —justo el dato que el cliente fue a buscar
+  y no encontró—.
+- **La tasa de cumplimiento explica su denominador** en la propia tarjeta:
+  «2 de 3 ya cerrados (cumplidos + incompletos)». Sin eventos cerrados muestra
+  «—», nunca 0 %.
+- **Las notas del período** salen como dato visible en la primera tarjeta
+  («3 cerrado(s) · 4 sin cerrar · 7 nota(s)»), no escondidas en el subtítulo de
+  la tasa.
+- **Regla del período, escrita**: un evento cuenta en el período de la fecha que
+  tiene **ahora**, no en el de la fecha de la que se movió. Y cuando alguna
+  actividad se aplaza **fuera** del rango filtrado, aparece un aviso ámbar bajo
+  los KPI diciendo cuántas fueron y que cuentan en el período al que se
+  movieron. Antes simplemente desaparecían sin explicación.
+- **«Evolución mensual» avisa en la propia tarjeta** —una etiqueta ámbar «No usa
+  el filtro de fechas: siempre el año completo»— en vez de decirlo solo dentro
+  del botón *Ayuda*.
+- **Cumplimiento por responsable** aclara que su porcentaje es
+  *cumplidos ÷ asignados* (denominador: todos sus eventos del rango, abiertos
+  incluidos), que **no** es la misma cuenta que la tasa de arriba.
+- **Corrección de fondo en la consulta** (`listEventos`, `src/lib/admin.ts`):
+  los responsables y las notas se pedían en una sola llamada con hasta 2000 ids
+  de evento en la URL y sin paginar. Supabase corta cualquier respuesta en 1000
+  filas, así que «carga por responsable» y «notas escritas» podían quedarse
+  cortas **en silencio**. Ahora se piden por tandas de 100 eventos y se pagina
+  dentro de cada tanda.
+
+Números verificados con el conjunto de prueba (rango septiembre 2026, 7 eventos):
+total 7 · cumplidos 2 (29 %) · incompletos 1 (14 %) · aplazados 2 (29 %) ·
+programados 2 (29 %) · cerrados 3 · tasa 67 % (2 de 3) · notas 7 · 1 actividad
+salida del período · carga por responsable 3/2/1/1/1/1 · evolución ago 1,
+sep 7, oct 2. Al ampliar el rango a octubre, los mismos números se mueven como
+deben (9 eventos, 3 aplazados, 3 programados, 8 notas) y el aviso de «salieron
+del período» desaparece porque el evento ya está dentro.
+
+### 3. Qué acciones tiene sentido ofrecer en cada estado
+
+Un evento **cumplido ofrecía «Aplazar a otra fecha»**, que no significa nada:
+ya se hizo. Ahora existe una matriz única (`accionesDisponibles()` en
+`src/lib/calendario.ts`) que aplican **a la vez** la interfaz y las server
+actions:
+
+| Estado | Cumplido | Incompleto | Reabrir | Aplazar | Editar | Eliminar |
+| --- | :---: | :---: | :---: | :---: | :---: | :---: |
+| Programado | Sí | Sí | — | Sí | Sí | Sí |
+| Aplazado | Sí | Sí | — | Sí | Sí | Sí |
+| Cumplido | — | Sí | Sí | **No** | Sí | Sí |
+| Incompleto | Sí | — | Sí | Sí («Reprogramar») | Sí | Sí |
+
+- **Cumplido no se aplaza.** Donde iría el botón hay una explicación de qué
+  hacer en su lugar (reabrir o marcar incompleto y después mover).
+- **Incompleto sí se reprograma**: el botón se llama «Reprogramar a otra fecha»
+  y el evento vuelve a quedar **abierto** (aplazado) en la fecha nueva.
+- **Reabrir solo aparece en los cerrados**: sobre uno abierto no haría nada.
+- **El servidor rechaza lo demás**, no solo la interfaz lo esconde. Probado
+  forzando el envío con la pantalla desactualizada: «Ese evento ya está marcado
+  como CUMPLIDO: una actividad que ya se hizo no se aplaza…», «"Reabrir" es
+  para eventos ya cerrados, y este está programado…», «Ese evento ya está
+  marcado como cumplido.»
+
+### 4. El portal del empleado, en pestañas
+
+`/mi-cuenta` era una sola página larga con todo encima. Ahora son **cuatro
+pestañas** y la pestaña viaja en la dirección con `?seccion=`, igual que el
+panel usa `?vista=`:
+
+| Pestaña | Dirección | Qué tiene |
+| --- | --- | --- |
+| Registrar jornada *(por defecto)* | `/mi-cuenta` | El resumen (pendientes/aprobadas/rechazadas), el formulario y «Mis jornadas» |
+| Mis eventos | `/mi-cuenta?seccion=eventos` | Los eventos asignados de hoy en adelante, con su caja de notas |
+| Mi nómina | `/mi-cuenta?seccion=nomina` | Las liquidaciones cerradas o pagadas y el volante |
+| Mi contraseña | `/mi-cuenta?seccion=clave` | Cambiar la contraseña |
+
+- El parámetro se llama **`seccion`** y no `vista` ni `portal` a propósito:
+  `?portal=1` ya significa «quiero el portal aunque tenga panel» y **sigue
+  funcionando igual**; las pestañas lo arrastran
+  (`/mi-cuenta?portal=1&seccion=nomina`), porque sin él un admin rebotaría al
+  panel al cambiar de pestaña. El aterrizaje por rol y el rebote a `/admin` no
+  se tocaron.
+- En escritorio es la misma tira de pastillas del panel; en el teléfono son
+  **dos filas de dos**, con las etiquetas cortas («Jornada», «Eventos»,
+  «Nómina», «Contraseña»), para que las cuatro se vean sin desplazamiento
+  horizontal. Cada pestaña lleva su contador: jornadas pendientes, eventos
+  asignados y volantes disponibles.
+- **Vacíos amables**: «Mi nómina» ya no devuelve `null` cuando no hay
+  liquidaciones —antes colgaba de una página larga y no pintarse tenía
+  sentido; una pestaña que se abre en blanco, no— y explica qué aparecerá ahí y
+  cuándo. «Mis eventos» ya tenía el suyo.
+- **El borrador del formulario se pierde al cambiar de pestaña** y se acepta a
+  conciencia: conservarlo obligaría a montar las cuatro secciones a la vez en un
+  componente de cliente con estado, y la pestaña por defecto es justamente la
+  del formulario.
+- Enlaces con `prefetch={false}`, como todo el panel.
+
+### 5. Verificación
+
+`npm run lint` y `npm run build` en verde. Prueba de punta a punta contra
+`localhost` con Playwright:
+
+- **La secuencia del cliente, repetida**: cumplido → reabrir → aplazar →
+  cumplir → reabrir. En cada paso se comprobó que el **badge**, el **aviso de
+  aplazamiento** y los **números del tablero** dicen lo mismo. El paso que antes
+  fallaba (reabrir un evento ya aplazado) ahora deja el evento en *Aplazado* y
+  el tablero lo cuenta ahí.
+- **Auditoría de métricas** con los números conocidos del apartado 2, en el
+  rango por defecto y ampliándolo a dos meses.
+- **Acciones por estado**: ficha revisada en los cuatro estados, y las tres
+  acciones forzadas contra el servidor con la pantalla desactualizada.
+- **Portal como empleado (`dgomez`)**: las cuatro pestañas, el registro de una
+  jornada real (guardada como pendiente, con su desglose correcto) y el vacío de
+  nómina.
+- Capturas en 1440 y 390 px revisadas como imagen, **cero errores de consola**,
+  y todas las filas de prueba borradas al terminar —salvo el «Evento de Prueba»
+  de César, que se queda en la base ya consistente—.
+
 ## Decisiones técnicas
 
 - **Fallback estático primero**: toda la capa de contenido (`src/lib/content.ts`)

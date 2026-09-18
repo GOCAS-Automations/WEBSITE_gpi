@@ -545,7 +545,35 @@ Cualquier cuenta activa tiene su portal de jornadas en `/mi-cuenta`. Empleados y
 Community Manager aterrizan ahí al ingresar; admin y coordinador entran al panel
 y llegan al portal con **"Registrar mi jornada"** (ver *A dónde aterriza cada rol
 al iniciar sesión*, en el apartado 4). Las cuentas con acceso al panel ven el
-portal debajo del botón **"Ir al panel"**:
+portal debajo del botón **"Ir al panel"**.
+
+#### El portal está en pestañas (18 sep 2026)
+
+El portal ya no es una sola página larga: son **cuatro pestañas**, y la pestaña
+viaja en la dirección —igual que en el panel—, así que el enlace se puede
+compartir.
+
+| Pestaña | Dirección | Qué tiene |
+| --- | --- | --- |
+| **Registrar jornada** *(la que abre por defecto)* | `/mi-cuenta` | El resumen de pendientes/aprobadas/rechazadas, el formulario y el historial «Mis jornadas» |
+| **Mis eventos** | `/mi-cuenta?seccion=eventos` | Los eventos del calendario asignados, de hoy en adelante, con la caja para dejar notas |
+| **Mi nómina** | `/mi-cuenta?seccion=nomina` | Las liquidaciones ya cerradas o pagadas y el volante para descargar |
+| **Mi contraseña** | `/mi-cuenta?seccion=clave` | Cambiar la contraseña |
+
+En el teléfono las pestañas se ven en **dos filas de dos**, con el nombre corto
+(*Jornada · Eventos · Nómina · Contraseña*). Cada una lleva un contador: las
+jornadas que están esperando revisión, los eventos asignados y los volantes
+disponibles. Quien no tenga eventos o volantes ve un mensaje explicando qué va a
+aparecer ahí, no una pestaña en blanco.
+
+> **Al cambiar de pestaña se pierde lo que estuvieras escribiendo** en el
+> formulario de jornada. Regístrala primero y después mira lo demás.
+
+El `?portal=1` de siempre —«quiero el portal aunque tenga panel»— **sigue
+funcionando igual** y se conserva al cambiar de pestaña
+(`/mi-cuenta?portal=1&seccion=nomina`).
+
+En la pestaña **Registrar jornada**:
 
 - **Registrar una jornada**: fecha del día laboral (por defecto hoy), número de
   orden de trabajo **(opcional)**, hora de inicio, hora de finalización,
@@ -562,7 +590,6 @@ portal debajo del botón **"Ir al panel"**:
 - **Mis jornadas**: historial con el estado de cada una
   (*pendiente* / *aprobada* / *rechazada*) y la nota del revisor si la hay.
   Puede **editar o eliminar** solo las que sigan **pendientes**.
-- **Mi contraseña**: cambiarla por una que recuerde.
 
 Estos son los mismos campos del Google Form que usaba GPI, mejor organizados.
 
@@ -1491,11 +1518,38 @@ las acciones:
 | Acción | Qué significa |
 | --- | --- |
 | **Marcar cumplido** | Se hizo completo. Es el cierre normal |
-| **Marcar incompleto** | No se hizo o quedó a medias, y no se va a reprogramar. Deja una nota explicando qué faltó |
+| **Marcar incompleto** | No se hizo o quedó a medias. Deja una nota explicando qué faltó |
 | **Aplazar a otra fecha** | Se movió: el evento se pasa al día nuevo, queda **aplazado** y el calendario **recuerda para cuándo estaba al principio** |
-| **Volver a programado** | Reabre un evento cerrado por error |
+| **Reprogramar a otra fecha** | Es el mismo botón sobre un evento **incompleto**: se decidió repetirlo, así que se mueve de día y vuelve a quedar **abierto** |
+| **Reabrir** | Vuelve a dejar pendiente un evento que ya estaba cerrado |
 | **Editar datos** | Cambia título, fecha, horas, descripción o responsables |
 | **Eliminar evento** | Lo borra para siempre, con sus notas |
+
+#### Qué acciones se ven en cada estado
+
+**Solo salen los botones que tienen sentido.** No es una decisión de pantalla:
+el servidor rechaza lo mismo que la pantalla esconde, por si alguien llega con
+la página desactualizada.
+
+| Estado del evento | Cumplido | Incompleto | Reabrir | Aplazar | Editar | Eliminar |
+| --- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Programado** | Sí | Sí | — ya está abierto | Sí | Sí | Sí |
+| **Aplazado** | Sí | Sí | — ya está abierto | Sí, se vuelve a mover | Sí | Sí |
+| **Cumplido** | — ya lo está | Sí | Sí | **No** | Sí | Sí |
+| **Incompleto** | Sí | — ya lo está | Sí | Sí, «Reprogramar» | Sí | Sí |
+
+- **Un evento cumplido no se aplaza**: ya se hizo. Si en realidad no se hizo,
+  primero **reábrelo** o márcalo **incompleto**, y después muévelo de fecha. La
+  ficha lo dice ahí mismo, donde iría el botón.
+- **«Reabrir» no siempre devuelve a *programado***. Si el evento **ya se movió
+  de fecha alguna vez**, vuelve a **aplazado**: sigue pendiente por hacer, pero
+  en un día distinto al que tenía al principio. El botón lo anuncia —«Reabrir
+  (queda programado)» o «Reabrir (queda aplazado)»—.
+- La razón es que **lo que dice la ficha y lo que cuenta el tablero de métricas
+  nunca pueden contradecirse**: el aviso ámbar «estaba programado para el … y se
+  aplazó» y el número de «Aplazados» del tablero tienen que hablar del mismo
+  evento. Antes, reabrir un evento aplazado lo dejaba como *programado*
+  conservando el aviso, y el tablero lo contaba donde no era.
 
 > **Marcar incompleto NO es eliminar.** Lo primero deja constancia de que la
 > actividad no salió, con sus notas, que es lo que se revisa a fin de mes. Lo
@@ -1521,21 +1575,48 @@ muro de texto—: se leen en la pestaña Notas y dentro de cada evento.
 
 ### Lo que ve el equipo — *Mi Cuenta → Mis eventos*
 
-Cada persona ve **solo** los eventos de hoy en adelante en los que figura como
+En la pestaña **Mis eventos** del portal (`/mi-cuenta?seccion=eventos`), cada
+persona ve **solo** los eventos de hoy en adelante en los que figura como
 responsable: el día, la hora, qué hay que hacer, con quién lo comparte y el
 estado. Desde ahí puede **dejar una nota**. No puede crear, editar ni cerrar
 eventos: eso es del administrador y del coordinador.
 
 ### Las métricas
 
-El tablero se calcula sobre el **rango de fechas** que elijas (empieza en el mes
-en curso) y muestra: cuántos eventos hubo, cuántos se cumplieron, cuántos
-quedaron incompletos o aplazados, la **tasa de cumplimiento** —de los eventos ya
-cerrados, qué porcentaje salió completo—, el reparto por estado, la **carga por
-responsable** (incluidos los externos) y los eventos con más notas. La gráfica
-**Evolución mensual** es la única que no depende del filtro: muestra siempre el
-año completo, para que se vea la tendencia. Cada bloque tiene su botón
-**Ayuda** con lo que significa cada dato.
+El tablero se calcula sobre el **rango de fechas** que elijas, que empieza en el
+mes en curso. Cada bloque tiene su botón **Ayuda** con lo que significa cada
+dato; esto es cómo se lee cada número.
+
+**La regla de oro: un evento cuenta en el período de la fecha que tiene AHORA.**
+Si estaba para el 30 de septiembre y se aplazó al 5 de octubre, sale de
+septiembre y entra en octubre. Para que eso no se lea como «desapareció
+trabajo», cuando alguna actividad se aplaza **fuera** del rango aparece un aviso
+ámbar bajo los números diciendo cuántas fueron.
+
+#### Los seis números de arriba
+
+| Número | Qué cuenta |
+| --- | --- |
+| **Eventos del período** | Todas las actividades con fecha dentro del rango, sin importar su estado. Debajo: cuántas están cerradas, cuántas sin cerrar y cuántas notas hay entre todas |
+| **Cumplidos** | Se hicieron completas. El porcentaje es sobre el total del período |
+| **Incompletos** | No salieron o quedaron a medias |
+| **Aplazados** | Se movieron de fecha y **siguen abiertas** (todavía hay que hacerlas) |
+| **Programados** | Pendientes, en su fecha original, sin haberse movido nunca |
+| **Tasa de cumplimiento** | **Cumplidos ÷ (cumplidos + incompletos)**, es decir: de lo que **ya se cerró**, qué porcentaje salió completo. Lo programado y lo aplazado queda **fuera del cálculo** —arriba y abajo de la división—: todavía no se sabe cómo va a terminar. Sin nada cerrado muestra «—», nunca 0 % |
+
+Los cuatro estados tienen su propio número a propósito: antes «incompletos» y
+«aplazados» iban sumados en una sola tarjeta y no se podía saber cuántos de cada
+uno había, que es justo lo que se quiere mirar a fin de mes.
+
+#### Las gráficas
+
+| Gráfica | Cómo se lee |
+| --- | --- |
+| **Eventos por estado** | El reparto del rango elegido, con los colores del calendario |
+| **Evolución mensual** | **No usa el filtro de fechas** (la tarjeta lo avisa en ámbar): muestra siempre el año completo alrededor de hoy, para que se vea la tendencia. Con el rango por defecto —un mes— una gráfica de evolución tendría una sola barra |
+| **Carga por responsable** | En cuántos eventos del período figura cada persona. Un evento con tres responsables suma uno a cada uno, así que el total de la gráfica es mayor que el número de eventos. Incluye a los externos, marcados como tales y en gris |
+| **Eventos con más notas** | Las actividades sobre las que más se ha escrito. El color de la barra es el estado del evento. Cuentan **todas** sus notas, sin importar el día en que se escribieron |
+| **Cumplimiento por responsable** (tabla) | El porcentaje es **cumplidos ÷ asignados**: el denominador son *todos* sus eventos del rango, **incluidos los que siguen abiertos**. No es la misma cuenta que la «tasa de cumplimiento» de arriba, que solo mira lo ya cerrado |
 
 ---
 
@@ -1667,7 +1748,8 @@ liquidación. Cada bloque tiene su botón **Ayuda**.
 
 ### Lo que ve el equipo — *Mi Cuenta → Mi nómina*
 
-Cada persona ve **solo sus** liquidaciones y **solo cuando están cerradas o
+En la pestaña **Mi nómina** del portal (`/mi-cuenta?seccion=nomina`), cada
+persona ve **solo sus** liquidaciones y **solo cuando están cerradas o
 pagadas**: el período, el neto, el estado, la fecha de pago y el botón para
 descargar su comprobante. Los borradores no aparecen, a propósito: sus cifras
 todavía pueden cambiar.

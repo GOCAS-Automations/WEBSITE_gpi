@@ -44,8 +44,12 @@ export async function MetricasView() {
         Los números de arriba y las gráficas se calculan sobre el{" "}
         <strong>rango de fechas</strong> que elijas; empieza en el mes en curso.
         La única excepción es «Evolución mensual», que muestra siempre el año
-        completo para que se vea la tendencia. Cada bloque tiene un botón{" "}
-        <strong>Ayuda</strong> que explica qué significa cada dato.
+        completo para que se vea la tendencia (la propia tarjeta lo avisa). Un
+        evento cuenta en el período de la <strong>fecha que tiene ahora</strong>:
+        si se aplazó de septiembre a octubre, cuenta en octubre —y bajo los
+        números se avisa cuántas actividades salieron así del período—. Cada
+        bloque tiene un botón <strong>Ayuda</strong> que explica qué significa
+        cada dato.
       </AyudaSeccion>
 
       <CalendarioDashboard

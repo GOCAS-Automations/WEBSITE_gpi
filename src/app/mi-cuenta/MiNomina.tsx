@@ -10,6 +10,11 @@
  * borrador sería prometer una cifra que todavía puede cambiar.
  *
  * Es un Server Component: no necesita interactividad, solo enlaces de descarga.
+ *
+ * Desde que el portal está en PESTAÑAS (18 sep 2026) este bloque es una pestaña
+ * propia, así que cuando no hay liquidaciones **sí** se pinta: antes devolvía
+ * `null` —tenía sentido colgando de una página larga—, pero una pestaña que se
+ * abre vacía y muda parece rota.
  */
 
 import {
@@ -34,12 +39,28 @@ export function MiNomina({
 }: {
   liquidaciones: NominaLiquidacionRecord[];
 }) {
-  // Sin nada que mostrar, el bloque no se pinta: un apartado vacío en el portal
-  // de alguien que aún no tiene volantes solo genera dudas.
-  if (liquidaciones.length === 0) return null;
+  // Vacío amable: explica QUÉ va a aparecer aquí y cuándo, en vez de dejar la
+  // pestaña en blanco.
+  if (liquidaciones.length === 0) {
+    return (
+      <section className="rounded-2xl border border-line bg-white p-5 shadow-soft sm:p-7">
+        <h2 className="flex items-center gap-2 text-lg font-bold text-ink">
+          <Banknote className="h-5 w-5 text-brand-dark" />
+          Mi nómina
+        </h2>
+        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-graphite">
+          Todavía no tienes comprobantes de pago publicados. En cuanto el
+          administrador <strong>cierre</strong> la liquidación de un período,
+          aparecerá aquí con su neto y el botón para descargar el volante. Las
+          liquidaciones en borrador no se muestran, a propósito: sus cifras
+          todavía pueden cambiar.
+        </p>
+      </section>
+    );
+  }
 
   return (
-    <section className="mb-8 rounded-2xl border border-line bg-white p-5 shadow-soft sm:p-7">
+    <section className="rounded-2xl border border-line bg-white p-5 shadow-soft sm:p-7">
       <header className="mb-4">
         <h2 className="flex items-center gap-2 text-lg font-bold text-ink">
           <Banknote className="h-5 w-5 text-brand-dark" />

@@ -49,7 +49,7 @@ export function MisEventos({
 
   if (eventos.length === 0) {
     return (
-      <section className="mb-7 rounded-2xl border border-line bg-white p-5 shadow-soft sm:p-6">
+      <section className="rounded-2xl border border-line bg-white p-5 shadow-soft sm:p-6">
         <h2 className="flex items-center gap-2 text-lg font-bold text-ink">
           <Calendar className="h-5 w-5 text-brand-dark" />
           Mis eventos
@@ -64,7 +64,7 @@ export function MisEventos({
   }
 
   return (
-    <section className="mb-7 rounded-2xl border border-line bg-white p-5 shadow-soft sm:p-6">
+    <section className="rounded-2xl border border-line bg-white p-5 shadow-soft sm:p-6">
       <header className="mb-4">
         <h2 className="flex items-center gap-2 text-lg font-bold text-ink">
           <Calendar className="h-5 w-5 text-brand-dark" />

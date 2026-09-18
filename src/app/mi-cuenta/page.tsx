@@ -25,7 +25,16 @@ import { saveJornada, deleteJornada, changeOwnPassword } from "./actions";
 // La acción de las notas vive con el resto del calendario: es la MISMA para el
 // panel y para el portal, y su permiso lo decide RLS (manager o responsable).
 import { agregarNotaEvento } from "@/app/admin/calendario/actions";
-import { Info, Lock, ArrowRight, LogOut, Clock } from "@/lib/icons";
+import {
+  Info,
+  Lock,
+  ArrowRight,
+  LogOut,
+  Clock,
+  ClockPlus,
+  Calendar,
+  Banknote,
+} from "@/lib/icons";
 
 export const metadata: Metadata = {
   title: "Mi Cuenta GPI",
@@ -39,6 +48,44 @@ export const dynamic = "force-dynamic";
 
 /** Parámetro que fuerza el portal de jornadas aunque tengas panel. */
 const BYPASS_PORTAL = "portal";
+
+/**
+ * EL PORTAL ESTÁ EN PESTAÑAS (18 sep 2026)
+ * ========================================
+ * La pestaña viaja en la dirección con `?seccion=`, igual que el panel usa
+ * `?vista=` en Jornadas, Calendario y Nómina: el enlace se puede compartir y
+ * funciona sin JavaScript. Se llama `seccion` y NO `vista` ni `portal` a
+ * propósito: `?portal=1` ya significa otra cosa —«quiero el portal aunque tenga
+ * panel»— y sigue funcionando igual, combinado con este (`?portal=1&seccion=nomina`).
+ *
+ * Cambiar de pestaña es una navegación completa, así que un formulario a medio
+ * llenar se pierde. Se acepta a conciencia: mantener las tres secciones montadas
+ * a la vez para conservar el borrador obligaría a un componente de cliente con
+ * estado y a traer todo siempre, y la pestaña por defecto es justamente la del
+ * formulario —el empleado entra, registra su jornada y se va—.
+ */
+type SeccionPortal = "jornada" | "eventos" | "nomina" | "clave";
+
+const SECCIONES: SeccionPortal[] = ["jornada", "eventos", "nomina", "clave"];
+
+function normalizarSeccion(valor: string | string[] | undefined): SeccionPortal {
+  const v = Array.isArray(valor) ? valor[0] : valor;
+  return (SECCIONES as string[]).includes(v ?? "")
+    ? (v as SeccionPortal)
+    : "jornada";
+}
+
+/**
+ * Dirección de una pestaña. Si se llegó con `?portal=1` hay que ARRASTRARLO:
+ * sin él, un admin o un coordinador que cambie de pestaña rebota al panel.
+ */
+function hrefSeccion(seccion: SeccionPortal, pidePortal: boolean): string {
+  const partes = [
+    ...(pidePortal ? [`${BYPASS_PORTAL}=1`] : []),
+    ...(seccion === "jornada" ? [] : [`seccion=${seccion}`]),
+  ];
+  return partes.length === 0 ? "/mi-cuenta" : `/mi-cuenta?${partes.join("&")}`;
+}
 
 export default async function MiCuentaPage({
   searchParams,
@@ -66,7 +113,13 @@ export default async function MiCuentaPage({
     // Portal de jornadas: lo ve CUALQUIER cuenta activa, sin importar el rol
     // (el Community Manager también es empleado de GPI, y un admin o un
     // coordinador puede registrar sus horas si lo necesita).
-    return <PortalEmpleado profile={session.profile} />;
+    return (
+      <PortalEmpleado
+        profile={session.profile}
+        seccion={normalizarSeccion(params.seccion)}
+        pidePortal={pidePortal}
+      />
+    );
   }
 
   return (
@@ -142,7 +195,16 @@ export default async function MiCuentaPage({
 /* Portal del empleado                                                 */
 /* ------------------------------------------------------------------ */
 
-async function PortalEmpleado({ profile }: { profile: SessionProfile }) {
+async function PortalEmpleado({
+  profile,
+  seccion,
+  pidePortal,
+}: {
+  profile: SessionProfile;
+  seccion: SeccionPortal;
+  /** true = se llegó con `?portal=1`; hay que conservarlo en las pestañas. */
+  pidePortal: boolean;
+}) {
   const hoy = hoyEnColombia();
 
   const [jornadas, config, horarios, eventos, liquidaciones] = await Promise.all([
@@ -155,7 +217,7 @@ async function PortalEmpleado({ profile }: { profile: SessionProfile }) {
       responsableId: profile.id,
       desde: hoy,
       conNotas: true,
-      limit: 12,
+      limit: 30,
     }),
     // Sus propias liquidaciones. La RLS de la 0011 ya filtra: solo las suyas y
     // solo cuando están cerradas o pagadas, así que aquí no hace falta nada más.
@@ -166,6 +228,46 @@ async function PortalEmpleado({ profile }: { profile: SessionProfile }) {
   const pendientes = jornadas.filter((j) => j.status === "pendiente").length;
   const aprobadas = jornadas.filter((j) => j.status === "aprobada").length;
   const rechazadas = jornadas.filter((j) => j.status === "rechazada").length;
+
+  /* Las cuatro pestañas. El contador es lo que hay ESPERANDO en cada una: las
+     jornadas por revisar, los eventos asignados y los volantes disponibles. */
+  const pestanas: {
+    value: SeccionPortal;
+    label: string;
+    /** Versión corta para el teléfono, donde «Registrar jornada» no cabe. */
+    corto: string;
+    icon: (props: { className?: string }) => React.ReactNode;
+    badge: number;
+  }[] = [
+    {
+      value: "jornada",
+      label: "Registrar jornada",
+      corto: "Jornada",
+      icon: ClockPlus,
+      badge: pendientes,
+    },
+    {
+      value: "eventos",
+      label: "Mis eventos",
+      corto: "Eventos",
+      icon: Calendar,
+      badge: eventos.length,
+    },
+    {
+      value: "nomina",
+      label: "Mi nómina",
+      corto: "Nómina",
+      icon: Banknote,
+      badge: liquidaciones.length,
+    },
+    {
+      value: "clave",
+      label: "Mi contraseña",
+      corto: "Contraseña",
+      icon: Lock,
+      badge: 0,
+    },
+  ];
 
   return (
     <div className="bg-mist">
@@ -203,8 +305,56 @@ async function PortalEmpleado({ profile }: { profile: SessionProfile }) {
         </Container>
       </div>
 
+      {/* ---------------- Pestañas del portal ----------------
+          La sección viaja en `?seccion=`; `?portal=1` se conserva para que las
+          cuentas con panel no reboten al cambiar de pestaña. En móvil son dos
+          filas de dos, no una tira con desplazamiento horizontal: así se ven
+          las cuatro de una vez. */}
+      <div className="border-b border-line bg-white">
+        <Container className="py-3">
+          <nav aria-label="Secciones de Mi Cuenta">
+            <ul className="grid grid-cols-2 gap-1.5 rounded-2xl border border-line bg-mist p-1.5 sm:inline-flex sm:gap-1 sm:rounded-full sm:p-1">
+              {pestanas.map((p) => {
+                const activa = p.value === seccion;
+                const Icon = p.icon;
+                return (
+                  <li key={p.value}>
+                    <Link
+                      prefetch={false}
+                      href={hrefSeccion(p.value, pidePortal)}
+                      aria-current={activa ? "page" : undefined}
+                      className={`flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold transition-colors sm:justify-start sm:rounded-full sm:px-4 ${
+                        activa
+                          ? "bg-brand-dark text-white shadow-soft"
+                          : "text-ink-soft hover:bg-white"
+                      }`}
+                    >
+                      <Icon className="h-4 w-4 shrink-0" />
+                      <span className="truncate sm:hidden">{p.corto}</span>
+                      <span className="hidden truncate sm:inline">{p.label}</span>
+                      {p.badge > 0 && (
+                        <span
+                          className={`ml-0.5 shrink-0 rounded-full px-1.5 py-px text-[11px] font-bold ${
+                            activa
+                              ? "bg-white/25 text-white"
+                              : "bg-white text-graphite"
+                          }`}
+                        >
+                          {p.badge}
+                        </span>
+                      )}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
+        </Container>
+      </div>
+
       <Container className="py-8 sm:py-10">
-        {/* Acceso al panel: admin, coordinador y Community Manager */}
+        {/* Acceso al panel: admin, coordinador y Community Manager. Va fuera de
+            las pestañas porque no pertenece a ninguna. */}
         {conPanel && (
           <div className="mb-7 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-brand/30 bg-brand-tint px-5 py-4 sm:px-6">
             <div className="min-w-0">
@@ -212,10 +362,9 @@ async function PortalEmpleado({ profile }: { profile: SessionProfile }) {
                 Tienes acceso al panel de administración
               </p>
               <p className="mt-1 text-sm leading-relaxed text-graphite">
-                Entraste como{" "}
-                <strong>{ROLE_LABELS[profile.role]}</strong>. Desde el panel
-                editas el contenido del sitio; aquí abajo registras tus propias
-                jornadas.
+                Entraste como <strong>{ROLE_LABELS[profile.role]}</strong>. Desde
+                el panel editas el contenido del sitio; aquí registras tus
+                propias jornadas.
               </p>
             </div>
             <Link
@@ -228,98 +377,105 @@ async function PortalEmpleado({ profile }: { profile: SessionProfile }) {
           </div>
         )}
 
-        {/* Resumen */}
-        <div className="mb-7 grid gap-3 sm:grid-cols-3">
-          <Resumen
-            label="Pendientes de aprobación"
-            valor={pendientes}
-            className="bg-amber-50 text-amber-900"
-          />
-          <Resumen
-            label="Aprobadas"
-            valor={aprobadas}
-            className="bg-brand-tint text-brand-deep"
-          />
-          <Resumen
-            label="Rechazadas"
-            valor={rechazadas}
-            className="bg-red-50 text-red-700"
-          />
-        </div>
+        {/* ---------------- Registrar jornada ---------------- */}
+        {seccion === "jornada" && (
+          <>
+            <div className="mb-7 grid gap-3 sm:grid-cols-3">
+              <Resumen
+                label="Pendientes de aprobación"
+                valor={pendientes}
+                className="bg-amber-50 text-amber-900"
+              />
+              <Resumen
+                label="Aprobadas"
+                valor={aprobadas}
+                className="bg-brand-tint text-brand-deep"
+              />
+              <Resumen
+                label="Rechazadas"
+                valor={rechazadas}
+                className="bg-red-50 text-red-700"
+              />
+            </div>
 
-        {/* Mi nómina: volantes de las liquidaciones ya cerradas */}
-        <MiNomina liquidaciones={liquidaciones} />
+            <section className="rounded-2xl border border-line bg-white p-5 shadow-soft sm:p-7">
+              <header className="mb-5">
+                <h1 className="flex items-center gap-2 text-xl font-extrabold text-ink sm:text-2xl">
+                  <Clock className="h-6 w-6 text-brand-dark" />
+                  Registrar una jornada
+                </h1>
+                <p className="mt-2 max-w-2xl text-sm leading-relaxed text-graphite">
+                  Cuéntanos qué día trabajaste, en qué orden de trabajo y en qué
+                  horario. Mientras escribes verás cómo quedan tus horas
+                  ordinarias y extra. Al guardar, tu coordinador la revisará.
+                </p>
+              </header>
 
-        {/* Mis eventos del calendario interno */}
-        <MisEventos
-          eventos={eventos}
-          agregarNota={agregarNotaEvento}
-          nombrePropio={profile.fullName}
-        />
+              <JornadaForm
+                action={saveJornada}
+                config={config}
+                hoy={hoy}
+                horarios={horarios}
+              />
+            </section>
 
-        {/* Registrar jornada */}
-        <section className="rounded-2xl border border-line bg-white p-5 shadow-soft sm:p-7">
-          <header className="mb-5">
-            <h1 className="flex items-center gap-2 text-xl font-extrabold text-ink sm:text-2xl">
-              <Clock className="h-6 w-6 text-brand-dark" />
-              Registrar una jornada
-            </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-graphite">
-              Cuéntanos qué día trabajaste, en qué orden de trabajo y en qué
-              horario. Mientras escribes verás cómo quedan tus horas ordinarias y
-              extra. Al guardar, tu coordinador la revisará.
+            <section className="mt-8">
+              <h2 className="text-lg font-bold text-ink">Mis jornadas</h2>
+              <p className="mb-4 mt-1 max-w-3xl text-sm leading-relaxed text-graphite">
+                Aquí queda el historial de lo que has registrado y el estado de
+                cada jornada: <strong>pendiente</strong> (nadie la ha revisado
+                todavía y puedes corregirla o eliminarla),{" "}
+                <strong>aprobada</strong> (queda fija, con las horas que se le
+                contaron) o <strong>rechazada</strong> (tu coordinador te dejó
+                una nota con lo que hay que corregir).
+              </p>
+              <MisJornadas
+                jornadas={jornadas}
+                config={config}
+                hoy={hoy}
+                horarios={horarios}
+                saveAction={saveJornada}
+                deleteAction={deleteJornada}
+              />
+            </section>
+
+            <p className="mt-8 flex items-start gap-2 text-xs leading-relaxed text-graphite">
+              <Info className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>
+                ¿Algo no cuadra con tus horas o necesitas corregir una jornada ya
+                revisada? Habla con tu coordinador: él puede devolverla al estado
+                pendiente para que la edites.
+              </span>
             </p>
-          </header>
+          </>
+        )}
 
-          <JornadaForm
-            action={saveJornada}
-            config={config}
-            hoy={hoy}
-            horarios={horarios}
+        {/* ---------------- Mis eventos ---------------- */}
+        {seccion === "eventos" && (
+          <MisEventos
+            eventos={eventos}
+            agregarNota={agregarNotaEvento}
+            nombrePropio={profile.fullName}
           />
-        </section>
+        )}
 
-        {/* Historial */}
-        <section className="mt-8">
-          <h2 className="text-lg font-bold text-ink">Mis jornadas</h2>
-          <p className="mb-4 mt-1 max-w-3xl text-sm leading-relaxed text-graphite">
-            Aquí queda el historial de lo que has registrado y el estado de cada
-            jornada: <strong>pendiente</strong> (nadie la ha revisado todavía y
-            puedes corregirla o eliminarla), <strong>aprobada</strong> (queda fija,
-            con las horas que se le contaron) o <strong>rechazada</strong> (tu
-            coordinador te dejó una nota con lo que hay que corregir).
-          </p>
-          <MisJornadas
-            jornadas={jornadas}
-            config={config}
-            hoy={hoy}
-            horarios={horarios}
-            saveAction={saveJornada}
-            deleteAction={deleteJornada}
-          />
-        </section>
+        {/* ---------------- Mi nómina ---------------- */}
+        {seccion === "nomina" && <MiNomina liquidaciones={liquidaciones} />}
 
-        {/* Contraseña */}
-        <section className="mt-8 rounded-2xl border border-line bg-white p-5 shadow-soft sm:p-7">
-          <h2 className="flex items-center gap-2 text-lg font-bold text-ink">
-            <Lock className="h-5 w-5 text-brand-dark" />
-            Mi contraseña
-          </h2>
-          <p className="mb-4 mt-1 max-w-2xl text-sm leading-relaxed text-graphite">
-            Si te entregaron una contraseña generada, este es el lugar para
-            cambiarla por una que recuerdes. Debe tener al menos 8 caracteres.
-          </p>
-          <PasswordForm action={changeOwnPassword} />
-        </section>
-
-        <p className="mt-8 flex items-start gap-2 text-xs leading-relaxed text-graphite">
-          <Info className="mt-0.5 h-4 w-4 shrink-0" />
-          <span>
-            ¿Algo no cuadra con tus horas o necesitas corregir una jornada ya
-            revisada? Habla con tu coordinador: él puede devolverla al estado
-            pendiente para que la edites.
-          </span>
-        </p>
+        {/* ---------------- Mi contraseña ---------------- */}
+        {seccion === "clave" && (
+          <section className="rounded-2xl border border-line bg-white p-5 shadow-soft sm:p-7">
+            <h2 className="flex items-center gap-2 text-lg font-bold text-ink">
+              <Lock className="h-5 w-5 text-brand-dark" />
+              Mi contraseña
+            </h2>
+            <p className="mb-4 mt-1 max-w-2xl text-sm leading-relaxed text-graphite">
+              Si te entregaron una contraseña generada, este es el lugar para
+              cambiarla por una que recuerdes. Debe tener al menos 8 caracteres.
+            </p>
+            <PasswordForm action={changeOwnPassword} />
+          </section>
+        )}
       </Container>
     </div>
   );

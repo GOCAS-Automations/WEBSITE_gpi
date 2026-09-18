@@ -779,6 +779,47 @@ function nombreDePerfil(
   return perfiles.get(id)?.nombre ?? null;
 }
 
+/**
+ * Cuántos ids de evento se piden por consulta. PostgREST manda el filtro `in`
+ * en la URL, así que con los 2000 eventos que trae el tablero de métricas una
+ * sola llamada armaría una dirección de decenas de miles de caracteres y el
+ * servidor la rechazaría; además Supabase corta cualquier respuesta en 1000
+ * filas (`db-max-rows`), y un evento puede tener varios responsables y varias
+ * notas. Por eso se pide por tandas y se pagina dentro de cada una: sin esto,
+ * «carga por responsable» y «notas escritas» del tablero se quedarían cortas en
+ * silencio, que es peor que fallar.
+ */
+const EVENTOS_POR_TANDA = 100;
+const FILAS_POR_PAGINA = 1000;
+
+/** Trae TODAS las filas hijas de un conjunto de eventos, sin topes ocultos. */
+async function filasDeEventos<T>(
+  supabase: NonNullable<Awaited<ReturnType<typeof getServerSupabase>>>,
+  tabla: "evento_responsables" | "evento_notas",
+  columnas: string,
+  eventoIds: string[],
+): Promise<T[]> {
+  const filas: T[] = [];
+
+  for (let i = 0; i < eventoIds.length; i += EVENTOS_POR_TANDA) {
+    const tanda = eventoIds.slice(i, i + EVENTOS_POR_TANDA);
+    let desde = 0;
+    for (;;) {
+      const { data, error } = await supabase
+        .from(tabla)
+        .select(columnas)
+        .in("evento_id", tanda)
+        .range(desde, desde + FILAS_POR_PAGINA - 1);
+      if (error || !data || data.length === 0) break;
+      filas.push(...(data as T[]));
+      if (data.length < FILAS_POR_PAGINA) break;
+      desde += FILAS_POR_PAGINA;
+    }
+  }
+
+  return filas;
+}
+
 export interface EventoFilters {
   /** `YYYY-MM-DD` — primer día incluido. */
   desde?: string;
@@ -831,20 +872,37 @@ export async function listEventos(
 
     const ids = data.map((row) => String(row.id));
 
-    const [responsablesRes, notasRes] = await Promise.all([
-      supabase
-        .from("evento_responsables")
-        .select("id, evento_id, profile_id, nombre_externo")
-        .in("evento_id", ids),
-      supabase
-        .from("evento_notas")
-        .select("id, evento_id, autor_id, texto, created_at")
-        .in("evento_id", ids)
-        .order("created_at", { ascending: false }),
+    const [responsables, notasSinOrden] = await Promise.all([
+      filasDeEventos<{
+        id: string;
+        evento_id: string;
+        profile_id: string | null;
+        nombre_externo: string | null;
+      }>(
+        supabase,
+        "evento_responsables",
+        "id, evento_id, profile_id, nombre_externo",
+        ids,
+      ),
+      filasDeEventos<{
+        id: string;
+        evento_id: string;
+        autor_id: string | null;
+        texto: string;
+        created_at: string;
+      }>(
+        supabase,
+        "evento_notas",
+        "id, evento_id, autor_id, texto, created_at",
+        ids,
+      ),
     ]);
 
-    const responsables = responsablesRes.data ?? [];
-    const notas = notasRes.data ?? [];
+    // El orden se impone aquí: al venir en tandas, ordenar en la consulta solo
+    // ordenaría dentro de cada una. Más reciente primero.
+    const notas = [...notasSinOrden].sort((a, b) =>
+      String(b.created_at ?? "").localeCompare(String(a.created_at ?? "")),
+    );
 
     const perfiles = await mapaDePerfiles(supabase, [
       ...data.map((row) => (row.creado_por ? String(row.creado_por) : null)),

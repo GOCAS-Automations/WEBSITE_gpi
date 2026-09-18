@@ -33,6 +33,9 @@ export type EventoEstado = (typeof EVENTO_ESTADOS)[number];
 /** Estados "abiertos": el evento todavía espera un cierre. */
 export const EVENTO_ESTADOS_ABIERTOS: EventoEstado[] = ["programado", "aplazado"];
 
+/** Estados "cerrados": ya se dijo cómo salió la actividad. */
+export const EVENTO_ESTADOS_CERRADOS: EventoEstado[] = ["cumplido", "incompleto"];
+
 export const EVENTO_ESTADO_LABELS: Record<EventoEstado, string> = {
   programado: "Programado",
   cumplido: "Cumplido",
@@ -46,9 +49,9 @@ export const EVENTO_ESTADO_DESCRIPCIONES: Record<EventoEstado, string> = {
     "Está agendado y todavía no se ha cerrado. Es el estado con el que nace todo evento.",
   cumplido: "Se hizo completo. Es el cierre normal de una actividad.",
   incompleto:
-    "Se hizo a medias o no se pudo hacer, y no se va a reprogramar. Deja una nota explicando por qué.",
+    "Se hizo a medias o no se pudo hacer. Deja una nota explicando por qué. Si después se decide repetirlo, se puede aplazar a otra fecha.",
   aplazado:
-    "Se movió a otra fecha y sigue abierto. El calendario recuerda para qué día estaba antes.",
+    "Se movió a otra fecha y sigue abierto (todavía hay que hacerlo). El calendario recuerda para qué día estaba antes.",
 };
 
 /** Clases del badge de estado (mismo lenguaje visual que las jornadas). */
@@ -85,6 +88,91 @@ export function normalizarEstado(value: unknown): EventoEstado {
     (EVENTO_ESTADOS as readonly string[]).includes(value)
     ? (value as EventoEstado)
     : "programado";
+}
+
+/* ------------------------------------------------------------------ */
+/* Máquina de estados: qué se puede hacer con un evento                */
+/* ------------------------------------------------------------------ */
+
+/**
+ * INVARIANTE DEL CALENDARIO (18 sep 2026)
+ * ---------------------------------------
+ * **Lo que la pantalla dice de un evento y lo que cuenta el tablero nunca
+ * pueden contradecirse.**
+ *
+ * El caso que lo rompía: `fecha_original` (la fecha que el evento tenía antes
+ * de moverse) es lo que dispara el aviso ámbar «estaba programado para el … y
+ * se aplazó», pero las métricas cuentan por `estado`. Reabrir un evento ya
+ * aplazado lo devolvía a `programado` CONSERVANDO `fecha_original`: en pantalla
+ * se leía «se aplazó» y en el tablero sumaba como programado.
+ *
+ * La regla que cierra el agujero: **un evento ABIERTO que ya se movió alguna
+ * vez es `aplazado`, nunca `programado`**. `programado` queda reservado para lo
+ * que sigue en su fecha original. Formalmente:
+ *
+ *     estado ∈ {programado, aplazado}  ⇒  (estado === 'aplazado' ⇔ fechaOriginal ≠ null)
+ *
+ * Los estados cerrados (`cumplido`, `incompleto`) sí pueden llevar
+ * `fecha_original`: ahí el dato es historia («se movió y luego se hizo»), no
+ * una afirmación sobre el presente.
+ *
+ * MATRIZ ESTADO → ACCIONES
+ * ------------------------
+ * | Estado desde | Cumplido | Incompleto | Reabrir | Aplazar | Editar | Eliminar |
+ * | ------------ | :------: | :--------: | :-----: | :-----: | :----: | :------: |
+ * | programado   |    Sí    |     Sí     |   no¹   |   Sí    |   Sí   |    Sí    |
+ * | aplazado     |    Sí    |     Sí     |   no¹   |   Sí²   |   Sí   |    Sí    |
+ * | cumplido     |   no³    |     Sí     |   Sí⁴   |  NO⁵    |   Sí   |    Sí    |
+ * | incompleto   |    Sí    |    no³     |   Sí⁴   |   Sí⁶   |   Sí   |    Sí    |
+ *
+ *  ¹ Ya está abierto: reabrirlo no haría nada.
+ *  ² Se vuelve a mover; `fecha_original` NO cambia (guarda el primer día).
+ *  ³ Ya está en ese estado.
+ *  ⁴ Vuelve a quedar abierto: `programado` si nunca se movió, `aplazado` si sí.
+ *  ⁵ **Un evento que ya se hizo no se aplaza.** Si en realidad no se hizo,
+ *    primero se marca incompleto o se reabre, y después se mueve de fecha.
+ *  ⁶ Reprogramar lo que quedó a medias: se mueve de fecha y vuelve a quedar
+ *    abierto (`aplazado`).
+ *
+ * Esto lo comprueban a la vez la interfaz (`EventoDetalle`, que solo pinta los
+ * botones con sentido) y el servidor (`cambiarEstadoEvento` / `aplazarEvento`,
+ * que rechazan lo demás). Ocultar un botón nunca es una barrera.
+ */
+
+/** El estado ABIERTO que le toca a un evento según si ya se movió de fecha. */
+export function estadoAbierto(fechaOriginal: string | null | undefined): EventoEstado {
+  return fechaOriginal ? "aplazado" : "programado";
+}
+
+/** ¿Está el evento todavía sin cerrar? */
+export function estaAbierto(estado: EventoEstado): boolean {
+  return EVENTO_ESTADOS_ABIERTOS.includes(estado);
+}
+
+/** Qué acciones tienen sentido sobre un evento. Única fuente de la matriz. */
+export interface AccionesDisponibles {
+  cumplido: boolean;
+  incompleto: boolean;
+  reabrir: boolean;
+  aplazar: boolean;
+  /** Estado al que volvería el evento si se reabre. */
+  estadoAlReabrir: EventoEstado;
+}
+
+export function accionesDisponibles(evento: {
+  estado: EventoEstado;
+  fechaOriginal: string | null;
+}): AccionesDisponibles {
+  const abierto = estaAbierto(evento.estado);
+  return {
+    cumplido: evento.estado !== "cumplido",
+    incompleto: evento.estado !== "incompleto",
+    // Reabrir solo tiene sentido sobre un evento ya cerrado.
+    reabrir: !abierto,
+    // Lo único que no se aplaza es lo que ya se hizo.
+    aplazar: evento.estado !== "cumplido",
+    estadoAlReabrir: estadoAbierto(evento.fechaOriginal),
+  };
 }
 
 /* ------------------------------------------------------------------ */

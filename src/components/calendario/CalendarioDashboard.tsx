@@ -16,7 +16,23 @@
  * OJO con «Evolución mensual»: es la única gráfica que NO depende del filtro de
  * fechas: se lee entera, mes a mes, sobre toda la ventana. Con el rango por
  * defecto —el mes en curso— una gráfica de evolución tendría una sola barra y
- * no diría nada.
+ * no diría nada. Eso va DICHO EN LA TARJETA (una etiqueta visible junto al
+ * título), no solo en la ayuda: un número que no obedece al filtro y no lo
+ * avisa se lee mal.
+ *
+ * EN QUÉ PERÍODO CUENTA CADA EVENTO (regla, 18 sep 2026)
+ * ------------------------------------------------------
+ * Siempre en el de la fecha que el evento tiene AHORA (`fecha`), nunca en la
+ * que tenía antes de moverse (`fechaOriginal`). Un evento del 30 de septiembre
+ * que se aplaza al 5 de octubre sale de septiembre y entra en octubre: el
+ * tablero responde «qué hay en estos días», no «qué se planeó en su momento».
+ * Para que eso no se lea como una pérdida, bajo los KPI se avisa cuántas
+ * actividades **salieron del período al aplazarse** (las que tenían su
+ * `fechaOriginal` dentro del rango y su `fecha` fuera).
+ *
+ * INVARIANTE (ver `src/lib/calendario.ts`): un evento abierto que ya se movió
+ * es `aplazado`, nunca `programado`. Estos conteos van por `estado`, así que si
+ * ese invariante se rompiera, el tablero volvería a contradecir a la pantalla.
  */
 
 import { useMemo, useState } from "react";
@@ -47,8 +63,11 @@ import {
   Calendar,
   CheckCircle,
   ClipboardList,
+  Clock,
   FilterX,
   AlertTriangle,
+  Info,
+  Shuffle,
   Users,
 } from "@/lib/icons";
 import {
@@ -112,11 +131,29 @@ export function CalendarioDashboard({
 
   const total = filtrados.length;
   const cerrados = conteo.cumplido + conteo.incompleto;
+  const abiertos = conteo.programado + conteo.aplazado;
   const tasa = porcentaje(conteo.cumplido, cerrados);
   const totalNotas = useMemo(
     () => filtrados.reduce((suma, e) => suma + e.totalNotas, 0),
     [filtrados],
   );
+
+  /**
+   * Actividades que ESTABAN en el período y se fueron de él al aplazarse: su
+   * fecha original cae dentro del rango, pero la fecha que tienen ahora no.
+   * No se suman a ningún KPI —cuentan en el período al que se movieron—, pero
+   * se avisan para que nadie lea el mes como «desapareció trabajo».
+   */
+  const salieronDelPeriodo = useMemo(() => {
+    const dentro = (fecha: string) =>
+      (!desde || fecha >= desde) && (!hasta || fecha <= hasta);
+    return eventos.filter(
+      (e) =>
+        e.fechaOriginal !== null &&
+        dentro(e.fechaOriginal) &&
+        !dentro(e.fecha),
+    ).length;
+  }, [eventos, desde, hasta]);
 
   /* ---------------- Series ---------------- */
   const porEstado = useMemo(
@@ -163,6 +200,8 @@ export function CalendarioDashboard({
     const mapa = new Map<
       string,
       {
+        /** Identidad estable de la fila (id de la cuenta o nombre externo). */
+        clave: string;
         nombre: string;
         completo: string;
         total: number;
@@ -174,6 +213,7 @@ export function CalendarioDashboard({
       for (const r of evento.responsables) {
         const clave = r.profileId ?? `externo:${r.nombre.toLowerCase()}`;
         const fila = mapa.get(clave) ?? {
+          clave,
           // En el eje manda el apodo si lo hay: los nombres completos no caben.
           nombre: r.externo
             ? `${r.nombre} (externo)`
@@ -261,44 +301,61 @@ export function CalendarioDashboard({
               info={[
                 {
                   label: "Eventos del período",
-                  desc: "Cuántas actividades tienen fecha dentro del rango elegido, sin importar su estado.",
+                  desc: "Cuántas actividades tienen fecha dentro del rango elegido, sin importar su estado. Un evento cuenta en el período de la fecha que tiene AHORA: si se aplazó de septiembre a octubre, cuenta en octubre.",
                 },
                 {
                   label: "Tasa de cumplimiento",
-                  desc: "De las actividades ya cerradas (cumplidas + incompletas), qué porcentaje salió completo. Las programadas y las aplazadas no cuentan: todavía no se sabe cómo van a terminar.",
+                  desc: "Cumplidos ÷ (cumplidos + incompletos), es decir: de las actividades que YA SE CERRARON, qué porcentaje salió completo. Las programadas y las aplazadas quedan fuera del cálculo —arriba y abajo de la división—: todavía no se sabe cómo van a terminar. Sin eventos cerrados, la tasa sale «—», nunca 0 %.",
                 },
                 ...AYUDA_ESTADOS,
                 {
                   label: "Notas escritas",
-                  desc: "Cuántas notas de seguimiento tienen entre todos los eventos del período. Muchas notas suelen indicar actividades que se complicaron.",
+                  desc: "Cuántas notas de seguimiento tienen entre todos los eventos del período, sin importar el día en que se escribieron. Muchas notas suelen indicar actividades que se complicaron.",
+                },
+                {
+                  label: "Salieron del período",
+                  desc: "Actividades que estaban programadas dentro de estas fechas y se aplazaron a un día fuera de ellas. No suman en ningún número de arriba: cuentan en el período al que se movieron. Se avisan para que el mes no se lea como si el trabajo hubiera desaparecido.",
                 },
               ]}
             />
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               <StatCard
                 icon={<Calendar className="h-5 w-5 text-white" />}
                 label="Eventos del período"
                 value={String(total)}
-                sub={`${conteo.programado} sin cerrar todavía`}
+                sub={`${cerrados} cerrado(s) · ${abiertos} sin cerrar · ${totalNotas} nota(s)`}
                 color="bg-brand-dark"
               />
               <StatCard
                 icon={<CheckCircle className="h-5 w-5 text-white" />}
                 label="Cumplidos"
                 value={String(conteo.cumplido)}
-                sub={`${porcentaje(conteo.cumplido, total)}% de lo programado`}
+                sub={`${porcentaje(conteo.cumplido, total)}% del total del período`}
                 subTone="success"
                 color="bg-brand"
               />
               <StatCard
                 icon={<AlertTriangle className="h-5 w-5 text-white" />}
-                label="Incompletos y aplazados"
-                value={String(conteo.incompleto + conteo.aplazado)}
-                sub={`${conteo.incompleto} incompleto(s) · ${conteo.aplazado} aplazado(s)`}
-                subTone={
-                  conteo.incompleto + conteo.aplazado > 0 ? "warning" : "muted"
-                }
+                label="Incompletos"
+                value={String(conteo.incompleto)}
+                sub={`${porcentaje(conteo.incompleto, total)}% del total · no salieron o quedaron a medias`}
+                subTone={conteo.incompleto > 0 ? "warning" : "muted"}
+                color="bg-red-600"
+              />
+              <StatCard
+                icon={<Shuffle className="h-5 w-5 text-white" />}
+                label="Aplazados"
+                value={String(conteo.aplazado)}
+                sub={`${porcentaje(conteo.aplazado, total)}% del total · movidos de fecha y todavía abiertos`}
+                subTone={conteo.aplazado > 0 ? "warning" : "muted"}
                 color="bg-amber-500"
+              />
+              <StatCard
+                icon={<Clock className="h-5 w-5 text-white" />}
+                label="Programados"
+                value={String(conteo.programado)}
+                sub={`${porcentaje(conteo.programado, total)}% del total · pendientes en su fecha original`}
+                color="bg-graphite"
               />
               <StatCard
                 icon={<ClipboardList className="h-5 w-5 text-white" />}
@@ -306,13 +363,29 @@ export function CalendarioDashboard({
                 value={cerrados === 0 ? "—" : `${tasa}%`}
                 sub={
                   cerrados === 0
-                    ? "Aún no hay eventos cerrados"
-                    : `${conteo.cumplido} de ${cerrados} cerrados · ${totalNotas} nota(s)`
+                    ? "Aún no hay eventos cerrados en el período"
+                    : `${conteo.cumplido} de ${cerrados} ya cerrados (cumplidos + incompletos)`
                 }
                 subTone={cerrados > 0 && tasa < 70 ? "warning" : "muted"}
                 color="bg-ink"
               />
             </div>
+
+            {/* Regla del período, dicha donde se necesita: un evento cuenta en
+                el mes de la fecha que tiene AHORA. */}
+            {salieronDelPeriodo > 0 && (
+              <p className="mt-4 flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-900">
+                <Info className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>
+                  Además, <strong>{salieronDelPeriodo}</strong> actividad(es)
+                  que estaban programadas dentro de estas fechas{" "}
+                  <strong>se aplazaron a un día fuera del rango</strong>, así que
+                  no suman en los números de arriba: cuentan en el período al que
+                  se movieron. Un evento siempre cuenta en el período de la fecha
+                  que tiene <strong>ahora</strong>.
+                </span>
+              </p>
+            )}
           </section>
 
           {/* ---------------- Gráficas ---------------- */}
@@ -375,9 +448,21 @@ export function CalendarioDashboard({
 
             <ChartCard
               title="Evolución mensual"
-              hint="Cuántos eventos hubo cada mes y cómo terminaron. Esta gráfica NO depende del filtro de fechas: muestra siempre el año completo alrededor de hoy."
-              info={AYUDA_ESTADOS}
+              hint="Cuántos eventos hubo cada mes y cómo terminaron, para ver la tendencia."
+              info={[
+                {
+                  label: "No usa el filtro de fechas",
+                  desc: "Es la ÚNICA gráfica del tablero que ignora el rango de arriba: siempre muestra el año completo alrededor de hoy (12 meses atrás y 4 adelante). Con el rango por defecto —el mes en curso— una gráfica de evolución tendría una sola barra y no diría nada.",
+                },
+                ...AYUDA_ESTADOS,
+              ]}
             >
+              {/* Aviso VISIBLE, no escondido en la ayuda: un número que no
+                  obedece al filtro que tiene encima se lee mal. */}
+              <p className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[11px] font-semibold text-amber-800">
+                <Info className="h-3.5 w-3.5" />
+                No usa el filtro de fechas: siempre el año completo
+              </p>
               {evolucion.length === 0 ? (
                 <ChartEmpty>Todavía no hay meses con eventos.</ChartEmpty>
               ) : (
@@ -497,9 +582,9 @@ export function CalendarioDashboard({
                       ]}
                     />
                     <Bar dataKey="total" radius={[0, 4, 4, 0]}>
-                      {responsables.visibles.map((r, i) => (
+                      {responsables.visibles.map((r) => (
                         <Cell
-                          key={`${r.nombre}-${i}`}
+                          key={r.clave}
                           fill={r.externo ? "#6d6e71" : "#3dae2b"}
                         />
                       ))}
@@ -585,8 +670,12 @@ export function CalendarioDashboard({
                 Cumplimiento por responsable
               </h3>
               <p className="mt-1 text-xs leading-relaxed text-graphite">
-                De los eventos en los que figura cada persona, cuántos terminaron
-                cumplidos.
+                De los eventos del período en los que figura cada persona,
+                cuántos terminaron cumplidos. El porcentaje es{" "}
+                <strong>cumplidos ÷ asignados</strong>: el denominador son{" "}
+                <em>todos</em> sus eventos del rango, incluidos los que siguen
+                abiertos, así que no es la misma cuenta que la «tasa de
+                cumplimiento» de arriba.
               </p>
               <div className="mt-3 overflow-x-auto">
                 <table className="w-full min-w-[26rem] text-sm">
@@ -608,7 +697,7 @@ export function CalendarioDashboard({
                   </thead>
                   <tbody>
                     {porResponsable.map((r) => (
-                      <tr key={r.nombre} className="border-b border-line/70">
+                      <tr key={r.clave} className="border-b border-line/70">
                         <td
                           className="py-2 pr-3 font-semibold text-ink-soft"
                           title={r.completo}
