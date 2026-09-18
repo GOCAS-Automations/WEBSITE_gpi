@@ -79,6 +79,7 @@ export function CalendarioPanel({
   guardar,
   cambiarEstado,
   aplazar,
+  devolverFechaOriginal,
   eliminar,
   agregarNota,
 }: {
@@ -92,10 +93,18 @@ export function CalendarioPanel({
   guardar: Accion;
   cambiarEstado: Accion;
   aplazar: Accion;
+  /** Deshacer el aplazamiento: el evento vuelve a su día original. */
+  devolverFechaOriginal: Accion;
   eliminar: Accion;
   agregarNota: Accion;
 }) {
-  const acciones = { cambiarEstado, aplazar, eliminar, agregarNota };
+  const acciones = {
+    cambiarEstado,
+    aplazar,
+    devolverFechaOriginal,
+    eliminar,
+    agregarNota,
+  };
   const [detalleId, setDetalleId] = useState<string | null>(null);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [creandoEn, setCreandoEn] = useState<string | null>(null);

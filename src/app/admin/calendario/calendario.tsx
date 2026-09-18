@@ -31,6 +31,7 @@ import {
   agregarNotaEvento,
   aplazarEvento,
   cambiarEstadoEvento,
+  devolverFechaOriginalEvento,
   eliminarEvento,
   saveEvento,
 } from "./actions";
@@ -104,6 +105,7 @@ export async function CalendarioView({
         guardar={saveEvento}
         cambiarEstado={cambiarEstadoEvento}
         aplazar={aplazarEvento}
+        devolverFechaOriginal={devolverFechaOriginalEvento}
         eliminar={eliminarEvento}
         agregarNota={agregarNotaEvento}
       />

@@ -254,7 +254,9 @@ async function PortalEmpleado({
     {
       value: "clave",
       label: "Mi contraseña",
-      corto: "Contraseña",
+      // «Clave» y no «Contraseña»: con tres columnas en un teléfono de 390 px,
+      // la palabra larga se cortaba («Contra…»), que es peor que acortarla.
+      corto: "Clave",
       icon: Lock,
       badge: 0,
     },
@@ -314,7 +316,7 @@ async function PortalEmpleado({
                       prefetch={false}
                       href={hrefSeccion(p.value, pidePortal)}
                       aria-current={activa ? "page" : undefined}
-                      className={`flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold transition-colors sm:justify-start sm:rounded-full sm:px-4 ${
+                      className={`flex items-center justify-center gap-1 rounded-xl px-1.5 py-2 text-xs font-semibold transition-colors sm:justify-start sm:gap-1.5 sm:rounded-full sm:px-4 sm:text-sm ${
                         activa
                           ? "bg-brand-dark text-white shadow-soft"
                           : "text-ink-soft hover:bg-white"
@@ -325,7 +327,7 @@ async function PortalEmpleado({
                       <span className="hidden truncate sm:inline">{p.label}</span>
                       {p.badge > 0 && (
                         <span
-                          className={`ml-0.5 shrink-0 rounded-full px-1.5 py-px text-[11px] font-bold ${
+                          className={`shrink-0 rounded-full px-1 py-px text-[10px] font-bold sm:ml-0.5 sm:px-1.5 sm:text-[11px] ${
                             activa
                               ? "bg-white/25 text-white"
                               : "bg-white text-graphite"

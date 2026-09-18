@@ -28,6 +28,18 @@
  * tocar: si un evento se mueve tres veces, sigue diciendo para cuándo estaba
  * previsto al principio, que es la pregunta que hace la gerencia.
  *
+ * **Aplazar es mover HACIA ADELANTE** (pedido de GPI, 18 sep 2026): la fecha
+ * nueva tiene que ser posterior a la que el evento tiene ahora. Antes se podía
+ * elegir un día anterior y quedaba un «aplazado» que en realidad adelantaba la
+ * actividad. Se comprueba en el formulario (con `min`) y aquí.
+ *
+ * DESHACER EL APLAZAMIENTO
+ * ------------------------
+ * `devolverFechaOriginalEvento` es la operación inversa: el evento vuelve a su
+ * día original, se limpia `fecha_original` y queda `programado` — como si nunca
+ * se hubiera movido. Solo sobre eventos ABIERTOS: en uno ya cerrado la fecha
+ * original es historia (ver la matriz en `src/lib/calendario.ts`).
+ *
  * QUÉ SE PUEDE HACER EN CADA ESTADO
  * ---------------------------------
  * La matriz vive en `src/lib/calendario.ts` (`accionesDisponibles`), y la
@@ -48,6 +60,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getActiveSession, getManagerOrNull } from "@/lib/supabase/auth";
+import { formatearFechaLarga } from "@/lib/jornada";
 import {
   EVENTO_ESTADOS,
   EVENTO_ESTADO_LABELS,
@@ -359,6 +372,15 @@ export async function aplazarEvento(
       "La nueva fecha es la misma que tiene el evento. Elige otro día.",
     );
 
+  /* APLAZAR ES MOVER HACIA ADELANTE. Las fechas son `YYYY-MM-DD`, así que
+     compararlas como texto ya las ordena bien. Si por lo que sea la fecha
+     guardada no tiene ese formato, no se inventa nada: se deja pasar y manda la
+     comprobación anterior. */
+  if (ES_FECHA.test(fechaActual) && nuevaFecha < fechaActual)
+    return fail(
+      `Aplazar es mover la actividad HACIA ADELANTE: la nueva fecha tiene que ser posterior al ${formatearFechaLarga(fechaActual)}, que es el día que el evento tiene ahora. Si lo que quieres es adelantarlo, cámbiale el día con «Editar datos»; si quieres deshacer un aplazamiento anterior, usa «Devolver a su fecha original».`,
+    );
+
   // La fecha original se escribe UNA sola vez: la primera que se aplaza.
   const fechaOriginal =
     typeof actual.fecha_original === "string" && actual.fecha_original
@@ -382,6 +404,88 @@ export async function aplazarEvento(
   revalidar();
   return ok(
     "Evento aplazado. Queda en la fecha nueva y el calendario recuerda para cuándo estaba programado al principio.",
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Deshacer el aplazamiento                                            */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Devuelve el evento a la fecha que tenía antes de aplazarse.
+ *
+ * Es la operación INVERSA de `aplazarEvento`, y por eso deja las cosas como si
+ * el aplazamiento nunca hubiera existido: vuelve `fecha` a `fecha_original`,
+ * pone `fecha_original` en NULL y el estado en `programado`.
+ *
+ * Ese `programado` no es una elección estética: lo exige el invariante del
+ * calendario (`estado ∈ {programado, aplazado} ⇒ aplazado ⇔ fechaOriginal ≠
+ * null`). Dejarlo en `aplazado` sin fecha original haría que la ficha dijera
+ * «se aplazó» sin poder decir desde cuándo, y el tablero lo contaría como
+ * aplazado cuando ya está en su día de siempre.
+ *
+ * Solo sobre eventos ABIERTOS. En uno cerrado (`cumplido` / `incompleto`) la
+ * fecha original es historia —se movió y después se cerró—: borrarla
+ * reescribiría el pasado y movería de día una actividad que ya pasó.
+ */
+export async function devolverFechaOriginalEvento(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await getManagerOrNull();
+  if (!session) return SIN_PERMISO;
+
+  const id = text(formData, "id");
+  if (!id) return fail("Falta el identificador del evento.");
+
+  const { data: actual, error: errorLectura } = await session.supabase
+    .from("eventos")
+    .select("fecha, fecha_original, estado")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (errorLectura) return fail(errorLectura.message);
+  if (!actual)
+    return fail("Ese evento ya no existe. Recarga la página, por favor.");
+
+  const fechaOriginal =
+    typeof actual.fecha_original === "string" && actual.fecha_original
+      ? actual.fecha_original
+      : null;
+
+  if (!fechaOriginal)
+    return fail(
+      "Ese evento nunca se aplazó, así que no hay una fecha original a la que devolverlo. Si quieres cambiarle el día, usa «Editar datos».",
+    );
+
+  const estadoActual = normalizarEstado(actual.estado);
+
+  // Barrera de la matriz (ver `accionesDisponibles`): en un evento ya cerrado la
+  // fecha original es historia. Se comprueba aquí y no solo escondiendo el botón.
+  if (!accionesDisponibles({ estado: estadoActual, fechaOriginal }).devolverFechaOriginal)
+    return fail(
+      `Ese evento ya está marcado como ${EVENTO_ESTADO_LABELS[
+        estadoActual
+      ].toLowerCase()}: su fecha original es parte de su historia (se movió y después se cerró), así que no se borra. Si hay que corregirlo, «Reabrir» primero y después devolverlo a su fecha.`,
+    );
+
+  const { data, error } = await session.supabase
+    .from("eventos")
+    .update({
+      fecha: fechaOriginal,
+      fecha_original: null,
+      estado: "programado",
+    })
+    .eq("id", id)
+    .select("id");
+
+  if (error) return fail(error.message);
+  if (!data || data.length === 0)
+    return fail("Ese evento ya no existe. Recarga la página, por favor.");
+
+  revalidar();
+  return ok(
+    `Listo: el evento volvió al ${formatearFechaLarga(fechaOriginal)} y deja de estar aplazado. Queda PROGRAMADO, como si nunca se hubiera movido.`,
   );
 }
 

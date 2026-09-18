@@ -544,7 +544,7 @@ compartir.
 | **Mi contraseña** | `/mi-cuenta?seccion=clave` | Cambiar la contraseña |
 
 En el teléfono las pestañas se ven en **tres columnas**, con el nombre corto
-(*Jornada · Eventos · Contraseña*). Las dos primeras llevan un contador: las
+(*Jornada · Eventos · Clave*). Las dos primeras llevan un contador: las
 jornadas que están esperando revisión y los eventos asignados. Quien no tenga
 eventos ve un mensaje explicando qué va a aparecer ahí, no una pestaña en
 blanco.
@@ -1508,11 +1508,18 @@ las acciones:
 | --- | --- |
 | **Marcar cumplido** | Se hizo completo. Es el cierre normal |
 | **Marcar incompleto** | No se hizo o quedó a medias. Deja una nota explicando qué faltó |
-| **Aplazar a otra fecha** | Se movió: el evento se pasa al día nuevo, queda **aplazado** y el calendario **recuerda para cuándo estaba al principio** |
+| **Aplazar a otra fecha** | Se movió: el evento se pasa al día nuevo, queda **aplazado** y el calendario **recuerda para cuándo estaba al principio**. La fecha nueva tiene que ser **posterior** a la que tiene ahora |
 | **Reprogramar a otra fecha** | Es el mismo botón sobre un evento **incompleto**: se decidió repetirlo, así que se mueve de día y vuelve a quedar **abierto** |
+| **Devolver a su fecha original** | **Deshace el aplazamiento**: el evento vuelve a su día original, deja de estar aplazado y queda **programado**, como si nunca se hubiera movido |
 | **Reabrir** | Vuelve a dejar pendiente un evento que ya estaba cerrado |
 | **Editar datos** | Cambia título, fecha, horas, descripción o responsables |
 | **Eliminar evento** | Lo borra para siempre, con sus notas |
+
+> **Aplazar es mover hacia ADELANTE.** El calendario ya no deja elegir un día
+> anterior al que el evento tiene: el campo de fecha empieza en el día
+> siguiente y, si alguien fuerza el envío, el servidor lo rechaza explicando
+> por qué. ¿Hay que **adelantar** la actividad? Eso es *Editar datos*. ¿Te
+> equivocaste al aplazar? Eso es *Devolver a su fecha original*.
 
 #### Qué acciones se ven en cada estado
 
@@ -1520,16 +1527,27 @@ las acciones:
 el servidor rechaza lo mismo que la pantalla esconde, por si alguien llega con
 la página desactualizada.
 
-| Estado del evento | Cumplido | Incompleto | Reabrir | Aplazar | Editar | Eliminar |
-| --- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Programado** | Sí | Sí | — ya está abierto | Sí | Sí | Sí |
-| **Aplazado** | Sí | Sí | — ya está abierto | Sí, se vuelve a mover | Sí | Sí |
-| **Cumplido** | — ya lo está | Sí | Sí | **No** | Sí | Sí |
-| **Incompleto** | Sí | — ya lo está | Sí | Sí, «Reprogramar» | Sí | Sí |
+| Estado del evento | Cumplido | Incompleto | Reabrir | Aplazar | Devolver a su fecha original | Editar | Eliminar |
+| --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Programado** | Sí | Sí | — ya está abierto | Sí | — nunca se movió | Sí | Sí |
+| **Aplazado** | Sí | Sí | — ya está abierto | Sí, se vuelve a mover | Sí | Sí | Sí |
+| **Cumplido** | — ya lo está | Sí | Sí | **No** | **No** | Sí | Sí |
+| **Incompleto** | Sí | — ya lo está | Sí | Sí, «Reprogramar» | **No** | Sí | Sí |
 
 - **Un evento cumplido no se aplaza**: ya se hizo. Si en realidad no se hizo,
   primero **reábrelo** o márcalo **incompleto**, y después muévelo de fecha. La
   ficha lo dice ahí mismo, donde iría el botón.
+- **«Devolver a su fecha original» solo aparece en los eventos abiertos que
+  alguna vez se movieron** —en la práctica, los *aplazados*—. En uno ya
+  **cerrado** esa fecha es **historia**: dice que se movió y que después se
+  cumplió o quedó incompleto, en el día que tiene. Borrarla reescribiría el
+  pasado y, de paso, movería de día una actividad que ya ocurrió. Si de verdad
+  hay que corregirla, primero se **reabre** (vuelve a *aplazado*) y entonces sí
+  se devuelve a su fecha.
+- Devolver un evento a su fecha original lo deja **programado**, no *aplazado*:
+  al limpiar la fecha original ya no queda constancia de ningún movimiento, y
+  el mismo principio de la viñeta de abajo exige que la ficha y el tablero
+  digan lo mismo.
 - **«Reabrir» no siempre devuelve a *programado***. Si el evento **ya se movió
   de fecha alguna vez**, vuelve a **aplazado**: sigue pendiente por hacer, pero
   en un día distinto al que tenía al principio. El botón lo anuncia —«Reabrir

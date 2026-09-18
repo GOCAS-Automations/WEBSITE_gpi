@@ -118,12 +118,12 @@ export function normalizarEstado(value: unknown): EventoEstado {
  *
  * MATRIZ ESTADO → ACCIONES
  * ------------------------
- * | Estado desde | Cumplido | Incompleto | Reabrir | Aplazar | Editar | Eliminar |
- * | ------------ | :------: | :--------: | :-----: | :-----: | :----: | :------: |
- * | programado   |    Sí    |     Sí     |   no¹   |   Sí    |   Sí   |    Sí    |
- * | aplazado     |    Sí    |     Sí     |   no¹   |   Sí²   |   Sí   |    Sí    |
- * | cumplido     |   no³    |     Sí     |   Sí⁴   |  NO⁵    |   Sí   |    Sí    |
- * | incompleto   |    Sí    |    no³     |   Sí⁴   |   Sí⁶   |   Sí   |    Sí    |
+ * | Estado desde | Cumplido | Incompleto | Reabrir | Aplazar | Devolver a fecha original | Editar | Eliminar |
+ * | ------------ | :------: | :--------: | :-----: | :-----: | :-----------------------: | :----: | :------: |
+ * | programado   |    Sí    |     Sí     |   no¹   |   Sí    |           no⁷             |   Sí   |    Sí    |
+ * | aplazado     |    Sí    |     Sí     |   no¹   |   Sí²   |           Sí⁸             |   Sí   |    Sí    |
+ * | cumplido     |   no³    |     Sí     |   Sí⁴   |  NO⁵    |           NO⁹             |   Sí   |    Sí    |
+ * | incompleto   |    Sí    |    no³     |   Sí⁴   |   Sí⁶   |           NO⁹             |   Sí   |    Sí    |
  *
  *  ¹ Ya está abierto: reabrirlo no haría nada.
  *  ² Se vuelve a mover; `fecha_original` NO cambia (guarda el primer día).
@@ -133,10 +133,22 @@ export function normalizarEstado(value: unknown): EventoEstado {
  *    primero se marca incompleto o se reabre, y después se mueve de fecha.
  *  ⁶ Reprogramar lo que quedó a medias: se mueve de fecha y vuelve a quedar
  *    abierto (`aplazado`).
+ *  ⁷ Por el invariante, un evento `programado` NUNCA tiene `fecha_original`:
+ *    no hay a dónde volver. La condición se escribe igual (`fechaOriginal ≠
+ *    null`) para que la regla se sostenga sola y no dependa del estado.
+ *  ⁸ **Deshacer el aplazamiento**: el evento vuelve a su día original, se
+ *    limpia `fecha_original` y queda `programado` — que es justo lo que exige
+ *    el invariante, porque ya no queda constancia de ningún movimiento.
+ *  ⁹ **En un evento ya cerrado, `fecha_original` es HISTORIA**: dice que se
+ *    movió y que después se cumplió o quedó incompleto, en la fecha que tiene.
+ *    Devolverlo reescribiría el pasado y movería de día una actividad que ya
+ *    pasó. Si de verdad hay que corregirla, primero se **reabre** (vuelve a
+ *    `aplazado`) y entonces sí se devuelve a su fecha.
  *
  * Esto lo comprueban a la vez la interfaz (`EventoDetalle`, que solo pinta los
- * botones con sentido) y el servidor (`cambiarEstadoEvento` / `aplazarEvento`,
- * que rechazan lo demás). Ocultar un botón nunca es una barrera.
+ * botones con sentido) y el servidor (`cambiarEstadoEvento`, `aplazarEvento` y
+ * `devolverFechaOriginalEvento`, que rechazan lo demás). Ocultar un botón nunca
+ * es una barrera.
  */
 
 /** El estado ABIERTO que le toca a un evento según si ya se movió de fecha. */
@@ -155,6 +167,8 @@ export interface AccionesDisponibles {
   incompleto: boolean;
   reabrir: boolean;
   aplazar: boolean;
+  /** Deshacer el aplazamiento: volver al día original y quedar `programado`. */
+  devolverFechaOriginal: boolean;
   /** Estado al que volvería el evento si se reabre. */
   estadoAlReabrir: EventoEstado;
 }
@@ -171,6 +185,10 @@ export function accionesDisponibles(evento: {
     reabrir: !abierto,
     // Lo único que no se aplaza es lo que ya se hizo.
     aplazar: evento.estado !== "cumplido",
+    // Deshacer el aplazamiento: hace falta que haya algo que deshacer y que el
+    // evento siga ABIERTO. En uno cerrado la fecha original es historia (ver la
+    // nota ⁹ de la matriz), no una decisión pendiente.
+    devolverFechaOriginal: abierto && evento.fechaOriginal !== null,
     estadoAlReabrir: estadoAbierto(evento.fechaOriginal),
   };
 }

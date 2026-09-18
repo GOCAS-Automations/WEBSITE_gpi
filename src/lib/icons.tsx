@@ -248,6 +248,17 @@ export const CalendarCheck = (p: IconProps) => (
   </Base>
 );
 
+/**
+ * Flecha en U hacia atrás: DESHACER. En el calendario es «Devolver a su fecha
+ * original», la operación inversa de aplazar.
+ */
+export const Undo = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M3 8h11a6 6 0 0 1 0 12h-6" />
+    <path d="m7 4-4 4 4 4" />
+  </Base>
+);
+
 /** Reloj con flecha: horas extra / tiempo adicional. */
 export const ClockPlus = (p: IconProps) => (
   <Base {...p}>

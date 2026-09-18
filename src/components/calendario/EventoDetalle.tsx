@@ -14,23 +14,29 @@
  *
  * QUÉ BOTONES SE PINTAN (matriz estado → acciones)
  * ------------------------------------------------
- * | Estado       | Cumplido | Incompleto | Reabrir | Aplazar | Editar | Eliminar |
- * | ------------ | :------: | :--------: | :-----: | :-----: | :----: | :------: |
- * | programado   |    Sí    |     Sí     |   no    |   Sí    |   Sí   |    Sí    |
- * | aplazado     |    Sí    |     Sí     |   no    |   Sí    |   Sí   |    Sí    |
- * | cumplido     |    no    |     Sí     |   Sí    |   NO    |   Sí   |    Sí    |
- * | incompleto   |    Sí    |     no     |   Sí    |   Sí    |   Sí   |    Sí    |
+ * | Estado       | Cumplido | Incompleto | Reabrir | Aplazar | Devolver a fecha original | Editar | Eliminar |
+ * | ------------ | :------: | :--------: | :-----: | :-----: | :-----------------------: | :----: | :------: |
+ * | programado   |    Sí    |     Sí     |   no    |   Sí    |            no             |   Sí   |    Sí    |
+ * | aplazado     |    Sí    |     Sí     |   no    |   Sí    |            Sí             |   Sí   |    Sí    |
+ * | cumplido     |    no    |     Sí     |   Sí    |   NO    |            NO             |   Sí   |    Sí    |
+ * | incompleto   |    Sí    |     no     |   Sí    |   Sí    |            NO             |   Sí   |    Sí    |
  *
  * Lo decide `accionesDisponibles()` de `src/lib/calendario.ts`, que es LA MISMA
  * función que usan las server actions para rechazar lo que no tiene sentido:
- * esconder un botón no es una barrera, solo evita el error. Los dos casos que
- * importan: un evento **cumplido no se aplaza** (ya se hizo) y un evento que
- * sigue abierto **no se reabre** (ya lo está).
+ * esconder un botón no es una barrera, solo evita el error. Los casos que
+ * importan: un evento **cumplido no se aplaza** (ya se hizo), un evento que
+ * sigue abierto **no se reabre** (ya lo está) y un evento ya **cerrado no se
+ * devuelve** a su fecha original, porque ahí ese dato es historia.
  *
  * «Reabrir» no siempre devuelve a *programado*: si el evento ya se movió alguna
  * vez (`fechaOriginal`), vuelve a *aplazado*, que es el estado abierto que le
  * corresponde. Así lo que dice esta ficha y lo que cuenta el tablero de
  * métricas nunca se contradicen.
+ *
+ * APLAZAR SOLO HACIA ADELANTE (18 sep 2026): el campo de fecha lleva `min` = el
+ * día siguiente al del evento y la server action rechaza igual cualquier fecha
+ * anterior. Para deshacer un aplazamiento está el botón «Devolver a su fecha
+ * original», que es la operación inversa.
  */
 
 import { useActionState, useEffect, useState } from "react";
@@ -45,6 +51,7 @@ import {
   Info,
   Pencil,
   Trash,
+  Undo,
   User,
   Users,
 } from "@/lib/icons";
@@ -57,6 +64,7 @@ import {
   formatearMomento,
   formatearRangoHoras,
   nombreCompletoResponsable,
+  sumarDiasFecha,
   type EventoRecord,
 } from "@/lib/calendario";
 import { NotaForm } from "./NotaForm";
@@ -66,6 +74,8 @@ type Accion = (state: ActionState, formData: FormData) => Promise<ActionState>;
 export interface AccionesEvento {
   cambiarEstado: Accion;
   aplazar: Accion;
+  /** Deshacer el aplazamiento: volver al día original. */
+  devolverFechaOriginal: Accion;
   eliminar: Accion;
   agregarNota: Accion;
 }
@@ -246,6 +256,17 @@ export function EventoDetalle({
             </button>
           </div>
 
+          {/* Deshacer el aplazamiento. Solo aparece si hay algo que deshacer
+              (el evento tiene fecha original) y sigue abierto: en uno cerrado
+              esa fecha es historia y no se toca. */}
+          {permitido.devolverFechaOriginal && evento.fechaOriginal && (
+            <BotonDevolverFecha
+              action={acciones.devolverFechaOriginal}
+              evento={evento}
+              fechaOriginal={evento.fechaOriginal}
+            />
+          )}
+
           {/* Aplazar: todo menos lo que ya se hizo. Cuando no se puede, en vez
               de dejar un hueco mudo se explica por qué y qué hacer. */}
           {permitido.aplazar ? (
@@ -364,6 +385,62 @@ function BotonEstado({
   );
 }
 
+/**
+ * «Devolver a su fecha original»: deshace el aplazamiento.
+ *
+ * Un botón suelto con confirmación, no un desplegable con formulario: aquí no
+ * hay nada que elegir —el destino es la fecha original— y el texto de la
+ * confirmación ya dice a qué día vuelve y en qué estado queda.
+ */
+function BotonDevolverFecha({
+  action,
+  evento,
+  fechaOriginal,
+}: {
+  action: Accion;
+  evento: EventoRecord;
+  fechaOriginal: string;
+}) {
+  const [state, formAction, pendiente] = useActionState(action, idleState);
+
+  return (
+    <form
+      action={formAction}
+      onSubmit={(event) => {
+        if (
+          !window.confirm(
+            `¿Devolver «${evento.titulo}» a su fecha original?\n\nVuelve al ${formatearFechaLarga(
+              fechaOriginal,
+            )}, deja de estar aplazado y queda PROGRAMADO, como si nunca se hubiera movido.`,
+          )
+        ) {
+          event.preventDefault();
+        }
+      }}
+      className="flex flex-col items-start"
+    >
+      <input type="hidden" name="id" value={evento.id} />
+      <button
+        type="submit"
+        disabled={pendiente}
+        className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold text-ink-soft shadow-soft transition-colors hover:border-brand hover:text-brand-dark disabled:pointer-events-none disabled:opacity-60"
+      >
+        <Undo className="h-4 w-4" />
+        {pendiente ? "Devolviendo…" : "Devolver a su fecha original"}
+      </button>
+      <p className="mt-1.5 text-xs leading-relaxed text-graphite">
+        Deshace el aplazamiento: el evento vuelve al{" "}
+        <strong>{formatearFechaLarga(fechaOriginal)}</strong> y queda programado.
+      </p>
+      {state.status === "error" && state.message && (
+        <p role="alert" className="mt-1 text-xs font-semibold text-red-600">
+          {state.message}
+        </p>
+      )}
+    </form>
+  );
+}
+
 function FormularioAplazar({
   action,
   evento,
@@ -373,6 +450,10 @@ function FormularioAplazar({
 }) {
   const [state, formAction, pendiente] = useActionState(action, idleState);
   const [abierto, setAbierto] = useState(false);
+
+  // Aplazar es mover HACIA ADELANTE: lo más pronto posible es el día siguiente.
+  // El navegador ya no deja elegir antes, y la server action lo comprueba igual.
+  const minimo = sumarDiasFecha(evento.fecha, 1);
 
   return (
     <div>
@@ -406,11 +487,19 @@ function FormularioAplazar({
             type="date"
             name="nueva_fecha"
             required
-            defaultValue={evento.fecha}
+            min={minimo}
+            defaultValue={minimo}
+            aria-describedby={`aplazar-ayuda-${evento.id}`}
             className="w-full rounded-xl border border-amber-200 bg-white px-3.5 py-2.5 text-sm text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/25"
           />
-          <p className="text-xs leading-relaxed text-amber-900">
-            El evento se mueve a ese día y queda <strong>aplazado</strong>
+          <p
+            id={`aplazar-ayuda-${evento.id}`}
+            className="text-xs leading-relaxed text-amber-900"
+          >
+            <strong>Tiene que ser un día posterior</strong> al{" "}
+            {formatearFechaLarga(evento.fecha)}: aplazar es mover la actividad
+            hacia adelante. El evento se mueve a ese día y queda{" "}
+            <strong>aplazado</strong>
             {evento.estado === "incompleto"
               ? ": deja de estar cerrado y vuelve a quedar pendiente por hacer en la fecha nueva."
               : "."}
