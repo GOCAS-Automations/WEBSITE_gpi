@@ -234,7 +234,7 @@ con su propia pantalla desde la 0007.
 | Tabla `evento_responsables` | Quién responde por cada evento: una cuenta del portal (`profile_id`) **o** una persona externa escrita a mano (`nombre_externo`) |
 | Tabla `evento_notas` | El hilo de seguimiento de cada evento: quién escribió, qué y cuándo |
 | Función `es_responsable_evento(uuid)` | Ayuda a las políticas de RLS a responder «¿esta persona es responsable de ese evento?» sin entrar en recursión |
-| Columna `profiles.apodo` | Nombre corto de la persona («YC») para el calendario y las tablas. **Solo lo cambia un administrador** |
+| Columna `profiles.apodo` | Nombre corto de la persona («YC») para el calendario y las tablas. **Lo cambian el administrador y el coordinador** |
 
 > **Quién ve qué.** El administrador y el coordinador ven y administran todo el
 > calendario. Cualquier otra cuenta activa —incluido el Community Manager— ve
@@ -446,7 +446,7 @@ Solo para **admin** y **coordinador**.
 > La contraseña no se puede volver a consultar (Supabase guarda solo su hash).
 > Si se pierde, se restablece desde la ficha de la persona.
 
-#### El apodo (solo lo cambia un administrador)
+#### El apodo (lo cambian el administrador y el coordinador)
 
 El **apodo** es un nombre corto —«YC» para Yeison Camacho— que el sitio usa
 donde el nombre completo no cabe: las fichas de responsables del calendario, la
@@ -456,9 +456,11 @@ con el apodo entre paréntesis, y al pasar el mouse siempre sale el nombre
 entero.
 
 - Es **opcional**: sin apodo, en todas partes se sigue viendo el nombre completo.
-- Lo cambia **únicamente el administrador**. El coordinador lo ve, pero en un
-  campo gris que no se puede editar, y el servidor **descarta** el dato si
-  llega desde una cuenta que no es administradora.
+- Lo cambian el **administrador y el coordinador** (hasta el 18 sep 2026 era
+  solo el administrador; GPI pidió abrirlo al coordinador, que es quien arma el
+  calendario). El **Community Manager** lo ve, pero en un campo gris que no se
+  puede editar, y el servidor **descarta** el dato si llega desde una cuenta
+  que no es administradora ni coordinadora.
 - Se ve en la lista del equipo, junto al nombre, y se puede buscar por él.
 
 ### Gestionar una cuenta

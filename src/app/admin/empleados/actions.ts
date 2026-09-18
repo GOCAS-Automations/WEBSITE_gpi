@@ -33,7 +33,7 @@ import {
   getServiceRoleSupabase,
   isServiceRoleConfigured,
 } from "@/lib/supabase/admin";
-import { normalizeRole, type UserRole } from "@/lib/roles";
+import { isManagerRole, normalizeRole, type UserRole } from "@/lib/roles";
 import {
   AYUDA_USUARIO,
   emailDeUsuario,
@@ -121,19 +121,21 @@ function sinCamposNuevos<T extends CamposNuevos>(payload: T) {
 }
 
 /**
- * EL APODO SOLO LO ESCRIBE UN ADMINISTRADOR
- * -----------------------------------------
- * Ni el coordinador ni el Community Manager pueden cambiarlo, aunque manipulen
- * el formulario: esta función devuelve `undefined` para cualquier otro rol y el
+ * EL APODO LO ESCRIBEN LOS MANAGERS (admin y coordinador)
+ * ------------------------------------------------------
+ * Hasta el 18 sep 2026 era solo del administrador; GPI pidió que el coordinador
+ * también pueda ponerlo, porque es quien arma el calendario y necesita que las
+ * fichas se lean. El Community Manager sigue fuera, aunque manipule el
+ * formulario: esta función devuelve `undefined` para cualquier otro rol y el
  * campo NO entra en el payload, así que la fila conserva el apodo que tenía.
  * La interfaz se lo muestra en un campo de solo lectura, pero la barrera real
- * es esta.
+ * es esta. (En la base, la RLS de `profiles` ya era `is_manager()`.)
  */
-function apodoSiEsAdmin(
+function apodoSiEsManager(
   actorRole: UserRole,
   formData: FormData,
 ): string | null | undefined {
-  if (actorRole !== "admin") return undefined;
+  if (!isManagerRole(actorRole)) return undefined;
   const valor = normalizarApodo(formData.get("apodo"));
   return valor === "" ? null : valor;
 }
@@ -287,7 +289,7 @@ export async function createEmployee(
         phone: textOrNull(formData, "phone"),
         active: true,
       },
-      apodoSiEsAdmin(session.profile.role, formData),
+      apodoSiEsManager(session.profile.role, formData),
     ),
   );
 
@@ -367,7 +369,7 @@ export async function updateEmployee(
         phone: textOrNull(formData, "phone"),
         active,
       },
-      apodoSiEsAdmin(session.profile.role, formData),
+      apodoSiEsManager(session.profile.role, formData),
     ),
   );
 

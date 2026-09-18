@@ -88,7 +88,7 @@ export const AYUDA_CALENDARIO_RESPONSABLES =
 
 /** Qué es el apodo de una cuenta y quién puede cambiarlo (migración 0010). */
 export const AYUDA_APODO =
-  "Nombre corto con el que se identifica a la persona en el calendario y en las tablas (por ejemplo, «YC» para Yeison Camacho). Solo lo puede cambiar un administrador; donde hay espacio se sigue mostrando el nombre completo.";
+  "Nombre corto con el que se identifica a la persona en el calendario y en las tablas (por ejemplo, «YC» para Yeison Camacho). Lo pueden cambiar el administrador y el coordinador; donde hay espacio se sigue mostrando el nombre completo.";
 
 /**
  * Recordatorio de guardar — el aviso que más falta hacía.

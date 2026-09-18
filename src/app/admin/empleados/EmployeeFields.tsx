@@ -7,6 +7,7 @@ import {
   Switch,
 } from "@/components/admin/ui";
 import {
+  isManagerRole,
   ROLE_BADGE_CLASSES,
   ROLE_DESCRIPTIONS,
   ROLE_LABELS,
@@ -107,11 +108,13 @@ export function EmployeeFields({
           </p>
         </AyudaDesplegable>
 
-        {/* APODO — solo lo cambia un administrador.
-            Al coordinador se le muestra igual, pero en un campo aparte que no
-            se envía: esconderlo haría pensar que el dato no existe, y dejarlo
-            editable haría creer que se guardó cuando el servidor lo descarta. */}
-        {actorRole === "admin" ? (
+        {/* APODO — lo cambian los MANAGERS (admin y coordinador) desde el
+            18 sep 2026; antes era solo del administrador.
+            Al Community Manager se le muestra igual, pero en un campo aparte
+            que no se envía: esconderlo haría pensar que el dato no existe, y
+            dejarlo editable haría creer que se guardó cuando el servidor lo
+            descarta. */}
+        {isManagerRole(actorRole) ? (
           <Field
             label="Apodo (opcional)"
             name="apodo"
@@ -127,7 +130,7 @@ export function EmployeeFields({
             defaultValue={profile?.apodo ?? ""}
             placeholder="Sin apodo"
             readOnly
-            hint="Solo un administrador puede cambiar el apodo."
+            hint="Solo un administrador o un coordinador puede cambiar el apodo."
           />
         )}
 
