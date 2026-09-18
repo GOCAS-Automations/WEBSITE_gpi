@@ -22,12 +22,16 @@ import {
 export default async function AdminDashboardPage() {
   const { profile } = await requireContentEditor();
   const manager = isManagerRole(profile.role);
+  // La nómina la administra SOLO el administrador (pedido de GPI, 18 sep
+  // 2026). El coordinador conserva el resto de la gestión interna y ve su
+  // propia nómina en Mi Cuenta, como cualquier empleado.
+  const admin = profile.role === "admin";
 
   const [counts, team, calendario, nomina] = await Promise.all([
     getContentCounts(),
     manager ? getTeamCounts() : Promise.resolve({ people: 0, pending: 0 }),
     manager ? getCalendarioCounts() : Promise.resolve({ proximos: 0 }),
-    manager ? getNominaCounts() : Promise.resolve({ borradores: 0, cerradas: 0 }),
+    admin ? getNominaCounts() : Promise.resolve({ borradores: 0, cerradas: 0 }),
   ]);
 
   /**
@@ -95,7 +99,12 @@ export default async function AdminDashboardPage() {
       description:
         "La agenda interna: actividades con su día, su hora y sus responsables, para cerrarlas como cumplidas, incompletas o aplazadas, con notas de seguimiento.",
     },
-    {
+  ];
+
+  // La tarjeta de nómina se añade aparte: es la única de «Gestión interna» que
+  // no ve el coordinador.
+  if (admin) {
+    gestion.push({
       href: "/admin/nomina",
       label: "Nómina",
       icon: Banknote,
@@ -103,8 +112,8 @@ export default async function AdminDashboardPage() {
       unit: "sin cerrar",
       description:
         "Lo que hay que pagarle a cada persona por quincena o por mes: el sueldo, las horas y recargos que salen de las jornadas aprobadas, los bonos y descuentos, y el volante de pago en PDF.",
-    },
-  ];
+    });
+  }
 
   return (
     <>

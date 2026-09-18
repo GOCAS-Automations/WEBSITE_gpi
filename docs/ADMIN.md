@@ -18,7 +18,7 @@ la gestión de cuentas y el registro de jornadas (horas extra).
 > pendientes: es la referencia de qué hace cada migración y el procedimiento
 > por si algún día hubiera que montar el proyecto en un Supabase nuevo.
 
-Hay **once** migraciones y se aplican **en orden**:
+Hay **doce** migraciones y se aplican **en orden**:
 
 | Archivo | Qué añade |
 | --- | --- |
@@ -33,6 +33,7 @@ Hay **once** migraciones y se aplican **en orden**:
 | `supabase/migrations/0009_telefono_mensajes.sql` | Columna `telefono` (opcional) en `site_mensajes`: respaldo del teléfono que ahora pide el formulario de `/contacto` |
 | `supabase/migrations/0010_calendario.sql` | **Calendario interno**: `eventos`, `evento_responsables` y `evento_notas` con su RLS, y el campo `profiles.apodo` |
 | `supabase/migrations/0011_nomina.sql` | **Nómina**: `nomina_config_mensual` (salario y tarifas por empleado y mes) y `nomina_liquidaciones` (la nómina de un período, con su cálculo congelado), más los datos de la empresa para el volante (`site_settings.empresa`) |
+| `supabase/migrations/0012_nomina_solo_admin.sql` | La nómina pasa a ser **solo del administrador**: las políticas de las dos tablas cambian de `is_manager()` a `is_admin_activo()` (helper nuevo = admin **con la cuenta activa**). La política de «lo propio» queda intacta, que es la que deja a cada quien ver su volante |
 
 Para cada una:
 
@@ -249,8 +250,10 @@ con su propia pantalla desde la 0007.
 | Tabla `nomina_liquidaciones` | La nómina de un empleado **en un período** (quincena 1, quincena 2 o mes completo): días liquidados, conceptos manuales, estado (`borrador` → `cerrada` → `pagada`) y el **snapshot congelado** del cálculo |
 | Clave `site_settings.empresa` | Razón social, NIT y ciudad que se imprimen en el **volante de pago**. Se editan en `/admin/ajustes` |
 
-> **Quién ve qué.** El administrador y el coordinador administran toda la
-> nómina. El **empleado** ve **únicamente sus propias liquidaciones y solo
+> **Quién ve qué.** Desde la **migración 0012** (18 sep 2026) la nómina la
+> administra **únicamente el administrador**: el coordinador quedó fuera a
+> pedido de GPI y de la nómina solo ve la suya. **Cualquier otra cuenta**
+> —incluido el coordinador— ve **únicamente sus propias liquidaciones y solo
 > cuando están cerradas o pagadas**, para descargar su volante desde *Mi
 > Cuenta*; nunca ve un borrador ni la nómina de nadie más, y no puede escribir.
 > El público (`anon`) no tiene ningún acceso: es el dato más sensible del
@@ -260,6 +263,26 @@ con su propia pantalla desde la 0007.
 > imprime **901.638.649-7**, pero en los documentos comerciales del proyecto
 > aparece **901.877.993-0**. Se dejó el del comprobante como valor inicial y es
 > editable en `/admin/ajustes` → *Datos de la empresa para nómina*.
+
+### ¿Qué añade la 0012?
+
+Nada nuevo: **endurece** los permisos de la nómina. GPI pidió el 18 de
+septiembre de 2026 que **solo el administrador** administre la nómina. El
+coordinador sigue aprobando jornadas y llevando el calendario, pero de la
+nómina ve **solo la suya**, como cualquier empleado.
+
+| Objeto | Para qué sirve |
+| --- | --- |
+| Función `is_admin_activo()` | «¿Quien consulta es un administrador **con la cuenta activa**?». Es `is_admin()` (0001) más la comprobación de `active` que ya hacía `is_manager()` |
+| Políticas `nomina_config_*_admin` | Reemplazan a las `_manager` de la 0011 en `nomina_config_mensual` |
+| Políticas `nomina_liquidaciones_*_admin` | Reemplazan a las `_manager` en `nomina_liquidaciones`, salvo la de «lo propio» |
+
+> **`nomina_liquidaciones_select_propia` no se toca.** Es la política que hace
+> que cada persona vea sus liquidaciones cerradas o pagadas y descargue su
+> volante desde *Mi Cuenta*. Si se borrara, nadie vería su propio comprobante.
+
+> **Se puede aplicar aunque el módulo de nómina no esté desplegado**: solo
+> endurece permisos sobre tablas que hoy están vacías.
 
 ### Si el bloque del usuario admin de la 0001 falla
 
@@ -382,6 +405,9 @@ Cada usuario tiene un rol en `profiles`. Esto es lo que puede hacer cada uno:
 | Equipo y cuentas (`/admin/empleados`) | ✅ | ✅ ¹ | ❌ | ❌ |
 | Horario del mes (`/admin/horarios`) | ✅ | ✅ | ❌ | ❌ |
 | Aprobar/rechazar jornadas y métricas (`/admin/jornadas`) | ✅ | ✅ | ❌ | ❌ |
+| Calendario interno (`/admin/calendario`) | ✅ | ✅ | ❌ ³ | ❌ ³ |
+| **Administrar la nómina** (`/admin/nomina`) | ✅ | ❌ ⁴ | ❌ | ❌ |
+| Ver **su propia** nómina y su volante en `/mi-cuenta` | ✅ | ✅ | ✅ | ✅ |
 | Registrar **sus propias** jornadas en `/mi-cuenta` | ✅ ² | ✅ ² | ✅ ² | ✅ |
 
 > **Community Manager** es el nombre visible del rol que en la base de datos se
@@ -398,6 +424,14 @@ quien además tiene acceso al panel llega ahí con "Registrar mi jornada" o en
 `/mi-cuenta?portal=1` (ver más abajo). Arriba del portal ve un botón **"Ir al
 panel"**. El Community Manager también es empleado de GPI, así que registra sus
 horas como cualquier otra persona.
+
+³ El Community Manager y el empleado **no administran** el calendario, pero sí
+ven en su *Mi Cuenta* los eventos en los que figuran como responsables y pueden
+dejar notas.
+
+⁴ Desde el **18 de septiembre de 2026** (migración 0012), a pedido de GPI: el
+coordinador aprueba jornadas y lleva el calendario, pero **no liquida la nómina
+de nadie**. De la nómina ve solo la suya, como cualquier empleado.
 
 ### A dónde aterriza cada rol al iniciar sesión
 
@@ -1642,7 +1676,7 @@ uno había, que es justo lo que se quiere mirar a fin de mes.
 
 ## 15. Nómina — `/admin/nomina`
 
-Solo para **admin** y **coordinador** (migración 0011). Aquí se calcula, persona
+Solo para el **administrador** (migraciones 0011 y 0012). Aquí se calcula, persona
 por persona y período por período, **lo que hay que pagarle a cada empleado**:
 el sueldo, las horas y recargos que salen **solos** de las jornadas ya
 aprobadas, y los bonos y descuentos que el administrador digita.

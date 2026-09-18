@@ -9,12 +9,14 @@
  *
  * La pestaña viaja en la URL (`?vista=configuracion`), igual que en jornadas y
  * en el calendario: el enlace se puede compartir y funciona sin JavaScript. El
- * acceso es solo para managers (admin | coordinador) y la barrera autoritativa
- * es `requireManager()`.
+ * El acceso es SOLO PARA EL ADMINISTRADOR —ni el coordinador ni el Community
+ * Manager administran la nómina (pedido de GPI, 18 sep 2026)— y la barrera
+ * autoritativa es `requireAdmin()`. El coordinador ve SU propia nómina en
+ * `/mi-cuenta?seccion=nomina`, como cualquier empleado.
  */
 
 import Link from "next/link";
-import { requireManager } from "@/lib/supabase/auth";
+import { requireAdmin } from "@/lib/supabase/auth";
 import { AdminPageHeader } from "@/components/admin/ui";
 import { BarChart, ClipboardList, Sliders } from "@/lib/icons";
 import { LiquidacionView } from "./liquidacion";
@@ -76,7 +78,7 @@ export default async function AdminNominaPage({
   }>;
 }) {
   // Barrera autoritativa: solo admin y coordinador.
-  await requireManager();
+  await requireAdmin();
 
   const params = await searchParams;
   const vista: Vista =
