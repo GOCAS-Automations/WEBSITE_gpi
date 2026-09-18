@@ -1,0 +1,1207 @@
+"use client";
+
+/**
+ * PANEL DE LIQUIDACIÓN — /admin/nomina
+ * ====================================
+ * La tabla del período con todas las personas y, al abrir una, su desglose
+ * completo en una ventana (`ModalPanel`, la misma pieza del calendario).
+ *
+ * Todo el cálculo llega YA HECHO desde el servidor (`liquidacion.tsx`): aquí no
+ * se suma ni se multiplica nada, solo se pinta y se mandan las acciones. Así la
+ * cifra que ve el manager es exactamente la que se va a congelar al cerrar.
+ *
+ * Las piezas de interfaz se importan de `@/components/admin/ui-base`, NUNCA de
+ * `ui.tsx`: este es un Client Component y arrastrar `ui.tsx` al navegador deja
+ * colgadas las server actions en producción (ver la nota larga de `ui-base`).
+ */
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useActionState, useMemo, useState } from "react";
+import { ModalPanel } from "@/components/calendario/ModalPanel";
+import {
+  AyudaSeccion,
+  Badge,
+  Card,
+  EmptyState,
+  inputClass,
+} from "@/components/admin/ui-base";
+import {
+  AYUDA_NOMINA,
+  AYUDA_NOMINA_CERRAR,
+  AYUDA_NOMINA_PENDIENTES,
+  AYUDA_NOMINA_PERIODO,
+  AYUDA_NOMINA_VOLANTE,
+} from "@/components/admin/ui";
+import { idleState, type ActionState, type FilaNomina } from "@/lib/admin-types";
+import {
+  CONCEPTOS_MANUALES_DESCUENTOS,
+  CONCEPTOS_MANUALES_DEVENGADOS,
+  NOMINA_ESTADO_CLASSES,
+  NOMINA_ESTADO_DESCRIPCIONES,
+  NOMINA_ESTADO_LABELS,
+  clavePeriodo,
+  decimalCSV,
+  formatearHorasNomina,
+  formatearMiles,
+  formatearPesos,
+  horasDeMinutos,
+  nombreMesNomina,
+  type TipoPeriodo,
+} from "@/lib/nomina";
+import { Check, Download, Info, Pencil, Plus, Trash } from "@/lib/icons";
+
+type Accion = (state: ActionState, formData: FormData) => Promise<ActionState>;
+
+const MESES_OPCIONES = Array.from({ length: 12 }, (_, i) => ({
+  value: String(i + 1),
+  label: nombreMesNomina(i + 1),
+}));
+
+/* ================================================================== */
+/* Exportación a CSV                                                   */
+/* ================================================================== */
+
+/** Un campo seguro para CSV: comillas dobles escapadas y saltos de línea fuera. */
+function campo(valor: string | number): string {
+  const texto = String(valor ?? "").replace(/[\r\n]+/g, " ");
+  return `"${texto.replace(/"/g, '""')}"`;
+}
+
+/**
+ * Descarga el período como CSV, con el mismo formato que el de jornadas:
+ * separador `;`, BOM UTF-8 y **todos los números con coma decimal**, para que
+ * Excel en español los sume sin tener que retocar nada.
+ */
+function descargarCSV(filas: FilaNomina[], etiquetaArchivo: string): void {
+  const encabezados = [
+    "Empleado",
+    "Usuario",
+    "Cédula",
+    "Cargo",
+    "Estado",
+    "Días liquidados",
+    "Salario básico mensual",
+    "Sueldo del período",
+    "Auxilio de transporte",
+    "Horas rotación nocturna",
+    "Horas extra diurnas",
+    "Horas extra nocturnas",
+    "Horas en festivo",
+    "Horas en festivo nocturnas",
+    "Horas extra festivo diurnas",
+    "Horas extra festivo nocturnas",
+    "Total horas y recargos",
+    "Otros devengados",
+    "Total devengado",
+    "Salud",
+    "Pensión",
+    "Otros descuentos",
+    "Total descuentos",
+    "Neto a pagar",
+    "Fecha de pago",
+    "Jornadas aprobadas",
+    "Jornadas pendientes (no pagadas)",
+    "Cálculo",
+  ];
+
+  const horas = (fila: FilaNomina, clave: string) =>
+    decimalCSV(
+      horasDeMinutos(fila.calculo.lineasHoras.find((l) => l.clave === clave)?.minutos ?? 0),
+    );
+
+  const cuerpo = filas.map((f) =>
+    [
+      f.nombre,
+      f.usuario ?? "",
+      f.cedula ?? "",
+      f.cargo ?? "",
+      f.estado ? NOMINA_ESTADO_LABELS[f.estado] : "Sin crear",
+      decimalCSV(f.dias),
+      decimalCSV(f.salario),
+      decimalCSV(f.calculo.basico),
+      decimalCSV(f.calculo.auxTransporte),
+      horas(f, "rotacionNocturna"),
+      horas(f, "extraDiurna"),
+      horas(f, "extraNocturna"),
+      horas(f, "festivo"),
+      horas(f, "festivoNocturno"),
+      horas(f, "extraFestivoDiurna"),
+      horas(f, "extraFestivoNocturna"),
+      decimalCSV(f.calculo.totalHoras),
+      decimalCSV(f.calculo.totalDevengadosManuales),
+      decimalCSV(f.calculo.totalDevengado),
+      decimalCSV(f.calculo.salud),
+      decimalCSV(f.calculo.pension),
+      decimalCSV(f.calculo.totalDescuentosManuales),
+      decimalCSV(f.calculo.totalDescuentos),
+      decimalCSV(f.calculo.neto),
+      f.fechaPago ?? "",
+      String(f.jornadas),
+      String(f.pendientes),
+      f.congelada ? "Congelado al cerrar" : "Provisional (borrador)",
+    ].map(campo),
+  );
+
+  const contenido = [encabezados.map(campo), ...cuerpo]
+    .map((f) => f.join(";"))
+    .join("\r\n");
+
+  // ﻿ = BOM UTF-8.
+  const blob = new Blob([`﻿${contenido}`], {
+    type: "text/csv;charset=utf-8;",
+  });
+  const url = URL.createObjectURL(blob);
+  const enlace = document.createElement("a");
+  enlace.href = url;
+  enlace.download = `nomina_GPI_${etiquetaArchivo}.csv`;
+  document.body.appendChild(enlace);
+  enlace.click();
+  document.body.removeChild(enlace);
+  URL.revokeObjectURL(url);
+}
+
+/* ================================================================== */
+/* Panel                                                               */
+/* ================================================================== */
+
+export function LiquidacionPanel({
+  filas,
+  tipo,
+  anio,
+  mes,
+  quincena,
+  etiqueta,
+  fechaInicio,
+  fechaFin,
+  diasSugeridos,
+  hoy,
+  abrir,
+  crearAction,
+  liquidarTodosAction,
+  guardarAction,
+  cerrarAction,
+  pagarAction,
+  reabrirAction,
+  eliminarAction,
+}: {
+  filas: FilaNomina[];
+  tipo: TipoPeriodo;
+  anio: number;
+  mes: number;
+  quincena: 1 | 2 | null;
+  etiqueta: string;
+  fechaInicio: string;
+  fechaFin: string;
+  diasSugeridos: number;
+  hoy: string;
+  abrir: string;
+  crearAction: Accion;
+  liquidarTodosAction: Accion;
+  guardarAction: Accion;
+  cerrarAction: Accion;
+  pagarAction: Accion;
+  reabrirAction: Accion;
+  eliminarAction: Accion;
+}) {
+  const router = useRouter();
+  const [abierta, setAbierta] = useState<string>(abrir);
+
+  const filaAbierta = useMemo(
+    () =>
+      filas.find(
+        (f) => f.employeeId === abierta || (f.liquidacionId && f.liquidacionId === abierta),
+      ) ?? null,
+    [filas, abierta],
+  );
+
+  const irA = (cambios: Record<string, string>) => {
+    const params = new URLSearchParams({
+      tipo,
+      anio: String(anio),
+      mes: String(mes),
+      ...(quincena ? { quincena: String(quincena) } : {}),
+      ...cambios,
+    });
+    router.push(`/admin/nomina?${params.toString()}`);
+  };
+
+  const totales = useMemo(
+    () =>
+      filas.reduce(
+        (acc, f) => ({
+          devengado: acc.devengado + f.calculo.totalDevengado,
+          descuentos: acc.descuentos + f.calculo.totalDescuentos,
+          neto: acc.neto + f.calculo.neto,
+          horas: acc.horas + f.calculo.totalHoras,
+        }),
+        { devengado: 0, descuentos: 0, neto: 0, horas: 0 },
+      ),
+    [filas],
+  );
+
+  const sinConfig = filas.filter((f) => !f.tieneConfig);
+  const conPendientes = filas.filter((f) => f.pendientes > 0);
+  const sinCrear = filas.filter((f) => f.liquidacionId === null && f.tieneConfig);
+
+  const [estadoLote, accionLote, enLote] = useActionState(
+    liquidarTodosAction,
+    idleState,
+  );
+
+  return (
+    <div className="space-y-6">
+      <AyudaSeccion title="Cómo funciona esta pantalla">{AYUDA_NOMINA}</AyudaSeccion>
+
+      {/* ---------------- Selector de período ---------------- */}
+      <Card>
+        <div className="flex flex-wrap items-end gap-4">
+          <div>
+            <label
+              htmlFor="nomina-tipo"
+              className="mb-1.5 block text-sm font-semibold text-ink"
+            >
+              Tipo de período
+            </label>
+            <select
+              id="nomina-tipo"
+              value={tipo}
+              onChange={(e) =>
+                irA(
+                  e.target.value === "mes"
+                    ? { tipo: "mes", quincena: "" }
+                    : { tipo: "quincena", quincena: "1" },
+                )
+              }
+              className={inputClass}
+            >
+              <option value="quincena">Quincena</option>
+              <option value="mes">Mes completo</option>
+            </select>
+          </div>
+
+          <div>
+            <label
+              htmlFor="nomina-mes"
+              className="mb-1.5 block text-sm font-semibold text-ink"
+            >
+              Mes
+            </label>
+            <select
+              id="nomina-mes"
+              value={String(mes)}
+              onChange={(e) => irA({ mes: e.target.value })}
+              className={`${inputClass} capitalize`}
+            >
+              {MESES_OPCIONES.map((m) => (
+                <option key={m.value} value={m.value} className="capitalize">
+                  {m.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label
+              htmlFor="nomina-anio"
+              className="mb-1.5 block text-sm font-semibold text-ink"
+            >
+              Año
+            </label>
+            <input
+              id="nomina-anio"
+              type="number"
+              min={2020}
+              max={2100}
+              defaultValue={anio}
+              onBlur={(e) => {
+                const valor = Number(e.target.value);
+                if (Number.isInteger(valor) && valor >= 2020 && valor <= 2100 && valor !== anio)
+                  irA({ anio: String(valor) });
+              }}
+              className={`${inputClass} w-28`}
+            />
+          </div>
+
+          {tipo === "quincena" && (
+            <div>
+              <label
+                htmlFor="nomina-quincena"
+                className="mb-1.5 block text-sm font-semibold text-ink"
+              >
+                Quincena
+              </label>
+              <select
+                id="nomina-quincena"
+                value={String(quincena ?? 1)}
+                onChange={(e) => irA({ quincena: e.target.value })}
+                className={inputClass}
+              >
+                <option value="1">Primera (del 1 al 15)</option>
+                <option value="2">Segunda (del 16 al fin de mes)</option>
+              </select>
+            </div>
+          )}
+
+          <p className="ml-auto max-w-xs text-sm leading-relaxed text-graphite">
+            <strong className="text-ink">{etiqueta}</strong>
+            <br />
+            Se liquidan <strong>{diasSugeridos} días</strong> y entran las jornadas
+            aprobadas del {fechaInicio.slice(8)} al {fechaFin.slice(8)}.
+          </p>
+        </div>
+
+        <p className="mt-4 border-t border-line pt-4 text-xs leading-relaxed text-graphite">
+          {AYUDA_NOMINA_PERIODO}
+        </p>
+      </Card>
+
+      {/* ---------------- Avisos ---------------- */}
+      {sinConfig.length > 0 && (
+        <AyudaSeccion tono="aviso" title="Hay personas sin salario configurado">
+          {sinConfig.map((f) => f.nombre).join(", ")}{" "}
+          {sinConfig.length === 1 ? "no tiene" : "no tienen"} salario ni tarifas
+          en {nombreMesNomina(mes)} de {anio}, así que no{" "}
+          {sinConfig.length === 1 ? "se puede liquidar" : "se pueden liquidar"}.
+          Configúra{sinConfig.length === 1 ? "lo" : "los"} en{" "}
+          <Link
+            prefetch={false}
+            href={`/admin/nomina?vista=configuracion&anio=${anio}&mes=${mes}&empleado=${sinConfig[0].employeeId}`}
+            className="font-semibold text-amber-900 underline"
+          >
+            la pestaña Configuración
+          </Link>
+          .
+        </AyudaSeccion>
+      )}
+
+      {conPendientes.length > 0 && (
+        <AyudaSeccion tono="aviso" title="Hay jornadas pendientes de aprobación">
+          {conPendientes
+            .map((f) => `${f.nombre} (${f.pendientes})`)
+            .join(", ")}
+          . {AYUDA_NOMINA_PENDIENTES}{" "}
+          <Link
+            prefetch={false}
+            href="/admin/jornadas"
+            className="font-semibold text-amber-900 underline"
+          >
+            Ir a Jornadas
+          </Link>
+          .
+        </AyudaSeccion>
+      )}
+
+      {/* ---------------- Totales del período ---------------- */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Total label="Total devengado" valor={totales.devengado} />
+        <Total label="Horas y recargos" valor={totales.horas} />
+        <Total label="Total descuentos" valor={totales.descuentos} />
+        <Total label="Neto a pagar" valor={totales.neto} destacado />
+      </div>
+
+      {/* ---------------- Acciones del período ---------------- */}
+      <div className="flex flex-wrap items-center gap-3">
+        <form action={accionLote}>
+          <input type="hidden" name="tipo" value={tipo} />
+          <input type="hidden" name="anio" value={anio} />
+          <input type="hidden" name="mes" value={mes} />
+          {quincena && <input type="hidden" name="quincena" value={quincena} />}
+          <button
+            type="submit"
+            disabled={enLote || sinCrear.length === 0}
+            className="inline-flex items-center gap-2 rounded-full bg-brand-dark px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-deep disabled:pointer-events-none disabled:opacity-50"
+          >
+            <Plus className="h-4 w-4" />
+            {enLote
+              ? "Creando…"
+              : sinCrear.length === 0
+                ? "Todas liquidadas"
+                : `Liquidar todos (${sinCrear.length})`}
+          </button>
+        </form>
+
+        <button
+          type="button"
+          onClick={() =>
+            descargarCSV(filas, clavePeriodo(tipo, anio, mes, quincena))
+          }
+          disabled={filas.length === 0}
+          className="inline-flex items-center gap-2 rounded-full border border-line bg-white px-5 py-2.5 text-sm font-semibold text-ink-soft transition-colors hover:border-brand hover:text-brand-dark disabled:opacity-50"
+        >
+          <Download className="h-4 w-4" />
+          Exportar CSV
+        </button>
+      </div>
+
+      {estadoLote.status !== "idle" && estadoLote.message && (
+        <p
+          role="status"
+          className={`rounded-xl border px-4 py-3 text-sm ${
+            estadoLote.status === "success"
+              ? "border-brand/30 bg-brand-tint text-brand-deep"
+              : "border-red-200 bg-red-50 text-red-700"
+          }`}
+        >
+          {estadoLote.message}
+        </p>
+      )}
+
+      {/* ---------------- Tabla ---------------- */}
+      {filas.length === 0 ? (
+        <EmptyState
+          title="No hay cuentas activas"
+          description="La nómina se arma con las cuentas activas del equipo. Crea o reactiva cuentas en la sección Equipo y vuelve aquí."
+        />
+      ) : (
+        <Card className="overflow-x-auto p-0 sm:p-0">
+          <table className="w-full min-w-[56rem] text-sm">
+            <thead>
+              <tr className="border-b border-line bg-mist/60 text-left text-xs uppercase tracking-wide text-graphite">
+                {/* Ancho mínimo para que el nombre no se parta en tres líneas
+                    y las filas no queden altísimas. */}
+                <Th className="pl-5 min-w-[12rem]">Persona</Th>
+                <Th align="right">Días</Th>
+                <Th align="right">Sueldo</Th>
+                <Th align="right">Horas y recargos</Th>
+                <Th align="right">Otros devengados</Th>
+                <Th align="right">Descuentos</Th>
+                <Th align="right">Neto</Th>
+                <Th>Estado</Th>
+                <Th className="pr-5" align="right">
+                  Detalle
+                </Th>
+              </tr>
+            </thead>
+            <tbody>
+              {filas.map((f) => (
+                <tr
+                  key={f.employeeId}
+                  className="border-b border-line/70 last:border-0 hover:bg-mist/40"
+                >
+                  <td className="py-3 pl-5 pr-3">
+                    <p className="font-semibold text-ink">{f.nombre}</p>
+                    <p className="text-xs text-graphite">
+                      {f.cargo || "Sin cargo"}
+                      {f.pendientes > 0 && (
+                        <span className="ml-2 font-semibold text-amber-700">
+                          · {f.pendientes} jornada{f.pendientes === 1 ? "" : "s"}{" "}
+                          sin aprobar
+                        </span>
+                      )}
+                    </p>
+                  </td>
+                  <td className="px-3 py-3 text-right tabular-nums text-graphite">
+                    {f.tieneConfig ? f.dias : "—"}
+                  </td>
+                  <Money valor={f.calculo.basico + f.calculo.auxTransporte} />
+                  <Money valor={f.calculo.totalHoras} />
+                  <Money valor={f.calculo.totalDevengadosManuales} />
+                  <Money valor={f.calculo.totalDescuentos} />
+                  <td className="px-3 py-3 text-right font-bold tabular-nums text-ink">
+                    {f.tieneConfig ? formatearMiles(f.calculo.neto) : "—"}
+                  </td>
+                  <td className="px-3 py-3">
+                    {f.estado ? (
+                      <Badge className={NOMINA_ESTADO_CLASSES[f.estado]}>
+                        {NOMINA_ESTADO_LABELS[f.estado]}
+                      </Badge>
+                    ) : (
+                      <Badge>Sin crear</Badge>
+                    )}
+                  </td>
+                  <td className="py-3 pl-3 pr-5 text-right">
+                    <button
+                      type="button"
+                      onClick={() => setAbierta(f.employeeId)}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3.5 py-1.5 text-xs font-semibold text-ink-soft transition-colors hover:border-brand hover:text-brand-dark"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      Abrir
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+      )}
+
+      {/* ---------------- Detalle ---------------- */}
+      {filaAbierta && (
+        <ModalPanel
+          titulo={filaAbierta.nombre}
+          descripcion={etiqueta}
+          ancho="max-w-3xl"
+          onClose={() => setAbierta("")}
+        >
+          <DetalleLiquidacion
+            fila={filaAbierta}
+            tipo={tipo}
+            anio={anio}
+            mes={mes}
+            quincena={quincena}
+            diasSugeridos={diasSugeridos}
+            hoy={hoy}
+            crearAction={crearAction}
+            guardarAction={guardarAction}
+            cerrarAction={cerrarAction}
+            pagarAction={pagarAction}
+            reabrirAction={reabrirAction}
+            eliminarAction={eliminarAction}
+          />
+        </ModalPanel>
+      )}
+    </div>
+  );
+}
+
+/* ================================================================== */
+/* Detalle de una persona                                              */
+/* ================================================================== */
+
+function DetalleLiquidacion({
+  fila,
+  tipo,
+  anio,
+  mes,
+  quincena,
+  diasSugeridos,
+  hoy,
+  crearAction,
+  guardarAction,
+  cerrarAction,
+  pagarAction,
+  reabrirAction,
+  eliminarAction,
+}: {
+  fila: FilaNomina;
+  tipo: TipoPeriodo;
+  anio: number;
+  mes: number;
+  quincena: 1 | 2 | null;
+  diasSugeridos: number;
+  hoy: string;
+  crearAction: Accion;
+  guardarAction: Accion;
+  cerrarAction: Accion;
+  pagarAction: Accion;
+  reabrirAction: Accion;
+  eliminarAction: Accion;
+}) {
+  const [crearEstado, crear, creando] = useActionState(crearAction, idleState);
+  const [guardarEstado, guardar, guardando] = useActionState(guardarAction, idleState);
+  const [cerrarEstado, cerrar, cerrando] = useActionState(cerrarAction, idleState);
+  const [pagarEstado, pagar, pagando] = useActionState(pagarAction, idleState);
+  const [reabrirEstado, reabrir, reabriendo] = useActionState(reabrirAction, idleState);
+  const [borrarEstado, borrar, borrando] = useActionState(eliminarAction, idleState);
+  const [mostrarPago, setMostrarPago] = useState(false);
+  /**
+   * Cuál fue la ÚLTIMA acción que se envió.
+   *
+   * Sin esto, el aviso que se muestra es el de la primera acción que dejó de
+   * estar «idle» —crear— y se queda ahí para siempre: después de cerrar, la
+   * pantalla seguía diciendo «Liquidación creada en borrador». Cada formulario
+   * lo marca al enviarse y el aviso se lee de ahí.
+   */
+  const [ultima, setUltima] = useState<
+    "crear" | "guardar" | "cerrar" | "pagar" | "reabrir" | "borrar" | ""
+  >("");
+
+  const c = fila.calculo;
+  const editable = fila.estado === "borrador";
+  const cerrada = fila.estado === "cerrada" || fila.estado === "pagada";
+
+  const estados = {
+    crear: crearEstado,
+    guardar: guardarEstado,
+    cerrar: cerrarEstado,
+    pagar: pagarEstado,
+    reabrir: reabrirEstado,
+    borrar: borrarEstado,
+    "": idleState,
+  } as const;
+  const mensaje = estados[ultima].status !== "idle" ? estados[ultima] : undefined;
+
+  const ocupado =
+    creando || guardando || cerrando || pagando || reabriendo || borrando;
+
+  /* --- Sin configuración: no hay nada que liquidar --- */
+  if (!fila.tieneConfig) {
+    return (
+      <AyudaSeccion tono="aviso" title="Sin salario configurado">
+        {fila.nombre} todavía no tiene salario ni tarifas en {nombreMesNomina(mes)}{" "}
+        de {anio}. Ve a la pestaña <strong>Configuración</strong>, elige a esta
+        persona y ese mes, escribe su salario y guarda: las siete tarifas se
+        sugieren solas y después puedes ajustarlas.
+      </AyudaSeccion>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      {/* --- Cabecera de estado --- */}
+      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-mist/60 px-4 py-3">
+        {fila.estado ? (
+          <Badge className={NOMINA_ESTADO_CLASSES[fila.estado]}>
+            {NOMINA_ESTADO_LABELS[fila.estado]}
+          </Badge>
+        ) : (
+          <Badge>Sin crear</Badge>
+        )}
+        <p className="min-w-0 flex-1 text-xs leading-relaxed text-graphite">
+          {fila.estado
+            ? NOMINA_ESTADO_DESCRIPCIONES[fila.estado]
+            : "Esta persona todavía no tiene liquidación en este período. Abajo ves lo que se le pagaría; créala para poder editarla y cerrarla."}
+          {fila.congelada && fila.calculadoEn && (
+            <>
+              {" "}
+              Cálculo congelado el{" "}
+              {new Date(fila.calculadoEn).toLocaleDateString("es-CO")}.
+            </>
+          )}
+        </p>
+      </div>
+
+      {fila.pendientes > 0 && (
+        <AyudaSeccion tono="aviso" title="Jornadas sin aprobar en el período">
+          Quedan <strong>{fila.pendientes}</strong> jornada
+          {fila.pendientes === 1 ? "" : "s"} pendiente
+          {fila.pendientes === 1 ? "" : "s"} de revisión. {AYUDA_NOMINA_PENDIENTES}
+        </AyudaSeccion>
+      )}
+
+      {/* --- Devengados --- */}
+      <section>
+        <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-graphite">
+          Devengados
+        </h3>
+        <div className="overflow-hidden rounded-2xl border border-line">
+          <table className="w-full text-sm">
+            <tbody>
+              <Renglon
+                label="Sueldo del período"
+                detalle={`${fila.dias} días · salario mensual ${formatearPesos(fila.salario)}`}
+                valor={c.basico}
+              />
+              {c.auxTransporte > 0 && (
+                <Renglon
+                  label="Auxilio de transporte"
+                  detalle={`Proporcional a ${fila.dias} días`}
+                  valor={c.auxTransporte}
+                />
+              )}
+
+              {c.lineasHoras
+                .filter((l) => l.minutos > 0)
+                .map((l) => (
+                  <Renglon
+                    key={l.clave}
+                    label={l.label}
+                    detalle={
+                      l.sePaga
+                        ? `${formatearHorasNomina(l.minutos)} × ${formatearPesos(l.tarifa)}${
+                            l.composicion ? ` · ${l.composicion}` : ""
+                          }`
+                        : `${formatearHorasNomina(l.minutos)} · ya incluidas en el sueldo`
+                    }
+                    valor={l.valor}
+                    apagado={!l.sePaga}
+                  />
+                ))}
+
+              {c.devengadosManuales
+                .filter((l) => l.valor > 0)
+                .map((l) => (
+                  <Renglon
+                    key={l.clave}
+                    label={l.label}
+                    detalle={l.nota}
+                    valor={l.valor}
+                  />
+                ))}
+
+              <Renglon label="Total devengado" valor={c.totalDevengado} total />
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* --- Descuentos --- */}
+      <section>
+        <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-graphite">
+          Descuentos
+        </h3>
+        <div className="overflow-hidden rounded-2xl border border-line">
+          <table className="w-full text-sm">
+            <tbody>
+              <Renglon
+                label="Salud"
+                detalle={`${c.pctSalud} % sobre ${formatearPesos(c.baseSeguridadSocial)} (sueldo + horas)`}
+                valor={c.salud}
+              />
+              <Renglon
+                label="Pensión"
+                detalle={`${c.pctPension} % sobre ${formatearPesos(c.baseSeguridadSocial)}`}
+                valor={c.pension}
+              />
+              {c.descuentosManuales
+                .filter((l) => l.valor > 0)
+                .map((l) => (
+                  <Renglon
+                    key={l.clave}
+                    label={l.label}
+                    detalle={l.nota}
+                    valor={l.valor}
+                  />
+                ))}
+              <Renglon label="Total descuentos" valor={c.totalDescuentos} total />
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* --- Neto --- */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-brand/30 bg-brand-tint px-5 py-4">
+        <p className="text-sm font-semibold uppercase tracking-wide text-brand-deep">
+          Neto a pagar
+        </p>
+        <p className="text-2xl font-extrabold text-brand-deep">
+          {formatearPesos(c.neto)}
+        </p>
+      </div>
+
+      {/* --- Conceptos manuales (editables en borrador) --- */}
+      {editable && fila.liquidacionId && (
+        <form
+          action={guardar}
+          onSubmit={() => setUltima("guardar")}
+          className="space-y-4 rounded-2xl border border-line p-4"
+        >
+          <input type="hidden" name="id" value={fila.liquidacionId} />
+
+          <div>
+            <h3 className="text-sm font-bold text-ink">
+              Días, bonos y descuentos del período
+            </h3>
+            <p className="mt-1 text-xs leading-relaxed text-graphite">
+              Lo que no sale de las jornadas. Deja en cero lo que no aplique. Las
+              horas y el sueldo se calculan solos.
+            </p>
+          </div>
+
+          <div>
+            <label
+              htmlFor="nomina-dias"
+              className="mb-1.5 block text-sm font-semibold text-ink"
+            >
+              Días liquidados
+            </label>
+            <input
+              id="nomina-dias"
+              name="dias_liquidados"
+              type="number"
+              min={0}
+              max={31}
+              step="0.5"
+              defaultValue={fila.dias}
+              className={`${inputClass} w-32`}
+            />
+            <p className="mt-1 text-xs text-graphite">
+              Sugerido para este período: {diasSugeridos}. Bájalo si la persona no
+              trabajó el período completo (ingreso, retiro o licencia).
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            {CONCEPTOS_MANUALES_DEVENGADOS.map((concepto) => (
+              <CampoManual
+                key={concepto.clave}
+                clave={concepto.clave}
+                label={concepto.label}
+                descripcion={concepto.descripcion}
+                valor={fila.manuales.valores[concepto.clave]}
+                nota={fila.manuales.notas[concepto.clave] ?? ""}
+              />
+            ))}
+          </div>
+
+          <div className="grid gap-3 border-t border-line pt-4 sm:grid-cols-2">
+            {CONCEPTOS_MANUALES_DESCUENTOS.map((concepto) => (
+              <CampoManual
+                key={concepto.clave}
+                clave={concepto.clave}
+                label={concepto.label}
+                descripcion={concepto.descripcion}
+                valor={fila.manuales.valores[concepto.clave]}
+                nota={fila.manuales.notas[concepto.clave] ?? ""}
+              />
+            ))}
+          </div>
+
+          <div>
+            <label
+              htmlFor="nomina-notas"
+              className="mb-1.5 block text-sm font-semibold text-ink"
+            >
+              Observaciones del volante
+            </label>
+            <textarea
+              id="nomina-notas"
+              name="notas"
+              rows={2}
+              defaultValue={fila.notas}
+              placeholder="Opcional: una línea que se imprime al pie del comprobante."
+              className={`${inputClass} resize-y`}
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={ocupado}
+            className="inline-flex items-center gap-2 rounded-full bg-brand-dark px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-deep disabled:pointer-events-none disabled:opacity-60"
+          >
+            <Check className="h-4 w-4" />
+            {guardando ? "Guardando…" : "Guardar cambios"}
+          </button>
+        </form>
+      )}
+
+      {mensaje?.message && (
+        <p
+          role="status"
+          className={`rounded-xl border px-4 py-3 text-sm ${
+            mensaje.status === "success"
+              ? "border-brand/30 bg-brand-tint text-brand-deep"
+              : "border-red-200 bg-red-50 text-red-700"
+          }`}
+        >
+          {mensaje.message}
+        </p>
+      )}
+
+      {/* --- Acciones --- */}
+      <div className="space-y-3 border-t border-line pt-5">
+        <AyudaSeccion>{AYUDA_NOMINA_CERRAR}</AyudaSeccion>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {!fila.liquidacionId && (
+            <form action={crear} onSubmit={() => setUltima("crear")}>
+              <input type="hidden" name="employee_id" value={fila.employeeId} />
+              <input type="hidden" name="tipo" value={tipo} />
+              <input type="hidden" name="anio" value={anio} />
+              <input type="hidden" name="mes" value={mes} />
+              {quincena && <input type="hidden" name="quincena" value={quincena} />}
+              <BotonPrincipal pendiente={creando} disabled={ocupado} icono={<Plus className="h-4 w-4" />}>
+                {creando ? "Creando…" : "Crear liquidación"}
+              </BotonPrincipal>
+            </form>
+          )}
+
+          {editable && fila.liquidacionId && (
+            <form
+              action={cerrar}
+              onSubmit={(event) => {
+                setUltima("cerrar");
+                if (
+                  !window.confirm(
+                    `¿Cerrar la liquidación de ${fila.nombre}?\n\nEl cálculo quedará congelado: cambiar después un horario, una tarifa o una jornada ya no la modificará. Si hay que corregirla, tendrás que reabrirla.`,
+                  )
+                )
+                  event.preventDefault();
+              }}
+            >
+              <input type="hidden" name="id" value={fila.liquidacionId} />
+              <BotonPrincipal pendiente={cerrando} disabled={ocupado} icono={<Check className="h-4 w-4" />}>
+                {cerrando ? "Cerrando…" : "Cerrar liquidación"}
+              </BotonPrincipal>
+            </form>
+          )}
+
+          {cerrada && fila.liquidacionId && (
+            <>
+              <a
+                href={`/admin/nomina/volante/${fila.liquidacionId}/pdf`}
+                className="inline-flex items-center gap-2 rounded-full border border-brand/40 bg-brand-tint px-4 py-2 text-sm font-semibold text-brand-deep transition-colors hover:border-brand hover:bg-brand/15"
+              >
+                <Download className="h-4 w-4" />
+                Descargar volante (PDF)
+              </a>
+
+              <button
+                type="button"
+                onClick={() => setMostrarPago((v) => !v)}
+                disabled={ocupado}
+                className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold text-ink-soft transition-colors hover:border-brand hover:text-brand-dark disabled:opacity-60"
+              >
+                {fila.estado === "pagada" ? "Corregir fecha de pago" : "Marcar pagada"}
+              </button>
+
+              <form
+                action={reabrir}
+                onSubmit={(event) => {
+                  setUltima("reabrir");
+                  if (
+                    !window.confirm(
+                      `¿Reabrir la liquidación de ${fila.nombre}?\n\nVolverá a borrador y se BORRARÁ el cálculo congelado: se recalculará con las jornadas y las tarifas de hoy. Reabrir no es eliminar.`,
+                    )
+                  )
+                    event.preventDefault();
+                }}
+              >
+                <input type="hidden" name="id" value={fila.liquidacionId} />
+                <button
+                  type="submit"
+                  disabled={ocupado}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold text-ink-soft transition-colors hover:border-amber-300 hover:bg-amber-50 hover:text-amber-800 disabled:opacity-60"
+                >
+                  {reabriendo ? "Reabriendo…" : "Reabrir"}
+                </button>
+              </form>
+            </>
+          )}
+
+          {editable && fila.liquidacionId && (
+            <a
+              href={`/admin/nomina/volante/${fila.liquidacionId}/pdf`}
+              className="inline-flex items-center gap-2 rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold text-ink-soft transition-colors hover:border-brand hover:text-brand-dark"
+            >
+              <Download className="h-4 w-4" />
+              Ver volante en borrador
+            </a>
+          )}
+
+          {fila.liquidacionId && (
+            <form
+              action={borrar}
+              onSubmit={(event) => {
+                setUltima("borrar");
+                if (
+                  !window.confirm(
+                    `¿Eliminar para siempre la liquidación de ${fila.nombre}?\n\nDesaparecen el registro y su volante. Si solo quieres corregirla, usa «Reabrir».`,
+                  )
+                )
+                  event.preventDefault();
+              }}
+              className="ml-auto"
+            >
+              <input type="hidden" name="id" value={fila.liquidacionId} />
+              <button
+                type="submit"
+                disabled={ocupado}
+                className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3.5 py-2 text-xs font-semibold text-graphite transition-colors hover:border-red-300 hover:bg-red-50 hover:text-red-600 disabled:opacity-60"
+              >
+                <Trash className="h-4 w-4" />
+                {borrando ? "Eliminando…" : "Eliminar"}
+              </button>
+            </form>
+          )}
+        </div>
+
+        {mostrarPago && fila.liquidacionId && (
+          <form
+            action={pagar}
+            onSubmit={() => setUltima("pagar")}
+            className="flex flex-wrap items-end gap-3 rounded-2xl border border-line bg-mist/60 p-4"
+          >
+            <input type="hidden" name="id" value={fila.liquidacionId} />
+            <div>
+              <label
+                htmlFor="nomina-fecha-pago"
+                className="mb-1.5 block text-sm font-semibold text-ink"
+              >
+                Fecha en que se pagó
+              </label>
+              <input
+                id="nomina-fecha-pago"
+                name="fecha_pago"
+                type="date"
+                required
+                defaultValue={fila.fechaPago ?? hoy}
+                className={inputClass}
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={ocupado}
+              className="inline-flex items-center gap-2 rounded-full bg-brand-dark px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition-colors hover:bg-brand-deep disabled:opacity-60"
+            >
+              <Check className="h-4 w-4" />
+              {pagando ? "Guardando…" : "Confirmar pago"}
+            </button>
+          </form>
+        )}
+
+        <p className="flex items-start gap-2 text-xs leading-relaxed text-graphite">
+          <Info className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{AYUDA_NOMINA_VOLANTE}</span>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================== */
+/* Piezas pequeñas                                                     */
+/* ================================================================== */
+
+function Total({
+  label,
+  valor,
+  destacado = false,
+}: {
+  label: string;
+  valor: number;
+  destacado?: boolean;
+}) {
+  return (
+    <div
+      className={`rounded-2xl border px-5 py-4 ${
+        destacado
+          ? "border-brand/30 bg-brand-tint text-brand-deep"
+          : "border-line bg-white text-ink"
+      }`}
+    >
+      <p className="text-xs font-semibold uppercase tracking-wide opacity-80">
+        {label}
+      </p>
+      <p className="mt-1 text-xl font-extrabold tabular-nums sm:text-2xl">
+        {formatearPesos(valor)}
+      </p>
+    </div>
+  );
+}
+
+function Th({
+  children,
+  align = "left",
+  className = "",
+}: {
+  children: React.ReactNode;
+  align?: "left" | "right";
+  className?: string;
+}) {
+  return (
+    <th
+      scope="col"
+      className={`px-3 py-3 font-semibold ${align === "right" ? "text-right" : ""} ${className}`}
+    >
+      {children}
+    </th>
+  );
+}
+
+function Money({ valor }: { valor: number }) {
+  return (
+    <td className="px-3 py-3 text-right tabular-nums text-graphite">
+      {valor === 0 ? "—" : formatearMiles(valor)}
+    </td>
+  );
+}
+
+function Renglon({
+  label,
+  detalle,
+  valor,
+  total = false,
+  apagado = false,
+}: {
+  label: string;
+  detalle?: string;
+  valor: number;
+  total?: boolean;
+  apagado?: boolean;
+}) {
+  return (
+    <tr
+      className={`border-b border-line/70 last:border-0 ${
+        total ? "bg-mist/70 font-bold text-ink" : ""
+      }`}
+    >
+      <td className="px-4 py-2.5">
+        <span className={apagado ? "text-graphite" : ""}>{label}</span>
+        {detalle && (
+          <span className="mt-0.5 block text-xs font-normal text-graphite">
+            {detalle}
+          </span>
+        )}
+      </td>
+      <td
+        className={`px-4 py-2.5 text-right tabular-nums ${
+          apagado ? "text-graphite/60" : ""
+        }`}
+      >
+        {apagado ? "incluido" : formatearPesos(valor)}
+      </td>
+    </tr>
+  );
+}
+
+function CampoManual({
+  clave,
+  label,
+  descripcion,
+  valor,
+  nota,
+}: {
+  clave: string;
+  label: string;
+  descripcion: string;
+  valor: number;
+  nota: string;
+}) {
+  return (
+    <div className="rounded-xl border border-line bg-white p-3">
+      <label
+        htmlFor={`nomina-${clave}`}
+        className="block text-sm font-semibold text-ink"
+      >
+        {label}
+      </label>
+      <p className="mb-2 mt-0.5 text-xs leading-relaxed text-graphite">
+        {descripcion}
+      </p>
+      <input
+        id={`nomina-${clave}`}
+        name={clave}
+        type="number"
+        min={0}
+        step={1}
+        defaultValue={valor}
+        className={inputClass}
+      />
+      <input
+        name={`nota_${clave}`}
+        type="text"
+        maxLength={200}
+        defaultValue={nota}
+        placeholder="Nota (opcional)"
+        aria-label={`Nota de ${label}`}
+        className={`${inputClass} mt-2 text-xs`}
+      />
+    </div>
+  );
+}
+
+function BotonPrincipal({
+  children,
+  pendiente,
+  disabled,
+  icono,
+}: {
+  children: React.ReactNode;
+  pendiente: boolean;
+  disabled: boolean;
+  icono: React.ReactNode;
+}) {
+  return (
+    <button
+      type="submit"
+      disabled={disabled}
+      className="inline-flex items-center gap-2 rounded-full bg-brand-dark px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-deep disabled:pointer-events-none disabled:opacity-60"
+    >
+      {pendiente ? null : icono}
+      {children}
+    </button>
+  );
+}

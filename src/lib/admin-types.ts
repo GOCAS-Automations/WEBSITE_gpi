@@ -7,6 +7,7 @@
 
 import type {
   ContactSettings,
+  EmpresaSettings,
   ExcellenceSettings,
   HeroSettings,
   HomeSettings,
@@ -18,6 +19,13 @@ import type {
 import type { UserRole } from "@/lib/roles";
 import type { HorarioDias } from "@/lib/horarios";
 import type { ContextoCalculo, DesgloseJornada } from "@/lib/jornada";
+import type {
+  ConceptosManuales,
+  LiquidacionCalculada,
+  NominaEstado,
+  TarifasNomina,
+  TipoPeriodo,
+} from "@/lib/nomina";
 
 export type ActionStatus = "idle" | "success" | "error";
 
@@ -149,6 +157,7 @@ export interface ValueRecord {
 
 export interface AdminSettings {
   contact: ContactSettings;
+  empresa: EmpresaSettings;
   hero: HeroSettings;
   excellence: ExcellenceSettings;
   youtube: YouTubeSettings;
@@ -316,3 +325,120 @@ export const JORNADA_FILTRO_ESTADOS: { value: JornadaStatus | "todas"; label: st
 
 /** Estado con el que arranca la bandeja si la URL no dice otra cosa. */
 export const JORNADA_FILTRO_ESTADO_DEFECTO: JornadaStatus | "todas" = "pendiente";
+
+/* ------------------------------------------------------------------ */
+/* Nómina (migración 0011)                                             */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Configuración de nómina de un empleado en un mes, tal como está en
+ * `nomina_config_mensual`. `id` es `null` cuando el mes todavía no existe en la
+ * base de datos y la pantalla muestra los valores sugeridos.
+ */
+export interface NominaConfigRecord {
+  id: string | null;
+  employee_id: string;
+  anio: number;
+  mes: number;
+  salario_basico: number;
+  aux_transporte: number;
+  tarifas: TarifasNomina;
+  pct_salud: number;
+  pct_pension: number;
+  /** Fila del mes anterior de la que se copió. `null` = valores sugeridos. */
+  copiado_de: string | null;
+  updated_at: string | null;
+}
+
+/** De dónde salió la configuración que se está mostrando. */
+export type OrigenNominaConfig =
+  | "existente"
+  | "mes-anterior"
+  | "sugerida"
+  | "sin-guardar";
+
+/** Una liquidación de `nomina_liquidaciones`. */
+export interface NominaLiquidacionRecord {
+  id: string;
+  employee_id: string;
+  tipo: TipoPeriodo;
+  anio: number;
+  mes: number;
+  /** `null` cuando el período es el mes completo. */
+  quincena: 1 | 2 | null;
+  fecha_inicio: string;
+  fecha_fin: string;
+  dias_liquidados: number;
+  /** Conceptos manuales, tal cual vienen del jsonb (se normalizan al usarlos). */
+  conceptos: unknown;
+  estado: NominaEstado;
+  /**
+   * Cálculo congelado al cerrar. `null` mientras está en borrador: entonces se
+   * calcula en vivo. Se lee SIEMPRE con `obtenerLiquidacion()` de
+   * `src/lib/nomina.ts`, nunca llamando a `calcularLiquidacion` a mano.
+   */
+  snapshot: unknown;
+  calculado_at: string | null;
+  fecha_pago: string | null;
+  notas: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+
+  /** Datos del empleado, resueltos aparte (la tabla solo guarda el id). */
+  employee_name?: string;
+  employee_username?: string | null;
+  employee_cedula?: string | null;
+  employee_cargo?: string | null;
+}
+
+/**
+ * Opciones del filtro de estado del historial de nómina.
+ *
+ * Vive aquí, en un módulo puro, por la misma razón que
+ * `JORNADA_FILTRO_ESTADOS`: lo leen el Server Component que consulta y el
+ * Client Component del tablero.
+ */
+export const NOMINA_FILTRO_ESTADOS: { value: NominaEstado | "todas"; label: string }[] =
+  [
+    { value: "todas", label: "Todas" },
+    { value: "borrador", label: "Borradores" },
+    { value: "cerrada", label: "Cerradas" },
+    { value: "pagada", label: "Pagadas" },
+  ];
+
+/**
+ * Una fila de la pestaña «Liquidación»: todo lo que la pantalla necesita saber
+ * de UNA persona en UN período, ya calculado en el servidor.
+ *
+ * Vive aquí, en un módulo puro, porque lo comparten el Server Component que
+ * consulta y el Client Component que pinta la tabla y el detalle.
+ */
+export interface FilaNomina {
+  employeeId: string;
+  nombre: string;
+  usuario: string | null;
+  cedula: string | null;
+  cargo: string | null;
+
+  /** `null` = todavía no se ha creado la liquidación de este período. */
+  liquidacionId: string | null;
+  /** `null` = sin crear. */
+  estado: NominaEstado | null;
+  dias: number;
+  fechaPago: string | null;
+  notas: string;
+  calculadoEn: string | null;
+
+  /** Cálculo del período: congelado si está cerrada, en vivo si no. */
+  calculo: LiquidacionCalculada;
+  congelada: boolean;
+  manuales: ConceptosManuales;
+
+  /** Jornadas aprobadas que entraron y pendientes que quedaron por fuera. */
+  jornadas: number;
+  pendientes: number;
+
+  /** false = esa persona no tiene salario configurado en el mes. */
+  tieneConfig: boolean;
+  salario: number;
+}

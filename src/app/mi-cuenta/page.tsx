@@ -10,6 +10,7 @@ import {
   getMapaHorarios,
   listEventos,
   listJornadas,
+  listLiquidaciones,
 } from "@/lib/admin";
 import { isContentEditorRole, ROLE_LABELS } from "@/lib/roles";
 import { hoyEnColombia } from "@/lib/jornada";
@@ -18,6 +19,7 @@ import { IrAlPanel } from "./IrAlPanel";
 import { JornadaForm } from "./JornadaForm";
 import { MisJornadas } from "./MisJornadas";
 import { MisEventos } from "./MisEventos";
+import { MiNomina } from "./MiNomina";
 import { PasswordForm } from "./PasswordForm";
 import { saveJornada, deleteJornada, changeOwnPassword } from "./actions";
 // La acción de las notas vive con el resto del calendario: es la MISMA para el
@@ -143,7 +145,7 @@ export default async function MiCuentaPage({
 async function PortalEmpleado({ profile }: { profile: SessionProfile }) {
   const hoy = hoyEnColombia();
 
-  const [jornadas, config, horarios, eventos] = await Promise.all([
+  const [jornadas, config, horarios, eventos, liquidaciones] = await Promise.all([
     listJornadas({ employeeId: profile.id, limit: 100 }),
     getJornadaConfig(),
     getMapaHorarios(),
@@ -155,6 +157,9 @@ async function PortalEmpleado({ profile }: { profile: SessionProfile }) {
       conNotas: true,
       limit: 12,
     }),
+    // Sus propias liquidaciones. La RLS de la 0011 ya filtra: solo las suyas y
+    // solo cuando están cerradas o pagadas, así que aquí no hace falta nada más.
+    listLiquidaciones({ employeeId: profile.id, limit: 24 }),
   ]);
 
   const conPanel = isContentEditorRole(profile.role);
@@ -241,6 +246,9 @@ async function PortalEmpleado({ profile }: { profile: SessionProfile }) {
             className="bg-red-50 text-red-700"
           />
         </div>
+
+        {/* Mi nómina: volantes de las liquidaciones ya cerradas */}
+        <MiNomina liquidaciones={liquidaciones} />
 
         {/* Mis eventos del calendario interno */}
         <MisEventos

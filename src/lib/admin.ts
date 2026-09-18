@@ -17,9 +17,21 @@ import {
   normalizarContextoCalculo,
   normalizarDesglose,
   normalizarJornadaConfig,
+  obtenerDesglose,
   jornadaConfigDefaults,
   type JornadaConfig,
 } from "@/lib/jornada";
+import {
+  derivarTarifas,
+  minutosVacios,
+  normalizarEstadoNomina,
+  numeroSeguro,
+  sumarMinutos,
+  tarifasVacias,
+  type MinutosPorConcepto,
+  type TarifasNomina,
+  type TipoPeriodo,
+} from "@/lib/nomina";
 import {
   normalizarEstado,
   recortarHora,
@@ -49,6 +61,9 @@ import type {
   ServiceImages,
   ServiceRecord,
   ServiceVideoRecord,
+  NominaConfigRecord,
+  NominaLiquidacionRecord,
+  OrigenNominaConfig,
   ValueRecord,
 } from "@/lib/admin-types";
 
@@ -998,5 +1013,453 @@ export async function getCalendarioCounts() {
     return { proximos: count ?? 0 };
   } catch {
     return { proximos: 0 };
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Nómina (`nomina_config_mensual` y `nomina_liquidaciones`)           */
+/* ------------------------------------------------------------------ */
+
+/**
+ * ¿El error de Supabase se debe a que las tablas de la migración 0011 todavía
+ * no existen? Se usa para caer en un estado vacío explicado en vez de romper la
+ * pantalla, igual que hace el resto del panel con sus migraciones.
+ */
+export function faltaTablaNomina(
+  error: { code?: string | null; message?: string | null } | null | undefined,
+): boolean {
+  if (!error) return false;
+  if (error.code === "42P01" || error.code === "PGRST205") return true;
+  const mensaje = error.message ?? "";
+  return (
+    /nomina_(config_mensual|liquidaciones)/i.test(mensaje) &&
+    /(does not exist|no existe|schema cache|find the table)/i.test(mensaje)
+  );
+}
+
+function rowToNominaConfig(row: Record<string, unknown>): NominaConfigRecord {
+  const tarifas: TarifasNomina = {
+    horaBase: numeroSeguro(row.valor_hora_base),
+    rotacionNocturna: numeroSeguro(row.valor_rotacion_nocturna),
+    extraDiurna: numeroSeguro(row.valor_extra_diurna),
+    extraNocturna: numeroSeguro(row.valor_extra_nocturna),
+    festivo: numeroSeguro(row.valor_festivo),
+    extraFestivoDiurna: numeroSeguro(row.valor_extra_festivo_diurna),
+    extraFestivoNocturna: numeroSeguro(row.valor_extra_festivo_nocturna),
+  };
+
+  return {
+    id: String(row.id),
+    employee_id: String(row.employee_id),
+    anio: Number(row.anio),
+    mes: Number(row.mes),
+    salario_basico: numeroSeguro(row.salario_basico),
+    aux_transporte: numeroSeguro(row.aux_transporte),
+    tarifas,
+    pct_salud: numeroSeguro(row.pct_salud, 4),
+    pct_pension: numeroSeguro(row.pct_pension, 4),
+    copiado_de: typeof row.copiado_de === "string" ? row.copiado_de : null,
+    updated_at: typeof row.updated_at === "string" ? row.updated_at : null,
+  };
+}
+
+/** Las columnas de `nomina_config_mensual` a partir de un registro del panel. */
+export function nominaConfigAColumnas(
+  config: Pick<
+    NominaConfigRecord,
+    "salario_basico" | "aux_transporte" | "tarifas" | "pct_salud" | "pct_pension"
+  >,
+): Record<string, number> {
+  return {
+    salario_basico: config.salario_basico,
+    aux_transporte: config.aux_transporte,
+    valor_hora_base: config.tarifas.horaBase,
+    valor_rotacion_nocturna: config.tarifas.rotacionNocturna,
+    valor_extra_diurna: config.tarifas.extraDiurna,
+    valor_extra_nocturna: config.tarifas.extraNocturna,
+    valor_festivo: config.tarifas.festivo,
+    valor_extra_festivo_diurna: config.tarifas.extraFestivoDiurna,
+    valor_extra_festivo_nocturna: config.tarifas.extraFestivoNocturna,
+    pct_salud: config.pct_salud,
+    pct_pension: config.pct_pension,
+  };
+}
+
+/** Configuración de nómina de un empleado en un mes, o `null` si no existe. */
+export async function getNominaConfig(
+  employeeId: string,
+  anio: number,
+  mes: number,
+): Promise<NominaConfigRecord | null> {
+  const supabase = await getServerSupabase();
+  if (!supabase) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from("nomina_config_mensual")
+      .select("*")
+      .eq("employee_id", employeeId)
+      .eq("anio", anio)
+      .eq("mes", mes)
+      .maybeSingle();
+
+    if (error || !data) return null;
+    return rowToNominaConfig(data);
+  } catch {
+    return null;
+  }
+}
+
+/** Todas las configuraciones de un mes, indexadas por empleado. */
+export async function mapaNominaConfigs(
+  anio: number,
+  mes: number,
+): Promise<Map<string, NominaConfigRecord>> {
+  const supabase = await getServerSupabase();
+  if (!supabase) return new Map();
+
+  try {
+    const { data, error } = await supabase
+      .from("nomina_config_mensual")
+      .select("*")
+      .eq("anio", anio)
+      .eq("mes", mes);
+
+    if (error || !data) return new Map();
+    return new Map(
+      data.map((row) => {
+        const config = rowToNominaConfig(row);
+        return [config.employee_id, config] as const;
+      }),
+    );
+  } catch {
+    return new Map();
+  }
+}
+
+export interface NominaConfigResuelta {
+  config: NominaConfigRecord;
+  origen: OrigenNominaConfig;
+  /** Mes del que se copió, cuando `origen === "mes-anterior"`. */
+  copiadoDe?: { anio: number; mes: number };
+}
+
+/**
+ * Devuelve la configuración de nómina del mes y, si no existe, LA CREA:
+ *   1. copiando la del mes anterior de ese empleado, si la hay;
+ *   2. o, si no, con todo en cero (el formulario sugiere las tarifas en cuanto
+ *      se escribe el salario).
+ *
+ * Es el mismo patrón de `asegurarHorarioMensual`. Si la migración 0011 todavía
+ * no está aplicada o la escritura falla, devuelve la propuesta con
+ * `origen: "sin-guardar"` y la pantalla lo explica en vez de romperse.
+ */
+export async function asegurarNominaConfig(
+  employeeId: string,
+  anio: number,
+  mes: number,
+): Promise<NominaConfigResuelta> {
+  const existente = await getNominaConfig(employeeId, anio, mes);
+  if (existente) return { config: existente, origen: "existente" };
+
+  const anterior = mes === 1 ? { anio: anio - 1, mes: 12 } : { anio, mes: mes - 1 };
+  const plantilla = await getNominaConfig(employeeId, anterior.anio, anterior.mes);
+
+  const propuesta: NominaConfigRecord = plantilla
+    ? {
+        ...plantilla,
+        id: null,
+        anio,
+        mes,
+        tarifas: { ...plantilla.tarifas },
+        copiado_de: plantilla.id,
+        updated_at: null,
+      }
+    : {
+        id: null,
+        employee_id: employeeId,
+        anio,
+        mes,
+        salario_basico: 0,
+        aux_transporte: 0,
+        tarifas: tarifasVacias(),
+        pct_salud: 4,
+        pct_pension: 4,
+        copiado_de: null,
+        updated_at: null,
+      };
+
+  const supabase = await getServerSupabase();
+  if (!supabase) return { config: propuesta, origen: "sin-guardar" };
+
+  try {
+    const { data, error } = await supabase
+      .from("nomina_config_mensual")
+      .insert({
+        employee_id: employeeId,
+        anio,
+        mes,
+        copiado_de: propuesta.copiado_de,
+        ...nominaConfigAColumnas(propuesta),
+      })
+      .select("*")
+      .maybeSingle();
+
+    if (error || !data) {
+      // Otro manager pudo crearla en el mismo instante: se relee antes de
+      // darla por no guardada.
+      const recien = await getNominaConfig(employeeId, anio, mes);
+      if (recien) return { config: recien, origen: "existente" };
+      return { config: propuesta, origen: "sin-guardar" };
+    }
+
+    return plantilla
+      ? { config: rowToNominaConfig(data), origen: "mes-anterior", copiadoDe: anterior }
+      : { config: rowToNominaConfig(data), origen: "sugerida" };
+  } catch {
+    return { config: propuesta, origen: "sin-guardar" };
+  }
+}
+
+/**
+ * Configuración que se le PROPONE a un empleado que todavía no tiene ninguna:
+ * las tarifas derivadas del salario. Se usa para precargar el formulario sin
+ * escribir nada en la base de datos.
+ */
+export function nominaConfigSugerida(
+  employeeId: string,
+  anio: number,
+  mes: number,
+  salario: number,
+): NominaConfigRecord {
+  return {
+    id: null,
+    employee_id: employeeId,
+    anio,
+    mes,
+    salario_basico: salario,
+    aux_transporte: 0,
+    tarifas: derivarTarifas(salario),
+    pct_salud: 4,
+    pct_pension: 4,
+    copiado_de: null,
+    updated_at: null,
+  };
+}
+
+/* --- Liquidaciones ------------------------------------------------- */
+
+function rowToLiquidacion(row: Record<string, unknown>): NominaLiquidacionRecord {
+  const quincenaBruta = Number(row.quincena);
+  return {
+    id: String(row.id),
+    employee_id: String(row.employee_id),
+    tipo: (row.tipo === "mes" ? "mes" : "quincena") as TipoPeriodo,
+    anio: Number(row.anio),
+    mes: Number(row.mes),
+    quincena: quincenaBruta === 1 || quincenaBruta === 2 ? quincenaBruta : null,
+    fecha_inicio: String(row.fecha_inicio ?? ""),
+    fecha_fin: String(row.fecha_fin ?? ""),
+    dias_liquidados: numeroSeguro(row.dias_liquidados),
+    conceptos: row.conceptos ?? null,
+    estado: normalizarEstadoNomina(row.estado),
+    snapshot: row.snapshot ?? null,
+    calculado_at: typeof row.calculado_at === "string" ? row.calculado_at : null,
+    fecha_pago: typeof row.fecha_pago === "string" ? row.fecha_pago : null,
+    notas: typeof row.notas === "string" ? row.notas : null,
+    created_at: typeof row.created_at === "string" ? row.created_at : null,
+    updated_at: typeof row.updated_at === "string" ? row.updated_at : null,
+  };
+}
+
+export interface LiquidacionFilters {
+  employeeId?: string;
+  anio?: number;
+  mes?: number;
+  tipo?: TipoPeriodo;
+  quincena?: 1 | 2;
+  estado?: NominaLiquidacionRecord["estado"];
+  limit?: number;
+}
+
+/**
+ * Liquidaciones visibles para el usuario actual. RLS decide el alcance: un
+ * manager ve las de todo el equipo; un empleado, solo las suyas y solo cuando
+ * están cerradas o pagadas.
+ *
+ * Adjunta los datos del empleado (nombre, usuario, cédula y cargo) con una
+ * segunda consulta a `profiles`, igual que `listJornadas`.
+ */
+export async function listLiquidaciones(
+  filters: LiquidacionFilters = {},
+): Promise<NominaLiquidacionRecord[]> {
+  const supabase = await getServerSupabase();
+  if (!supabase) return [];
+
+  try {
+    let query = supabase
+      .from("nomina_liquidaciones")
+      .select("*")
+      .order("anio", { ascending: false })
+      .order("mes", { ascending: false })
+      .order("quincena", { ascending: false, nullsFirst: false })
+      .limit(filters.limit ?? 400);
+
+    if (filters.employeeId) query = query.eq("employee_id", filters.employeeId);
+    if (filters.anio) query = query.eq("anio", filters.anio);
+    if (filters.mes) query = query.eq("mes", filters.mes);
+    if (filters.tipo) query = query.eq("tipo", filters.tipo);
+    if (filters.quincena) query = query.eq("quincena", filters.quincena);
+    if (filters.estado) query = query.eq("estado", filters.estado);
+
+    const { data, error } = await query;
+    if (error || !data) return [];
+
+    const liquidaciones = data.map(rowToLiquidacion);
+    const ids = [...new Set(liquidaciones.map((l) => l.employee_id))];
+    if (ids.length === 0) return liquidaciones;
+
+    const { data: people } = await supabase
+      .from("profiles")
+      .select("id, full_name, email, username, cedula, cargo")
+      .in("id", ids);
+
+    const byId = new Map(
+      (people ?? []).map((p) => [
+        String(p.id),
+        {
+          name: String(p.full_name ?? p.email ?? ""),
+          username: typeof p.username === "string" ? p.username : null,
+          cedula: typeof p.cedula === "string" ? p.cedula : null,
+          cargo: typeof p.cargo === "string" ? p.cargo : null,
+        },
+      ]),
+    );
+
+    return liquidaciones.map((l) => ({
+      ...l,
+      employee_name: byId.get(l.employee_id)?.name,
+      employee_username: byId.get(l.employee_id)?.username ?? null,
+      employee_cedula: byId.get(l.employee_id)?.cedula ?? null,
+      employee_cargo: byId.get(l.employee_id)?.cargo ?? null,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+/** Una liquidación por su id, con los datos del empleado. */
+export async function getLiquidacion(
+  id: string,
+): Promise<NominaLiquidacionRecord | null> {
+  const supabase = await getServerSupabase();
+  if (!supabase) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from("nomina_liquidaciones")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (error || !data) return null;
+
+    const liquidacion = rowToLiquidacion(data);
+    const { data: persona } = await supabase
+      .from("profiles")
+      .select("full_name, email, username, cedula, cargo")
+      .eq("id", liquidacion.employee_id)
+      .maybeSingle();
+
+    return {
+      ...liquidacion,
+      employee_name: String(persona?.full_name ?? persona?.email ?? ""),
+      employee_username:
+        typeof persona?.username === "string" ? persona.username : null,
+      employee_cedula: typeof persona?.cedula === "string" ? persona.cedula : null,
+      employee_cargo: typeof persona?.cargo === "string" ? persona.cargo : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/* --- Horas del período --------------------------------------------- */
+
+export interface HorasPeriodo {
+  /** Minutos por concepto de nómina (ya mapeados desde el desglose). */
+  minutos: MinutosPorConcepto;
+  /** Cuántas jornadas APROBADAS entraron en el cálculo. */
+  jornadas: number;
+  /**
+   * Cuántas jornadas del período siguen PENDIENTES de aprobación. No se pagan:
+   * la pantalla avisa para que el manager las apruebe primero.
+   */
+  pendientes: number;
+}
+
+/**
+ * Suma las horas de un empleado en un rango de fechas, repartidas por concepto
+ * de nómina.
+ *
+ * Solo entran las jornadas **aprobadas**, y su desglose se lee SIEMPRE con
+ * `obtenerDesglose()`: si la jornada se aprobó con la 0004 aplicada se usa el
+ * cálculo congelado y nada de lo que se cambie después (un horario, un recargo)
+ * altera la nómina.
+ */
+export async function horasDelPeriodo(
+  employeeId: string,
+  desde: string,
+  hasta: string,
+  config?: JornadaConfig,
+  horarios?: MapaHorarios,
+): Promise<HorasPeriodo> {
+  const [jornadaConfig, mapaHorarios] = await Promise.all([
+    config ? Promise.resolve(config) : getJornadaConfig(),
+    horarios ? Promise.resolve(horarios) : getMapaHorarios(),
+  ]);
+
+  const [aprobadas, pendientes] = await Promise.all([
+    listJornadas({ status: "aprobada", employeeId, from: desde, to: hasta, limit: 500 }),
+    listJornadas({ status: "pendiente", employeeId, from: desde, to: hasta, limit: 500 }),
+  ]);
+
+  const desgloses = aprobadas.map(
+    (j) => obtenerDesglose(j, jornadaConfig, mapaHorarios).desglose,
+  );
+
+  return {
+    minutos: aprobadas.length > 0 ? sumarMinutos(desgloses) : minutosVacios(),
+    jornadas: aprobadas.length,
+    pendientes: pendientes.length,
+  };
+}
+
+/** Conteo rápido de nómina para la tarjeta del dashboard. */
+export async function getNominaCounts(): Promise<{
+  borradores: number;
+  cerradas: number;
+}> {
+  const supabase = await getServerSupabase();
+  if (!supabase) return { borradores: 0, cerradas: 0 };
+
+  try {
+    const [borradores, cerradas] = await Promise.all([
+      supabase
+        .from("nomina_liquidaciones")
+        .select("id", { count: "exact", head: true })
+        .eq("estado", "borrador"),
+      supabase
+        .from("nomina_liquidaciones")
+        .select("id", { count: "exact", head: true })
+        .eq("estado", "cerrada"),
+    ]);
+
+    return {
+      borradores: borradores.count ?? 0,
+      cerradas: cerradas.count ?? 0,
+    };
+  } catch {
+    return { borradores: 0, cerradas: 0 };
   }
 }

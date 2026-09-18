@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { PuntoDeCarga } from "./PuntoDeCarga";
 import { isManagerRole, ROLE_LABELS, type UserRole } from "@/lib/roles";
 import {
+  Banknote,
   Gauge,
   Sliders,
   LogOut,
@@ -36,8 +37,8 @@ interface AdminSection {
 }
 
 /**
- * MENÚ DEL PANEL — siete entradas
- * ===============================
+ * MENÚ DEL PANEL — ocho entradas
+ * ==============================
  * Se usan tanto en el sidebar de escritorio como en las tabs móviles.
  *
  * El menú tenía doce entradas y ocho de ellas eran contenido del sitio: la
@@ -51,7 +52,7 @@ interface AdminSection {
  * barrera real.
  */
 export const adminSections: AdminSection[] = [
-  // `Gauge` para el Dashboard y `Sliders` para Ajustes: con siete entradas, dos
+  // `Gauge` para el Dashboard y `Sliders` para Ajustes: con ocho entradas, dos
   // iconos iguales convierten el menú en una adivinanza. Por lo mismo,
   // «Horarios» lleva `Calendar` y «Calendario» lleva `CalendarCheck`.
   { href: "/admin", label: "Dashboard", icon: Gauge, exact: true },
@@ -70,6 +71,7 @@ export const adminSections: AdminSection[] = [
     icon: CalendarCheck,
     managerOnly: true,
   },
+  { href: "/admin/nomina", label: "Nómina", icon: Banknote, managerOnly: true },
   { href: "/admin/ajustes", label: "Ajustes", icon: Sliders },
 ];
 

@@ -1174,6 +1174,112 @@ solo lo suyo, dejando una nota y quedando fuera de `/admin/calendario`; y el
 coordinador sin poder tocar el apodo. Capturas revisadas en 1440 y 390 px, cero
 errores de consola, y todas las filas de prueba borradas al terminar.
 
+## Iteración del 17–18 de septiembre de 2026 — sistema de nómina y volante de pago
+
+La segunda funcionalidad que pidió la gerencia en la reunión del 16 de
+septiembre: que los administradores vean **automáticamente la nómina
+desglosada** de cada empleado, a partir de las jornadas ya aprobadas,
+configurando por persona su salario y el valor de cada tipo de hora.
+**Migración 0011 aplicada.**
+
+### 1. Qué se construyó
+
+Un módulo nuevo del panel, **`/admin/nomina`**, solo para managers (admin y
+coordinador), con tres pestañas:
+
+- **Liquidación** (por defecto) — el período elegido (quincena 1, quincena 2 o
+  mes completo) con **todas las cuentas activas**: días, sueldo, horas y
+  recargos, otros devengados, descuentos, **neto** y estado. Al abrir una
+  persona se ve su **desglose completo** —cantidad de horas y valor por
+  concepto—, con los conceptos manuales editables mientras esté en borrador, y
+  los botones **Cerrar**, **Marcar pagada**, **Reabrir**, **Eliminar** y
+  **Descargar volante (PDF)**. Hay un botón «Liquidar todos» y exportación a
+  **CSV** (`;`, BOM UTF-8 y números con coma decimal, igual que el de jornadas).
+- **Configuración** — por empleado y mes: salario básico, auxilio de transporte,
+  las **siete tarifas por hora**, y los porcentajes de salud y pensión. Al abrir
+  un mes nuevo **se copia solo del mes anterior**, igual que `/admin/horarios`.
+- **Tablero** — KPIs, nómina por período (últimos doce), reparto por concepto,
+  neto por persona e **historial** filtrable con enlace al volante de cada uno.
+
+Y, fuera del panel, **«Mi nómina»** en `/mi-cuenta`: cada persona ve sus
+liquidaciones **cerradas o pagadas** y descarga su propio comprobante.
+
+### 2. Cómo se calcula (las decisiones que hay que conocer)
+
+- **El salario básico cubre las horas ordinarias diurnas**: esas se muestran
+  para cuadrar el total de horas, pero **no se pagan aparte**. Las siete tarifas
+  son **pesos por hora que se pagan ADEMÁS** del salario.
+- **Sueldo del período** = `salario / 30 × días liquidados` (convención
+  colombiana de mes de 30 días: una quincena completa son 15 días, tenga el mes
+  28 o 31). El **auxilio de transporte** sigue la misma regla.
+- **Salud y pensión** = porcentajes configurables (4 % y 4 % por defecto) sobre
+  `sueldo del período + horas y recargos`. **No** incluyen el auxilio de
+  transporte ni los bonos, igual que el Excel de GPI.
+- **Mapeo del desglose de jornadas → conceptos de nómina** (las horas salen
+  SIEMPRE del desglose **congelado** al aprobar, vía `obtenerDesglose()`):
+  `ordinariaNocturna` → rotación nocturna (recargo) · `extraDiurna` → extra
+  diurna · `extraNocturna` → extra nocturna · `dominicalDiurna` → hora en
+  festivo · `dominicalNocturna` → **hora en festivo + rotación nocturna**
+  (composición, con línea propia en el desglose para que sea auditable) ·
+  `extraDominicalDiurna` y `extraDominicalNocturna` → sus extras festivas.
+- **Valores sugeridos** = `salario / 240 × factor`, con los factores del Excel
+  que GPI usa hoy (0,35 · 1,25 · 1,75 · 2,15 · 2,65). La única excepción es la
+  **hora extra diurna en festivo**, que en el Excel tiene exactamente el mismo
+  valor que la hora ordinaria en festivo (2,15) —una fórmula copiada, no una
+  regla— y por eso se sugiere con el valor de ley (2,05). Como eso deja una
+  hora extra valiendo menos que una ordinaria, el formulario **avisa en ámbar**
+  y las tres tarifas festivas quedan en la lista de dudas para el cliente.
+- **Liquidación congelada**: al **cerrar** se guarda el cálculo completo en
+  `nomina_liquidaciones.snapshot` (cantidades, valores unitarios, devengados,
+  descuentos, neto y la configuración aplicada). A partir de ahí, corregir un
+  horario, una tarifa o una jornada **no altera** esa nómina — la misma regla
+  del desglose congelado de la 0004. **Reabrir** vuelve a borrador y borra el
+  snapshot: es el único mecanismo para recalcular. **Reabrir ≠ eliminar.**
+- **Redondeo**: todo se paga en **pesos enteros**, redondeando **línea por
+  línea**. Así el volante cuadra al sumarlo a mano, cosa que el Excel actual no
+  hace (sus devengados impresos suman 1.340.190 pero el total impreso dice
+  1.340.189, porque la hoja arrastra centavos y solo redondea al imprimir).
+
+### 3. El volante de pago
+
+PDF de verdad, generado en el servidor con **`@react-pdf/renderer`** (única
+dependencia nueva; nada de navegadores headless) desde
+`GET /admin/nomina/volante/[id]/pdf` y su gemela
+`GET /mi-cuenta/volante/[id]/pdf`, que solo sirve el volante propio. Lleva los
+mismos bloques que GPI espera de su comprobante actual —razón social, NIT,
+«COMPROBANTE DE NÓMINA», empleado, cédula, cargo, período, fecha de pago,
+devengados, descuentos, totales, neto y las dos firmas— con tres mejoras:
+
+1. el **período son fechas reales** (en el comprobante hecho a mano, un recibo
+   de septiembre seguía diciendo «QUINCENA DE ENERO»);
+2. las horas van **desglosadas**, con cantidad y valor por hora, en vez de una
+   sola línea «HORAS EXTRAS»;
+3. los subtotales cuadran al sumarlos.
+
+La **razón social y el NIT** se editan en `/admin/ajustes` → «Datos de la
+empresa para nómina» (clave `site_settings.empresa`).
+
+### 4. Verificación
+
+Pruebas del módulo puro en verde —`node --experimental-strip-types
+scripts/pruebas-nomina.mjs`, 71 comprobaciones— incluida la **reproducción
+exacta del volante real de Santiago Córdoba** (sueldo 875.048, auxilio 124.548,
+salud y pensión 42.586 y **neto 1.255.017 al peso**). `npm run lint` y
+`npm run build` en verde. Prueba de punta a punta contra `localhost` con
+Playwright: configurar a dos empleados con jornadas aprobadas reales, liquidar
+la 2.ª quincena de agosto de 2026, revisar el desglose contra las jornadas,
+editar conceptos manuales, cerrar, marcar pagada, descargar el PDF (revisado
+como imagen), exportar el CSV, revisar el tablero, y luego —como empleado— ver
+«Mi nómina», descargar su volante, quedar fuera de `/admin/nomina` y recibir
+401 en la ruta de volantes del panel. Capturas revisadas en 1440 y 390 px, cero
+errores de consola, y todas las filas de prueba borradas al terminar.
+
+Dos fallos reales salieron de esa prueba y quedaron corregidos: el parseo de
+importes borraba el **punto decimal** (un `<input type="number">` manda
+«9115.08» y se guardaba 911.508, cien veces la tarifa), y el aviso del detalle
+se quedaba mostrando el de la primera acción usada («liquidación creada») aunque
+después se cerrara o se pagara.
+
 ## Decisiones técnicas
 
 - **Fallback estático primero**: toda la capa de contenido (`src/lib/content.ts`)
@@ -1283,6 +1389,52 @@ errores de consola, y todas las filas de prueba borradas al terminar.
   `coordinador` (aprueban jornadas, gestionan cuentas y editan los horarios del
   mes) frente a **Community Manager** (solo contenido del sitio + sus propias
   jornadas).
+
+### Dudas abiertas de NÓMINA (17–18 sep 2026)
+
+Salen del análisis del Excel `NOMINA_LIQUIDACION.xlsx` y del volante real de
+GPI. Ninguna bloquea el módulo —**todo es configurable desde el panel**—, pero
+conviene cerrarlas antes de liquidar de verdad.
+
+1. **Tarifas de domingo y festivo** ⚠️ *(la más importante: es dinero)*. El
+   Excel de GPI usa 2,15 / 2,15 / 2,65 (festivo ordinario / extra diurna
+   festiva / extra nocturna festiva) sobre el valor hora; la ley vigente y los
+   valores por defecto de la webapp (`jornada_config`) dan 1,80 / 2,05 / 2,55.
+   Además, en el Excel «hora en festivo» y «hora extra diurna en festivo»
+   tienen **el mismo** valor, lo que parece una fórmula copiada. ¿Cuáles son
+   las tres tarifas reales?
+2. **Divisor del valor hora**: el Excel usa `salario / 240` («30 días × 8 h»),
+   anterior a la Ley 2101; GPI ya trabaja 42 h semanales. ¿Se mantiene 240 como
+   convención de nómina o se recalcula?
+3. **Auxilio de transporte 2026**: ¿cuál es el valor mensual vigente que debe
+   quedar por defecto? (El Excel tiene un valor viejo en una fórmula sin usar y
+   valores digitados a mano en las filas reales.)
+4. **«Rotación nocturna»**: se implementó como **recargo aditivo** sobre la
+   hora ordinaria nocturna (la hora ya la paga el salario), que es como lo hace
+   el Excel. ¿GPI lo entiende así, o espera digitar un valor absoluto que
+   reemplace el salario de esas horas?
+5. **Hora ordinaria NOCTURNA en festivo**: no existe como tarifa ni en el Excel
+   ni en el pedido de la gerencia. Se paga como **festivo + rotación nocturna**
+   y se muestra como línea propia. ¿Se acepta o quieren una octava tarifa?
+6. **Período**: el único ejemplo real es quincenal. ¿Alguien se liquida por mes
+   completo? (El módulo soporta los dos.)
+7. **Prima y cesantías**: hoy entran como **campos manuales** del período
+   cuando corresponde pagarlas. ¿Se quiere que el sistema las calcule (proceso
+   semestral/anual aparte) o siguen a cargo del contador?
+8. **NIT y razón social del volante** ⚠️: el comprobante actual imprime
+   **901.638.649-7**, pero en los documentos comerciales del proyecto aparece
+   **901.877.993-0**. Se dejó el del comprobante como valor inicial y es
+   editable en `/admin/ajustes`. **Confirmar cuál es el correcto.**
+9. **«Bono» vs «Bono cumplimiento» vs «Comisiones»**: el Excel usa las tres
+   etiquetas en distintas copias del mismo bloque. ¿Son tres conceptos reales y
+   simultáneos o nombres alternativos según el cargo? (Hoy existen los tres.)
+10. **Préstamos por cuotas**: hoy se digita la cuota de cada período. ¿Hace
+    falta que el sistema lleve el **saldo** del préstamo y lo descuente solo
+    hasta agotarlo?
+11. **Costo patronal**: el módulo liquida lo que se le paga al empleado. Las
+    provisiones (cesantías, intereses, vacaciones, prima) y los aportes
+    patronales (caja, pensión, ARL) que el Excel calcula agregados **no** se
+    construyeron. ¿Se quieren en una fase 2 del módulo?
 
 ## Referencias
 
