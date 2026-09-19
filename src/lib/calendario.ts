@@ -488,5 +488,3 @@ export const EVENTO_FILTRO_ESTADOS: { value: EventoEstado | "todos"; label: stri
     ...EVENTO_ESTADOS.map((e) => ({ value: e, label: EVENTO_ESTADO_LABELS[e] })),
   ];
 
-/** Filas por página de la tabla de notas. */
-export const NOTAS_POR_PAGINA = 25;

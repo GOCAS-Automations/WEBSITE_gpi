@@ -43,6 +43,14 @@ export const AYUDA_ORDEN =
 export const AYUDA_VISIBILIDAD =
   "Ocultar es reversible y no borra nada: el contenido se conserva aquí y puedes volver a mostrarlo cuando quieras. Eliminar sí es permanente. Para retirar algo del sitio de forma temporal, oculta.";
 
+/**
+ * Listados de contenido paginados (servicios, proyectos, clientes, FAQ,
+ * valores): el orden se cambia con el número de ORDEN de cada elemento, así
+ * que un elemento puede cambiar de página al guardarlo.
+ */
+export const AYUDA_ORDEN_PAGINAS =
+  "La lista va de 10 en 10, ordenada por el número de orden. Si le cambias el orden a un elemento y guardas, pasa a su nuevo lugar aunque quede en otra página.";
+
 /** Qué es el texto alternativo de una imagen y por qué importa. */
 export const AYUDA_ALT =
   "Describe en pocas palabras lo que se ve en la foto. Lo leen en voz alta los programas que usan las personas con discapacidad visual y le sirve a Google para entender la imagen.";

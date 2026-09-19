@@ -1779,6 +1779,75 @@ aplicar**.
 
 ---
 
+## Iteración del 19 de septiembre de 2026 — tablas de 10 filas y quincena por defecto
+
+Dos pedidos de GPI. **Sin migración.**
+
+### 1. Máximo 10 filas por página en todas las tablas
+
+Un **único control** para todo el sitio: `Paginacion`
+(`src/components/admin/ui-base.tsx`) con la constante `FILAS_POR_PAGINA = 10`
+de `src/lib/paginacion.ts` (módulo puro con `paginar`, `leerPagina` y
+`hrefConPagina`). Pinta «Mostrando a–b de N · Anterior · Página [n] de N ·
+Siguiente», el número se puede escribir, no aparece con una sola página y en
+390 px cabe en una fila (la palabra «Página» se omite en el teléfono). El
+`Pagination` de las gráficas del tablero pasó a ser un adaptador de ese mismo
+control.
+
+| Tabla / listado | Dónde se filtra | Cómo quedó |
+| --- | --- | --- |
+| Aprobaciones de jornadas | Servidor | `?pagina=`; los filtros la reinician |
+| Detalle de jornadas (Métricas; antes 50 por página) | Cliente | Estado local; cada filtro vuelve a la 1; el CSV exporta todo |
+| Control semanal de horas extra (Métricas) | Cliente | Estado local, reinicio con los filtros |
+| Equipo y cuentas | Servidor | `?pagina=`; buscar vuelve a la 1 |
+| Servicios, Proyectos, Clientes, FAQ, Valores | — | `?pagina=`; el orden se cambia con el campo «orden» |
+| Notas del calendario (antes 25 por página) | Servidor | `?pagina=` |
+| Agenda del mes (calendario) | — | Estado local; cambiar de mes vuelve a la 1 |
+| Cumplimiento por responsable (métricas del calendario) | Cliente | Estado local, reinicio con el rango |
+| Liquidación de nómina | Servidor | `?pagina=`; totales, «Liquidar todos» y CSV siguen sobre todo el período |
+| Historial del tablero de nómina | Cliente | Estado local, reinicio con los filtros |
+| *Mi Cuenta*: Mis jornadas, Mis eventos | — | Estado local |
+| *Mi Cuenta*: Mi nómina | — | `?pagina=` junto a `?seccion=nomina` (y `?portal=1`) |
+
+**Fuera, a propósito**: las gráficas y los «top N» de los tableros, el editor
+semanal de `/admin/horarios` (7 días fijos) y las tablas del desglose de una
+liquidación (conceptos fijos). No hay pantalla de mensajes de contacto.
+
+**Reordenar**: servicios, proyectos, clientes, FAQ y valores no tienen «mover
+arriba/abajo»: el orden es un número que se edita en cada elemento. Por eso
+paginar no rompe nada: al guardar un número nuevo, el elemento aparece en su
+página. Para que el reparto sea estable con números repetidos (hay 8 clientes
+con orden 0), las lecturas del panel desempatan por `created_at`. El sitio
+público **no** se tocó: allí los empates siguen en el orden que devuelva la base.
+
+### 2. Quincena por defecto
+
+La Liquidación ya abría el período de hoy; ahora la regla vive en
+`periodoDeHoy(hoy)` de `src/lib/nomina.ts` (pura y probada: 1–15 → primera,
+16–fin → segunda) y se alimenta con `hoyEnColombia()` **en el servidor**. Si la
+URL trae período, manda la URL. Además, al pasar de «Mes completo» a
+«Quincena» se elige la quincena de hoy si es el mes en curso (antes siempre la
+primera).
+
+### Verificación
+
+- `npm run lint`, `npm run build` limpio y `scripts/pruebas-nomina.mjs`
+  **191/191** (se añadieron el período por defecto y la paginación).
+- `next start` + Playwright contra **localhost**, como `admin`: Servicios 10 + 1
+  con la página 2 conservada al recargar; Clientes 10 + 7; Aprobaciones con
+  «todas» 10/10/10/3 —la página 4 escrita a mano— y el filtro de empleado
+  quitando `pagina` de la URL; detalle de Métricas 10 por página con el CSV
+  exportando las **33** filas y el cambio de estado volviendo a la página 1;
+  `/admin/nomina` sin parámetros abre **septiembre de 2026, segunda
+  quincena**, y con `?mes=8&quincena=1` manda la URL. Como `dgomez`: Mis
+  jornadas 10 + 1 en 390 y 1440 px. **Cero errores de consola.**
+- Reordenar a través del borde: un cliente de la página 1 pasó a la 2 al
+  cambiarle el orden y se le devolvió el suyo desde la 2; los datos quedaron
+  iguales salvo su `updated_at`, que lo pone un disparador de la base y no se
+  puede restaurar desde la API.
+
+---
+
 ## Decisiones técnicas
 
 - **Fallback estático primero**: toda la capa de contenido (`src/lib/content.ts`)

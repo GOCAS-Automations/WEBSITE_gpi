@@ -3,17 +3,26 @@ import { listServices } from "@/lib/admin";
 import {
   AdminPageHeader,
   AyudaSeccion,
+  AYUDA_ORDEN_PAGINAS,
   AYUDA_VISIBILIDAD,
   EmptyState,
+  Paginacion,
   PrimaryLink,
   PublishedBadge,
 } from "@/components/admin/ui";
+import { leerPagina, paginar } from "@/lib/paginacion";
 import { DeleteForm } from "@/components/admin/AdminForm";
 import { deleteService } from "../actions";
 import { iconMap, Plus, Pencil, ArrowRight } from "@/lib/icons";
 
-export default async function AdminServiciosPage() {
+export default async function AdminServiciosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ pagina?: string }>;
+}) {
   const services = await listServices();
+  // 10 por página (regla del panel), con la página en la URL.
+  const pagina = paginar(services, leerPagina((await searchParams).pagina));
 
   return (
     <>
@@ -38,7 +47,7 @@ export default async function AdminServiciosPage() {
       <AyudaSeccion className="mb-6">
         En cada fila ves la categoría del servicio, si está visible y su número
         de <strong>orden</strong>: el más bajo aparece primero en el menú y en la
-        página de servicios. {AYUDA_VISIBILIDAD}
+        página de servicios. {AYUDA_VISIBILIDAD} {AYUDA_ORDEN_PAGINAS}
       </AyudaSeccion>
 
       {services.length === 0 ? (
@@ -53,8 +62,9 @@ export default async function AdminServiciosPage() {
           }
         />
       ) : (
-        <ul className="space-y-3">
-          {services.map((service) => {
+        <>
+        <ul id="lista-servicios" className="scroll-mt-28 space-y-3">
+          {pagina.visibles.map((service) => {
             const Icon =
               iconMap[service.icon_key as keyof typeof iconMap] ?? iconMap.cog;
             return (
@@ -114,6 +124,14 @@ export default async function AdminServiciosPage() {
             );
           })}
         </ul>
+        <Paginacion
+          pagina={pagina.pagina}
+          total={pagina.total}
+          hrefBase="/admin/servicios"
+          ancla="lista-servicios"
+          etiqueta="Páginas de servicios"
+        />
+        </>
       )}
     </>
   );

@@ -1260,6 +1260,22 @@ la base de datos esté arriba» — y no se edita desde aquí.
 - Cada sección tiene breadcrumb y botón **← Volver**; dentro de «Contenido del
   sitio» ese botón dice **← Volver a Contenido del sitio**, y los formularios
   de crear/editar añaden además **← Volver a [sección]**.
+- **Tablas y listados: máximo 10 filas por página** (pedido de GPI, 19 sep
+  2026). Toda tabla o listado de registros del panel —y del portal *Mi Cuenta*—
+  muestra 10 filas y, debajo, el mismo control en todas partes: **«Mostrando
+  11–20 de 33» · Anterior · Página [2] de 4 · Siguiente** (el número de página
+  se puede escribir). Si todo cabe en una página, el control no aparece. En las
+  pantallas cuyos filtros viajan en la dirección (Aprobaciones, Notas del
+  calendario, Liquidación de nómina, los listados de contenido, Equipo y «Mi
+  nómina»), la página también queda en la dirección (`?pagina=2`): sobrevive a
+  una recarga y se puede compartir. **Cambiar un filtro devuelve siempre a la
+  página 1.** Lo que la paginación NO cambia: **Exportar CSV** descarga todo lo
+  filtrado, no solo la página visible, y **«Liquidar todos»** sigue creando las
+  de todo el período. En los listados de contenido (servicios, proyectos,
+  clientes, FAQ, valores) el orden se sigue cambiando con el **número de orden**
+  de cada elemento: al guardarlo, el elemento pasa a su nuevo lugar aunque sea
+  en otra página. Las gráficas y los «top» de los tableros no son tablas: siguen
+  como estaban.
 - El **Dashboard** de `/admin` se reorganizó igual, en dos grupos: «Gestión
   interna» (Equipo, Horarios, Jornadas y Calendario — solo managers — y Nómina,
   solo para el administrador) y «El sitio web»
@@ -1846,6 +1862,16 @@ autorizada*). Si la liquidación todavía está en borrador, el documento sale
 
 El archivo se llama `volante_<usuario>_<período>.pdf`, por ejemplo
 `volante_scordoba_2026-08-Q2.pdf`.
+
+### El período que se abre por defecto
+
+Al entrar a *Liquidación* sin un período elegido (desde el menú o el
+dashboard), la pantalla abre **el mes en curso y la quincena de hoy**, con la
+fecha de **Colombia**: del día 1 al 15, la **primera quincena**; del 16 al
+último día del mes, la **segunda**. Si la dirección ya trae un período (por
+ejemplo, un enlace a agosto, primera quincena), manda la dirección. Al pasar de
+*Mes completo* a *Quincena*, se elige la quincena de hoy si es el mes en curso
+y la primera en cualquier otro mes.
 
 ### El filtro por persona
 

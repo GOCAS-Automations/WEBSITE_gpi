@@ -42,7 +42,13 @@ import {
   StatCard,
   tooltipStyle,
 } from "@/components/jornadas/dashboard-ui";
-import { Badge, Card, EmptyState } from "@/components/admin/ui-base";
+import {
+  Badge,
+  Card,
+  EmptyState,
+  Paginacion,
+  usePaginaLocal,
+} from "@/components/admin/ui-base";
 import {
   NOMINA_ESTADO_CLASSES,
   NOMINA_ESTADO_LABELS,
@@ -166,6 +172,14 @@ export function NominaDashboard({
         .filter((f) => (tipo === "todos" ? true : f.tipo === tipo))
         .sort((a, b) => orden(b) - orden(a)),
     [filas, empleado, anio, estado, tipo],
+  );
+
+  // El HISTORIAL (la tabla) va de 10 en 10, como toda tabla del panel; cualquier
+  // cambio de filtro vuelve a la primera página. KPIs y gráficas usan el
+  // conjunto filtrado completo.
+  const historial = usePaginaLocal(
+    filtradas,
+    `${empleado}|${anio}|${estado}|${tipo}`,
   );
 
   /* ---- KPIs ---- */
@@ -473,7 +487,7 @@ export function NominaDashboard({
       </section>
 
       {/* ---------------- Historial ---------------- */}
-      <section>
+      <section id="historial-nomina" className="scroll-mt-28">
         <SectionHeader
           title="Historial"
           description="Todas las liquidaciones del filtro, de la más reciente a la más antigua, con su volante."
@@ -509,7 +523,7 @@ export function NominaDashboard({
               </tr>
             </thead>
             <tbody>
-              {filtradas.map((f) => (
+              {historial.visibles.map((f) => (
                 <tr
                   key={f.id}
                   className="border-b border-line/70 last:border-0 hover:bg-mist/40"
@@ -551,6 +565,13 @@ export function NominaDashboard({
             </tbody>
           </table>
         </Card>
+        <Paginacion
+          pagina={historial.pagina}
+          total={historial.total}
+          onCambiar={historial.setPagina}
+          ancla="historial-nomina"
+          etiqueta="Páginas del historial de nómina"
+        />
 
         {filtradas.some((f) => !f.congelada) && (
           <p className="mt-3 text-xs leading-relaxed text-graphite">

@@ -13,14 +13,12 @@
  * cada evento.
  */
 
-import Link from "next/link";
 import { listEventos, listNotasEventos } from "@/lib/admin";
 import { hoyEnColombia, formatearFechaCorta } from "@/lib/jornada";
 import {
   EVENTO_ESTADO_CLASSES,
   EVENTO_ESTADO_LABELS,
   formatearMomento,
-  NOTAS_POR_PAGINA,
   sumarDiasFecha,
 } from "@/lib/calendario";
 import {
@@ -30,7 +28,9 @@ import {
   Card,
   CardTitle,
   EmptyState,
+  Paginacion,
 } from "@/components/admin/ui";
+import { leerPagina, paginar } from "@/lib/paginacion";
 import { etiquetaCompleta, etiquetaCorta } from "@/lib/usuarios";
 import { NotaForm } from "@/components/calendario/NotaForm";
 import { agregarNotaEvento, eliminarNotaEvento } from "./actions";
@@ -89,28 +89,20 @@ export async function NotasView({
     ).values(),
   ].sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
 
-  const totalPaginas = Math.max(1, Math.ceil(notas.length / NOTAS_POR_PAGINA));
-  const paginaSolicitada = Number(paginaParam);
-  const pagina = Math.min(
-    Math.max(Number.isInteger(paginaSolicitada) ? paginaSolicitada : 1, 1),
-    totalPaginas,
-  );
-  const visibles = notas.slice(
-    (pagina - 1) * NOTAS_POR_PAGINA,
-    pagina * NOTAS_POR_PAGINA,
+  // 10 notas por página (`FILAS_POR_PAGINA`), con la página en la URL. La
+  // barra de filtros reescribe la URL sin `pagina`: filtrar vuelve a la 1.
+  const { visibles, pagina, totalPaginas } = paginar(
+    notas,
+    leerPagina(paginaParam),
   );
 
-  /** URL de esta misma vista en otra página, conservando los filtros. */
-  function urlPagina(n: number): string {
-    const params = new URLSearchParams();
-    params.set("vista", "notas");
-    if (eventoId) params.set("evento", eventoId);
-    if (autorId) params.set("autor", autorId);
-    if (desde) params.set("desde", desde);
-    if (hasta) params.set("hasta", hasta);
-    if (n > 1) params.set("pagina", String(n));
-    return `/admin/calendario?${params.toString()}`;
-  }
+  /** Esta misma vista con los filtros actuales; la página la añade `Paginacion`. */
+  const params = new URLSearchParams({ vista: "notas" });
+  if (eventoId) params.set("evento", eventoId);
+  if (autorId) params.set("autor", autorId);
+  if (desde) params.set("desde", desde);
+  if (hasta) params.set("hasta", hasta);
+  const hrefBase = `/admin/calendario?${params.toString()}`;
 
   return (
     <>
@@ -152,7 +144,10 @@ export async function NotasView({
             {notas.length} nota(s) · página {pagina} de {totalPaginas}
           </p>
 
-          <div className="overflow-hidden rounded-2xl border border-line bg-white shadow-soft">
+          <div
+            id="tabla-notas"
+            className="scroll-mt-28 overflow-hidden rounded-2xl border border-line bg-white shadow-soft"
+          >
             <div className="overflow-x-auto">
               <table className="w-full min-w-[44rem] text-sm">
                 <thead>
@@ -229,34 +224,13 @@ export async function NotasView({
             </div>
           </div>
 
-          {totalPaginas > 1 && (
-            <nav
-              aria-label="Páginas de notas"
-              className="mt-4 flex items-center justify-center gap-2"
-            >
-              {pagina > 1 && (
-                <Link
-                  prefetch={false}
-                  href={urlPagina(pagina - 1)}
-                  className="rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold text-ink-soft transition-colors hover:border-brand hover:text-brand-dark"
-                >
-                  ← Anterior
-                </Link>
-              )}
-              <span className="text-sm text-graphite">
-                Página {pagina} de {totalPaginas}
-              </span>
-              {pagina < totalPaginas && (
-                <Link
-                  prefetch={false}
-                  href={urlPagina(pagina + 1)}
-                  className="rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold text-ink-soft transition-colors hover:border-brand hover:text-brand-dark"
-                >
-                  Siguiente →
-                </Link>
-              )}
-            </nav>
-          )}
+          <Paginacion
+            pagina={pagina}
+            total={notas.length}
+            hrefBase={hrefBase}
+            ancla="tabla-notas"
+            etiqueta="Páginas de notas"
+          />
         </>
       )}
     </>

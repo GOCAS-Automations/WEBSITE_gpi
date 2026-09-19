@@ -26,6 +26,7 @@ import { BarChart, ClipboardList, Sliders } from "@/lib/icons";
 import { LiquidacionView } from "./liquidacion";
 import { ConfiguracionView } from "./configuracion";
 import { TableroView } from "./tablero";
+import { leerPagina } from "@/lib/paginacion";
 
 /** Depende de la sesión: nunca se cachea. */
 export const dynamic = "force-dynamic";
@@ -80,6 +81,7 @@ export default async function AdminNominaPage({
     persona?: string;
     estado?: string;
     abrir?: string;
+    pagina?: string;
   }>;
 }) {
   // Barrera autoritativa: solo el administrador.
@@ -151,6 +153,7 @@ export default async function AdminNominaPage({
           quincena={params.quincena}
           persona={params.persona ?? ""}
           abrir={params.abrir ?? ""}
+          pagina={leerPagina(params.pagina)}
         />
       )}
     </>

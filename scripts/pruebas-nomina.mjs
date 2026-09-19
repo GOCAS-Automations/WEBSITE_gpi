@@ -12,6 +12,10 @@
  *     tarifas ×100 y el caso ambiguo de un solo punto;
  *   · la resolución «vigente desde» de la configuración mensual
  *     (`configVigente` / `estadoConfigMes` de `nomina.ts`).
+ * Y desde el 19 sep 2026:
+ *   · el período que se preselecciona sin período en la URL (`periodoDeHoy`);
+ *   · `src/lib/paginacion.ts`, la regla de 10 filas por página de las tablas
+ *     del panel (también módulo puro, sin importaciones).
  *
  * CÓMO SE EJECUTA
  *   node --experimental-strip-types scripts/pruebas-nomina.mjs
@@ -26,6 +30,7 @@
 
 const nomina = await import("../src/lib/nomina.ts");
 const dinero = await import("../src/lib/dinero.ts");
+const paginacion = await import("../src/lib/paginacion.ts");
 
 const {
   CONCEPTOS_HORA,
@@ -42,6 +47,7 @@ const {
   normalizarManuales,
   normalizarSnapshot,
   obtenerLiquidacion,
+  periodoDeHoy,
   rangoPeriodo,
   sumarMinutos,
   tarifaDeConcepto,
@@ -591,6 +597,55 @@ comprobar("…y septiembre figura como heredado", estadoConfigMes(filas, 2026, 9
 comprobar("…ni cuenta como cambio guardado", estadoConfigMes(filas, 2026, 9).cambios.length, 1);
 comprobar("el orden de las filas no importa", configVigente([octubre, agosto], 2026, 12)?.id ?? null, "2026-10");
 comprobar("diciembre → enero cruza el año", configVigente([fila(2026, 12, 2_000_000)], 2027, 1)?.id ?? null, "2026-12");
+
+/* ================================================================== */
+/* 11. Período por defecto de la liquidación (19 sep 2026)             */
+/* ================================================================== */
+
+grupoDe("Período por defecto: mes de hoy y quincena según el día (Colombia)");
+const periodo = (hoy) => {
+  const r = periodoDeHoy(hoy);
+  return `${r.anio}-${r.mes}-Q${r.quincena}`;
+};
+comprobar("el 1 → primera quincena", periodo("2026-09-01"), "2026-9-Q1");
+comprobar("el 15 → primera quincena", periodo("2026-09-15"), "2026-9-Q1");
+comprobar("el 16 → segunda quincena", periodo("2026-09-16"), "2026-9-Q2");
+comprobar("hoy, 19 sep 2026 → segunda de septiembre", periodo("2026-09-19"), "2026-9-Q2");
+comprobar("el 31 → segunda quincena", periodo("2026-12-31"), "2026-12-Q2");
+comprobar("el 28 de febrero → segunda quincena", periodo("2027-02-28"), "2027-2-Q2");
+
+/* ================================================================== */
+/* 12. Paginación de las tablas: 10 filas por página (19 sep 2026)     */
+/* ================================================================== */
+
+grupoDe("Paginación: 10 filas por página (src/lib/paginacion.ts)");
+const { FILAS_POR_PAGINA, hrefConPagina, leerPagina, paginar } = paginacion;
+const treintaYTres = Array.from({ length: 33 }, (_, i) => i + 1);
+comprobar("la regla es 10 filas", FILAS_POR_PAGINA, 10);
+comprobar("33 filas → 4 páginas", paginar(treintaYTres, 1).totalPaginas, 4);
+comprobar("página 1 → 10 filas", paginar(treintaYTres, 1).visibles.length, 10);
+comprobar("página 2 empieza en la fila 11", paginar(treintaYTres, 2).desde, 11);
+comprobar("página 2 termina en la fila 20", paginar(treintaYTres, 2).hasta, 20);
+comprobar("la última página trae el resto (3)", paginar(treintaYTres, 4).visibles.length, 3);
+comprobar("una página inexistente se recorta a la última", paginar(treintaYTres, 99).pagina, 4);
+comprobar("página 0 o negativa → la 1", paginar(treintaYTres, -3).pagina, 1);
+comprobar("lista vacía → 1 página y «desde» 0", `${paginar([], 1).totalPaginas}/${paginar([], 1).desde}`, "1/0");
+comprobar("exactamente 10 → 1 página (el control no se pinta)", paginar(treintaYTres.slice(0, 10), 1).totalPaginas, 1);
+comprobar("?pagina=abc → 1", leerPagina("abc"), 1);
+comprobar("?pagina=2.5 → 1", leerPagina("2.5"), 1);
+comprobar("?pagina=3 → 3", leerPagina("3"), 3);
+comprobar("?pagina repetido → el primero", leerPagina(["2", "5"]), 2);
+comprobar(
+  "href: conserva los filtros y añade la página",
+  hrefConPagina("/admin/jornadas?vista=aprobaciones&estado=todas", 3),
+  "/admin/jornadas?vista=aprobaciones&estado=todas&pagina=3",
+);
+comprobar("href: la página 1 no se escribe", hrefConPagina("/admin/servicios?pagina=4", 1), "/admin/servicios");
+comprobar(
+  "href: reemplaza una página vieja",
+  hrefConPagina("/mi-cuenta?seccion=nomina&pagina=2", 3),
+  "/mi-cuenta?seccion=nomina&pagina=3",
+);
 
 /* ------------------------------------------------------------------ */
 

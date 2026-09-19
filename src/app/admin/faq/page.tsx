@@ -4,14 +4,17 @@ import {
   AvisoGuardar,
   AyudaSeccion,
   AYUDA_ORDEN,
+  AYUDA_ORDEN_PAGINAS,
   AYUDA_VISIBILIDAD,
   Card,
   CardTitle,
   Field,
+  Paginacion,
   PublishedBadge,
   Switch,
   TextArea,
 } from "@/components/admin/ui";
+import { leerPagina, paginar } from "@/lib/paginacion";
 import { AdminForm, DeleteForm } from "@/components/admin/AdminForm";
 import { saveFaq, deleteFaq } from "../actions";
 
@@ -54,8 +57,14 @@ function FaqFields({ faq }: { faq?: FaqRecord }) {
   );
 }
 
-export default async function AdminFaqPage() {
+export default async function AdminFaqPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ pagina?: string }>;
+}) {
   const faqs = await listFaqs();
+  // 10 por página (regla del panel), con la página en la URL.
+  const pagina = paginar(faqs, leerPagina((await searchParams).pagina));
 
   return (
     <>
@@ -75,11 +84,11 @@ export default async function AdminFaqPage() {
 
       <AyudaSeccion className="mb-6">
         Google también las lee y puede mostrarlas en sus resultados, así que vale
-        la pena responder con claridad. {AYUDA_VISIBILIDAD}
+        la pena responder con claridad. {AYUDA_VISIBILIDAD} {AYUDA_ORDEN_PAGINAS}
       </AyudaSeccion>
 
-      <div className="space-y-5">
-        {faqs.map((faq) => (
+      <div id="lista-faq" className="scroll-mt-28 space-y-5">
+        {pagina.visibles.map((faq) => (
           <Card key={faq.id}>
             <CardTitle
               title={faq.question}
@@ -99,6 +108,15 @@ export default async function AdminFaqPage() {
             </AdminForm>
           </Card>
         ))}
+
+        <Paginacion
+          pagina={pagina.pagina}
+          total={pagina.total}
+          hrefBase="/admin/faq"
+          ancla="lista-faq"
+          etiqueta="Páginas de preguntas"
+          className="mt-0"
+        />
 
         <Card className="border-dashed">
           <CardTitle

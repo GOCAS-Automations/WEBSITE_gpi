@@ -25,7 +25,8 @@ import {
 } from "@/lib/nomina";
 import { formatearPesos } from "@/lib/dinero";
 import type { NominaLiquidacionRecord } from "@/lib/admin-types";
-import { Badge } from "@/components/admin/ui-base";
+import { Badge, Paginacion } from "@/components/admin/ui-base";
+import { paginar } from "@/lib/paginacion";
 import { Banknote, Download, Info } from "@/lib/icons";
 
 /** "2026-09-15" → "15/09/2026". */
@@ -36,9 +37,19 @@ function fecha(valor: string | null): string {
 
 export function MiNomina({
   liquidaciones,
+  pagina: paginaPedida,
+  hrefBase,
 }: {
   liquidaciones: NominaLiquidacionRecord[];
+  /** Página pedida en la URL (`?pagina=`, 1-based). */
+  pagina: number;
+  /** La pestaña «Mi nómina» con `?portal=1` si hace falta; sin la página. */
+  hrefBase: string;
 }) {
+  // De 10 en 10 (regla del sitio); las tarjetas del móvil y la tabla del
+  // escritorio muestran la MISMA página.
+  const { visibles, pagina } = paginar(liquidaciones, paginaPedida);
+
   // Vacío amable: explica QUÉ va a aparecer aquí y cuándo, en vez de dejar la
   // pestaña en blanco.
   if (liquidaciones.length === 0) {
@@ -60,7 +71,10 @@ export function MiNomina({
   }
 
   return (
-    <section className="rounded-2xl border border-line bg-white p-5 shadow-soft sm:p-7">
+    <section
+      id="mi-nomina"
+      className="scroll-mt-28 rounded-2xl border border-line bg-white p-5 shadow-soft sm:p-7"
+    >
       <header className="mb-4">
         <h2 className="flex items-center gap-2 text-lg font-bold text-ink">
           <Banknote className="h-5 w-5 text-brand-dark" />
@@ -77,7 +91,7 @@ export function MiNomina({
           que el empleado viene a buscar— queda fuera de la pantalla en un
           teléfono, y nada indica que haya que desplazarse en horizontal. */}
       <ul className="space-y-3 sm:hidden">
-        {liquidaciones.map((l) => {
+        {visibles.map((l) => {
           const snapshot = normalizarSnapshot(l.snapshot);
           return (
             <li
@@ -135,7 +149,7 @@ export function MiNomina({
             </tr>
           </thead>
           <tbody>
-            {liquidaciones.map((l) => {
+            {visibles.map((l) => {
               const snapshot = normalizarSnapshot(l.snapshot);
               return (
                 <tr
@@ -169,6 +183,14 @@ export function MiNomina({
           </tbody>
         </table>
       </div>
+
+      <Paginacion
+        pagina={pagina}
+        total={liquidaciones.length}
+        hrefBase={hrefBase}
+        ancla="mi-nomina"
+        etiqueta="Páginas de mi nómina"
+      />
 
       <p className="mt-4 flex items-start gap-2 text-xs leading-relaxed text-graphite">
         <Info className="mt-0.5 h-4 w-4 shrink-0" />

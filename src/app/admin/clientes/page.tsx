@@ -4,13 +4,16 @@ import {
   AvisoGuardar,
   AyudaSeccion,
   AYUDA_ORDEN,
+  AYUDA_ORDEN_PAGINAS,
   AYUDA_VISIBILIDAD,
   Card,
   CardTitle,
   Field,
+  Paginacion,
   PublishedBadge,
   Switch,
 } from "@/components/admin/ui";
+import { leerPagina, paginar } from "@/lib/paginacion";
 import { AdminForm, DeleteForm } from "@/components/admin/AdminForm";
 import { ImageField } from "@/components/admin/ImageField";
 import { saveClient, deleteClient } from "../actions";
@@ -59,8 +62,14 @@ function ClientFields({ client }: { client?: ClientRecord }) {
   );
 }
 
-export default async function AdminClientesPage() {
+export default async function AdminClientesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ pagina?: string }>;
+}) {
   const clients = await listClients();
+  // 10 por página (regla del panel), con la página en la URL.
+  const pagina = paginar(clients, leerPagina((await searchParams).pagina));
 
   return (
     <>
@@ -80,11 +89,11 @@ export default async function AdminClientesPage() {
 
       <AyudaSeccion className="mb-6">
         Los logos se muestran centrados en la banda «Portafolio de clientes» de
-        la página de inicio, en el orden que indiques. {AYUDA_VISIBILIDAD}
+        la página de inicio, en el orden que indiques. {AYUDA_VISIBILIDAD} {AYUDA_ORDEN_PAGINAS}
       </AyudaSeccion>
 
-      <div className="space-y-5">
-        {clients.map((client) => (
+      <div id="lista-clientes" className="scroll-mt-28 space-y-5">
+        {pagina.visibles.map((client) => (
           <Card key={client.id}>
             <CardTitle
               title={client.name}
@@ -104,6 +113,15 @@ export default async function AdminClientesPage() {
             </AdminForm>
           </Card>
         ))}
+
+        <Paginacion
+          pagina={pagina.pagina}
+          total={pagina.total}
+          hrefBase="/admin/clientes"
+          ancla="lista-clientes"
+          etiqueta="Páginas de clientes"
+          className="mt-0"
+        />
 
         <Card className="border-dashed">
           <CardTitle

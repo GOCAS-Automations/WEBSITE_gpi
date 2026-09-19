@@ -8,6 +8,10 @@
  * lo único que es cliente es la barra que los reescribe (`FiltrosAprobaciones`),
  * para que se apliquen al cambiar en vez de con un botón "Filtrar".
  *
+ * PAGINACIÓN: 10 fichas por página (`FILAS_POR_PAGINA`), con la página en la
+ * URL (`?pagina=`). La barra de filtros reescribe la URL SIN `pagina`, así que
+ * cambiar un filtro devuelve a la primera página.
+ *
  * ELIMINAR ≠ RECHAZAR: rechazar conserva el registro con una nota que el
  * empleado lee para corregir; eliminar lo borra de la base de datos y el
  * empleado deja de verlo. Eliminar existe para limpiar registros de prueba o
@@ -29,7 +33,14 @@ import {
   SIN_ORDEN_TRABAJO,
   type JornadaStatus,
 } from "@/lib/admin-types";
-import { AyudaSeccion, Badge, Card, EmptyState } from "@/components/admin/ui";
+import {
+  AyudaSeccion,
+  Badge,
+  Card,
+  EmptyState,
+  Paginacion,
+} from "@/components/admin/ui";
+import { paginar } from "@/lib/paginacion";
 import { JornadaBreakdown } from "@/components/jornadas/JornadaBreakdown";
 import {
   DeleteJornadaAction,
@@ -57,11 +68,13 @@ export async function AprobacionesView({
   empleadoId,
   desde,
   hasta,
+  pagina: paginaPedida,
 }: {
   estado?: string;
   empleadoId: string;
   desde: string;
   hasta: string;
+  pagina: number;
 }) {
   const estado = JORNADA_FILTRO_ESTADOS.some((e) => e.value === estadoRaw)
     ? (estadoRaw as JornadaStatus | "todas")
@@ -73,11 +86,23 @@ export async function AprobacionesView({
       employeeId: empleadoId || undefined,
       from: desde || undefined,
       to: hasta || undefined,
+      // Solo se pintan 10 por página: traer más filas ya no cuesta render.
+      limit: 1000,
     }),
     listProfiles(),
     getJornadaConfig(),
     getMapaHorarios(),
   ]);
+
+  const { visibles, pagina } = paginar(jornadas, paginaPedida);
+
+  /** La bandeja con los filtros actuales; la página la añade `Paginacion`. */
+  const params = new URLSearchParams({ vista: "aprobaciones" });
+  if (estado !== JORNADA_FILTRO_ESTADO_DEFECTO) params.set("estado", estado);
+  if (empleadoId) params.set("empleado", empleadoId);
+  if (desde) params.set("desde", desde);
+  if (hasta) params.set("hasta", hasta);
+  const hrefBase = `/admin/jornadas?${params.toString()}`;
 
   return (
     <>
@@ -140,12 +165,12 @@ export async function AprobacionesView({
           }
         />
       ) : (
-        <div className="space-y-4">
+        <div id="lista-jornadas" className="scroll-mt-28 space-y-4">
           <p className="text-sm text-graphite">
             {jornadas.length} jornada(s) encontrada(s).
           </p>
 
-          {jornadas.map((jornada) => {
+          {visibles.map((jornada) => {
             // Regla de lectura única: si la jornada se aprobó con el desglose
             // congelado, se muestran esas cifras; si no, se calculan en vivo.
             const { desglose, congelado, contexto, calculadoEn } =
@@ -250,6 +275,14 @@ export async function AprobacionesView({
               </article>
             );
           })}
+
+          <Paginacion
+            pagina={pagina}
+            total={jornadas.length}
+            hrefBase={hrefBase}
+            ancla="lista-jornadas"
+            etiqueta="Páginas de jornadas"
+          />
         </div>
       )}
 

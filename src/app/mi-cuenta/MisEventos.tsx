@@ -29,7 +29,7 @@ import {
   nombreCompletoResponsable,
   type EventoRecord,
 } from "@/lib/calendario";
-import { Badge } from "@/components/admin/ui-base";
+import { Badge, Paginacion, usePaginaLocal } from "@/components/admin/ui-base";
 import { NotaForm } from "@/components/calendario/NotaForm";
 import { Calendar, ChevronDown, Clock, Users } from "@/lib/icons";
 
@@ -46,6 +46,8 @@ export function MisEventos({
   nombrePropio: string;
 }) {
   const [abierto, setAbierto] = useState<string | null>(null);
+  // De 10 en 10, como todo listado del sitio (sin filtros: estado local).
+  const lista = usePaginaLocal(eventos);
 
   if (eventos.length === 0) {
     return (
@@ -64,7 +66,10 @@ export function MisEventos({
   }
 
   return (
-    <section className="rounded-2xl border border-line bg-white p-5 shadow-soft sm:p-6">
+    <section
+      id="mis-eventos"
+      className="scroll-mt-28 rounded-2xl border border-line bg-white p-5 shadow-soft sm:p-6"
+    >
       <header className="mb-4">
         <h2 className="flex items-center gap-2 text-lg font-bold text-ink">
           <Calendar className="h-5 w-5 text-brand-dark" />
@@ -78,7 +83,7 @@ export function MisEventos({
       </header>
 
       <ul className="space-y-3">
-        {eventos.map((evento) => {
+        {lista.visibles.map((evento) => {
           const otros = evento.responsables.filter(
             (r) => r.nombre !== nombrePropio,
           );
@@ -180,6 +185,13 @@ export function MisEventos({
           );
         })}
       </ul>
+      <Paginacion
+        pagina={lista.pagina}
+        total={lista.total}
+        onCambiar={lista.setPagina}
+        ancla="mis-eventos"
+        etiqueta="Páginas de mis eventos"
+      />
     </section>
   );
 }

@@ -35,8 +35,17 @@
  * son, por diseño, solo para Server Components.
  */
 
-import type { ReactNode } from "react";
-import { ChevronDown, Info } from "@/lib/icons";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState, useTransition, type ReactNode } from "react";
+import { ChevronDown, ChevronLeft, ChevronRight, Info } from "@/lib/icons";
+import {
+  FILAS_POR_PAGINA,
+  hrefConPagina,
+  paginar,
+  type PaginaDe,
+} from "@/lib/paginacion";
+import { PuntoDeCarga } from "./PuntoDeCarga";
 
 export const inputClass =
   "w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm text-ink placeholder:text-graphite/60 transition-colors focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/25";
@@ -429,4 +438,257 @@ export function EmptyState({
       {action && <div className="mt-5 flex justify-center">{action}</div>}
     </div>
   );
+}
+
+/* ------------------------------------------------------------------ */
+/* Paginación — el ÚNICO control de páginas del panel y del portal      */
+/* ------------------------------------------------------------------ */
+
+type PaginacionComun = {
+  /** Página actual, 1-based. */
+  pagina: number;
+  /** Filas del conjunto completo. Con él se pinta «Mostrando a–b de N». */
+  total?: number;
+  /** Filas por página. Por defecto, la regla del panel: `FILAS_POR_PAGINA`. */
+  porPagina?: number;
+  /**
+   * Solo cuando no hay un total de filas que contar (las gráficas paginadas
+   * por días): entonces no se pinta «Mostrando…».
+   */
+  totalPaginas?: number;
+  /**
+   * `id` del principio del listado. Al cambiar de página se vuelve ahí si ya
+   * quedó fuera de la pantalla: en los listados de fichas altas, quedarse
+   * abajo obligaría a subir a buscar la primera fila.
+   */
+  ancla?: string;
+  /** Nombre accesible del bloque, p. ej. «Páginas de jornadas». */
+  etiqueta?: string;
+  /**
+   * Resumen y controles siempre uno encima del otro, también en escritorio:
+   * para columnas angostas (la agenda del calendario).
+   */
+  apilado?: boolean;
+  /** Por defecto `mt-4`; lo que se pase REEMPLAZA ese margen. */
+  className?: string;
+};
+
+/**
+ * Dos modos, uno por cada forma de filtrar:
+ * - `onCambiar`: la tabla se pagina en el cliente (estado local).
+ * - `hrefBase`: la página viaja en la URL (`?pagina=`); `hrefBase` es la
+ *   dirección actual con sus filtros, sin pensar en la página.
+ */
+type PaginacionProps = PaginacionComun &
+  (
+    | { onCambiar: (pagina: number) => void; hrefBase?: never }
+    | { hrefBase: string; onCambiar?: never }
+  );
+
+const PAGINACION_BOTON =
+  "inline-flex items-center gap-1 rounded-full border border-line bg-white px-3 py-1.5 text-xs font-semibold text-ink-soft transition-colors hover:border-brand hover:text-brand-dark";
+
+/**
+ * «Mostrando a–b de N» · Anterior · Página [n] de N · Siguiente.
+ *
+ * No se pinta cuando todo cabe en una página. El número de página se puede
+ * escribir (confirma con Enter o al salir del campo, recortado al rango). En
+ * un teléfono de 390 px el resumen va arriba y los controles debajo.
+ */
+export function Paginacion(props: PaginacionProps) {
+  const {
+    pagina,
+    total,
+    porPagina = FILAS_POR_PAGINA,
+    ancla,
+    etiqueta = "Paginación",
+    apilado = false,
+    className = "mt-4",
+  } = props;
+  const totalPaginas =
+    props.totalPaginas ?? Math.max(1, Math.ceil((total ?? 0) / porPagina));
+
+  const router = useRouter();
+  const [, startTransition] = useTransition();
+  const [valor, setValor] = useState(String(pagina));
+  // Si la página cambia desde fuera (botones, filtros, atrás del navegador),
+  // el campo se resincroniza durante el render, sin efecto.
+  const [previa, setPrevia] = useState(pagina);
+  if (previa !== pagina) {
+    setPrevia(pagina);
+    setValor(String(pagina));
+  }
+
+  if (totalPaginas <= 1) return null;
+
+  const href = (n: number) =>
+    `${hrefConPagina(props.hrefBase ?? "", n)}${ancla ? `#${ancla}` : ""}`;
+
+  function volverAlAncla() {
+    if (!ancla) return;
+    requestAnimationFrame(() => {
+      const el = document.getElementById(ancla);
+      if (el && el.getBoundingClientRect().top < 0) {
+        el.scrollIntoView({ block: "start", behavior: "smooth" });
+      }
+    });
+  }
+
+  function ir(n: number) {
+    const destino = Math.max(1, Math.min(totalPaginas, n));
+    setValor(String(destino));
+    if (destino === pagina) return;
+    if (props.onCambiar) {
+      props.onCambiar(destino);
+      volverAlAncla();
+    } else {
+      startTransition(() => {
+        router.push(href(destino), { scroll: Boolean(ancla) });
+      });
+    }
+  }
+
+  function confirmar() {
+    const n = Number.parseInt(valor, 10);
+    if (Number.isNaN(n)) {
+      setValor(String(pagina));
+      return;
+    }
+    ir(n);
+  }
+
+  function control(
+    destino: number,
+    habilitado: boolean,
+    texto: string,
+    etiquetaControl: string,
+    icono: ReactNode,
+    iconoAlFinal = false,
+  ) {
+    const contenido = (
+      <>
+        {!iconoAlFinal && icono}
+        {texto}
+        {iconoAlFinal && icono}
+      </>
+    );
+    if (!habilitado) {
+      return (
+        <span
+          aria-disabled="true"
+          className={`${PAGINACION_BOTON} pointer-events-none opacity-35`}
+        >
+          {contenido}
+        </span>
+      );
+    }
+    if (props.onCambiar) {
+      return (
+        <button
+          type="button"
+          onClick={() => ir(destino)}
+          aria-label={etiquetaControl}
+          className={PAGINACION_BOTON}
+        >
+          {contenido}
+        </button>
+      );
+    }
+    return (
+      <Link
+        prefetch={false}
+        href={href(destino)}
+        scroll={Boolean(ancla)}
+        aria-label={etiquetaControl}
+        className={PAGINACION_BOTON}
+      >
+        {contenido}
+        <PuntoDeCarga className="ml-0.5" />
+      </Link>
+    );
+  }
+
+  const desde = total != null ? (pagina - 1) * porPagina + 1 : 0;
+  const hasta = total != null ? Math.min(pagina * porPagina, total) : 0;
+
+  return (
+    <nav
+      aria-label={etiqueta}
+      className={`flex flex-col items-center gap-2.5 ${
+        apilado
+          ? ""
+          : total != null
+            ? "sm:flex-row sm:justify-between"
+            : "sm:flex-row sm:justify-center"
+      } ${className}`}
+    >
+      {total != null && (
+        <p className="text-xs text-graphite" aria-live="polite">
+          Mostrando{" "}
+          <strong className="font-semibold text-ink">
+            {desde}–{hasta}
+          </strong>{" "}
+          de <strong className="font-semibold text-ink">{total}</strong>
+        </p>
+      )}
+      <div className="flex items-center gap-1.5 sm:gap-2">
+        {control(
+          pagina - 1,
+          pagina > 1,
+          "Anterior",
+          "Página anterior",
+          <ChevronLeft className="h-3.5 w-3.5" />,
+        )}
+        {/* En el teléfono se omite la palabra «Página» (el campo la dice a los
+            lectores de pantalla): así los tres controles caben en una fila. */}
+        <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-xs text-graphite">
+          <span className="hidden sm:inline">Página</span>
+          <input
+            type="text"
+            inputMode="numeric"
+            value={valor}
+            onChange={(e) => setValor(e.target.value.replace(/\D/g, ""))}
+            onBlur={confirmar}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                confirmar();
+              }
+            }}
+            aria-label={`Ir a la página (de 1 a ${totalPaginas})`}
+            className="w-10 rounded-lg border border-line bg-white px-1.5 py-1 text-center text-xs font-semibold text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/25"
+          />
+          de {totalPaginas}
+        </span>
+        {control(
+          pagina + 1,
+          pagina < totalPaginas,
+          "Siguiente",
+          "Página siguiente",
+          <ChevronRight className="h-3.5 w-3.5" />,
+          true,
+        )}
+      </div>
+    </nav>
+  );
+}
+
+/**
+ * Paginación con estado local, para las tablas que se filtran en el cliente.
+ * `claveReinicio` resume los filtros: cuando cambia, se vuelve a la página 1
+ * (ajuste durante el render, el patrón que recomienda React, sin efecto).
+ */
+export function usePaginaLocal<T>(
+  lista: readonly T[],
+  claveReinicio = "",
+  porPagina: number = FILAS_POR_PAGINA,
+): PaginaDe<T> & { setPagina: (pagina: number) => void } {
+  const [pagina, setPagina] = useState(1);
+  const [clave, setClave] = useState(claveReinicio);
+  const reiniciar = clave !== claveReinicio;
+  if (reiniciar) {
+    setClave(claveReinicio);
+    setPagina(1);
+  }
+  return { ...paginar(lista, reiniciar ? 1 : pagina, porPagina), setPagina };
 }

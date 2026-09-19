@@ -16,6 +16,7 @@ import { AdminPageHeader } from "@/components/admin/ui";
 import { BarChart, ClipboardList } from "@/lib/icons";
 import { AprobacionesView } from "./aprobaciones";
 import { MetricasView } from "./metricas";
+import { leerPagina } from "@/lib/paginacion";
 
 type Vista = "aprobaciones" | "metricas";
 
@@ -37,6 +38,7 @@ export default async function AdminJornadasPage({
     empleado?: string;
     desde?: string;
     hasta?: string;
+    pagina?: string;
   }>;
 }) {
   // Barrera autoritativa: solo admin y coordinador.
@@ -96,6 +98,7 @@ export default async function AdminJornadasPage({
           empleadoId={filtros.empleado ?? ""}
           desde={filtros.desde ?? ""}
           hasta={filtros.hasta ?? ""}
+          pagina={leerPagina(filtros.pagina)}
         />
       )}
     </>

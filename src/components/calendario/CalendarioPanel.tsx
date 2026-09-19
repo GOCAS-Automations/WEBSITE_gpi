@@ -50,7 +50,7 @@ import {
   resumirResponsables,
   type EventoRecord,
 } from "@/lib/calendario";
-import { Badge } from "@/components/admin/ui-base";
+import { Badge, Paginacion, usePaginaLocal } from "@/components/admin/ui-base";
 import {
   Calendar,
   ChevronLeft,
@@ -110,6 +110,9 @@ export function CalendarioPanel({
   const [creandoEn, setCreandoEn] = useState<string | null>(null);
 
   const semanas = useMemo(() => construirMes(anio, mes), [anio, mes]);
+  // La agenda del mes se pagina de 10 en 10 (regla del panel); cambiar de mes
+  // vuelve a la primera página.
+  const agenda = usePaginaLocal(eventos, `${anio}-${mes}`);
   const porFecha = useMemo(() => agruparPorFecha(eventos), [eventos]);
 
   const detalle = detalleId
@@ -336,8 +339,9 @@ export function CalendarioPanel({
               {puedeAdministrar && " Pulsa «Nuevo evento» para empezar."}
             </p>
           ) : (
-            <ul className="mt-3 max-h-[34rem] space-y-2 overflow-y-auto pr-1 2xl:max-h-[40rem]">
-              {eventos.map((evento) => (
+            <>
+            <ul id="agenda-mes" className="mt-3 scroll-mt-28 space-y-2">
+              {agenda.visibles.map((evento) => (
                 <li key={evento.id}>
                   <button
                     type="button"
@@ -375,6 +379,16 @@ export function CalendarioPanel({
                 </li>
               ))}
             </ul>
+            <Paginacion
+              pagina={agenda.pagina}
+              total={agenda.total}
+              onCambiar={agenda.setPagina}
+              ancla="agenda-mes"
+              etiqueta="Páginas de la agenda del mes"
+              apilado
+              className="mt-3 border-t border-line pt-3"
+            />
+            </>
           )}
         </aside>
       </div>

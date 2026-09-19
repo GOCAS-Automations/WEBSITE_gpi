@@ -5,15 +5,18 @@ import {
   AyudaSeccion,
   AYUDA_ALT,
   AYUDA_ORDEN,
+  AYUDA_ORDEN_PAGINAS,
   AYUDA_VISIBILIDAD,
   Card,
   CardTitle,
   Field,
+  Paginacion,
   PublishedBadge,
   Select,
   Switch,
   TextArea,
 } from "@/components/admin/ui";
+import { leerPagina, paginar } from "@/lib/paginacion";
 import { AdminForm, DeleteForm } from "@/components/admin/AdminForm";
 import { ImageField } from "@/components/admin/ImageField";
 import { GalleryField } from "@/components/admin/ListField";
@@ -110,8 +113,14 @@ function ProjectFields({ project }: { project?: ProjectRecord }) {
   );
 }
 
-export default async function AdminProyectosPage() {
+export default async function AdminProyectosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ pagina?: string }>;
+}) {
   const projects = await listProjects();
+  // 10 por página (regla del panel), con la página en la URL.
+  const pagina = paginar(projects, leerPagina((await searchParams).pagina));
 
   return (
     <>
@@ -136,11 +145,11 @@ export default async function AdminProyectosPage() {
           /proyectos/…
         </code>
         ), con la descripción larga y la galería que cargues aquí.{" "}
-        {AYUDA_VISIBILIDAD}
+        {AYUDA_VISIBILIDAD} {AYUDA_ORDEN_PAGINAS}
       </AyudaSeccion>
 
-      <div className="space-y-5">
-        {projects.map((project) => (
+      <div id="lista-proyectos" className="scroll-mt-28 space-y-5">
+        {pagina.visibles.map((project) => (
           <Card key={project.id}>
             <CardTitle
               title={project.title}
@@ -160,6 +169,15 @@ export default async function AdminProyectosPage() {
             </AdminForm>
           </Card>
         ))}
+
+        <Paginacion
+          pagina={pagina.pagina}
+          total={pagina.total}
+          hrefBase="/admin/proyectos"
+          ancla="lista-proyectos"
+          etiqueta="Páginas de proyectos"
+          className="mt-0"
+        />
 
         <Card className="border-dashed">
           <CardTitle

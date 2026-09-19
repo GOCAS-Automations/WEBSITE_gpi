@@ -41,6 +41,7 @@ import {
   minutosVacios,
   normalizarManuales,
   obtenerLiquidacion,
+  periodoDeHoy,
   rangoPeriodo,
   type TipoPeriodo,
 } from "@/lib/nomina";
@@ -56,16 +57,6 @@ import {
   reabrirLiquidacion,
 } from "./actions";
 
-/** Período por defecto: la quincena en la que estamos hoy, hora de Colombia. */
-function periodoDeHoy(): { anio: number; mes: number; quincena: 1 | 2 } {
-  const hoy = hoyEnColombia();
-  return {
-    anio: Number(hoy.slice(0, 4)),
-    mes: Number(hoy.slice(5, 7)),
-    quincena: Number(hoy.slice(8, 10)) <= 15 ? 1 : 2,
-  };
-}
-
 function numero(valor: string | undefined, porDefecto: number): number {
   const n = Number(valor);
   return Number.isInteger(n) ? n : porDefecto;
@@ -78,6 +69,7 @@ export async function LiquidacionView({
   quincena,
   persona,
   abrir,
+  pagina,
 }: {
   tipo?: string;
   anio?: string;
@@ -87,8 +79,14 @@ export async function LiquidacionView({
   persona: string;
   /** Id de la liquidación que debe abrirse nada más cargar (enlaces directos). */
   abrir: string;
+  /** Página de la tabla (`?pagina=`, 1-based). */
+  pagina: number;
 }) {
-  const porDefecto = periodoDeHoy();
+  // PERÍODO POR DEFECTO: si la URL no lo trae, el mes de hoy y la quincena
+  // según el día, con la fecha de COLOMBIA calculada aquí, en el servidor. Lo
+  // que venga en la URL manda sobre esto.
+  const hoy = hoyEnColombia();
+  const porDefecto = periodoDeHoy(hoy);
   const tipoPeriodo: TipoPeriodo = tipo === "mes" ? "mes" : "quincena";
   const anioSel = numero(anio, porDefecto.anio);
   const mesBruto = numero(mes, porDefecto.mes);
@@ -217,8 +215,9 @@ export async function LiquidacionView({
       fechaInicio={rango.fechaInicio}
       fechaFin={rango.fechaFin}
       diasSugeridos={rango.diasSugeridos}
-      hoy={hoyEnColombia()}
+      hoy={hoy}
       abrir={abrir}
+      pagina={pagina}
       crearAction={crearLiquidacion}
       liquidarTodosAction={liquidarTodos}
       guardarAction={guardarConceptos}

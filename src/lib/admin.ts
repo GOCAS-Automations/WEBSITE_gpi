@@ -159,7 +159,10 @@ export async function listServices(): Promise<ServiceRecord[]> {
   const { data } = await supabase
     .from("site_services")
     .select("*")
-    .order("sort", { ascending: true });
+    .order("sort", { ascending: true })
+    // Desempate estable: con el mismo número de orden, la paginación de 10 en
+    // 10 no puede repartir las filas distinto en cada consulta.
+    .order("created_at", { ascending: true });
   if (!data) return [];
   return data.map((row) => ({
     id: String(row.id),
@@ -193,7 +196,10 @@ export async function listProjects(): Promise<ProjectRecord[]> {
   const { data } = await supabase
     .from("site_projects")
     .select("*")
-    .order("sort", { ascending: true });
+    .order("sort", { ascending: true })
+    // Desempate estable: con el mismo número de orden, la paginación de 10 en
+    // 10 no puede repartir las filas distinto en cada consulta.
+    .order("created_at", { ascending: true });
   if (!data) return [];
   // `slug`, `details` y `gallery` llegan `undefined` mientras la migración 0005
   // no esté aplicada: el panel muestra el slug propuesto desde el título y la
@@ -220,7 +226,10 @@ export async function listClients(): Promise<ClientRecord[]> {
   const { data } = await supabase
     .from("site_clients")
     .select("*")
-    .order("sort", { ascending: true });
+    .order("sort", { ascending: true })
+    // Desempate estable: con el mismo número de orden, la paginación de 10 en
+    // 10 no puede repartir las filas distinto en cada consulta.
+    .order("created_at", { ascending: true });
   if (!data) return [];
   return data.map((row) => ({
     id: String(row.id),
@@ -238,7 +247,10 @@ export async function listFaqs(): Promise<FaqRecord[]> {
   const { data } = await supabase
     .from("site_faqs")
     .select("*")
-    .order("sort", { ascending: true });
+    .order("sort", { ascending: true })
+    // Desempate estable: con el mismo número de orden, la paginación de 10 en
+    // 10 no puede repartir las filas distinto en cada consulta.
+    .order("created_at", { ascending: true });
   if (!data) return [];
   return data.map((row) => ({
     id: String(row.id),
@@ -255,7 +267,10 @@ export async function listValues(): Promise<ValueRecord[]> {
   const { data } = await supabase
     .from("site_values")
     .select("*")
-    .order("sort", { ascending: true });
+    .order("sort", { ascending: true })
+    // Desempate estable: con el mismo número de orden, la paginación de 10 en
+    // 10 no puede repartir las filas distinto en cada consulta.
+    .order("created_at", { ascending: true });
   if (!data) return [];
   return data.map((row) => ({
     id: String(row.id),
@@ -788,7 +803,7 @@ function nombreDePerfil(
  * silencio, que es peor que fallar.
  */
 const EVENTOS_POR_TANDA = 100;
-const FILAS_POR_PAGINA = 1000;
+const FILAS_POR_TANDA = 1000;
 
 /** Trae TODAS las filas hijas de un conjunto de eventos, sin topes ocultos. */
 async function filasDeEventos<T>(
@@ -807,11 +822,11 @@ async function filasDeEventos<T>(
         .from(tabla)
         .select(columnas)
         .in("evento_id", tanda)
-        .range(desde, desde + FILAS_POR_PAGINA - 1);
+        .range(desde, desde + FILAS_POR_TANDA - 1);
       if (error || !data || data.length === 0) break;
       filas.push(...(data as T[]));
-      if (data.length < FILAS_POR_PAGINA) break;
-      desde += FILAS_POR_PAGINA;
+      if (data.length < FILAS_POR_TANDA) break;
+      desde += FILAS_POR_TANDA;
     }
   }
 

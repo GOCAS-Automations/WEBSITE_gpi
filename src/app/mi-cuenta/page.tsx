@@ -20,6 +20,7 @@ import { JornadaForm } from "./JornadaForm";
 import { MisJornadas } from "./MisJornadas";
 import { MisEventos } from "./MisEventos";
 import { MiNomina } from "./MiNomina";
+import { leerPagina } from "@/lib/paginacion";
 import { PasswordForm } from "./PasswordForm";
 import { saveJornada, deleteJornada, changeOwnPassword } from "./actions";
 // La acción de las notas vive con el resto del calendario: es la MISMA para el
@@ -118,6 +119,7 @@ export default async function MiCuentaPage({
         profile={session.profile}
         seccion={normalizarSeccion(params.seccion)}
         pidePortal={pidePortal}
+        pagina={leerPagina(params.pagina)}
       />
     );
   }
@@ -199,11 +201,17 @@ async function PortalEmpleado({
   profile,
   seccion,
   pidePortal,
+  pagina,
 }: {
   profile: SessionProfile;
   seccion: SeccionPortal;
   /** true = se llegó con `?portal=1`; hay que conservarlo en las pestañas. */
   pidePortal: boolean;
+  /**
+   * `?pagina=` de «Mi nómina» (la única lista del portal que se pagina en la
+   * URL; las demás son de cliente). Cambiar de pestaña no la arrastra.
+   */
+  pagina: number;
 }) {
   const hoy = hoyEnColombia();
 
@@ -464,7 +472,13 @@ async function PortalEmpleado({
         )}
 
         {/* ---------------- Mi nómina ---------------- */}
-        {seccion === "nomina" && <MiNomina liquidaciones={liquidaciones} />}
+        {seccion === "nomina" && (
+          <MiNomina
+            liquidaciones={liquidaciones}
+            pagina={pagina}
+            hrefBase={hrefSeccion("nomina", pidePortal)}
+          />
+        )}
 
         {/* ---------------- Mi contraseña ---------------- */}
         {seccion === "clave" && (

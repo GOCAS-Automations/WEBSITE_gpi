@@ -19,14 +19,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import {
-  Check,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  Info,
-  Search,
-} from "@/lib/icons";
+import { Check, ChevronDown, Info, Search } from "@/lib/icons";
+import { Paginacion } from "@/components/admin/ui-base";
 
 /* ------------------------------------------------------------------ */
 /* Paleta                                                              */
@@ -79,9 +73,12 @@ export const tooltipStyle = {
 /* ------------------------------------------------------------------ */
 
 /**
- * Anterior / Página [n] de N / Siguiente. El input se puede editar libremente
- * y solo confirma al salir del campo o con Enter (con recorte al rango válido).
- * Se oculta solo cuando hay una única página.
+ * Paginación de las GRÁFICAS del tablero (0-based, como `usePaginacion`).
+ *
+ * Es solo un adaptador: el control es el único del panel, `Paginacion` de
+ * `components/admin/ui-base.tsx`, el mismo de todas las tablas. Aquí no hay un
+ * total de filas que contar (se pagina por días o por personas), así que se
+ * pinta sin «Mostrando a–b de N». Se oculta cuando hay una única página.
  */
 export function Pagination({
   page,
@@ -92,74 +89,13 @@ export function Pagination({
   totalPages: number;
   onPageChange: (p: number) => void;
 }) {
-  const [valor, setValor] = useState(String(page + 1));
-  const [paginaPrevia, setPaginaPrevia] = useState(page);
-
-  // Si la página cambia desde fuera (botones, cambio de filtros), el input se
-  // vuelve a sincronizar. Se ajusta durante el render —el patrón que recomienda
-  // React— en vez de con un efecto, que provocaría un render en cascada.
-  if (paginaPrevia !== page) {
-    setPaginaPrevia(page);
-    setValor(String(page + 1));
-  }
-
-  if (totalPages <= 1) return null;
-
-  const confirmar = () => {
-    const n = Number.parseInt(valor, 10);
-    if (Number.isNaN(n)) {
-      setValor(String(page + 1));
-      return;
-    }
-    const acotada = Math.max(1, Math.min(totalPages, n));
-    onPageChange(acotada - 1);
-    setValor(String(acotada));
-  };
-
-  const botonClass =
-    "inline-flex items-center gap-1 rounded-lg border border-line px-2.5 py-1.5 text-xs font-semibold text-ink-soft transition-colors hover:border-brand hover:text-brand-dark disabled:pointer-events-none disabled:opacity-35";
-
   return (
-    <div className="mt-3 flex flex-wrap items-center justify-center gap-2 border-t border-line pt-3">
-      <button
-        type="button"
-        onClick={() => onPageChange(Math.max(0, page - 1))}
-        disabled={page === 0}
-        className={botonClass}
-      >
-        <ChevronLeft className="h-3.5 w-3.5" />
-        Anterior
-      </button>
-      <span className="inline-flex items-center gap-1.5 px-1 text-xs text-graphite">
-        Página
-        <input
-          type="number"
-          min={1}
-          max={totalPages}
-          value={valor}
-          onChange={(e) => setValor(e.target.value)}
-          onBlur={confirmar}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              confirmar();
-            }
-          }}
-          aria-label="Ir a la página"
-          className="w-14 rounded-lg border border-line px-2 py-1 text-center text-xs text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/25"
-        />
-        de {totalPages}
-      </span>
-      <button
-        type="button"
-        onClick={() => onPageChange(Math.min(totalPages - 1, page + 1))}
-        disabled={page >= totalPages - 1}
-        className={botonClass}
-      >
-        Siguiente
-        <ChevronRight className="h-3.5 w-3.5" />
-      </button>
-    </div>
+    <Paginacion
+      pagina={page + 1}
+      totalPaginas={totalPages}
+      onCambiar={(p) => onPageChange(p - 1)}
+      className="mt-3 border-t border-line pt-3"
+    />
   );
 }
 

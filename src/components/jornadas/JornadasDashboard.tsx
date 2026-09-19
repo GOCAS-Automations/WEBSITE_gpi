@@ -20,7 +20,13 @@ import {
   SIN_ORDEN_TRABAJO,
   type JornadaStatus,
 } from "@/lib/admin-types";
-import { Badge, EmptyState } from "@/components/admin/ui-base";
+import {
+  Badge,
+  EmptyState,
+  Paginacion,
+  usePaginaLocal,
+} from "@/components/admin/ui-base";
+import { FILAS_POR_PAGINA, paginar } from "@/lib/paginacion";
 import {
   fechaColombia,
   formatearFechaNumerica,
@@ -36,7 +42,6 @@ import {
   DateRange,
   FilterSelect,
   MultiSelect,
-  Pagination,
   SectionHeader,
   StatCard,
 } from "./dashboard-ui";
@@ -51,8 +56,6 @@ import {
   FilterX,
   Users,
 } from "@/lib/icons";
-
-const FILAS_TABLA = 50;
 
 /** Opciones del filtro de estado. `oficiales` = aprobadas + pendientes. */
 const ESTADOS = [
@@ -257,6 +260,12 @@ export function JornadasDashboard({
   const semanasEnAlerta = semanas.filter(
     (s) => s.excedeSemana || s.diasSobreTope > 0,
   );
+  // La tabla de alertas también va de 10 en 10; cualquier filtro la devuelve a
+  // la primera página.
+  const alertas = usePaginaLocal(
+    semanasEnAlerta,
+    `${desde}|${hasta}|${seleccionEmpleados.join(",")}|${estado}`,
+  );
 
   /* ---- Tabla ------------------------------------------------------ */
   const ordenadas = useMemo(
@@ -269,9 +278,10 @@ export function JornadasDashboard({
       ),
     [datos],
   );
-  const totalPaginas = Math.max(1, Math.ceil(ordenadas.length / FILAS_TABLA));
-  const pagina = Math.min(paginaTabla, totalPaginas - 1);
-  const filas = ordenadas.slice(pagina * FILAS_TABLA, (pagina + 1) * FILAS_TABLA);
+  // Regla del panel: 10 filas por página (`FILAS_POR_PAGINA`). La página es
+  // estado local y vuelve a la primera en cada cambio de filtro; el CSV exporta
+  // SIEMPRE `ordenadas` completo, nunca solo la página visible.
+  const { visibles: filas, pagina } = paginar(ordenadas, paginaTabla + 1, FILAS_POR_PAGINA);
 
   /* ---- Frescura --------------------------------------------------- */
   const ultima = useMemo(() => {
@@ -541,7 +551,7 @@ export function JornadasDashboard({
                 </tr>
               </thead>
               <tbody>
-                {semanasEnAlerta.map((s) => (
+                {alertas.visibles.map((s) => (
                   <tr key={s.clave} className="border-b border-line/70 last:border-0">
                     <Td className="font-semibold text-ink">{s.empleadoNombre}</Td>
                     <Td className="whitespace-nowrap font-mono text-xs">
@@ -573,12 +583,19 @@ export function JornadasDashboard({
                 ))}
               </tbody>
             </table>
+            <Paginacion
+              pagina={alertas.pagina}
+              total={alertas.total}
+              onCambiar={alertas.setPagina}
+              etiqueta="Páginas del control semanal de horas extra"
+              className="border-t border-line px-3 py-3"
+            />
           </div>
         )}
       </div>
 
       {/* ---------------- Tabla detallada ---------------- */}
-      <div>
+      <div id="detalle-jornadas" className="scroll-mt-28">
         <SectionHeader
           title="Detalle de jornadas"
           description={`${ordenadas.length} jornada${ordenadas.length === 1 ? "" : "s"} con los filtros actuales.`}
@@ -704,10 +721,13 @@ export function JornadasDashboard({
                 </tbody>
               </table>
             </div>
-            <Pagination
-              page={pagina}
-              totalPages={totalPaginas}
-              onPageChange={setPaginaTabla}
+            <Paginacion
+              pagina={pagina}
+              total={ordenadas.length}
+              onCambiar={(p) => setPaginaTabla(p - 1)}
+              ancla="detalle-jornadas"
+              etiqueta="Páginas del detalle de jornadas"
+              className="mt-3 border-t border-line px-1 pt-3"
             />
           </div>
         )}

@@ -887,6 +887,25 @@ export function rangoPeriodo(
   };
 }
 
+/**
+ * Período que se preselecciona cuando la URL de la liquidación NO trae uno:
+ * el mes de hoy y la quincena según el día (1–15 → primera; 16 al último día
+ * → segunda). `hoy` es `YYYY-MM-DD` en hora de COLOMBIA: quien llama lo saca
+ * de `hoyEnColombia()` en el servidor, nunca del reloj del navegador ni de la
+ * hora UTC del servidor (a las 8 p. m. del 15, en UTC ya sería el 16).
+ */
+export function periodoDeHoy(hoy: string): {
+  anio: number;
+  mes: number;
+  quincena: 1 | 2;
+} {
+  return {
+    anio: Number(hoy.slice(0, 4)),
+    mes: Number(hoy.slice(5, 7)),
+    quincena: Number(hoy.slice(8, 10)) <= 15 ? 1 : 2,
+  };
+}
+
 /** "Quincena del 1 al 15 de septiembre de 2026" · "Mes de septiembre de 2026". */
 export function etiquetaPeriodo(
   tipo: TipoPeriodo,

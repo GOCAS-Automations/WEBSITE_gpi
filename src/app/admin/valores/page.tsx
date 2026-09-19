@@ -4,15 +4,18 @@ import {
   AvisoGuardar,
   AyudaSeccion,
   AYUDA_ORDEN,
+  AYUDA_ORDEN_PAGINAS,
   AYUDA_VISIBILIDAD,
   Card,
   CardTitle,
   Field,
+  Paginacion,
   PublishedBadge,
   Select,
   Switch,
   TextArea,
 } from "@/components/admin/ui";
+import { leerPagina, paginar } from "@/lib/paginacion";
 import { AdminForm, DeleteForm } from "@/components/admin/AdminForm";
 import { saveValue, deleteValue } from "../actions";
 import { iconMap } from "@/lib/icons";
@@ -67,8 +70,14 @@ function ValueFields({ value }: { value?: ValueRecord }) {
   );
 }
 
-export default async function AdminValoresPage() {
+export default async function AdminValoresPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ pagina?: string }>;
+}) {
   const values = await listValues();
+  // 10 por página (regla del panel), con la página en la URL.
+  const pagina = paginar(values, leerPagina((await searchParams).pagina));
 
   return (
     <>
@@ -88,11 +97,11 @@ export default async function AdminValoresPage() {
 
       <AyudaSeccion className="mb-6">
         Se ven como tarjetas con icono, en el orden que indiques.{" "}
-        {AYUDA_VISIBILIDAD}
+        {AYUDA_VISIBILIDAD} {AYUDA_ORDEN_PAGINAS}
       </AyudaSeccion>
 
-      <div className="space-y-5">
-        {values.map((value) => (
+      <div id="lista-valores" className="scroll-mt-28 space-y-5">
+        {pagina.visibles.map((value) => (
           <Card key={value.id}>
             <CardTitle
               title={value.title}
@@ -112,6 +121,15 @@ export default async function AdminValoresPage() {
             </AdminForm>
           </Card>
         ))}
+
+        <Paginacion
+          pagina={pagina.pagina}
+          total={pagina.total}
+          hrefBase="/admin/valores"
+          ancla="lista-valores"
+          etiqueta="Páginas de valores"
+          className="mt-0"
+        />
 
         <Card className="border-dashed">
           <CardTitle

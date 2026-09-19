@@ -21,6 +21,7 @@ import {
 import type { MapaHorarios } from "@/lib/horarios";
 import { JornadaBreakdown } from "@/components/jornadas/JornadaBreakdown";
 import { JornadaForm } from "./JornadaForm";
+import { Paginacion, usePaginaLocal } from "@/components/admin/ui-base";
 import { Pencil, Trash } from "@/lib/icons";
 
 type Accion = (state: ActionState, formData: FormData) => Promise<ActionState>;
@@ -42,6 +43,10 @@ export function MisJornadas({
   saveAction: Accion;
   deleteAction: Accion;
 }) {
+  // Historial de 10 en 10, como toda tabla del sitio (estado local: la lista no
+  // tiene filtros, así que no hay nada que reinicie la página).
+  const historial = usePaginaLocal(jornadas);
+
   if (jornadas.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-line bg-mist/60 p-8 text-center">
@@ -57,8 +62,9 @@ export function MisJornadas({
   }
 
   return (
+    <div id="mis-jornadas" className="scroll-mt-28">
     <ul className="space-y-4">
-      {jornadas.map((jornada) => (
+      {historial.visibles.map((jornada) => (
         <li key={jornada.id}>
           <JornadaItem
             jornada={jornada}
@@ -71,6 +77,14 @@ export function MisJornadas({
         </li>
       ))}
     </ul>
+    <Paginacion
+      pagina={historial.pagina}
+      total={historial.total}
+      onCambiar={historial.setPagina}
+      ancla="mis-jornadas"
+      etiqueta="Páginas de mis jornadas"
+    />
+    </div>
   );
 }
 

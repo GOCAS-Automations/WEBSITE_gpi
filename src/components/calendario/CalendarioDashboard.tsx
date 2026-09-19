@@ -58,7 +58,11 @@ import {
   tooltipStyle,
   usePaginacion,
 } from "@/components/jornadas/dashboard-ui";
-import { EmptyState } from "@/components/admin/ui-base";
+import {
+  EmptyState,
+  Paginacion,
+  usePaginaLocal,
+} from "@/components/admin/ui-base";
 import {
   Calendar,
   CheckCircle,
@@ -249,6 +253,9 @@ export function CalendarioDashboard({
   );
 
   const responsables = usePaginacion(porResponsable, FILAS_BARRAS);
+  // La TABLA de cumplimiento (no la gráfica) va de 10 en 10, como toda tabla
+  // del panel; cambiar el rango de fechas vuelve a la primera página.
+  const tablaResponsables = usePaginaLocal(porResponsable, `${desde}|${hasta}`);
   const notas = usePaginacion(porNotas, FILAS_BARRAS);
 
   const altoBarras = (filas: number) => Math.max(160, filas * 30 + 40);
@@ -696,7 +703,7 @@ export function CalendarioDashboard({
                     </tr>
                   </thead>
                   <tbody>
-                    {porResponsable.map((r) => (
+                    {tablaResponsables.visibles.map((r) => (
                       <tr key={r.clave} className="border-b border-line/70">
                         <td
                           className="py-2 pr-3 font-semibold text-ink-soft"
@@ -714,6 +721,13 @@ export function CalendarioDashboard({
                   </tbody>
                 </table>
               </div>
+              <Paginacion
+                pagina={tablaResponsables.pagina}
+                total={tablaResponsables.total}
+                onCambiar={tablaResponsables.setPagina}
+                etiqueta="Páginas del cumplimiento por responsable"
+                className="mt-3 border-t border-line pt-3"
+              />
             </section>
           )}
         </>

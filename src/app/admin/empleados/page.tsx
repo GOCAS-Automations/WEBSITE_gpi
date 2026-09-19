@@ -14,9 +14,11 @@ import {
   Badge,
   Card,
   EmptyState,
+  Paginacion,
   PrimaryLink,
   inputClass,
 } from "@/components/admin/ui";
+import { leerPagina, paginar } from "@/lib/paginacion";
 import { identificadorCuenta } from "@/lib/usuarios";
 import { formatearFechaCorta } from "@/lib/jornada";
 import { Info, Pencil, Plus, User } from "@/lib/icons";
@@ -24,11 +26,11 @@ import { Info, Pencil, Plus, User } from "@/lib/icons";
 export default async function AdminEmpleadosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; pagina?: string }>;
 }) {
   // Barrera autoritativa: solo admin y coordinador entran aquí.
   const { profile } = await requireManager();
-  const { q } = await searchParams;
+  const { q, pagina: paginaParam } = await searchParams;
 
   const busqueda = (q ?? "").trim();
   const todos = await listProfiles();
@@ -49,6 +51,13 @@ export default async function AdminEmpleadosPage({
           .includes(busqueda.toLowerCase()),
       )
     : todos;
+
+  // 10 cuentas por página (regla del panel). El formulario de búsqueda solo
+  // envía `q`, así que buscar vuelve a la primera página.
+  const pagina = paginar(cuentas, leerPagina(paginaParam));
+  const hrefBase = busqueda
+    ? `/admin/empleados?q=${encodeURIComponent(busqueda)}`
+    : "/admin/empleados";
 
   return (
     <>
@@ -125,8 +134,9 @@ export default async function AdminEmpleadosPage({
           }
         />
       ) : (
-        <ul className="space-y-3">
-          {cuentas.map((cuenta) => (
+        <>
+        <ul id="lista-cuentas" className="scroll-mt-28 space-y-3">
+          {pagina.visibles.map((cuenta) => (
             <li
               key={cuenta.id}
               className={`flex flex-wrap items-center gap-4 rounded-2xl border bg-white p-4 shadow-soft sm:p-5 ${
@@ -186,6 +196,14 @@ export default async function AdminEmpleadosPage({
             </li>
           ))}
         </ul>
+        <Paginacion
+          pagina={pagina.pagina}
+          total={pagina.total}
+          hrefBase={hrefBase}
+          ancla="lista-cuentas"
+          etiqueta="Páginas de cuentas"
+        />
+        </>
       )}
 
       <Card className="mt-6">

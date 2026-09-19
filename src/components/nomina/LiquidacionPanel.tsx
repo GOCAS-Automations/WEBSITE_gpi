@@ -40,7 +40,9 @@ import {
   Card,
   EmptyState,
   inputClass,
+  Paginacion,
 } from "@/components/admin/ui-base";
+import { paginar } from "@/lib/paginacion";
 import {
   AYUDA_NOMINA,
   AYUDA_NOMINA_CERRAR,
@@ -60,6 +62,7 @@ import {
   formatearHorasNomina,
   horasDeMinutos,
   nombreMesNomina,
+  periodoDeHoy,
   type TipoPeriodo,
 } from "@/lib/nomina";
 import {
@@ -203,6 +206,7 @@ export function LiquidacionPanel({
   diasSugeridos,
   hoy,
   abrir,
+  pagina: paginaPedida,
   crearAction,
   liquidarTodosAction,
   guardarAction,
@@ -226,6 +230,8 @@ export function LiquidacionPanel({
   diasSugeridos: number;
   hoy: string;
   abrir: string;
+  /** Página de la tabla que pide la URL (`?pagina=`, 1-based). */
+  pagina: number;
   crearAction: Accion;
   liquidarTodosAction: Accion;
   guardarAction: Accion;
@@ -267,6 +273,27 @@ export function LiquidacionPanel({
   };
 
   const personaSel = persona ? personas.find((p) => p.id === persona) ?? null : null;
+
+  // TABLA de 10 en 10 (regla del panel), con la página en la URL. `irA` arma
+  // la URL desde cero, sin `pagina`: cambiar período o persona vuelve a la 1.
+  // Los totales, «Liquidar todos» y el CSV siguen usando `filas` COMPLETO.
+  const tabla = paginar(filas, paginaPedida);
+  const hrefTabla = (() => {
+    const params = new URLSearchParams({
+      tipo,
+      anio: String(anio),
+      mes: String(mes),
+      ...(quincena ? { quincena: String(quincena) } : {}),
+      ...(persona ? { persona } : {}),
+    });
+    return `/admin/nomina?${params.toString()}`;
+  })();
+
+  // Al pasar de «Mes completo» a «Quincena»: si es el mes en curso, la quincena
+  // de hoy; en otro mes, la primera.
+  const hoyPeriodo = periodoDeHoy(hoy);
+  const quincenaAlCambiar =
+    hoyPeriodo.anio === anio && hoyPeriodo.mes === mes ? hoyPeriodo.quincena : 1;
 
   const totales = useMemo(
     () =>
@@ -318,7 +345,7 @@ export function LiquidacionPanel({
                 irA(
                   e.target.value === "mes"
                     ? { tipo: "mes", quincena: "" }
-                    : { tipo: "quincena", quincena: "1" },
+                    : { tipo: "quincena", quincena: String(quincenaAlCambiar) },
                 )
               }
               className={inputClass}
@@ -541,6 +568,7 @@ export function LiquidacionPanel({
           description="La nómina se arma con las cuentas activas del equipo. Crea o reactiva cuentas en la sección Equipo y vuelve aquí."
         />
       ) : (
+        <div id="tabla-liquidacion" className="scroll-mt-28">
         <Card className="overflow-x-auto p-0 sm:p-0">
           <table className="w-full min-w-[56rem] text-sm">
             <thead>
@@ -561,7 +589,7 @@ export function LiquidacionPanel({
               </tr>
             </thead>
             <tbody>
-              {filas.map((f) => (
+              {tabla.visibles.map((f) => (
                 <tr
                   key={f.employeeId}
                   className="border-b border-line/70 last:border-0 hover:bg-mist/40"
@@ -612,6 +640,14 @@ export function LiquidacionPanel({
             </tbody>
           </table>
         </Card>
+        <Paginacion
+          pagina={tabla.pagina}
+          total={tabla.total}
+          hrefBase={hrefTabla}
+          ancla="tabla-liquidacion"
+          etiqueta="Páginas de la liquidación"
+        />
+        </div>
       )}
 
       {/* ---------------- Detalle ---------------- */}
