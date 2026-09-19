@@ -47,6 +47,7 @@ import {
   listProfiles,
   mapaNominaConfigsVigentes,
   nominaConfigAColumnas,
+  parametrosLegalesNomina,
 } from "@/lib/admin";
 import {
   CONCEPTOS_MANUALES,
@@ -61,11 +62,12 @@ import {
   normalizarManuales,
   pesos,
   rangoPeriodo,
+  tarifasBajoMinimoLegal,
   type ConceptoManual,
   type ConceptosManuales,
   type TipoPeriodo,
 } from "@/lib/nomina";
-import { parsearNumero } from "@/lib/dinero";
+import { formatearDinero, parsearNumero } from "@/lib/dinero";
 import type { ActionState } from "@/lib/admin-types";
 
 const SIN_PERMISO: ActionState = {
@@ -271,9 +273,20 @@ export async function saveNominaConfig(
     ? ` Rige desde ${mesTexto({ anio, mes })} ${hastaTexto(siguiente)}: en ${mesTexto(siguiente)} hay otro cambio guardado y desde ahí manda ese.`
     : ` Rige desde ${mesTexto({ anio, mes })} en adelante, hasta que guardes otro cambio.`;
 
+  // Aviso (no bloqueo) si alguna tarifa queda por debajo del mínimo legal del
+  // mes: GPI puede pagar más que la ley, nunca menos.
+  const legal = await parametrosLegalesNomina(anio, mes);
+  const bajo = tarifasBajoMinimoLegal(tarifas, salario, legal);
+  const avisoLegal =
+    bajo.length === 0
+      ? ""
+      : ` OJO: ${bajo.length === 1 ? "una tarifa quedó" : `${bajo.length} tarifas quedaron`} POR DEBAJO del mínimo legal de ${mesTexto({ anio, mes })}: ${bajo
+          .map((b) => `${b.etiqueta} (${formatearDinero(b.tarifa)}; mínimo ${formatearDinero(b.minimo)})`)
+          .join(", ")}. Se guardó igual, pero conviene subirlas antes de liquidar.`;
+
   revalidar();
   return ok(
-    `Configuración guardada.${vigencia} Las liquidaciones en borrador de esos meses se recalculan solas; las ya cerradas no se tocan.`,
+    `Configuración guardada.${vigencia} Las liquidaciones en borrador de esos meses se recalculan solas; las ya cerradas no se tocan.${avisoLegal}`,
   );
 }
 

@@ -32,6 +32,9 @@ import {
   calcularJornada,
   construirContextoCalculo,
   faltaColumnaDesglose,
+  formatearFechaLarga,
+  formatearHora12,
+  horaColombia,
 } from "@/lib/jornada";
 import type { ActionState } from "@/lib/admin-types";
 
@@ -107,7 +110,7 @@ export async function approveJornada(
   // los datos reales del turno.
   const { data: fila, error: errorLectura } = await session.supabase
     .from("jornadas")
-    .select("id, start_at, end_at, work_date")
+    .select("id, employee_id, start_at, end_at, work_date")
     .eq("id", id)
     .maybeSingle();
 
@@ -116,6 +119,30 @@ export async function approveJornada(
     return fail(
       "No encontramos esa jornada. Puede que alguien la haya eliminado: recarga la página.",
     );
+
+  // Dos jornadas del mismo empleado que se cruzan no se aprueban (auditoría
+  // legal, 19 sep 2026): cada una tendría su propia jornada ordinaria y su
+  // almuerzo, y las horas extra del día se perderían. El portal ya no deja
+  // registrarlas; esto cubre las que se hubieran creado antes de la regla.
+  const { data: cruzadas } = await session.supabase
+    .from("jornadas")
+    .select("id, work_date, start_at, end_at")
+    .eq("employee_id", String(fila.employee_id ?? ""))
+    .neq("id", id)
+    .neq("status", "rechazada")
+    .lt("start_at", String(fila.end_at ?? ""))
+    .gt("end_at", String(fila.start_at ?? ""))
+    .limit(1);
+  if (cruzadas && cruzadas.length > 0) {
+    const otra = cruzadas[0];
+    return fail(
+      `No se puede aprobar: se cruza con otra jornada de la misma persona (${formatearFechaLarga(
+        String(otra.work_date),
+      )}, de ${formatearHora12(horaColombia(String(otra.start_at)))} a ${formatearHora12(
+        horaColombia(String(otra.end_at)),
+      )}). Rechaza una de las dos con una nota pidiendo registrar una sola jornada, desde la primera entrada hasta la última salida.`,
+    );
+  }
 
   const [config, horarios] = await Promise.all([
     getJornadaConfig(),

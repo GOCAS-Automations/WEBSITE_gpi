@@ -22,7 +22,7 @@
  *   · «Liquidar todos» pasa a «Liquidar a <nombre>» y la acción recibe
  *     `persona`: NUNCA crea liquidaciones de quien no está en pantalla;
  *   · el CSV exporta solo esa fila, y el archivo lleva el usuario en el nombre
- *     (`nomina_GPI_2026-09-Q2_scordoba.csv`) y el botón lo dice.
+ *     (`nomina_GPI_2026-09-Q2_oprueba.csv`) y el botón lo dice.
  * El filtro viaja en la URL: sobrevive a recargar y a cambiar de período.
  *
  * DINERO: todo importe se pinta con `src/lib/dinero.ts` (punto de miles, coma
@@ -310,6 +310,8 @@ export function LiquidacionPanel({
   );
 
   const sinConfig = filas.filter((f) => !f.tieneConfig);
+  // Configuraciones que pagan menos que la ley del mes: aviso, no bloqueo.
+  const bajoMinimo = filas.filter((f) => f.tarifasBajoMinimo.length > 0);
   const conPendientes = filas.filter((f) => f.pendientes > 0);
   const sinCrear = filas.filter((f) => f.liquidacionId === null && f.tieneConfig);
 
@@ -471,6 +473,27 @@ export function LiquidacionPanel({
             la pestaña Configuración
           </Link>
           .
+        </AyudaSeccion>
+      )}
+
+      {bajoMinimo.length > 0 && (
+        <AyudaSeccion tono="aviso" title="Hay tarifas por debajo del mínimo legal">
+          {bajoMinimo
+            .map((f) => `${f.nombre} (${f.tarifasBajoMinimo.join(", ").toLowerCase()})`)
+            .join("; ")}
+          . Con la ley de {nombreMesNomina(mes)} de {anio} —valor hora = salario ÷ el
+          divisor de la jornada del mes y el recargo de domingo y festivo
+          vigente— esas tarifas pagan menos que el mínimo. GPI puede pagar más,
+          nunca menos. Corrígelas en{" "}
+          <Link
+            prefetch={false}
+            href={`/admin/nomina?vista=configuracion&anio=${anio}&mes=${mes}&empleado=${bajoMinimo[0].employeeId}`}
+            className="font-semibold text-amber-900 underline"
+          >
+            la pestaña Configuración
+          </Link>{" "}
+          («Usar los valores sugeridos») antes de cerrar: las liquidaciones en
+          borrador se recalculan solas y las ya cerradas no cambian.
         </AyudaSeccion>
       )}
 
@@ -1175,7 +1198,7 @@ function DetalleLiquidacion({
 /* Piezas pequeñas                                                     */
 /* ================================================================== */
 
-/** «Santiago Córdoba Tovar» → «Santiago» (para botones cortos). */
+/** «Ana María Pérez» → «Ana» (para botones cortos). */
 function primerNombre(nombre: string): string {
   return nombre.trim().split(/\s+/)[0] || nombre;
 }
@@ -1186,7 +1209,7 @@ const UMBRAL_BUSCADOR = 10;
 /**
  * Selector del filtro por persona: «Todas» + cada cuenta activa. Con una lista
  * larga aparece además un cuadro de búsqueda que acorta las opciones (sin
- * tildes ni mayúsculas: «cordoba» encuentra a «Córdoba»).
+ * tildes ni mayúsculas: «perez» encuentra a «Pérez»).
  */
 function SelectorPersona({
   personas,

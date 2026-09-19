@@ -805,15 +805,34 @@ Los recargos y los topes están en el ajuste `jornada_config` de `site_settings`
 - `jornadaOrdinariaInicio`, `jornadaOrdinariaFin` y `horasOrdinariasDia` quedan
   como **legado informativo**: ya no intervienen en el cálculo.
 
-> ⚠️ Los porcentajes de recargo son los de la normativa laboral colombiana
-> vigente en 2026. **GPI debe confirmar sus propias reglas.** Para cambiarlos,
-> edita esa fila en el SQL Editor de Supabase; el código cae en los mismos
-> valores por defecto si la clave no existe, así que el portal nunca se rompe.
+- La **franja nocturna** (7:00 p. m. a 6:00 a. m.) es la del art. 160 del
+  Código Sustantivo del Trabajo modificado por la **Ley 2466 de 2025**.
+- **El recargo de domingo y festivo ya no se toma de aquí**: lo fija la ley por
+  fecha (80 % desde el 1 de julio de 2025, **90 % desde el 1 de julio de 2026**,
+  100 % desde el 1 de julio de 2027) y el sistema lo aplica solo, según la fecha
+  de cada minuto trabajado. Los tres campos dominicales de `recargos` quedan
+  como legado. De todos modos, estos porcentajes **no mueven dinero**: el dinero
+  sale de las tarifas de la nómina.
 
-**Festivos**: la lista de festivos nacionales de **2026** está en
-`FESTIVOS_COLOMBIA` dentro de `src/lib/jornada.ts` y hay que **ampliarla cada
-año**. Mientras un año no esté en la tabla, el cálculo sigue funcionando: solo
-los domingos cuentan como día de recargo dominical.
+> ⚠️ Los porcentajes de recargo nocturno y de extras son los de la normativa
+> laboral colombiana vigente en 2026. **GPI debe confirmar sus propias
+> reglas.** Para cambiarlos, edita esa fila en el SQL Editor de Supabase; el
+> código cae en los mismos valores por defecto si la clave no existe, así que
+> el portal nunca se rompe.
+
+**Festivos**: se **calculan solos para cualquier año** (`festivosDelAnio` en
+`src/lib/ley-laboral.ts`): los fijos, los que la Ley Emiliani corre al lunes
+—incluido el **9 de julio, Virgen de Chiquinquirá**, festivo nuevo de la Ley
+2578 de 2026 (en 2026 fue el lunes 13 de julio)— y los que dependen de la
+Semana Santa. Ya no hay una lista que ampliar cada año: 2027, 2028 y los
+siguientes funcionan igual, tanto en el cálculo de horas como en el calendario.
+
+**Dos registros no pueden cruzarse.** Si alguien intenta registrar una jornada
+cuyo horario se cruza con otra suya (pendiente o aprobada), el portal no la
+guarda y le explica que registre **una sola jornada, desde la primera entrada
+hasta la última salida**. Si ese día ya tenía otra jornada sin cruce, la guarda
+pero le avisa lo mismo. Tampoco se puede **aprobar** una jornada que se cruce
+con otra de la misma persona: hay que rechazar una de las dos con una nota.
 
 ---
 
@@ -1814,20 +1833,37 @@ inglés) y queda bien. Los porcentajes de salud y pensión no llevan miles pero
 aceptan coma: `4,5`. En todas las pantallas, en el tablero, en *Mi nómina* y en
 el volante, las cifras salen con el mismo formato (`$ 1.300.000`, `$ 9.115,08`).
 
-### Los valores sugeridos
+### Los valores sugeridos = el mínimo que pide la ley ese mes
 
-Al escribir el salario, el formulario propone las siete tarifas con
-`salario ÷ 240 × un factor`, usando los factores del Excel que GPI usa hoy. El
-botón **«Usar los valores sugeridos»** las escribe todas; después se puede
-corregir cualquiera.
+Al escribir el salario, el formulario propone las siete tarifas con **la ley
+del mes que se está configurando** (auditoría legal del 19 de septiembre de
+2026):
 
-> ⚠️ **Las tres tarifas de domingo y festivo están pendientes de confirmar con
-> la gerencia.** En el Excel actual, «hora en festivo» y «hora extra diurna en
-> festivo» tienen **el mismo** valor, lo que parece una fórmula copiada; por eso
-> la extra festiva se sugiere con el valor de ley. Si eso deja una hora extra
-> valiendo menos que una ordinaria, el formulario lo **avisa en ámbar**. Los
-> números que quedan son los que el administrador escriba: el sistema no impone
-> ninguno.
+- **Valor de la hora = salario ÷ 210.** Sale de la jornada semanal (42 horas ÷
+  6 × 30): el sistema toma las horas del **horario de ese mes** (sección
+  Horarios) y nunca usa un número mayor que el legal. Antes se usaba ÷ 240, la
+  cuenta de cuando la semana era de 48 horas, y todas las horas salían un
+  12,5 % por debajo de la ley.
+- **Factores de ley**: rotación nocturna 0,35 · extra diurna 1,25 · extra
+  nocturna 1,75 · y las de domingo y festivo con el **recargo vigente**: desde
+  el 1 de julio de 2026 es del **90 %** → hora en festivo **1,90**, extra
+  diurna en festivo **2,15**, extra nocturna en festivo **2,65**. El 1 de julio
+  de 2027 sube al 100 % (2,00 / 2,25 / 2,75) y los sugeridos de ese mes en
+  adelante ya salen así.
+
+Encima del formulario se ve la regla del mes («Ley de septiembre de 2026:
+jornada de 42 h semanales → valor hora = salario ÷ 210 · recargo dominical y
+festivo del 90 %»). El botón **«Usar los valores sugeridos»** las escribe
+todas; después se puede cambiar cualquiera **hacia arriba**.
+
+> ⚠️ **Aviso de «por debajo del mínimo legal».** Si una tarifa queda por debajo
+> de lo que pide la ley ese mes, el formulario la marca en **ámbar**, el
+> mensaje de «Configuración guardada» lo repite con el mínimo de cada una y la
+> pestaña **Liquidación** lo recuerda para las personas afectadas. Es un aviso,
+> **no un bloqueo**: GPI puede pagar más que la ley, nunca menos. Las
+> configuraciones guardadas antes del 19 de septiembre con ÷ 240 **no cambian
+> solas**: el administrador las corrige con «Usar los valores sugeridos» y
+> Guardar. Las liquidaciones ya cerradas no se tocan.
 
 ### Borrador, cerrada, pagada
 
@@ -1861,7 +1897,7 @@ autorizada*). Si la liquidación todavía está en borrador, el documento sale
 **marcado como BORRADOR**.
 
 El archivo se llama `volante_<usuario>_<período>.pdf`, por ejemplo
-`volante_scordoba_2026-08-Q2.pdf`.
+`volante_oprueba_2026-08-Q2.pdf`.
 
 ### El período que se abre por defecto
 

@@ -43,10 +43,15 @@ import {
 import {
   claveMes,
   clonarHorario,
+  minutosSemanales,
   normalizarHorarioDias,
   type HorarioDias,
   type MapaHorarios,
 } from "@/lib/horarios";
+import {
+  parametrosLegalesDelMes,
+  type ParametrosLegalesMes,
+} from "@/lib/ley-laboral";
 import type {
   AdminSettings,
   ClientRecord,
@@ -364,6 +369,24 @@ export async function getMapaHorarios(): Promise<MapaHorarios> {
   } catch {
     return {};
   }
+}
+
+/**
+ * Lo que la ley exige para liquidar un mes de nómina: el divisor del valor hora
+ * (con las horas semanales del HORARIO de ese mes, nunca más que las legales) y
+ * el recargo dominical vigente. Si el mes no tiene horario cargado se usan las
+ * horas legales. Es lo que alimenta las tarifas sugeridas y el aviso de «por
+ * debajo del mínimo legal» (configuración, guardado y liquidación).
+ */
+export async function parametrosLegalesNomina(
+  anio: number,
+  mes: number,
+  horarios?: MapaHorarios,
+): Promise<ParametrosLegalesMes> {
+  const mapa = horarios ?? (await getMapaHorarios());
+  const dias = mapa[claveMes(anio, mes)];
+  const horasPactadas = dias ? minutosSemanales(dias) / 60 : null;
+  return parametrosLegalesDelMes(anio, mes, horasPactadas);
 }
 
 function rowToHorario(row: Record<string, unknown>): HorarioMensualRecord {

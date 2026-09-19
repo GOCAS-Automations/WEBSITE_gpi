@@ -19,7 +19,13 @@
 
 import { revalidatePath } from "next/cache";
 import { getActiveSession } from "@/lib/supabase/auth";
-import { faltaColumnaDesglose, instanteColombia } from "@/lib/jornada";
+import {
+  faltaColumnaDesglose,
+  formatearFechaLarga,
+  formatearHora12,
+  horaColombia,
+  instanteColombia,
+} from "@/lib/jornada";
 import type { ActionState } from "@/lib/admin-types";
 
 const SIN_SESION: ActionState = {
@@ -68,6 +74,46 @@ function rechazaOrdenVacia(
   if ((error.code ?? "") === "23502") return true;
   const mensaje = error.message ?? "";
   return /work_order/i.test(mensaje) && /null/i.test(mensaje);
+}
+
+/** Lo que se le dice a quien registra dos tramos del mismo día. */
+const AVISO_UN_REGISTRO =
+  "Si saliste y volviste el mismo día, registra UNA sola jornada, desde tu primera entrada hasta tu última salida (edita la que ya tenías y, si hace falta, cuéntalo en observaciones).";
+
+type SesionActiva = NonNullable<Awaited<ReturnType<typeof getActiveSession>>>;
+
+interface OtraJornada {
+  id: string;
+  work_date: string;
+  start_at: string;
+  end_at: string;
+}
+
+/**
+ * Las OTRAS jornadas propias que cumplen un filtro, sin contar la que se está
+ * editando ni las rechazadas. Si la consulta falla devuelve `[]`: la
+ * comprobación es una ayuda y nunca debe impedir registrar por un error de red.
+ */
+async function otrasJornadas(
+  session: SesionActiva,
+  idEditada: string,
+  filtro: { seCruzaCon: { desde: string; hasta: string } } | { delDia: string },
+): Promise<OtraJornada[]> {
+  let consulta = session.supabase
+    .from("jornadas")
+    .select("id, work_date, start_at, end_at")
+    .eq("employee_id", session.profile.id)
+    .neq("status", "rechazada");
+  if (idEditada) consulta = consulta.neq("id", idEditada);
+  // Dos intervalos [a, b) y [c, d) se cruzan si a < d y c < b: tocarse en el
+  // borde (una termina a las 12:00 y otra empieza a las 12:00) no es cruzarse.
+  consulta =
+    "seCruzaCon" in filtro
+      ? consulta.lt("start_at", filtro.seCruzaCon.hasta).gt("end_at", filtro.seCruzaCon.desde)
+      : consulta.eq("work_date", filtro.delDia);
+  const { data, error } = await consulta.order("start_at").limit(5);
+  if (error || !data) return [];
+  return data as OtraJornada[];
 }
 
 /* ------------------------------------------------------------------ */
@@ -120,6 +166,31 @@ export async function saveJornada(
   if (duracionMin > 24 * 60)
     return fail("Una jornada no puede durar más de 24 horas. Revisa las horas.");
 
+  /* --- Dos registros no pueden solaparse (auditoría legal, 19 sep 2026) ---
+     Si alguien registra dos tramos del mismo turno, cada uno recibe su propia
+     jornada ordinaria y su propio almuerzo, y las horas extra del día se
+     pierden. Se RECHAZA lo que se cruce con otra jornada propia (las
+     rechazadas no cuentan: son las que el empleado vuelve a registrar bien) y
+     se AVISA, sin bloquear, si ese día ya había otra. */
+  const [solapadas, delMismoDia] = await Promise.all([
+    otrasJornadas(session, id, { seCruzaCon: { desde: startAt, hasta: endAt } }),
+    otrasJornadas(session, id, { delDia: workDate }),
+  ]);
+  if (solapadas.length > 0) {
+    const otra = solapadas[0];
+    return fail(
+      `Este horario se cruza con otra jornada tuya: la del ${formatearFechaLarga(
+        otra.work_date,
+      )} (de ${formatearHora12(horaColombia(otra.start_at))} a ${formatearHora12(
+        horaColombia(otra.end_at),
+      )}). Dos registros no pueden solaparse. ${AVISO_UN_REGISTRO}`,
+    );
+  }
+  const avisoMismoDia =
+    delMismoDia.length > 0
+      ? ` Ojo: ese día ya tenías otra jornada registrada. ${AVISO_UN_REGISTRO}`
+      : "";
+
   const payload = {
     employee_id: session.profile.id, // SIEMPRE el usuario de la sesión
     work_order: workOrder,
@@ -168,7 +239,7 @@ export async function saveJornada(
       );
 
     revalidar();
-    return ok("Los cambios de tu jornada quedaron guardados.");
+    return ok(`Los cambios de tu jornada quedaron guardados.${avisoMismoDia}`);
   }
 
   const crear = (datos: Record<string, unknown>) =>
@@ -184,7 +255,7 @@ export async function saveJornada(
 
   revalidar();
   return ok(
-    "Tu jornada quedó registrada y está pendiente de aprobación. Te avisaremos aquí mismo cuando la revisen.",
+    `Tu jornada quedó registrada y está pendiente de aprobación. Te avisaremos aquí mismo cuando la revisen.${avisoMismoDia}`,
   );
 }
 

@@ -14,9 +14,10 @@
  *    `src/lib/calendario.ts`). No entra ninguna librería de calendario: son
  *    quince líneas de aritmética de fechas y el panel ya carga Recharts.
  *  · La semana empieza en LUNES, como los calendarios colombianos.
- *  · Los FESTIVOS salen de la misma tabla que usan las jornadas
- *    (`FESTIVOS_COLOMBIA`), así que el calendario y el cálculo de horas extra
- *    no pueden discrepar sobre qué día es festivo.
+ *  · Los FESTIVOS salen de la misma regla que usan las jornadas
+ *    (`nombreFestivo` → `festivosDelAnio` de `src/lib/ley-laboral.ts`,
+ *    calculados para cualquier año), así que el calendario y el cálculo de
+ *    horas extra no pueden discrepar sobre qué día es festivo.
  *  · En escritorio cada casilla muestra hasta tres eventos como fichas de
  *    color; en móvil, donde una ficha con texto no cabe, muestra puntos del
  *    color del estado y el detalle se lee en la AGENDA de abajo, que es la

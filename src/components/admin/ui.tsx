@@ -115,9 +115,9 @@ export const AYUDA_NOMINA_PERIODO =
 export const AYUDA_NOMINA_TARIFAS =
   "El salario básico ya paga las horas ordinarias diurnas: esas NO se suman aparte. Las siete tarifas son pesos por hora que se pagan ADEMÁS del salario. La «hora de rotación diurna» es solo la referencia con la que se calculan las otras. La «rotación nocturna» es un RECARGO: se paga por cada hora ordinaria trabajada de noche, porque la hora en sí ya está en el salario.";
 
-/** De dónde salen los valores sugeridos y qué está pendiente de confirmar. */
+/** De dónde salen los valores sugeridos (auditoría legal del 19 sep 2026). */
 export const AYUDA_NOMINA_SUGERIDAS =
-  "Los valores sugeridos salen del salario (salario ÷ 240 × el factor de cada tipo de hora) usando los factores del Excel que GPI usa hoy. Puedes sobrescribir cualquiera. Ojo con las tres tarifas de domingo y festivo: en el Excel de GPI la hora extra diurna en festivo tiene el mismo valor que la hora ordinaria en festivo, lo que parece un error de la plantilla, así que esa se sugiere con el valor de ley. Conviene confirmar las tres con la gerencia.";
+  "Los valores sugeridos son el MÍNIMO LEGAL del mes: salario ÷ divisor de la jornada (con 42 horas semanales, 210) × el factor de ley de cada tipo de hora, con el recargo de domingo y festivo vigente ese mes (90 % desde el 1 de julio de 2026 y 100 % desde el 1 de julio de 2027). Puedes cambiar cualquiera hacia arriba: GPI puede pagar más que la ley, nunca menos. Si una tarifa queda por debajo, el panel lo avisa en ámbar, aquí y en la Liquidación.";
 
 /** Por qué una liquidación cerrada ya no cambia (mismo espíritu que el desglose congelado). */
 export const AYUDA_NOMINA_CERRAR =

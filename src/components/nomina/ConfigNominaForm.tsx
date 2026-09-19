@@ -56,12 +56,13 @@ import {
 import { CampoDinero } from "@/components/admin/CampoDinero";
 import { idleState, type ActionState } from "@/lib/admin-types";
 import {
-  DIVISOR_HORAS_MES,
-  FACTORES_TARIFA,
   derivarTarifas,
+  factoresTarifa,
   mesAnterior,
   nombreMesNomina,
+  tarifasBajoMinimoLegal,
   type OrigenConfigMes,
+  type ParametrosTarifas,
   type TarifasNomina,
 } from "@/lib/nomina";
 import { formatearDinero, formatearNumero, formatearPesos } from "@/lib/dinero";
@@ -72,6 +73,16 @@ type Accion = (state: ActionState, formData: FormData) => Promise<ActionState>;
 interface Mes {
   anio: number;
   mes: number;
+}
+
+/**
+ * Lo que la LEY pone en el mes que se está viendo (lo calcula el servidor con
+ * `parametrosLegalesDelMes()` y el horario del mes): con eso se sugieren las
+ * tarifas y se avisa si alguna queda por debajo del mínimo.
+ */
+export interface LegalMesVista extends ParametrosTarifas {
+  /** Horas semanales con que se sacó el divisor (las del horario, hoy 42). */
+  horasSemanales: number;
 }
 
 /** De dónde salen los valores del mes que se está viendo. */
@@ -166,6 +177,7 @@ export function ConfigNominaForm({
   mes,
   config,
   estado,
+  legal,
 }: {
   action: Accion;
   quitarAction: Accion;
@@ -181,6 +193,7 @@ export function ConfigNominaForm({
     pctPension: number;
   };
   estado: EstadoConfigVista;
+  legal: LegalMesVista;
 }) {
   const router = useRouter();
   const [cargando, iniciarNavegacion] = useTransition();
@@ -329,7 +342,11 @@ export function ConfigNominaForm({
           disabled={cargando}
           className="space-y-6 disabled:opacity-60"
         >
-          <CamposConfig config={config} />
+          <CamposConfig
+            config={config}
+            legal={legal}
+            mesEtiqueta={mesTexto(mesActual)}
+          />
         </fieldset>
 
         {aviso.status !== "idle" && aviso.message && (
@@ -527,6 +544,8 @@ function OrigenDeLosValores({
 
 function CamposConfig({
   config,
+  legal,
+  mesEtiqueta,
 }: {
   config: {
     salario: number;
@@ -535,15 +554,32 @@ function CamposConfig({
     pctSalud: number;
     pctPension: number;
   };
+  legal: LegalMesVista;
+  /** «septiembre de 2026»: el mes cuya ley se aplica. */
+  mesEtiqueta: string;
 }) {
   const [salario, setSalario] = useState(config.salario);
   const [tarifas, setTarifas] = useState<TarifasNomina>(config.tarifas);
 
-  const sugeridas = useMemo(() => derivarTarifas(salario), [salario]);
+  // Sugeridas = mínimo legal del mes: salario ÷ divisor × factor de ley.
+  const sugeridas = useMemo(
+    () => derivarTarifas(salario, legal),
+    [salario, legal],
+  );
+  const factores = useMemo(
+    () => factoresTarifa(legal.recargoDominical),
+    [legal.recargoDominical],
+  );
 
-  /** La incoherencia festiva heredada del Excel de GPI: se avisa, no se bloquea. */
-  const festivoIncoherente =
-    tarifas.festivo > 0 && tarifas.extraFestivoDiurna < tarifas.festivo;
+  /**
+   * Tarifas por debajo del mínimo legal: se AVISA, no se bloquea (GPI puede
+   * pagar más, nunca menos). Reemplaza al viejo aviso de «incoherencia
+   * festiva», que culpaba al Excel de un 2,15 que en realidad era el legal.
+   */
+  const bajoMinimo = useMemo(
+    () => tarifasBajoMinimoLegal(tarifas, salario, legal),
+    [tarifas, salario, legal],
+  );
 
   return (
     <>
@@ -613,22 +649,38 @@ function CamposConfig({
           }
         />
 
-        <AyudaSeccion className="mb-5">{AYUDA_NOMINA_SUGERIDAS}</AyudaSeccion>
+        <AyudaSeccion className="mb-5">
+          {AYUDA_NOMINA_SUGERIDAS}
+          <span className="mt-1.5 block font-semibold text-ink">
+            Ley de {mesEtiqueta}: jornada de{" "}
+            {formatearNumero(legal.horasSemanales)} h semanales → valor hora =
+            salario ÷ {formatearNumero(legal.divisor)} · recargo dominical y
+            festivo del {formatearNumero(Math.round(legal.recargoDominical * 100))}&nbsp;%.
+          </span>
+        </AyudaSeccion>
 
-        {festivoIncoherente && (
-          <AyudaSeccion tono="aviso" title="Revisa las tarifas de festivo" className="mb-5">
-            La <strong>hora extra diurna en festivo</strong> está quedando por
-            debajo de la <strong>hora en domingo o festivo</strong>, y una hora
-            extra debería valer más que una ordinaria. Es exactamente la
-            incoherencia que trae el Excel actual de GPI: conviene confirmar
-            las tres tarifas festivas con la gerencia antes de liquidar.
+        {bajoMinimo.length > 0 && (
+          <AyudaSeccion
+            tono="aviso"
+            title={`${bajoMinimo.length === 1 ? "Una tarifa está" : `${bajoMinimo.length} tarifas están`} por debajo del mínimo legal de ${mesEtiqueta}`}
+            className="mb-5"
+          >
+            {bajoMinimo.map((b) => b.etiqueta).join(", ")}.{" "}
+            Con este salario, la ley de {mesEtiqueta} pide al menos lo que
+            aparece como <strong>sugerido</strong> debajo de cada campo (salario ÷{" "}
+            {formatearNumero(legal.divisor)} × el factor de ley, con el recargo
+            dominical del {formatearNumero(Math.round(legal.recargoDominical * 100))}&nbsp;%).
+            GPI puede pagar más, nunca menos: pulsa «Usar los valores
+            sugeridos» o sube las que están marcadas. Se puede guardar igual:
+            es un aviso, no un bloqueo.
           </AyudaSeccion>
         )}
 
         <div className="grid gap-4 sm:grid-cols-2">
           {CAMPOS_TARIFA.map((campo) => {
-            const factor = FACTORES_TARIFA[campo.clave];
+            const factor = factores[campo.clave];
             const sugerida = sugeridas[campo.clave];
+            const bajo = bajoMinimo.some((b) => b.clave === campo.clave);
             return (
               <div key={campo.clave}>
                 <label
@@ -660,10 +712,16 @@ function CamposConfig({
                     <>
                       {" "}
                       Sugerido: <strong>{formatearDinero(sugerida)}</strong>{" "}
-                      (salario ÷ {DIVISOR_HORAS_MES} × {formatearNumero(factor)}).
+                      (salario ÷ {formatearNumero(legal.divisor)} ×{" "}
+                      {formatearNumero(factor)}).
                     </>
                   )}
                 </p>
+                {bajo && (
+                  <p className="mt-1 text-xs font-semibold text-amber-700">
+                    Por debajo del mínimo legal de {mesEtiqueta}.
+                  </p>
+                )}
               </div>
             );
           })}

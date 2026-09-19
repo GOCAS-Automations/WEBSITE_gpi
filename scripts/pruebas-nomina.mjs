@@ -2,8 +2,9 @@
  * PRUEBAS DEL CÁLCULO DE NÓMINA
  * =============================
  * Comprueba `src/lib/nomina.ts` —el módulo puro que liquida un período— contra
- * el **volante de pago real** que GPI le entregó a Santiago Córdoba el 15 de
- * septiembre de 2026, más el resto de reglas del módulo (mapeo del desglose de
+ * el **volante de referencia de GPI** (una quincena de septiembre de 2026, con
+ * las tarifas de su Excel; anonimizado: el repositorio es público), más el
+ * resto de reglas del módulo (mapeo del desglose de
  * jornadas, composición de la hora festiva nocturna, snapshot congelado y
  * períodos). Desde el 18 sep 2026 prueba además:
  *   · `src/lib/dinero.ts`, el módulo ÚNICO de formato y lectura de dinero en
@@ -15,7 +16,13 @@
  * Y desde el 19 sep 2026:
  *   · el período que se preselecciona sin período en la URL (`periodoDeHoy`);
  *   · `src/lib/paginacion.ts`, la regla de 10 filas por página de las tablas
- *     del panel (también módulo puro, sin importaciones).
+ *     del panel (también módulo puro, sin importaciones);
+ *   · las tarifas sugeridas con la LEY del mes (divisor 210 con 42 h, recargo
+ *     dominical por fecha) y el aviso de «por debajo del mínimo legal», contra
+ *     `src/lib/ley-laboral.ts` (auditoría legal del 19 sep 2026).
+ *
+ * El cálculo de HORAS (`jornada.ts`) tiene su propia batería:
+ * `scripts/pruebas-jornada.mjs`.
  *
  * CÓMO SE EJECUTA
  *   node --experimental-strip-types scripts/pruebas-nomina.mjs
@@ -31,11 +38,12 @@
 const nomina = await import("../src/lib/nomina.ts");
 const dinero = await import("../src/lib/dinero.ts");
 const paginacion = await import("../src/lib/paginacion.ts");
+const ley = await import("../src/lib/ley-laboral.ts");
 
 const {
   CONCEPTOS_HORA,
-  DIVISOR_HORAS_MES,
-  FACTORES_TARIFA,
+  factoresTarifa,
+  tarifasBajoMinimoLegal,
   calcularLiquidacion,
   construirSnapshot,
   configVigente,
@@ -102,11 +110,14 @@ function comprobarQue(descripcion, condicion) {
 }
 
 /* ================================================================== */
-/* 1. El volante real de Santiago Córdoba                              */
+/* 1. El volante de referencia de GPI (anonimizado)                    */
 /* ================================================================== */
 
 /**
- * Datos del comprobante impreso (Insumos/SANTIAGO_CORDOBA_Q1_SEPTIEMBRE.pdf):
+ * Un comprobante de pago real que GPI entregó para una quincena de septiembre
+ * de 2026 (15 días), liquidado con su Excel. El repositorio es PÚBLICO: aquí no
+ * se nombra a la persona; solo quedan las cifras necesarias para comprobar el
+ * cálculo al peso.
  *
  *   SALARIOS ................ $875.048
  *   AUXILIO DE TRANSPORTE ... $124.548
@@ -117,31 +128,42 @@ function comprobarQue(descripcion, condicion) {
  *   TOTALES ......... $1.340.189 / $85.171
  *   NETO A PAGAR ............ $1.255.017
  *
- * El salario mensual de la hoja «NOMINA 1» es 1.750.095 y el auxilio mensual
- * 249.095. Las horas extra del período, reconstruidas desde el valor hora
- * (1.750.095 / 240 = 7.292,0625), son **4 h extra diurnas + 12 h extra
+ * Salario mensual de la hoja 1.750.095 y auxilio mensual 249.095. Las horas
+ * extra del período, reconstruidas desde el valor hora QUE USABA EL EXCEL
+ * (salario ÷ 240 = 7.292,0625), son **4 h extra diurnas + 12 h extra
  * nocturnas**: 4 × 1,25 + 12 × 1,75 = 26 horas equivalentes = $189.593,625, que
  * la hoja imprime redondeado a $189.594.
+ *
+ * Desde la auditoría legal (19 sep 2026) las tarifas SUGERIDAS ya no son las
+ * del Excel (÷240) sino las de la ley (÷210, recargo dominical por fecha), así
+ * que este caso usa las TARIFAS EXPLÍCITAS del Excel, las que el volante pagó:
+ * lo que se comprueba aquí es la mecánica de la liquidación, no la tarifa.
  */
-grupoDe("Volante real de Santiago Córdoba — quincena, 15 días");
+grupoDe("Volante de referencia de GPI — quincena, 15 días, tarifas del Excel");
 
 const SALARIO = 1_750_095;
 const AUX_MENSUAL = 249_095;
 
-const tarifas = derivarTarifas(SALARIO);
-comprobar("valor hora = salario / 240", tarifas.horaBase, 7292.06);
-comprobar("hora extra diurna = valor hora × 1,25", tarifas.extraDiurna, 9115.08);
-comprobar("hora extra nocturna = valor hora × 1,75", tarifas.extraNocturna, 12761.11);
+/** Las siete tarifas tal como las traía el Excel de GPI (salario ÷ 240). */
+const tarifas = {
+  horaBase: 7292.06,
+  rotacionNocturna: 2552.22,
+  extraDiurna: 9115.08,
+  extraNocturna: 12761.11,
+  festivo: 15677.93,
+  extraFestivoDiurna: 15677.93,
+  extraFestivoNocturna: 19323.97,
+};
 
-const manualesSantiago = manualesVacios();
-manualesSantiago.valores.bonificacion = 151_000;
+const manualesVolante = manualesVacios();
+manualesVolante.valores.bonificacion = 151_000;
 
-const minutosSantiago = minutosVacios();
-minutosSantiago.ordinariaDiurna = 15 * 8 * 60; // informativas: ya van en el básico
-minutosSantiago.extraDiurna = 4 * 60;
-minutosSantiago.extraNocturna = 12 * 60;
+const minutosVolante = minutosVacios();
+minutosVolante.ordinariaDiurna = 15 * 8 * 60; // informativas: ya van en el básico
+minutosVolante.extraDiurna = 4 * 60;
+minutosVolante.extraNocturna = 12 * 60;
 
-const santiago = calcularLiquidacion({
+const volante = calcularLiquidacion({
   config: {
     salarioBasico: SALARIO,
     auxTransporte: AUX_MENSUAL,
@@ -149,26 +171,26 @@ const santiago = calcularLiquidacion({
     pctSalud: 4,
     pctPension: 4,
   },
-  minutos: minutosSantiago,
+  minutos: minutosVolante,
   dias: 15,
-  manuales: manualesSantiago,
+  manuales: manualesVolante,
 });
 
-comprobar("SALARIOS (básico = salario / 30 × 15)", santiago.basico, 875_048);
-comprobar("AUXILIO DE TRANSPORTE (mensual / 30 × 15)", santiago.auxTransporte, 124_548);
-comprobar("HORAS EXTRAS (4 h diurnas + 12 h nocturnas)", santiago.totalHoras, 189_593);
-comprobar("BONO (concepto manual)", santiago.totalDevengadosManuales, 151_000);
-comprobar("TOTALES devengados", santiago.totalDevengado, 1_340_189);
-comprobar("base de salud y pensión (básico + horas)", santiago.baseSeguridadSocial, 1_064_641);
-comprobar("SALUD (4 %)", santiago.salud, 42_586);
-comprobar("PENSION (4 %)", santiago.pension, 42_586);
-comprobar("TOTALES descuentos", santiago.totalDescuentos, 85_172);
-comprobar("NETO A PAGAR", santiago.neto, 1_255_017);
+comprobar("SALARIOS (básico = salario / 30 × 15)", volante.basico, 875_048);
+comprobar("AUXILIO DE TRANSPORTE (mensual / 30 × 15)", volante.auxTransporte, 124_548);
+comprobar("HORAS EXTRAS (4 h diurnas + 12 h nocturnas)", volante.totalHoras, 189_593);
+comprobar("BONO (concepto manual)", volante.totalDevengadosManuales, 151_000);
+comprobar("TOTALES devengados", volante.totalDevengado, 1_340_189);
+comprobar("base de salud y pensión (básico + horas)", volante.baseSeguridadSocial, 1_064_641);
+comprobar("SALUD (4 %)", volante.salud, 42_586);
+comprobar("PENSION (4 %)", volante.pension, 42_586);
+comprobar("TOTALES descuentos", volante.totalDescuentos, 85_172);
+comprobar("NETO A PAGAR", volante.neto, 1_255_017);
 
 comprobarQue(
   "las horas ordinarias diurnas se muestran pero NO se pagan aparte",
-  santiago.lineasHoras.find((l) => l.clave === "ordinariaDiurna").valor === 0 &&
-    santiago.minutosOrdinarios === 7200,
+  volante.lineasHoras.find((l) => l.clave === "ordinariaDiurna").valor === 0 &&
+    volante.minutosOrdinarios === 7200,
 );
 
 console.log(`
@@ -176,9 +198,9 @@ console.log(`
    imprimir, así que sus subtotales no cuadran al sumarlos a mano (875.048 +
    124.548 + 189.594 + 151.000 = 1.340.190, pero el volante imprime 1.340.189).
    Aquí se paga en pesos enteros línea por línea, así que el volante SÍ cuadra:
-   horas extra ${formatearPesos(santiago.totalHoras)} en vez de $189.594 y
-   descuentos ${formatearPesos(santiago.totalDescuentos)} en vez de $85.171
-   (±1 peso), y el NETO coincide exactamente: ${formatearPesos(santiago.neto)}.`);
+   horas extra ${formatearPesos(volante.totalHoras)} en vez de $189.594 y
+   descuentos ${formatearPesos(volante.totalDescuentos)} en vez de $85.171
+   (±1 peso), y el NETO coincide exactamente: ${formatearPesos(volante.neto)}.`);
 
 /* ================================================================== */
 /* 2. Mapeo del desglose de jornadas → conceptos de nómina             */
@@ -274,23 +296,64 @@ comprobarQue(
 );
 
 /* ================================================================== */
-/* 4. Factores derivados y la incoherencia festiva del Excel           */
+/* 4. Tarifas sugeridas = mínimo legal del mes (auditoría, 19 sep 2026) */
 /* ================================================================== */
 
-grupoDe("Tarifas sugeridas");
+grupoDe("Tarifas sugeridas con la ley del mes y aviso de mínimo legal");
 
-comprobar("divisor de horas del mes", DIVISOR_HORAS_MES, 240);
-comprobar("recargo nocturno (Excel y ley coinciden)", FACTORES_TARIFA.rotacionNocturna, 0.35);
-comprobar("hora en festivo (valor del Excel de GPI)", FACTORES_TARIFA.festivo, 2.15);
-comprobar("extra diurna en festivo (valor legal)", FACTORES_TARIFA.extraFestivoDiurna, 2.05);
+// Parámetros de la ley: los da ley-laboral.ts (nomina.ts no importa nada).
+const sep26 = ley.parametrosLegalesDelMes(2026, 9, 42);
+comprobar("sep-2026 con horario de 42 h → divisor 210", sep26.divisor, 210);
+comprobar("sep-2026 → recargo dominical 90 %", sep26.recargoDominical, 0.9);
+const f26 = factoresTarifa(sep26.recargoDominical);
+comprobar("recargo nocturno 0,35", f26.rotacionNocturna, 0.35);
+comprobar("hora en festivo 1,90 (1 + d)", f26.festivo, 1.9);
+comprobar("extra diurna en festivo 2,15 (1,25 + d): el valor del Excel ERA el legal", f26.extraFestivoDiurna, 2.15);
+comprobar("extra nocturna en festivo 2,65 (1,75 + d)", f26.extraFestivoNocturna, 2.65);
+comprobarQue("ya no hay «inversión festiva»: la extra festiva vale más que la ordinaria festiva", f26.extraFestivoDiurna > f26.festivo);
 comprobarQue(
-  "queda registrada la inversión festiva que GPI debe confirmar (extra < ordinaria)",
-  FACTORES_TARIFA.extraFestivoDiurna < FACTORES_TARIFA.festivo,
+  "factoresTarifa (nomina.ts) = factoresLegales (ley-laboral.ts) para 0,75 · 0,8 · 0,9 · 1",
+  [0.75, 0.8, 0.9, 1].every((d) => JSON.stringify(factoresTarifa(d)) === JSON.stringify(ley.factoresLegales(d))),
 );
+const jul27 = ley.parametrosLegalesDelMes(2027, 7, 42);
+const f27 = factoresTarifa(jul27.recargoDominical);
+comprobar("jul-2027 → recargo 100 %: festivo 2,00", f27.festivo, 2);
+comprobar("jul-2027 → extra festiva diurna 2,25", f27.extraFestivoDiurna, 2.25);
+comprobar("jul-2027 → extra festiva nocturna 2,75", f27.extraFestivoNocturna, 2.75);
+comprobar("jun-2026 (42 h todavía no rige: 44) con horario de 42 → divisor 210", ley.parametrosLegalesDelMes(2026, 6, 42).divisor, 210);
+comprobar("jun-2026 sin horario → 44 h legales → divisor 220", ley.parametrosLegalesDelMes(2026, 6).divisor, 220);
+comprobar("un horario de 48 h no sube el divisor por encima del legal (42 → 210)", ley.parametrosLegalesDelMes(2026, 9, 48).divisor, 210);
 
-const t2 = derivarTarifas(2_400_000);
-comprobar("salario 2.400.000 → hora base 10.000", t2.horaBase, 10_000);
-comprobar("salario 2.400.000 → recargo nocturno 3.500", t2.rotacionNocturna, 3_500);
+// Salario redondo de ejemplo.
+const t2 = derivarTarifas(2_100_000, sep26);
+comprobar("salario 2.100.000 ÷ 210 → hora base 10.000", t2.horaBase, 10_000);
+comprobar("→ recargo nocturno 3.500", t2.rotacionNocturna, 3_500);
+comprobar("→ extra diurna 12.500", t2.extraDiurna, 12_500);
+comprobar("→ extra nocturna 17.500", t2.extraNocturna, 17_500);
+comprobar("→ hora en festivo 19.000", t2.festivo, 19_000);
+comprobar("→ extra festiva diurna 21.500", t2.extraFestivoDiurna, 21_500);
+comprobar("→ extra festiva nocturna 26.500", t2.extraFestivoNocturna, 26_500);
+
+// El aviso: las tarifas del modelo viejo (÷240 y factores del Excel) quedan
+// por debajo de la ley de septiembre; las sugeridas, no; pagar más, tampoco.
+comprobar("las tarifas del Excel (÷240) avisan en las 7", tarifasBajoMinimoLegal(tarifas, SALARIO, sep26).length, 7);
+comprobar("las sugeridas no avisan", tarifasBajoMinimoLegal(derivarTarifas(SALARIO, sep26), SALARIO, sep26).length, 0);
+comprobar(
+  "pagar MÁS que la ley no avisa",
+  tarifasBajoMinimoLegal({ ...t2, extraDiurna: 20_000 }, 2_100_000, sep26).length,
+  0,
+);
+comprobar(
+  "1 peso por debajo se tolera (redondeo)",
+  tarifasBajoMinimoLegal({ ...t2, extraDiurna: 12_499.5 }, 2_100_000, sep26).length,
+  0,
+);
+comprobar(
+  "más de 1 peso por debajo avisa",
+  tarifasBajoMinimoLegal({ ...t2, extraDiurna: 12_400 }, 2_100_000, sep26).map((b) => b.clave).join(","),
+  "extraDiurna",
+);
+comprobar("sin salario no hay contra qué comparar", tarifasBajoMinimoLegal(t2, 0, sep26).length, 0);
 
 /* ================================================================== */
 /* 5. Conceptos manuales                                               */
@@ -316,7 +379,7 @@ const conManuales = calcularLiquidacion({
   config: {
     salarioBasico: 1_300_000,
     auxTransporte: 200_000,
-    tarifas: derivarTarifas(1_300_000),
+    tarifas: derivarTarifas(1_300_000, sep26),
     pctSalud: 4,
     pctPension: 4,
   },
@@ -380,7 +443,7 @@ comprobar(
 
 grupoDe("Snapshot congelado (mismo patrón que jornadas.desglose)");
 
-const snapshot = construirSnapshot(santiago, {
+const snapshot = construirSnapshot(volante, {
   jornadas: 6,
   fechaInicio: "2026-09-01",
   fechaFin: "2026-09-15",
@@ -405,7 +468,7 @@ const enVivo = obtenerLiquidacion(null, () => ({
   config: {
     salarioBasico: 1_300_000,
     auxTransporte: 0,
-    tarifas: derivarTarifas(1_300_000),
+    tarifas: derivarTarifas(1_300_000, sep26),
     pctSalud: 4,
     pctPension: 4,
   },

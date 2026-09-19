@@ -32,6 +32,7 @@ import {
   listLiquidaciones,
   listProfiles,
   mapaNominaConfigsVigentes,
+  parametrosLegalesNomina,
 } from "@/lib/admin";
 import { hoyEnColombia } from "@/lib/jornada";
 import {
@@ -43,6 +44,7 @@ import {
   obtenerLiquidacion,
   periodoDeHoy,
   rangoPeriodo,
+  tarifasBajoMinimoLegal,
   type TipoPeriodo,
 } from "@/lib/nomina";
 import type { FilaNomina } from "@/lib/admin-types";
@@ -109,6 +111,10 @@ export async function LiquidacionView({
       getJornadaConfig(),
       getMapaHorarios(),
     ]);
+
+  // La ley del mes (divisor con el horario del mes y recargo dominical), para
+  // avisar de tarifas por debajo del mínimo legal. Aviso, no bloqueo.
+  const legal = await parametrosLegalesNomina(anioSel, mesSel, horarios);
 
   const activos = perfiles.filter((p) => p.active);
   const personaSel = activos.some((p) => p.id === persona) ? persona : "";
@@ -190,6 +196,12 @@ export async function LiquidacionView({
         tieneConfig,
         salario: config?.salario_basico ?? 0,
         configDesde: config ? { anio: config.anio, mes: config.mes } : null,
+        tarifasBajoMinimo:
+          config && !resuelta.congelada
+            ? tarifasBajoMinimoLegal(config.tarifas, config.salario_basico, legal).map(
+                (b) => b.etiqueta,
+              )
+            : [],
       };
     }),
   );

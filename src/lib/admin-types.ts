@@ -443,4 +443,10 @@ export interface FilaNomina {
   salario: number;
   /** Mes en que se guardó la configuración que rige (`null` = sin configurar). */
   configDesde: { anio: number; mes: number } | null;
+  /**
+   * Tarifas de la configuración que rige que quedan POR DEBAJO del mínimo
+   * legal del mes (nombres). Solo se calcula para lo que se liquida en vivo
+   * (borrador o sin crear): una liquidación cerrada lee su snapshot.
+   */
+  tarifasBajoMinimo: string[];
 }

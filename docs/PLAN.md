@@ -1267,7 +1267,7 @@ empresa para nómina» (clave `site_settings.empresa`).
 
 Pruebas del módulo puro en verde —`node --experimental-strip-types
 scripts/pruebas-nomina.mjs`, 71 comprobaciones— incluida la **reproducción
-exacta del volante real de Santiago Córdoba** (sueldo 875.048, auxilio 124.548,
+exacta del volante de referencia de GPI** (sueldo 875.048, auxilio 124.548,
 salud y pensión 42.586 y **neto 1.255.017 al peso**). `npm run lint` y
 `npm run build` en verde. Prueba de punta a punta contra `localhost` con
 Playwright: configurar a dos empleados con jornadas aprobadas reales, liquidar
@@ -1709,7 +1709,7 @@ empezar). En `nomina_config_mensual` hay **cuatro filas en cero** creadas solas
 por el modelo anterior al abrir meses —`admin` sep-2026, `dgomez` ago-2026 y
 sep-2026, `scordoba` ago-2026—; con el modelo nuevo **se ignoran** (no cuentan
 como configuración), así que no estorban, pero pueden borrarse cuando César
-quiera. La única configuración real es la de `scordoba` desde sep-2026, y su
+quiera. La única configuración real es la de una cuenta desde sep-2026, y su
 liquidación de la 2.ª quincena de septiembre sigue en borrador.
 
 ### Verificación
@@ -1767,7 +1767,7 @@ aplicar**.
   limpio (sin `.next`) en verde; `scripts/pruebas-nomina.mjs`: **168/168**.
 - `next start` + Playwright contra **localhost**: como `admin`, menú de ocho
   entradas con Nómina; `/admin/nomina` con sus tres pestañas; Configuración con
-  punto de miles (`1.750.095`, `9.115,08`) y el valor limpio en el campo oculto;
+  punto de miles (`1.300.000`, `9.115,08`) y el valor limpio en el campo oculto;
   filtro por persona; en el calendario, un evento temporal rechazado al forzar
   una fecha anterior (el servidor lo niega aunque se quite el `min`), aplazado
   hacia adelante (`aplazado` + `fecha_original`) y devuelto a su fecha
@@ -1845,6 +1845,91 @@ primera).
   cambiarle el orden y se le devolvió el suyo desde la 2; los datos quedaron
   iguales salvo su `updated_at`, que lo pone un disparador de la base y no se
   puede restaurar desde la API.
+
+---
+
+## Iteración del 19 de septiembre de 2026 — auditoría legal del cálculo de horas
+
+Una auditoría legal (normativa vigente a septiembre de 2026, 25 casos
+ejecutados contra el código) encontró que el sistema **clasifica bien las
+horas pero no las pagaba bien**. Aquí se implementó **solo lo que la ley
+obliga**; lo que depende de GPI quedó como decisión pendiente (abajo). **Sin
+migración y sin tocar datos**: la configuración de nómina que ya estaba en la
+base (÷ 240) no se modificó —la corrige el administrador desde el panel— y las
+jornadas aprobadas siguen congeladas.
+
+### Lo que se implementó
+
+| # | Qué | Dónde |
+| --- | --- | --- |
+| P0 | Módulo puro de reglas que cambian con la fecha: recargo dominical (75 → 80 % el 1-jul-2025 → **90 %** el 1-jul-2026 → 100 % el 1-jul-2027), jornada máxima (… 44 → **42 h** el 15-jul-2026), divisor (horas ÷ 6 × 30 → **210**), factores legales y **festivos de cualquier año** (fijos, trasladables con la Ley Emiliani —incluido el **9 de julio** desde 2026, Ley 2578— y los de la Pascua) | `src/lib/ley-laboral.ts` |
+| P1 | Valor hora con el divisor de la **jornada del mes** (horario del mes, nunca más que las horas legales): hoy **÷ 210**. `derivarTarifas(salario, { divisor, recargoDominical })`: `nomina.ts` sigue sin importaciones | `nomina.ts`, `admin.ts` (`parametrosLegalesNomina`), Configuración |
+| P2 | Sugeridos con el recargo del mes (sep-2026: **1,90 / 2,15 / 2,65**). **Aviso ámbar de «por debajo del mínimo legal»** en el formulario, en el mensaje de guardado y en la Liquidación: aviso, no bloqueo. Sustituye al aviso `festivoIncoherente`, que empujaba al revés. En `jornada.ts`, `horasEquivalentes` y el contexto congelado usan el recargo de la fecha de cada minuto | `ConfigNominaForm`, `nomina/actions.ts`, `LiquidacionPanel`, `jornada.ts` |
+| P3 | `nombreFestivo` = `festivosDelAnio`: 2026 = la tabla anterior + 13-jul; 2027 y 2028 verificados (19 por año). El calendario queda arreglado de paso | `jornada.ts`, calendario |
+| P6 (mínimo) | Se **rechaza** una jornada que se cruce con otra propia (crear y editar en el portal) y se **avisa** si ese día ya había otra. Tampoco se aprueba una jornada que se cruce con otra de la misma persona | `mi-cuenta/actions.ts`, `admin/jornadas/actions.ts` |
+| P8 | Textos corregidos: la franja de las 7:00 p. m. es de la **Ley 2466 de 2025**; el recargo vigente es **90 %**; el 2,15 del Excel para la extra festiva **era el legal** | comentarios, `AGENTS.md`, `docs/ADMIN.md`, ayudas del panel |
+| P9 | Pruebas: el volante de referencia usa las **tarifas explícitas del Excel** y quedó **anonimizado**; batería nueva `scripts/pruebas-jornada.mjs` (alias `@/` con `scripts/alias.mjs`) | `scripts/` |
+
+Además: `.claude/` al `.gitignore`, y ningún nombre real ni salario de una
+persona en pruebas, comentarios ni documentación (el repositorio es público).
+
+### Decisiones pendientes con GPI (reunión del martes 22 sep)
+
+No se tocó el comportamiento actual en ninguna de las tres. La batería
+`scripts/pruebas-jornada.mjs` fija lo que el sistema hace HOY en esos casos,
+para que cualquier cambio sea deliberado.
+
+1. **P4 · El sábado.** Hoy un día sin horario (sábado) se paga **como
+   domingo** (extra dominical: ×2,15 con la ley de hoy). La ley lo paga como
+   **extra normal** (×1,25 de día, ×1,75 de noche). *Qué cambiaría*: en
+   `calcularJornada` (`jornada.ts`), `const dominical = diaSemana === 0 ||
+   festivo !== null || noLaboral;` pasaría a no incluir `noLaboral`, o se
+   haría explícito con un `jornada_config.sabadoComoFestivo` si GPI quiere
+   seguir pagándolo como domingo. Hay **6 jornadas de sábado de agosto ya
+   aprobadas y congeladas** como extra dominical: no cambian solas; si GPI
+   decide aplicar la ley y se van a liquidar en el sistema, un manager las
+   devuelve a pendiente y las vuelve a aprobar (nunca por SQL).
+2. **P5 · Festivo entre semana** (p. ej. lunes 12 de octubre). Hoy **todo el
+   turno** va como extra festiva. La ley pide las horas de la jornada del día
+   como **festivas ordinarias** (×1,90) y solo el exceso como extra festiva
+   (×2,15). *Qué cambiaría*: en `calcularJornada` y `construirContextoCalculo`,
+   separar «día programado» (`horarioBase !== null`) de «día laboral», dar la
+   jornada del horario también en festivo y aplicar el almuerzo con el día
+   programado. Hoy GPI paga más que el mínimo en ese caso, lo cual es legal.
+3. **P7 · La regla del almuerzo.** Hoy se descuenta 1 h si el turno pasa de 6 h
+   en día laboral, con un **salto**: 6 h 1 min trabajadas quedan en 5 h 1 min.
+   *Qué cambiaría*: un descuento continuo (`min(almuerzo, total − 6 h)`) o una
+   casilla «tomé almuerzo» en el formulario del portal.
+
+Relacionado: la versión **completa** de P6 (que el cálculo reste la jornada ya
+usada ese día por otra jornada aprobada) no se hizo; con el rechazo de
+solapados y el aviso del mismo día no hace falta mientras GPI pida un solo
+registro por día.
+
+### Después del despliegue (lo hace el administrador desde el panel)
+
+1. `/admin/nomina` → **Configuración**, septiembre de 2026: «Usar los valores
+   sugeridos» y Guardar en la cuenta configurada (hoy tiene las tarifas ÷ 240 y
+   el panel las marca en ámbar), y completar las demás cuentas.
+2. El borrador de la 2.ª quincena de septiembre se recalcula solo (no hay nada
+   cerrado).
+3. Decidir con GPI el destino de las 6 jornadas de sábado (P4).
+
+### Verificación
+
+- `scripts/pruebas-nomina.mjs` **208/208** y `scripts/pruebas-jornada.mjs`
+  **74/74**; `npm run lint` y `npm run build` limpio.
+- `next start` + Playwright contra **localhost**: Configuración de
+  septiembre de 2026 con «Ley de septiembre de 2026: jornada de 42 h semanales
+  → valor hora = salario ÷ 210 · recargo del 90 %» y los sugeridos con ×1,9 /
+  ×2,15 / ×2,65; con la configuración vieja de la base (÷ 240, **sin
+  modificarla**) salen el aviso «7 tarifas están por debajo del mínimo legal»
+  y las siete marcas en ámbar, y el aviso equivalente en la Liquidación; el
+  calendario marca el 1 y el 11 de enero de 2027 y el 12 de julio de 2027
+  (Chiquinquirá); en el portal de un empleado, una jornada que se cruza con
+  otra aprobada se rechaza con el mensaje explicativo (en 1440 y 390 px).
+  **Cero errores de consola** y las tablas de la base idénticas antes y
+  después.
 
 ---
 
@@ -1944,6 +2029,12 @@ primera).
 - **Lista de empleados** (Fase 2): nombres, **usuarios**, cédulas, cargos,
   teléfonos y correos de contacto para crear las cuentas desde
   `/admin/empleados`. El sistema ya está listo: solo falta cargarlos.
+- **Tres decisiones de la auditoría legal** ⚠️ (reunión del 22 sep 2026):
+  el **sábado** (hoy se paga como domingo; la ley, como extra normal), el
+  **festivo entre semana** (hoy todo el turno como extra festiva; la ley, las
+  horas de la jornada como festivas ordinarias) y la **regla del almuerzo**
+  (salto a las 6 h). Detalle y qué cambiaría en cada caso: iteración del 19 sep
+  2026, «auditoría legal del cálculo de horas».
 - **Regla del almuerzo** ⚠️: confirmar que descontar el almuerzo del día cuando
   el turno dura más de 6 horas en un día laboral es lo correcto. La alternativa
   sería pedirle al empleado que registre la hora exacta de su almuerzo, lo que
@@ -1960,20 +2051,21 @@ primera).
 
 ### Dudas abiertas de NÓMINA (17–18 sep 2026)
 
-Salen del análisis del Excel `NOMINA_LIQUIDACION.xlsx` y del volante real de
+Salen del análisis del Excel `NOMINA_LIQUIDACION.xlsx` y de un volante real de
 GPI. Ninguna bloquea el módulo —**todo es configurable desde el panel**—, pero
 conviene cerrarlas antes de liquidar de verdad.
 
-1. **Tarifas de domingo y festivo** ⚠️ *(la más importante: es dinero)*. El
-   Excel de GPI usa 2,15 / 2,15 / 2,65 (festivo ordinario / extra diurna
-   festiva / extra nocturna festiva) sobre el valor hora; la ley vigente y los
-   valores por defecto de la webapp (`jornada_config`) dan 1,80 / 2,05 / 2,55.
-   Además, en el Excel «hora en festivo» y «hora extra diurna en festivo»
-   tienen **el mismo** valor, lo que parece una fórmula copiada. ¿Cuáles son
-   las tres tarifas reales?
-2. **Divisor del valor hora**: el Excel usa `salario / 240` («30 días × 8 h»),
-   anterior a la Ley 2101; GPI ya trabaja 42 h semanales. ¿Se mantiene 240 como
-   convención de nómina o se recalcula?
+1. ~~**Tarifas de domingo y festivo**~~ ✅ **Resuelto por la auditoría legal
+   del 19 sep 2026**: con el recargo del 90 % (desde el 1-jul-2026) la ley pide
+   1,90 / 2,15 / 2,65. El 2,15 del Excel para la extra diurna festiva **era el
+   legal**; lo que no cuadraba era el 2,15 de «hora en festivo» (1,90). Los
+   sugeridos del panel ya son los legales y el formulario avisa si alguna
+   tarifa queda por debajo. Queda como pregunta para GPI solo si quiere pagar
+   **más** que la ley en algún concepto.
+2. ~~**Divisor del valor hora**~~ ✅ **Resuelto por la auditoría**: con 42 h
+   semanales la ley pide **÷ 210** (horas ÷ 6 × 30); el 240 del Excel es la
+   cuenta de 48 h y dejaba todo un 12,5 % por debajo. El sistema ya sugiere
+   ÷ 210.
 3. **Auxilio de transporte 2026**: ¿cuál es el valor mensual vigente que debe
    quedar por defecto? (El Excel tiene un valor viejo en una fórmula sin usar y
    valores digitados a mano en las filas reales.)

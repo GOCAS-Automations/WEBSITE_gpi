@@ -18,7 +18,11 @@
  */
 
 import Link from "next/link";
-import { listNominaConfigsEmpleado, listProfiles } from "@/lib/admin";
+import {
+  listNominaConfigsEmpleado,
+  listProfiles,
+  parametrosLegalesNomina,
+} from "@/lib/admin";
 import { hoyEnColombia } from "@/lib/jornada";
 import { AyudaSeccion, EmptyState } from "@/components/admin/ui";
 import { estadoConfigMes, tarifasVacias, PCT_PENSION_DEFECTO, PCT_SALUD_DEFECTO } from "@/lib/nomina";
@@ -59,7 +63,11 @@ export async function ConfiguracionView({
   const seleccionado =
     perfiles.find((p) => p.id === empleadoId) ?? perfiles[0];
 
-  const { filas, error } = await listNominaConfigsEmpleado(seleccionado.id);
+  const [{ filas, error }, legal] = await Promise.all([
+    listNominaConfigsEmpleado(seleccionado.id),
+    // La ley del mes elegido: divisor (horario del mes) y recargo dominical.
+    parametrosLegalesNomina(anioSel, mesSel),
+  ]);
   const estado = estadoConfigMes(filas, anioSel, mesSel);
   const vigente = estado.vigente;
 
@@ -112,6 +120,11 @@ export async function ConfiguracionView({
                 pctPension: PCT_PENSION_DEFECTO,
               }
         }
+        legal={{
+          divisor: legal.divisor,
+          recargoDominical: legal.recargoDominical,
+          horasSemanales: legal.horasSemanales,
+        }}
         estado={{
           origen: estado.origen,
           desde: vigente ? { anio: vigente.anio, mes: vigente.mes } : null,

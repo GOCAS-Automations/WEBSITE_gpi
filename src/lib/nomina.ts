@@ -46,22 +46,33 @@
  * y aparece como **línea propia** en el desglose para que sea auditable. Es la
  * misma composición que ya usaba `horasEquivalentes` en `src/lib/jornada.ts`.
  *
- * VALORES SUGERIDOS
- * -----------------
- * Al crear la configuración de un empleado, las siete tarifas se **derivan** del
- * salario: `salario / 240 × factor`. Los factores por defecto son los que GPI
- * paga HOY según su Excel (ver `FACTORES_TARIFA`), no los de la ley, porque el
- * encargo es reproducir lo que la empresa paga. **Todos son editables**.
+ * VALORES SUGERIDOS = MÍNIMO LEGAL DEL MES (auditoría legal, 19 sep 2026)
+ * -----------------------------------------------------------------------
+ * Las siete tarifas se **derivan** del salario con la LEY del mes configurado:
+ * `salario ÷ divisor × factor`, donde
+ *   · el **divisor** sale de la jornada semanal (`horas ÷ 6 × 30`): con las 42 h
+ *     de GPI, **210** (antes se usaba 240, la cuenta de la semana de 48 h que
+ *     traía el Excel de GPI: todo salía un 12,5 % por debajo de la ley);
+ *   · los **factores** llevan el recargo dominical vigente ese mes (90 % desde
+ *     el 1-jul-2026 → 1,90 / 2,15 / 2,65; 100 % desde el 1-jul-2027).
+ * Este módulo NO importa nada en tiempo de ejecución, así que no calcula esos
+ * dos números: los recibe (`ParametrosTarifas`). Quien llama los saca de
+ * `parametrosLegalesDelMes()` de `src/lib/ley-laboral.ts`.
+ *
+ * Todas las tarifas son **editables**: GPI puede pagar MÁS que la ley, nunca
+ * menos. Por eso una tarifa por debajo del mínimo legal solo se AVISA
+ * (`tarifasBajoMinimoLegal`), en la configuración, al guardarla y en la
+ * liquidación; no se bloquea.
  *
  * REDONDEO
  * --------
  * Todo se paga en **pesos enteros** y se redondea **línea por línea** (cada
  * concepto de horas, el básico, el auxilio, salud y pensión). Así el volante
  * cuadra cuando alguien lo suma a mano —cosa que el Excel de GPI no hace: en el
- * volante real de Santiago Córdoba los devengados impresos suman 1.340.190 pero
- * el total impreso dice 1.340.189, porque la hoja arrastra centavos y solo
- * redondea al mostrar—. El neto coincide al peso con el del Excel; algún
- * subtotal puede diferir en 1 peso por esa misma razón.
+ * volante de referencia de GPI (una quincena de septiembre de 2026) los
+ * devengados impresos suman un peso más que el total impreso, porque la hoja
+ * arrastra centavos y solo redondea al mostrar—. El neto coincide al peso con
+ * el del Excel; algún subtotal puede diferir en 1 peso por esa misma razón.
  */
 
 import type { DesgloseJornada } from "@/lib/jornada";
@@ -70,16 +81,6 @@ import type { DesgloseJornada } from "@/lib/jornada";
 /* 1. Parámetros                                                       */
 /* ================================================================== */
 
-/**
- * Divisor con el que el Excel de GPI obtiene el valor de la hora
- * (`salario / 240`). Es el clásico «30 días × 8 horas», anterior a la Ley 2101
- * de 2021; GPI ya trabaja 42 h semanales, así que el divisor real sería menor.
- * **Pendiente de confirmar con GPI** (ver `docs/PLAN.md`): mientras tanto se
- * mantiene 240 porque es lo que la empresa usa hoy, y el valor derivado es solo
- * una sugerencia que el administrador puede sobrescribir.
- */
-export const DIVISOR_HORAS_MES = 240;
-
 /** Días de un mes de nómina: siempre 30 (convención colombiana). */
 export const DIAS_MES_NOMINA = 30;
 
@@ -87,36 +88,57 @@ export const DIAS_MES_NOMINA = 30;
 export const DIAS_QUINCENA = 15;
 
 /**
- * Factores con los que se derivan las tarifas sugeridas a partir del valor hora
- * (`salario / 240`).
- *
- * Origen de cada uno:
- *   · `rotacionNocturna` 0,35 — Excel de GPI **y** ley (coinciden).
- *   · `extraDiurna` 1,25 y `extraNocturna` 1,75 — Excel **y** ley (coinciden).
- *   · `festivo` 2,15 — **Excel de GPI**. La ley vigente (Ley 2466 de 2025, que
- *     es lo que trae `jornada_config`) daría 1,80. Se usa el de GPI porque es
- *     lo que la empresa paga hoy. **Pendiente de confirmar.**
- *   · `extraFestivoDiurna` 2,05 — **ley**, no Excel. En el archivo de GPI esta
- *     casilla tiene 2,15, exactamente el mismo número que «hora en festivo»,
- *     lo que delata una fórmula copiada: las filas de plantilla sin usar del
- *     propio Excel llevan valores distintos. Se toma el legal.
- *   · `extraFestivoNocturna` 2,65 — **Excel de GPI** (la ley daría 2,55).
- *
- * OJO: con estos números una hora EXTRA diurna en festivo (2,05) sale más
- * barata que una hora ORDINARIA en festivo (2,15), que es imposible. Es
- * consecuencia directa de la incoherencia del Excel y por eso las tres tarifas
- * festivas están marcadas para confirmar con la gerencia; el formulario del
- * panel avisa en ámbar cuando se da esa inversión.
+ * Lo que la LEY del mes pone para derivar las tarifas. Se recibe como
+ * parámetro (este módulo no importa nada): sale de `parametrosLegalesDelMes()`
+ * de `src/lib/ley-laboral.ts`, con el año y el mes de la configuración.
  */
-export const FACTORES_TARIFA = {
-  horaBase: 1,
-  rotacionNocturna: 0.35,
-  extraDiurna: 1.25,
-  extraNocturna: 1.75,
-  festivo: 2.15,
-  extraFestivoDiurna: 2.05,
-  extraFestivoNocturna: 2.65,
-} as const;
+export interface ParametrosTarifas {
+  /** Valor hora = salario ÷ divisor (42 h semanales → 210). */
+  divisor: number;
+  /** Recargo dominical/festivo del mes (0,90 desde el 1-jul-2026). */
+  recargoDominical: number;
+}
+
+/**
+ * Factores de cada tarifa sobre el valor hora, para un recargo dominical `d`.
+ * Es la MISMA regla que `factoresLegales()` de `ley-laboral.ts` (las pruebas
+ * comprueban que coinciden); vive duplicada aquí solo porque este módulo no
+ * puede importar nada en tiempo de ejecución.
+ *
+ *   · rotación nocturna 0,35 — recargo nocturno (art. 168 CST);
+ *   · extra diurna 1,25 y extra nocturna 1,75 — sin acumularse entre sí;
+ *   · hora en festivo 1 + d; extra festiva diurna 1,25 + d; extra festiva
+ *     nocturna 1,75 + d (el dominical SÍ se suma a la extra).
+ *
+ * Con d = 0,90: 1,90 / 2,15 / 2,65. Nota histórica: el 2,15 que el Excel de
+ * GPI traía en «extra diurna en festivo» NO era un error de plantilla, como se
+ * creyó el 17 sep: es exactamente el valor legal con el 90 %. Lo que no cuadraba
+ * con la ley era el 2,15 de «hora en festivo» (debe ser 1,90) y el divisor 240.
+ */
+export function factoresTarifa(recargoDominical: number): TarifasNomina {
+  const d = Number.isFinite(recargoDominical) && recargoDominical >= 0 ? recargoDominical : 0;
+  const r = (n: number) => Math.round(n * 100) / 100;
+  return {
+    horaBase: 1,
+    rotacionNocturna: 0.35,
+    extraDiurna: 1.25,
+    extraNocturna: 1.75,
+    festivo: r(1 + d),
+    extraFestivoDiurna: r(1.25 + d),
+    extraFestivoNocturna: r(1.75 + d),
+  };
+}
+
+/** Nombre de cada tarifa, como lo ve el administrador. */
+export const ETIQUETAS_TARIFA: Record<keyof TarifasNomina, string> = {
+  horaBase: "Hora de rotación diurna",
+  rotacionNocturna: "Rotación nocturna",
+  extraDiurna: "Hora extra diurna",
+  extraNocturna: "Hora extra nocturna",
+  festivo: "Hora en domingo o festivo",
+  extraFestivoDiurna: "Hora extra diurna en festivo",
+  extraFestivoNocturna: "Hora extra nocturna en festivo",
+};
 
 /** Porcentaje de aporte a salud del empleado (Excel de GPI y ley: 4 %). */
 export const PCT_SALUD_DEFECTO = 4;
@@ -437,22 +459,60 @@ export function tarifasVacias(): TarifasNomina {
 }
 
 /**
- * Tarifas SUGERIDAS a partir del salario: `salario / 240 × factor`, con dos
- * decimales (la columna de la base de datos es `numeric(14,2)`).
- * Son solo una propuesta: el administrador puede sobrescribir cualquiera.
+ * Tarifas SUGERIDAS a partir del salario, que son también el MÍNIMO LEGAL del
+ * mes: `salario ÷ divisor × factor`, con dos decimales (la columna de la base
+ * de datos es `numeric(14,2)`). El divisor y el recargo dominical llegan como
+ * parámetros (ver `ParametrosTarifas`). Son una propuesta: el administrador
+ * puede sobrescribir cualquiera, hacia arriba.
  */
-export function derivarTarifas(salarioBasico: number): TarifasNomina {
-  const base = numeroSeguro(salarioBasico) / DIVISOR_HORAS_MES;
+export function derivarTarifas(
+  salarioBasico: number,
+  { divisor, recargoDominical }: ParametrosTarifas,
+): TarifasNomina {
+  const div = Number.isFinite(divisor) && divisor > 0 ? divisor : 240;
+  const base = numeroSeguro(salarioBasico) / div;
+  const f = factoresTarifa(recargoDominical);
   const dos = (n: number) => Math.round(n * 100) / 100;
   return {
-    horaBase: dos(base * FACTORES_TARIFA.horaBase),
-    rotacionNocturna: dos(base * FACTORES_TARIFA.rotacionNocturna),
-    extraDiurna: dos(base * FACTORES_TARIFA.extraDiurna),
-    extraNocturna: dos(base * FACTORES_TARIFA.extraNocturna),
-    festivo: dos(base * FACTORES_TARIFA.festivo),
-    extraFestivoDiurna: dos(base * FACTORES_TARIFA.extraFestivoDiurna),
-    extraFestivoNocturna: dos(base * FACTORES_TARIFA.extraFestivoNocturna),
+    horaBase: dos(base * f.horaBase),
+    rotacionNocturna: dos(base * f.rotacionNocturna),
+    extraDiurna: dos(base * f.extraDiurna),
+    extraNocturna: dos(base * f.extraNocturna),
+    festivo: dos(base * f.festivo),
+    extraFestivoDiurna: dos(base * f.extraFestivoDiurna),
+    extraFestivoNocturna: dos(base * f.extraFestivoNocturna),
   };
+}
+
+/** Una tarifa configurada por debajo del mínimo legal del mes. */
+export interface TarifaBajoMinimo {
+  clave: keyof TarifasNomina;
+  etiqueta: string;
+  tarifa: number;
+  minimo: number;
+}
+
+/**
+ * Las tarifas que quedan POR DEBAJO del mínimo legal del mes
+ * (`salario ÷ divisor × factor legal`, con 1 peso de tolerancia por redondeo).
+ * Es un AVISO, nunca un bloqueo: GPI puede pagar más, nunca menos. Sin salario
+ * no hay contra qué comparar y devuelve una lista vacía.
+ */
+export function tarifasBajoMinimoLegal(
+  tarifas: TarifasNomina,
+  salarioBasico: number,
+  params: ParametrosTarifas,
+): TarifaBajoMinimo[] {
+  if (!(numeroSeguro(salarioBasico) > 0)) return [];
+  const minimas = derivarTarifas(salarioBasico, params);
+  return (Object.keys(ETIQUETAS_TARIFA) as (keyof TarifasNomina)[])
+    .filter((clave) => numeroSeguro(tarifas[clave]) < minimas[clave] - 1)
+    .map((clave) => ({
+      clave,
+      etiqueta: ETIQUETAS_TARIFA[clave],
+      tarifa: numeroSeguro(tarifas[clave]),
+      minimo: minimas[clave],
+    }));
 }
 
 /**
@@ -944,7 +1004,7 @@ export function clavePeriodo(
   return `${anio}-${dos(mes)}-Q${quincena}`;
 }
 
-/** `volante_scordoba_2026-09-Q2.pdf` */
+/** `volante_oprueba_2026-09-Q2.pdf` */
 export function nombreArchivoVolante(
   usuario: string,
   tipo: TipoPeriodo,

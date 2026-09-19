@@ -22,7 +22,14 @@
  *
  * IMPORTANTE: los porcentajes de recargo son PARÁMETROS, no reglas fijas.
  * Salen del ajuste `jornada_config` de Supabase (editable) y aquí solo viven
- * como valores por defecto. GPI debe confirmar sus propias reglas.
+ * como valores por defecto. GPI debe confirmar sus propias reglas. La
+ * excepción es el recargo DOMINICAL/FESTIVO, que la ley cambia por fecha: ese
+ * sale de `recargoDominicalVigente()` (`src/lib/ley-laboral.ts`) con la fecha
+ * de cada minuto, y los tres campos dominicales de `jornada_config` quedan
+ * como legado (se ignoran).
+ *
+ * El dinero NO sale de aquí: este módulo clasifica los minutos; lo que se paga
+ * lo fijan las tarifas de la nómina (`src/lib/nomina.ts`).
  */
 
 import {
@@ -41,12 +48,20 @@ import {
   type HorarioDias,
   type MapaHorarios,
 } from "@/lib/horarios";
+import { festivoDeFecha, recargoDominicalVigente } from "@/lib/ley-laboral";
 
 /* ------------------------------------------------------------------ */
 /* Configuración                                                       */
 /* ------------------------------------------------------------------ */
 
 export interface JornadaRecargos {
+  /*
+   * Los tres campos dominicales (`dominicalFestivo`, `extraDominicalDiurna`,
+   * `extraDominicalNocturna`) son LEGADO desde el 19 sep 2026: el recargo
+   * dominical lo fija la ley por fecha (`recargoDominicalVigente`). Se siguen
+   * leyendo de `jornada_config` para no romper nada, pero el cálculo los ignora
+   * y el contexto congelado guarda el recargo que de verdad se aplicó.
+   */
   /** Hora extra diurna (sobre la hora ordinaria). */
   extraDiurna: number;
   /** Hora extra nocturna. */
@@ -93,11 +108,17 @@ export interface JornadaConfig {
 /**
  * Valores por defecto — horario confirmado por GPI (lunes a jueves 8:00 a. m.
  * a 5:30 p. m., viernes hasta las 5:00 p. m., 1 hora de almuerzo, 42 h
- * semanales netas) y normativa laboral colombiana vigente en 2026: franja
- * nocturna desde las 7:00 p. m. (Ley 2101 de 2021) y recargo dominical del 80%
- * (Ley 2466 de 2025).
+ * semanales netas) y normativa laboral colombiana vigente en 2026:
+ *   · franja nocturna desde las 7:00 p. m. (art. 160 CST, modificado por el
+ *     art. 10 de la **Ley 2466 de 2025**, vigente desde el 25-dic-2025; antes
+ *     era desde las 9:00 p. m. por la Ley 1846 de 2017);
+ *   · recargo dominical/festivo **del 90 %** desde el 1-jul-2026 (80 % desde el
+ *     1-jul-2025, 100 % desde el 1-jul-2027; art. 179 CST mod. Ley 2466). No se
+ *     toma de aquí: sale de `recargoDominicalVigente()` por fecha; los números
+ *     dominicales de abajo son legado y solo reflejan el valor de hoy.
  * Los topes de horas extra (2 h al día, 12 h a la semana) son los del artículo
- * 22 de la Ley 50 de 1990; el tablero solo los usa para avisar, nunca bloquea.
+ * 22 de la Ley 50 de 1990, modificado por el art. 13 de la Ley 2466; el tablero
+ * solo los usa para avisar, nunca bloquea (lo trabajado siempre se paga).
  * Son AJUSTABLES desde `jornada_config` cuando GPI confirme sus reglas.
  */
 export const jornadaConfigDefaults: JornadaConfig = {
@@ -113,9 +134,10 @@ export const jornadaConfigDefaults: JornadaConfig = {
     extraDiurna: 0.25,
     extraNocturna: 0.75,
     nocturno: 0.35,
-    dominicalFestivo: 0.8,
-    extraDominicalDiurna: 1.05,
-    extraDominicalNocturna: 1.55,
+    // Legado: el cálculo usa el recargo de la ley por fecha (hoy 0,90).
+    dominicalFestivo: 0.9,
+    extraDominicalDiurna: 1.15,
+    extraDominicalNocturna: 1.65,
   },
 };
 
@@ -197,37 +219,17 @@ export function fechaColombia(instante: Date | string): string {
 /* ------------------------------------------------------------------ */
 
 /**
- * Festivos nacionales de Colombia — AÑO 2026.
+ * Nombre del festivo si la fecha `YYYY-MM-DD` lo es; si no, `null`.
  *
- * MANTENIMIENTO: esta lista hay que ampliarla cada año (los festivos
- * "trasladables" de la Ley Emiliani caen siempre en lunes, y la Semana Santa
- * depende de la Pascua). Mientras un año no esté en la tabla, el cálculo sigue
- * funcionando: solo los domingos se tratan como día de recargo dominical.
+ * Desde el 19 sep 2026 los festivos se CALCULAN para cualquier año
+ * (`festivosDelAnio` de `src/lib/ley-laboral.ts`: fijos, trasladables con la
+ * Ley Emiliani —incluido el 9 de julio desde 2026, Ley 2578— y los de la
+ * Pascua). Antes había una tabla escrita a mano solo con 2026, a la que además
+ * le faltaba el 13-jul-2026; desde el 1-ene-2027 no habría reconocido ningún
+ * festivo.
  */
-export const FESTIVOS_COLOMBIA: Record<string, string> = {
-  "2026-01-01": "Año Nuevo",
-  "2026-01-12": "Día de los Reyes Magos",
-  "2026-03-23": "Día de San José",
-  "2026-04-02": "Jueves Santo",
-  "2026-04-03": "Viernes Santo",
-  "2026-05-01": "Día del Trabajo",
-  "2026-05-18": "Ascensión del Señor",
-  "2026-06-08": "Corpus Christi",
-  "2026-06-15": "Sagrado Corazón de Jesús",
-  "2026-06-29": "San Pedro y San Pablo",
-  "2026-07-20": "Día de la Independencia",
-  "2026-08-07": "Batalla de Boyacá",
-  "2026-08-17": "Asunción de la Virgen",
-  "2026-10-12": "Día de la Raza",
-  "2026-11-02": "Día de Todos los Santos",
-  "2026-11-16": "Independencia de Cartagena",
-  "2026-12-08": "Día de la Inmaculada Concepción",
-  "2026-12-25": "Navidad",
-};
-
-/** Nombre del festivo si la fecha `YYYY-MM-DD` lo es; si no, `null`. */
 export function nombreFestivo(fecha: string): string | null {
-  return FESTIVOS_COLOMBIA[fecha] ?? null;
+  return festivoDeFecha(fecha);
 }
 
 /* ------------------------------------------------------------------ */
@@ -453,6 +455,13 @@ export function calcularJornada(
 
   const festivos = new Set<string>();
 
+  // Equivalente en horas ordinarias (referencia; el dinero lo fija la nómina).
+  // El recargo dominical es el de la LEY en la fecha de cada minuto; los demás
+  // recargos salen de `jornada_config`.
+  const r = { ...jornadaConfigDefaults.recargos, ...(config.recargos ?? {}) };
+  const recargoDelDia = new Map<string, number>();
+  let equivalente = 0;
+
   for (let i = 0; i < totalMinutos; i += 1) {
     // El almuerzo no es tiempo de trabajo: no entra en ninguna categoría.
     if (almuerzoMinutos > 0 && i >= almuerzoDesde && i < almuerzoHasta) continue;
@@ -491,6 +500,21 @@ export function calcularJornada(
 
     if (nocturno) resultado.minutosNocturnos += 1;
     if (dominical) resultado.minutosDominicales += 1;
+
+    if (dominical) {
+      let d = recargoDelDia.get(fecha);
+      if (d === undefined) {
+        d = recargoDominicalVigente(fecha);
+        recargoDelDia.set(fecha, d);
+      }
+      equivalente += extra
+        ? 1 + (nocturno ? r.extraNocturna : r.extraDiurna) + d
+        : 1 + d + (nocturno ? r.nocturno : 0);
+    } else if (extra) {
+      equivalente += 1 + (nocturno ? r.extraNocturna : r.extraDiurna);
+    } else {
+      equivalente += nocturno ? 1 + r.nocturno : 1;
+    }
   }
 
   resultado.ordinarias =
@@ -509,17 +533,6 @@ export function calcularJornada(
   resultado.esDominicalFestivo = resultado.minutosDominicales > 0;
   resultado.cruzaMedianoche =
     partesLocales(inicio).fecha !== partesLocales(new Date(fin.getTime() - 1)).fecha;
-
-  const r = { ...jornadaConfigDefaults.recargos, ...(config.recargos ?? {}) };
-  const equivalente =
-    resultado.ordinariaDiurna * 1 +
-    resultado.ordinariaNocturna * (1 + r.nocturno) +
-    resultado.extraDiurna * (1 + r.extraDiurna) +
-    resultado.extraNocturna * (1 + r.extraNocturna) +
-    resultado.dominicalDiurna * (1 + r.dominicalFestivo) +
-    resultado.dominicalNocturna * (1 + r.dominicalFestivo + r.nocturno) +
-    resultado.extraDominicalDiurna * (1 + r.extraDominicalDiurna) +
-    resultado.extraDominicalNocturna * (1 + r.extraDominicalNocturna);
 
   resultado.horasEquivalentes = Math.round((equivalente / 60) * 100) / 100;
 
@@ -799,9 +812,26 @@ export function construirContextoCalculo(
     jornadaOrdinariaMinutos: diaLaboral ? minutosJornadaDia(horarioDia) : 0,
     inicioNocturno: config.inicioNocturno,
     finNocturno: config.finNocturno,
-    recargos: { ...jornadaConfigDefaults.recargos, ...(config.recargos ?? {}) },
+    recargos: recargosAplicados(fecha, config),
     limiteExtrasDia: config.limiteExtrasDia,
     limiteExtrasSemana: config.limiteExtrasSemana,
+  };
+}
+
+/**
+ * Los recargos que de verdad se aplican a un día: los de `jornada_config` para
+ * nocturno y extras, y el dominical de la LEY en esa fecha (los tres campos
+ * dominicales se derivan de él). Es lo que se guarda en el contexto congelado.
+ */
+function recargosAplicados(fecha: string, config: JornadaConfig): JornadaRecargos {
+  const r = { ...jornadaConfigDefaults.recargos, ...(config.recargos ?? {}) };
+  const d = recargoDominicalVigente(fecha);
+  const dos = (n: number) => Math.round(n * 100) / 100;
+  return {
+    ...r,
+    dominicalFestivo: d,
+    extraDominicalDiurna: dos(r.extraDiurna + d),
+    extraDominicalNocturna: dos(r.extraNocturna + d),
   };
 }
 
