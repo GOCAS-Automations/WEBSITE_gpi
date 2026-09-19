@@ -263,8 +263,10 @@ async function PortalEmpleado({
     {
       value: "clave",
       label: "Mi contraseña",
-      // «Clave» y no «Contraseña»: con tres columnas en un teléfono de 390 px,
-      // la palabra larga se cortaba («Contra…»), que es peor que acortarla.
+      // «Clave» y no «Contraseña»: cuando el portal tuvo tres columnas en un
+      // teléfono de 390 px la palabra larga se cortaba («Contra…»). Con dos
+      // filas de dos ya cabría, pero la etiqueta corta se queda: es la misma
+      // en las cuatro pestañas (una palabra) y no depende del ancho.
       corto: "Clave",
       icon: Lock,
       badge: 0,

@@ -28,6 +28,8 @@ el sitio vive en **https://www.gpiprofesionales.com**.
 | 4i | Rediseño y contenido editable total (12 ago) — **pase visual** | ✅ Completa | El rediseño de las páginas públicas según el prototipo del community manager (línea de tiempo, galería de aliados, misión/visión, menú, opacidad del hero, logos de clientes a color), cerrado a lo largo del pulido final, los ajustes finales del 12 ago y las iteraciones del 13 ago (bucket de imágenes, carrusel de Nosotros con peek). |
 | 4j | Pulido final (12 ago) | ✅ Completa | Últimos títulos editables del inicio y de las cabeceras de página (`/admin/inicio`, `/admin/paginas`), menú del panel agrupado en seis entradas detrás de «Contenido del sitio», «Mi Cuenta» rebota al panel para los roles de contenido, arreglo del bug «el panel se traba» al navegar, y ajustes visuales menores. Migración 0008 aplicada. |
 | 4k | Cierre del proyecto (13 ago) | ✅ Completa | Correo del formulario **activo en producción** con el SMTP Workspace de GoDaddy (`smtpout.secureserver.net:465`); **teléfono obligatorio** en el formulario de contacto, con la migración 0009 **aplicada**; carrusel de la galería de Nosotros sin puntos indicadores; y QA final del sitio. Con esto son **nueve** las migraciones, todas aplicadas. |
+| 4l | Calendario interno de programación (17–18 sep) | ✅ Desplegado | `/admin/calendario` (Calendario · Notas · Métricas) para managers y «Mis eventos» en el portal; aplazar solo hacia adelante y «Devolver a su fecha original»; campo **apodo**, editable por admin y coordinador. Migración 0010 aplicada. |
+| 4m | Nómina y volante de pago (17–19 sep) | ✅ Desplegada (19 sep) | `/admin/nomina` (Liquidación · Configuración · Tablero) **solo para el administrador**, volante en PDF y «Mi nómina» en el portal; dinero con punto de miles, configuración «vigente desde» y filtro por persona. Migraciones 0011 y 0012 aplicadas. |
 | 5 | Deploy en Vercel desde el repo de GitHub + variables de entorno | ✅ Completa | **https://website-gpi.vercel.app** — despliega solo con cada push a `main`; las 3 env vars configuradas (incl. `SUPABASE_SERVICE_ROLE_KEY` sin prefijo). Verificado en vivo: 7 cabeceras de seguridad, 9 rutas 200, `/admin` protegido. |
 | 6 | Apuntar dominio `gpiprofesionales.com` de GoDaddy → Vercel | ✅ Completa | **19 ago 2026** — raíz con A `216.198.79.1` y `www` en CNAME; `www` es el dominio principal (el raíz redirige 308, alineado con sitemap/canónicas); certificado emitido y verificación completa en vivo. MX y SPF del correo intactos. |
 | 7 | Extra cotizable aparte: chatbot IA | 💡 Planeado | Claude Haiku 4.5 vía `/api/chat`, con conocimiento del contenido del sitio (servicios, proyectos, contacto) y captura de leads hacia Supabase. No incluido en la cotización actual. |
@@ -1457,6 +1459,9 @@ ajustes que pidió el cliente sobre el aplazamiento de eventos.
 
 ### 1. La nómina sale del árbol desplegable
 
+> Estado histórico: la nómina **volvió a `main` y se desplegó el 19 sep 2026**
+> (ver esa iteración, más abajo). Lo que sigue cuenta cómo salió.
+
 - Antes de tocar nada se creó la rama de respaldo **`nomina-wip`** sobre el
   estado completo del trabajo, así que **nada se perdió**.
 - El módulo salió con un **`git revert` del commit de nómina**, no reescribiendo
@@ -1534,16 +1539,17 @@ Playwright contra `localhost`:
 
 ## Iteración del 18 de septiembre de 2026 — la nómina queda solo para el administrador
 
-> Esta sección describe trabajo que vive en la rama **`nomina-wip`**, junto con
-> el resto del módulo de nómina. En `main` la nómina está fuera del despliegue.
+> Se hizo en la rama **`nomina-wip`** mientras la nómina estaba fuera del
+> despliegue, y llegó a `main` el **19 sep 2026** (ver esa iteración).
 
 GPI revisó los permisos del rol **coordinador** y pidió dos cosas opuestas:
 
 1. **Abrirle el «Apodo»** de las cuentas (antes solo del administrador). Eso
-   toca `/admin/empleados`, no la nómina, así que vive en **`main`**.
+   toca `/admin/empleados`, no la nómina, así que se hizo directamente en
+   `main` (iteración anterior).
 2. **Cerrarle la nómina.** El coordinador aprueba jornadas y lleva el
    calendario, pero **no liquida la nómina de nadie**: de la nómina ve *solo la
-   suya*, como cualquier empleado. Eso es lo que hay aquí.
+   suya*, como cualquier empleado. Eso es lo que describe esta sección.
 
 ### Las tres capas del cambio
 
@@ -1565,22 +1571,19 @@ la API con un token válido. Por eso la 0012 crea `is_admin_activo()`, que es
 
 ### Estado y reintegración
 
-- **La migración 0012 ya está aplicada** en el GPI Project, aunque `main` no
-  lleve el código de nómina: solo endurece permisos sobre tablas vacías.
-- Esta rama es `main` **antes** del revert de la nómina más este commit. No
-  incluye lo que entró en `main` después (los ajustes de aplazamiento del
-  calendario ni el apodo para el coordinador).
-- **Para reintegrar**: en `main`, revertir el revert (`git revert <hash del
-  revert>`) para recuperar el módulo, y después traer este commit
-  (`git cherry-pick`) para que llegue ya con los permisos correctos.
-- Queda **pendiente de probar a fondo** el módulo completo con el plan de
-  `docs/PRUEBAS_CALENDARIO_NOMINA.md` cuando se decida desplegarlo.
+- **La migración 0012 está aplicada** en el GPI Project desde el 18 sep 2026,
+  antes de que el código llegara a `main`: solo endurecía permisos sobre tablas
+  vacías.
+- La reintegración se hizo el 19 sep 2026 tal como se había previsto: en
+  `main`, revert del revert para recuperar el módulo y `cherry-pick` de este
+  commit para que llegara ya con los permisos correctos.
 
 ---
 
 ## Iteración del 18 de septiembre de 2026 — cuatro ajustes de la nómina tras probarla César
 
-> Trabajo en la rama **`nomina-wip`** (la nómina sigue fuera del despliegue).
+> Trabajo hecho en la rama **`nomina-wip`** mientras la nómina estaba fuera del
+> despliegue; llegó a `main` el 19 sep 2026.
 > **Sin migración nueva**: `nomina_config_mensual` ya guardaba empleado + año +
 > mes, que es todo lo que el modelo nuevo necesita. `copiado_de` queda como
 > columna legada (ya no se escribe ni se lee).
@@ -1722,6 +1725,57 @@ liquidación de la 2.ª quincena de septiembre sigue en borrador.
   cambios, liquidar cuatro meses después sin abrir la Configuración, filtro por
   persona con recarga, volante PDF rasterizado y CSV sin miles; capturas a 1440
   y 390, **cero errores de consola**.
+
+---
+
+## Iteración del 19 de septiembre de 2026 — la nómina vuelve a `main` y se despliega
+
+GPI terminó de probar la nómina y pide publicarla. **Sin migración nueva**: la
+0011 y la 0012 ya estaban aplicadas en el GPI Project y **no se volvieron a
+aplicar**.
+
+### Cómo se reintegró
+
+1. En `main`, **revert del revert** de la nómina (`5020f50`): vuelven el
+   módulo, `@react-pdf/renderer`, el logo del volante, las pruebas y la 0011.
+2. `cherry-pick` de los tres commits de `nomina-wip`, en orden: nómina solo
+   para el administrador (0012), los cuatro ajustes (dinero con miles,
+   «vigente desde», filtro por persona, arreglo del formulario) y su
+   documentación.
+3. La rama `nomina-wip` **se conserva** (local y remota) como respaldo.
+
+### Qué se cuidó al resolver los conflictos
+
+- **Apodo**: manda `main` — lo editan **admin y coordinador**
+  (`apodoSiEsManager`, `isManagerRole` en `EmployeeFields`, `AYUDA_APODO`);
+  el código de `nomina-wip` no tocaba esos archivos, así que no hubo que
+  descartar nada.
+- **Calendario**: intactos «aplazar solo hacia adelante» y «Devolver a su fecha
+  original».
+- **Portal**: cuatro pestañas; en el teléfono, dos filas de dos con las
+  etiquetas cortas *Jornada · Eventos · Nómina · Clave* (se queda «Clave», el
+  ajuste que se hizo en `main` para que no se cortara).
+- **Menú**: ocho entradas; «Nómina» es `adminOnly` (el coordinador ve siete).
+- **Documentación**: los conflictos fueron solo en `AGENTS.md`, `docs/ADMIN.md` y
+  este plan. Se dejó una sola versión: la nómina desplegada, el historial de
+  iteraciones completo (las secciones del 18 sep quedan como historia) y las
+  migraciones de la 0001 a la 0012.
+
+### Verificación
+
+- `npm install` (vuelve `@react-pdf/renderer`), `npm run lint` y `npm run build`
+  limpio (sin `.next`) en verde; `scripts/pruebas-nomina.mjs`: **168/168**.
+- `next start` + Playwright contra **localhost**: como `admin`, menú de ocho
+  entradas con Nómina; `/admin/nomina` con sus tres pestañas; Configuración con
+  punto de miles (`1.750.095`, `9.115,08`) y el valor limpio en el campo oculto;
+  filtro por persona; en el calendario, un evento temporal rechazado al forzar
+  una fecha anterior (el servidor lo niega aunque se quite el `min`), aplazado
+  hacia adelante (`aplazado` + `fecha_original`) y devuelto a su fecha
+  (`programado`, `fecha_original` en `null`), y borrado al terminar; el campo
+  apodo editable. Como `dgomez`, en 390 y 1440 px: cuatro pestañas sin cortes y
+  «Mi nómina» con su vacío amable. **Cero errores de consola.**
+- Datos de nómina (`nomina_config_mensual`, `nomina_liquidaciones` y
+  `site_settings.empresa`) **idénticos** antes y después de la verificación.
 
 ---
 

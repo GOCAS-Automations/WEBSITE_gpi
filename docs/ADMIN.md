@@ -281,8 +281,9 @@ nómina ve **solo la suya**, como cualquier empleado.
 > que cada persona vea sus liquidaciones cerradas o pagadas y descargue su
 > volante desde *Mi Cuenta*. Si se borrara, nadie vería su propio comprobante.
 
-> **Se puede aplicar aunque el módulo de nómina no esté desplegado**: solo
-> endurece permisos sobre tablas que hoy están vacías.
+> **Ya está aplicada** en el GPI Project: se aplicó el 18 sep 2026, antes de
+> que el código de nómina se desplegara (19 sep), porque solo endurecía permisos
+> sobre tablas vacías. No hay que volver a aplicarla.
 
 ### Si el bloque del usuario admin de la 0001 falla
 
@@ -597,7 +598,7 @@ compartir.
 | **Mi contraseña** | `/mi-cuenta?seccion=clave` | Cambiar la contraseña |
 
 En el teléfono las pestañas se ven en **dos filas de dos**, con el nombre corto
-(*Jornada · Eventos · Nómina · Contraseña*). Cada una lleva un contador: las
+(*Jornada · Eventos · Nómina · Clave*). Las tres primeras llevan un contador: las
 jornadas que están esperando revisión, los eventos asignados y los volantes
 disponibles. Quien no tenga eventos o volantes ve un mensaje explicando qué va a
 aparecer ahí, no una pestaña en blanco.
@@ -1233,18 +1234,21 @@ la base de datos esté arriba» — y no se edita desde aquí.
 - Barra superior siempre visible con el rol de la sesión, **Registrar mi
   jornada** (lleva a `/mi-cuenta?portal=1`, el portal de jornadas), **Ver
   sitio** y **Cerrar sesión**.
-- **Menú de seis entradas** (pulido final), en escritorio como columna a la
-  izquierda y en móvil como tabs desplazables, con la sección activa
-  resaltada: **Dashboard · Contenido del sitio · Equipo · Horarios · Jornadas ·
-  Ajustes**. Las tres internas (Equipo, Horarios, Jornadas) solo aparecen para
-  managers.
+- **Menú de ocho entradas**, en escritorio como columna a la izquierda y en
+  móvil como tabs desplazables, con la sección activa resaltada: **Dashboard ·
+  Contenido del sitio · Equipo · Horarios · Jornadas · Calendario · Nómina ·
+  Ajustes**. Las cuatro internas (Equipo, Horarios, Jornadas, Calendario) solo
+  aparecen para managers, y **Nómina** solo para el administrador: el
+  coordinador ve siete y el Community Manager, tres. (El pulido final lo dejó
+  en seis; el calendario sumó la séptima el 17 sep 2026 y la nómina la octava,
+  desplegada el 19 sep 2026.)
 - **Contenido del sitio** (`/admin/contenido`) es el hub que reemplazó a las
   ocho entradas sueltas de antes: un índice con una tarjeta por pantalla
   —Página de inicio, Página Nosotros, Cabeceras de páginas y pie del sitio,
   Servicios,
   Proyectos, Clientes, FAQ y Valores—, en el mismo orden en que un visitante
   recorre el sitio. El menú tenía **doce** entradas y se leía como un
-  inventario; ahora tiene **seis**.
+  inventario; con el hub quedó en **seis** (hoy ocho, con Calendario y Nómina).
 - **Ninguna URL cambió.** `/admin/servicios` sigue siendo `/admin/servicios`:
   reagrupar el menú no tocó ninguna ruta. Estar en cualquiera de las ocho
   pantallas de contenido marca «Contenido del sitio» como activo (la lista de
@@ -1257,7 +1261,8 @@ la base de datos esté arriba» — y no se edita desde aquí.
   sitio» ese botón dice **← Volver a Contenido del sitio**, y los formularios
   de crear/editar añaden además **← Volver a [sección]**.
 - El **Dashboard** de `/admin` se reorganizó igual, en dos grupos: «Gestión
-  interna» (Equipo, Horarios, Jornadas — solo managers) y «El sitio web»
+  interna» (Equipo, Horarios, Jornadas y Calendario — solo managers — y Nómina,
+  solo para el administrador) y «El sitio web»
   (Contenido del sitio, Contacto y ajustes).
 
 ---
