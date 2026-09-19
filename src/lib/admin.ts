@@ -22,12 +22,11 @@ import {
   type JornadaConfig,
 } from "@/lib/jornada";
 import {
-  derivarTarifas,
+  configVigente,
   minutosVacios,
   normalizarEstadoNomina,
   numeroSeguro,
   sumarMinutos,
-  tarifasVacias,
   type MinutosPorConcepto,
   type TarifasNomina,
   type TipoPeriodo,
@@ -63,7 +62,6 @@ import type {
   ServiceVideoRecord,
   NominaConfigRecord,
   NominaLiquidacionRecord,
-  OrigenNominaConfig,
   ValueRecord,
 } from "@/lib/admin-types";
 
@@ -1143,8 +1141,18 @@ export function nominaConfigAColumnas(
   };
 }
 
-/** Configuración de nómina de un empleado en un mes, o `null` si no existe. */
-export async function getNominaConfig(
+/*
+ * CONFIGURACIÓN «VIGENTE DESDE» (18 sep 2026)
+ * -------------------------------------------
+ * Una fila guardada en el mes M rige para M y los meses siguientes hasta la
+ * próxima fila de esa persona. Estas lecturas NUNCA crean filas: solo leen y
+ * resuelven con `configVigente()` / `estadoConfigMes()` de `src/lib/nomina.ts`,
+ * que es la regla única. Crear o cambiar una fila es cosa exclusiva de
+ * `saveNominaConfig` (guardar) y quitarla, de `quitarConfigMes`.
+ */
+
+/** La fila guardada EXACTAMENTE en ese mes (válida o no), o `null`. */
+export async function getNominaConfigDelMes(
   employeeId: string,
   anio: number,
   mes: number,
@@ -1168,8 +1176,51 @@ export async function getNominaConfig(
   }
 }
 
-/** Todas las configuraciones de un mes, indexadas por empleado. */
-export async function mapaNominaConfigs(
+/**
+ * Todas las filas de configuración de UN empleado, de la más antigua a la más
+ * reciente (incluidas las vacías del modelo anterior: la resolución las
+ * descarta). `error` distingue «no tiene ninguna» de «no se pudo leer».
+ */
+export async function listNominaConfigsEmpleado(
+  employeeId: string,
+): Promise<{ filas: NominaConfigRecord[]; error: "sin-tabla" | "lectura" | null }> {
+  const supabase = await getServerSupabase();
+  if (!supabase) return { filas: [], error: "lectura" };
+
+  try {
+    const { data, error } = await supabase
+      .from("nomina_config_mensual")
+      .select("*")
+      .eq("employee_id", employeeId)
+      .order("anio", { ascending: true })
+      .order("mes", { ascending: true });
+
+    if (error) return { filas: [], error: faltaTablaNomina(error) ? "sin-tabla" : "lectura" };
+    return { filas: (data ?? []).map(rowToNominaConfig), error: null };
+  } catch {
+    return { filas: [], error: "lectura" };
+  }
+}
+
+/**
+ * La configuración que RIGE para un empleado en un mes: la suya de ese mes o
+ * la heredada del cambio anterior más reciente. `null` = sin configurar.
+ */
+export async function getNominaConfigVigente(
+  employeeId: string,
+  anio: number,
+  mes: number,
+): Promise<NominaConfigRecord | null> {
+  const { filas } = await listNominaConfigsEmpleado(employeeId);
+  return configVigente(filas, anio, mes);
+}
+
+/**
+ * La configuración que RIGE en un mes para TODO el equipo, indexada por
+ * empleado. Una sola consulta: todas las filas hasta ese mes (inclusive), y la
+ * resolución se hace aquí con la regla única.
+ */
+export async function mapaNominaConfigsVigentes(
   anio: number,
   mes: number,
 ): Promise<Map<string, NominaConfigRecord>> {
@@ -1180,129 +1231,27 @@ export async function mapaNominaConfigs(
     const { data, error } = await supabase
       .from("nomina_config_mensual")
       .select("*")
-      .eq("anio", anio)
-      .eq("mes", mes);
+      .or(`anio.lt.${anio},and(anio.eq.${anio},mes.lte.${mes})`);
 
     if (error || !data) return new Map();
-    return new Map(
-      data.map((row) => {
-        const config = rowToNominaConfig(row);
-        return [config.employee_id, config] as const;
-      }),
-    );
+
+    const porEmpleado = new Map<string, NominaConfigRecord[]>();
+    for (const row of data) {
+      const config = rowToNominaConfig(row);
+      const lista = porEmpleado.get(config.employee_id) ?? [];
+      lista.push(config);
+      porEmpleado.set(config.employee_id, lista);
+    }
+
+    const salida = new Map<string, NominaConfigRecord>();
+    for (const [employeeId, filas] of porEmpleado) {
+      const vigente = configVigente(filas, anio, mes);
+      if (vigente) salida.set(employeeId, vigente);
+    }
+    return salida;
   } catch {
     return new Map();
   }
-}
-
-export interface NominaConfigResuelta {
-  config: NominaConfigRecord;
-  origen: OrigenNominaConfig;
-  /** Mes del que se copió, cuando `origen === "mes-anterior"`. */
-  copiadoDe?: { anio: number; mes: number };
-}
-
-/**
- * Devuelve la configuración de nómina del mes y, si no existe, LA CREA:
- *   1. copiando la del mes anterior de ese empleado, si la hay;
- *   2. o, si no, con todo en cero (el formulario sugiere las tarifas en cuanto
- *      se escribe el salario).
- *
- * Es el mismo patrón de `asegurarHorarioMensual`. Si la migración 0011 todavía
- * no está aplicada o la escritura falla, devuelve la propuesta con
- * `origen: "sin-guardar"` y la pantalla lo explica en vez de romperse.
- */
-export async function asegurarNominaConfig(
-  employeeId: string,
-  anio: number,
-  mes: number,
-): Promise<NominaConfigResuelta> {
-  const existente = await getNominaConfig(employeeId, anio, mes);
-  if (existente) return { config: existente, origen: "existente" };
-
-  const anterior = mes === 1 ? { anio: anio - 1, mes: 12 } : { anio, mes: mes - 1 };
-  const plantilla = await getNominaConfig(employeeId, anterior.anio, anterior.mes);
-
-  const propuesta: NominaConfigRecord = plantilla
-    ? {
-        ...plantilla,
-        id: null,
-        anio,
-        mes,
-        tarifas: { ...plantilla.tarifas },
-        copiado_de: plantilla.id,
-        updated_at: null,
-      }
-    : {
-        id: null,
-        employee_id: employeeId,
-        anio,
-        mes,
-        salario_basico: 0,
-        aux_transporte: 0,
-        tarifas: tarifasVacias(),
-        pct_salud: 4,
-        pct_pension: 4,
-        copiado_de: null,
-        updated_at: null,
-      };
-
-  const supabase = await getServerSupabase();
-  if (!supabase) return { config: propuesta, origen: "sin-guardar" };
-
-  try {
-    const { data, error } = await supabase
-      .from("nomina_config_mensual")
-      .insert({
-        employee_id: employeeId,
-        anio,
-        mes,
-        copiado_de: propuesta.copiado_de,
-        ...nominaConfigAColumnas(propuesta),
-      })
-      .select("*")
-      .maybeSingle();
-
-    if (error || !data) {
-      // Otro manager pudo crearla en el mismo instante: se relee antes de
-      // darla por no guardada.
-      const recien = await getNominaConfig(employeeId, anio, mes);
-      if (recien) return { config: recien, origen: "existente" };
-      return { config: propuesta, origen: "sin-guardar" };
-    }
-
-    return plantilla
-      ? { config: rowToNominaConfig(data), origen: "mes-anterior", copiadoDe: anterior }
-      : { config: rowToNominaConfig(data), origen: "sugerida" };
-  } catch {
-    return { config: propuesta, origen: "sin-guardar" };
-  }
-}
-
-/**
- * Configuración que se le PROPONE a un empleado que todavía no tiene ninguna:
- * las tarifas derivadas del salario. Se usa para precargar el formulario sin
- * escribir nada en la base de datos.
- */
-export function nominaConfigSugerida(
-  employeeId: string,
-  anio: number,
-  mes: number,
-  salario: number,
-): NominaConfigRecord {
-  return {
-    id: null,
-    employee_id: employeeId,
-    anio,
-    mes,
-    salario_basico: salario,
-    aux_transporte: 0,
-    tarifas: derivarTarifas(salario),
-    pct_salud: 4,
-    pct_pension: 4,
-    copiado_de: null,
-    updated_at: null,
-  };
 }
 
 /* --- Liquidaciones ------------------------------------------------- */

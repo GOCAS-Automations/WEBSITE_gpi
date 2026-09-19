@@ -5,8 +5,11 @@
  * todo lo que la pantalla necesita, y se lo entrega ya masticado al panel
  * (`LiquidacionPanel`, Client Component).
  *
- * Por cada cuenta activa:
- *   · su configuración del mes (salario y tarifas);
+ * Por cada cuenta activa (o solo la del filtro `?persona=`):
+ *   · su configuración VIGENTE en el mes (salario y tarifas): la guardada en
+ *     ese mes o la heredada del cambio anterior más reciente («vigente desde»,
+ *     `mapaNominaConfigsVigentes`). Nadie tiene que abrir el mes en
+ *     Configuración para poder liquidarlo;
  *   · las horas del período, sumadas desde el desglose CONGELADO de sus
  *     jornadas aprobadas (`horasDelPeriodo` → `obtenerDesglose`);
  *   · su liquidación, si existe, con sus conceptos manuales;
@@ -16,6 +19,10 @@
  *
  * El cálculo se hace AQUÍ, una sola vez, para no enviar al navegador ni las
  * jornadas ni las tarifas de todo el equipo.
+ *
+ * FILTRO POR PERSONA (`?persona=<id>`): se aplica aquí, en el servidor, así
+ * que los totales, los avisos, «Liquidar todos» y el CSV trabajan solo con lo
+ * que se ve. Un id que no es de una cuenta activa se ignora (se ve a todos).
  */
 
 import {
@@ -24,7 +31,7 @@ import {
   horasDelPeriodo,
   listLiquidaciones,
   listProfiles,
-  mapaNominaConfigs,
+  mapaNominaConfigsVigentes,
 } from "@/lib/admin";
 import { hoyEnColombia } from "@/lib/jornada";
 import {
@@ -69,12 +76,15 @@ export async function LiquidacionView({
   anio,
   mes,
   quincena,
+  persona,
   abrir,
 }: {
   tipo?: string;
   anio?: string;
   mes?: string;
   quincena?: string;
+  /** Id del empleado del filtro; "" = todas las personas. */
+  persona: string;
   /** Id de la liquidación que debe abrirse nada más cargar (enlaces directos). */
   abrir: string;
 }) {
@@ -91,7 +101,7 @@ export async function LiquidacionView({
   const [perfiles, configs, liquidaciones, jornadaConfig, horarios] =
     await Promise.all([
       listProfiles(),
-      mapaNominaConfigs(anioSel, mesSel),
+      mapaNominaConfigsVigentes(anioSel, mesSel),
       listLiquidaciones({
         anio: anioSel,
         mes: mesSel,
@@ -103,13 +113,16 @@ export async function LiquidacionView({
     ]);
 
   const activos = perfiles.filter((p) => p.active);
+  const personaSel = activos.some((p) => p.id === persona) ? persona : "";
+  const visibles = personaSel ? activos.filter((p) => p.id === personaSel) : activos;
   const porEmpleado = new Map(liquidaciones.map((l) => [l.employee_id, l]));
 
   const filas: FilaNomina[] = await Promise.all(
-    activos.map(async (perfil): Promise<FilaNomina> => {
+    visibles.map(async (perfil): Promise<FilaNomina> => {
+      // La que RIGE en el mes: la propia o la heredada («vigente desde»).
       const config = configs.get(perfil.id) ?? null;
       const liquidacion = porEmpleado.get(perfil.id) ?? null;
-      const tieneConfig = !!config && config.salario_basico > 0;
+      const tieneConfig = !!config;
 
       const manuales = liquidacion
         ? normalizarManuales(liquidacion.conceptos)
@@ -178,16 +191,24 @@ export async function LiquidacionView({
 
         tieneConfig,
         salario: config?.salario_basico ?? 0,
+        configDesde: config ? { anio: config.anio, mes: config.mes } : null,
       };
     }),
   );
 
-  // Primero quien tiene algo que revisar (borradores), luego por nombre.
   filas.sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
 
   return (
     <LiquidacionPanel
+      // La `key` reinicia el panel al cambiar de período o de persona: sin
+      // ella, el detalle abierto, los campos con `defaultValue` y el aviso de
+      // «Liquidar todos» se quedaban con lo del período anterior.
+      key={`${tipoPeriodo}-${anioSel}-${mesSel}-${quincenaSel ?? "m"}-${personaSel}`}
       filas={filas}
+      personas={activos
+        .map((p) => ({ id: p.id, nombre: p.full_name, usuario: p.username }))
+        .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"))}
+      persona={personaSel}
       tipo={tipoPeriodo}
       anio={anioSel}
       mes={mesSel}

@@ -90,7 +90,14 @@ export const AYUDA_CALENDARIO_RESPONSABLES =
 
 /** Qué es el módulo de nómina y de dónde saca las cifras. */
 export const AYUDA_NOMINA =
-  "Aquí se calcula, empleado por empleado, lo que hay que pagarle en cada período. Las horas salen SOLAS de las jornadas que ya aprobaste; el salario y el valor de cada tipo de hora se configuran en la pestaña «Configuración», y los bonos, préstamos y demás se digitan al abrir cada empleado.";
+  "Aquí se calcula, empleado por empleado, lo que hay que pagarle en cada período. Las horas salen SOLAS de las jornadas que ya aprobaste; el salario y el valor de cada tipo de hora salen de la pestaña «Configuración» (lo último que se guardó para esa persona en este mes o en uno anterior: no hace falta abrir cada mes), y los bonos, préstamos y demás se digitan al abrir cada empleado. Con el filtro «Persona» ves, liquidas y exportas solo a quien elijas.";
+
+/**
+ * El modelo «vigente desde» de la configuración (18 sep 2026) y dónde van los
+ * montos que solo se pagan o descuentan una vez.
+ */
+export const AYUDA_NOMINA_CONFIG =
+  "Lo que guardas aquí rige desde el mes elegido EN ADELANTE: no hace falta configurar mes por mes. Si en marzo le suben el salario a alguien, abre marzo, cambia el salario y guarda: enero y febrero se quedan como estaban y de marzo en adelante se paga lo nuevo. Si un mes se configuró por error, «Quitar el cambio» lo devuelve a lo que traía del mes anterior. Ojo: un monto que solo aplica UNA vez —un bono, un descuento puntual, una cuota de préstamo— NO va aquí, porque se repetiría todos los meses; va en los conceptos de la liquidación de ese período (pestaña «Liquidación», al abrir a la persona). Las liquidaciones ya cerradas nunca cambian.";
 
 /** Qué es un período y por qué no es texto libre. */
 export const AYUDA_NOMINA_PERIODO =

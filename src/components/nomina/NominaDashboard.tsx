@@ -47,12 +47,11 @@ import {
   NOMINA_ESTADO_CLASSES,
   NOMINA_ESTADO_LABELS,
   etiquetaPeriodoCorta,
-  formatearMiles,
-  formatearPesos,
   nombreMesNomina,
   type NominaEstado,
   type TipoPeriodo,
 } from "@/lib/nomina";
+import { formatearMiles, formatearPesos } from "@/lib/dinero";
 import { NOMINA_FILTRO_ESTADOS } from "@/lib/admin-types";
 import { Download, Users, Clock, Check, BarChart as BarIcon } from "@/lib/icons";
 
@@ -304,10 +303,12 @@ export function NominaDashboard({
       <section>
         <SectionHeader
           title="Resumen"
-          description={`${filtradas.length} liquidación${filtradas.length === 1 ? "" : "es"} de ${kpis.personas} persona${kpis.personas === 1 ? "" : "s"} en el filtro actual. Datos al ${hoy.split("-").reverse().join("/")}.`}
+          description={`${filtradas.length} ${filtradas.length === 1 ? "liquidación" : "liquidaciones"} de ${kpis.personas} persona${kpis.personas === 1 ? "" : "s"} en el filtro actual. Datos al ${hoy.split("-").reverse().join("/")}.`}
           info={AYUDA_KPIS}
         />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Dos columnas y no cuatro: un importe con miles («$ 2.903.384») no
+            se parte y, a cuatro columnas, se montaba sobre el icono. */}
+        <div className="grid gap-4 sm:grid-cols-2">
           <StatCard
             icon={<Check className="h-5 w-5 text-white" />}
             label="Neto pagado"

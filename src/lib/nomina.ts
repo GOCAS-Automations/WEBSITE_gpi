@@ -974,21 +974,10 @@ export function normalizarEstadoNomina(value: unknown): NominaEstado {
 /* 9. Formato                                                          */
 /* ================================================================== */
 
-const FORMATO_PESOS = new Intl.NumberFormat("es-CO", {
-  style: "currency",
-  currency: "COP",
-  maximumFractionDigits: 0,
-});
-
-/** 1255017 → "$ 1.255.017". */
-export function formatearPesos(valor: number): string {
-  return FORMATO_PESOS.format(pesos(valor));
-}
-
-/** 1255017 → "1.255.017" (sin el símbolo, para tablas apretadas). */
-export function formatearMiles(valor: number): string {
-  return new Intl.NumberFormat("es-CO").format(pesos(valor));
-}
+// Los importes (`formatearPesos`, `formatearDinero`, `formatearMiles`…) se
+// formatean con `src/lib/dinero.ts`, el módulo único de formato y lectura de
+// dinero en formato colombiano (punto de miles, coma decimal). Aquí solo
+// quedan las horas y el CSV, que a propósito NO lleva separador de miles.
 
 /** 510 → "8 h 30 min" · 0 → "—". */
 export function formatearHorasNomina(minutos: number): string {
@@ -1003,8 +992,145 @@ export function formatearHorasNomina(minutos: number): string {
 /**
  * Número con coma decimal para el CSV (Excel en español lo suma; un "8h 30m"
  * lo trataría como texto). Misma regla que el CSV de jornadas.
+ *
+ * **Sin separador de miles, a propósito** (pedido de César): «1.300.000» en
+ * una celda de Excel puede leerse como texto o como fecha según la
+ * configuración regional; «1300000» siempre es un número que se puede sumar.
+ * Por eso el CSV NO usa `src/lib/dinero.ts`.
  */
 export function decimalCSV(valor: number): string {
   const n = Number.isFinite(valor) ? Math.round(valor * 100) / 100 : 0;
   return String(n).replace(".", ",");
+}
+
+/* ================================================================== */
+/* 10. Configuración «vigente desde»                                   */
+/* ================================================================== */
+
+/**
+ * LA CONFIGURACIÓN SE HEREDA HACIA ADELANTE (18 sep 2026)
+ * -------------------------------------------------------
+ * Una fila de `nomina_config_mensual` guardada en el mes M **rige para M y
+ * para todos los meses siguientes, hasta que exista otra fila más reciente**.
+ * La configuración efectiva de un empleado en el mes M es, por tanto, la fila
+ * VÁLIDA más reciente con (año, mes) ≤ M.
+ *
+ * Consecuencias que hay que tener presentes:
+ *   · **Ver un mes no crea filas.** Solo guardar crea o actualiza la fila de
+ *     ese mes. (Antes, abrir un mes en Configuración lo creaba copiando el
+ *     inmediatamente anterior; si ese no existía, lo creaba en cero.)
+ *   · Una persona configurada en agosto se liquida en octubre sin que nadie
+ *     abra septiembre ni octubre.
+ *   · Corregir agosto después corrige también septiembre y octubre (salvo que
+ *     alguno tenga su propio cambio guardado), porque ya no hay copias.
+ *   · **Quitar el cambio de un mes** = borrar su fila: ese mes vuelve a heredar
+ *     del cambio anterior.
+ *   · Las liquidaciones CERRADAS no se enteran de nada de esto: leen su
+ *     snapshot congelado (`obtenerLiquidacion`).
+ *
+ * «VÁLIDA» = con salario mayor que cero. El formulario nunca deja guardar un
+ * salario en cero, así que una fila así solo puede ser un resto del modelo
+ * anterior (las que se creaban vacías al abrir un mes). Tomarla en serio
+ * dejaría a la persona «configurada en cero» y taparía lo heredado; por eso
+ * se ignora, como si no existiera, y no hace falta borrarla.
+ */
+
+/** Lo mínimo que necesita la resolución: el mes y el salario de cada fila. */
+export interface FilaConfigMensual {
+  anio: number;
+  mes: number;
+  salario_basico: number;
+}
+
+/** Número correlativo de un mes, para comparar (año, mes) de un vistazo. */
+export function indiceMes(anio: number, mes: number): number {
+  return anio * 12 + (mes - 1);
+}
+
+/** El mes anterior: enero de 2027 → diciembre de 2026. */
+export function mesAnterior(anio: number, mes: number): { anio: number; mes: number } {
+  return mes === 1 ? { anio: anio - 1, mes: 12 } : { anio, mes: mes - 1 };
+}
+
+/** ¿La fila cuenta como configuración? Ver «VÁLIDA» arriba. */
+export function esConfigValida(fila: FilaConfigMensual): boolean {
+  return numeroSeguro(fila.salario_basico) > 0;
+}
+
+/** Las filas válidas, de la más antigua a la más reciente. */
+export function cambiosDeConfig<T extends FilaConfigMensual>(filas: readonly T[]): T[] {
+  return filas
+    .filter(esConfigValida)
+    .slice()
+    .sort((a, b) => indiceMes(a.anio, a.mes) - indiceMes(b.anio, b.mes));
+}
+
+/**
+ * **REGLA ÚNICA de la configuración de un mes**: la fila válida más reciente
+ * con (año, mes) ≤ el mes pedido, o `null` si no hay ninguna (la persona no
+ * tiene salario configurado ni en ese mes ni antes).
+ *
+ * `filas` pueden ser las de un solo empleado o de varios mezclados: quien
+ * llama es responsable de pasar solo las de la persona que le interesa.
+ */
+export function configVigente<T extends FilaConfigMensual>(
+  filas: readonly T[],
+  anio: number,
+  mes: number,
+): T | null {
+  const tope = indiceMes(anio, mes);
+  let mejor: T | null = null;
+  let mejorIndice = -Infinity;
+  for (const fila of filas) {
+    if (!esConfigValida(fila)) continue;
+    const indice = indiceMes(fila.anio, fila.mes);
+    if (indice <= tope && indice > mejorIndice) {
+      mejor = fila;
+      mejorIndice = indice;
+    }
+  }
+  return mejor;
+}
+
+/** De dónde sale la configuración que rige en un mes. */
+export type OrigenConfigMes = "propia" | "heredada" | "ninguna";
+
+export interface EstadoConfigMes<T extends FilaConfigMensual> {
+  /** La fila que rige en el mes (propia o heredada), o `null`. */
+  vigente: T | null;
+  origen: OrigenConfigMes;
+  /** La fila guardada EN este mes, si es válida. */
+  propia: T | null;
+  /**
+   * Lo que regiría si se quitara el cambio de este mes: la fila vigente del
+   * mes anterior. `null` = la persona quedaría SIN configuración.
+   */
+  alQuitar: T | null;
+  /** El próximo cambio guardado DESPUÉS de este mes: hasta ahí rige este. */
+  siguiente: T | null;
+  /** Todos los cambios válidos de la persona, del más antiguo al más reciente. */
+  cambios: T[];
+}
+
+/** Todo lo que la pantalla de Configuración necesita saber de un mes. */
+export function estadoConfigMes<T extends FilaConfigMensual>(
+  filas: readonly T[],
+  anio: number,
+  mes: number,
+): EstadoConfigMes<T> {
+  const cambios = cambiosDeConfig(filas);
+  const aqui = indiceMes(anio, mes);
+  const propia = cambios.find((f) => indiceMes(f.anio, f.mes) === aqui) ?? null;
+  const anterior = mesAnterior(anio, mes);
+  const alQuitar = configVigente(cambios, anterior.anio, anterior.mes);
+  const vigente = propia ?? alQuitar;
+  const siguiente = cambios.find((f) => indiceMes(f.anio, f.mes) > aqui) ?? null;
+  return {
+    vigente,
+    origen: propia ? "propia" : vigente ? "heredada" : "ninguna",
+    propia,
+    alQuitar,
+    siguiente,
+    cambios,
+  };
 }

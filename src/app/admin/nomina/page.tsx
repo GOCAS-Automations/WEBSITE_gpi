@@ -4,11 +4,15 @@
  *   · "Liquidación" (por defecto): el período en curso, persona por persona,
  *     con su desglose, sus conceptos manuales y su volante en PDF.
  *   · "Configuración": salario, tarifas por hora y aportes de cada empleado,
- *     mes a mes (se copian solos del mes anterior).
+ *     **vigentes desde** el mes en que se guardan (rigen hacia adelante hasta
+ *     el próximo cambio; ver un mes no crea nada).
  *   · "Tablero": KPIs, gráficas e historial por empleado.
  *
  * La pestaña viaja en la URL (`?vista=configuracion`), igual que en jornadas y
- * en el calendario: el enlace se puede compartir y funciona sin JavaScript. El
+ * en el calendario: el enlace se puede compartir y funciona sin JavaScript.
+ * El filtro por persona de la liquidación también (`?persona=<id>`), así que
+ * sobrevive a recargar y a cambiar de período.
+ *
  * El acceso es SOLO PARA EL ADMINISTRADOR —ni el coordinador ni el Community
  * Manager administran la nómina (pedido de GPI, 18 sep 2026)— y la barrera
  * autoritativa es `requireAdmin()`. El coordinador ve SU propia nómina en
@@ -23,7 +27,7 @@ import { LiquidacionView } from "./liquidacion";
 import { ConfiguracionView } from "./configuracion";
 import { TableroView } from "./tablero";
 
-/** Depende de la sesión y crea filas al entrar: nunca se cachea. */
+/** Depende de la sesión: nunca se cachea. */
 export const dynamic = "force-dynamic";
 
 type Vista = "liquidacion" | "configuracion" | "tablero";
@@ -58,7 +62,7 @@ const DESCRIPCIONES: Record<Vista, string> = {
   liquidacion:
     "Lo que hay que pagarle a cada persona en el período: el sueldo, las horas y recargos que salen de las jornadas aprobadas, los bonos y descuentos que tú digitas, y el neto.",
   configuracion:
-    "El salario de cada empleado, el valor de cada tipo de hora, el auxilio de transporte y los aportes de salud y pensión, mes a mes.",
+    "El salario de cada empleado, el valor de cada tipo de hora, el auxilio de transporte y los aportes de salud y pensión. Lo que guardas en un mes rige desde ese mes en adelante.",
   tablero:
     "Cómo ha evolucionado la nómina: totales por mes, reparto por concepto y por persona, e historial de cada empleado con su volante.",
 };
@@ -73,11 +77,12 @@ export default async function AdminNominaPage({
     mes?: string;
     quincena?: string;
     empleado?: string;
+    persona?: string;
     estado?: string;
     abrir?: string;
   }>;
 }) {
-  // Barrera autoritativa: solo admin y coordinador.
+  // Barrera autoritativa: solo el administrador.
   await requireAdmin();
 
   const params = await searchParams;
@@ -98,7 +103,9 @@ export default async function AdminNominaPage({
 
       {/* ---------------- Pestañas ---------------- */}
       <nav aria-label="Vistas de nómina" className="mb-6">
-        <ul className="inline-flex gap-1 rounded-full border border-line bg-white p-1 shadow-soft">
+        {/* En móvil ocupa todo el ancho y aprieta el relleno: a 390 px las tres
+            pestañas con su relleno de escritorio se salían de la pantalla. */}
+        <ul className="flex w-full justify-between gap-1 rounded-full border border-line bg-white p-1 shadow-soft sm:inline-flex sm:w-auto sm:justify-start">
           {PESTANAS.map((p) => {
             const activa = p.value === vista;
             const Icon = p.icon;
@@ -108,7 +115,7 @@ export default async function AdminNominaPage({
                   prefetch={false}
                   href={p.href}
                   aria-current={activa ? "page" : undefined}
-                  className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
+                  className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-2 text-[13px] font-semibold transition-colors sm:px-4 sm:text-sm ${
                     activa
                       ? "bg-brand-dark text-white shadow-soft"
                       : "text-ink-soft hover:bg-mist"
@@ -142,6 +149,7 @@ export default async function AdminNominaPage({
           anio={params.anio}
           mes={params.mes}
           quincena={params.quincena}
+          persona={params.persona ?? ""}
           abrir={params.abrir ?? ""}
         />
       )}

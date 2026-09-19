@@ -13,11 +13,26 @@
  * Las piezas de interfaz se importan de `@/components/admin/ui-base`, NUNCA de
  * `ui.tsx`: este es un Client Component y arrastrar `ui.tsx` al navegador deja
  * colgadas las server actions en producción (ver la nota larga de `ui-base`).
+ *
+ * FILTRO POR PERSONA (`?persona=`, 18 sep 2026)
+ * ---------------------------------------------
+ * El servidor ya manda solo las filas de la persona elegida, así que todo lo
+ * que hay en pantalla trabaja con lo que se ve:
+ *   · los totales y los avisos son los de esa persona;
+ *   · «Liquidar todos» pasa a «Liquidar a <nombre>» y la acción recibe
+ *     `persona`: NUNCA crea liquidaciones de quien no está en pantalla;
+ *   · el CSV exporta solo esa fila, y el archivo lleva el usuario en el nombre
+ *     (`nomina_GPI_2026-09-Q2_scordoba.csv`) y el botón lo dice.
+ * El filtro viaja en la URL: sobrevive a recargar y a cambiar de período.
+ *
+ * DINERO: todo importe se pinta con `src/lib/dinero.ts` (punto de miles, coma
+ * decimal) y los conceptos manuales se escriben con `CampoDinero`. El CSV es la
+ * excepción a propósito: números sin miles para que Excel los sume.
  */
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useMemo, useState, useTransition } from "react";
 import { ModalPanel } from "@/components/calendario/ModalPanel";
 import {
   AyudaSeccion,
@@ -43,12 +58,18 @@ import {
   clavePeriodo,
   decimalCSV,
   formatearHorasNomina,
-  formatearMiles,
-  formatearPesos,
   horasDeMinutos,
   nombreMesNomina,
   type TipoPeriodo,
 } from "@/lib/nomina";
+import {
+  formatearDinero,
+  formatearMiles,
+  formatearNumero,
+  formatearPesos,
+  formatearPorcentaje,
+} from "@/lib/dinero";
+import { CampoDinero } from "@/components/admin/CampoDinero";
 import { Check, Download, Info, Pencil, Plus, Trash } from "@/lib/icons";
 
 type Accion = (state: ActionState, formData: FormData) => Promise<ActionState>;
@@ -70,8 +91,10 @@ function campo(valor: string | number): string {
 
 /**
  * Descarga el período como CSV, con el mismo formato que el de jornadas:
- * separador `;`, BOM UTF-8 y **todos los números con coma decimal**, para que
- * Excel en español los sume sin tener que retocar nada.
+ * separador `;`, BOM UTF-8 y **todos los números con coma decimal y SIN
+ * separador de miles** (`decimalCSV`), para que Excel en español los reconozca
+ * como números y los sume sin tener que retocar nada. Es la única salida del
+ * módulo que no usa `src/lib/dinero.ts`, y es a propósito (pedido de César).
  */
 function descargarCSV(filas: FilaNomina[], etiquetaArchivo: string): void {
   const encabezados = [
@@ -118,7 +141,8 @@ function descargarCSV(filas: FilaNomina[], etiquetaArchivo: string): void {
       f.cargo ?? "",
       f.estado ? NOMINA_ESTADO_LABELS[f.estado] : "Sin crear",
       decimalCSV(f.dias),
-      decimalCSV(f.salario),
+      // El del cálculo (el congelado si está cerrada), no el de la configuración de hoy.
+      decimalCSV(f.calculo.salarioBasico),
       decimalCSV(f.calculo.basico),
       decimalCSV(f.calculo.auxTransporte),
       horas(f, "rotacionNocturna"),
@@ -167,6 +191,8 @@ function descargarCSV(filas: FilaNomina[], etiquetaArchivo: string): void {
 
 export function LiquidacionPanel({
   filas,
+  personas,
+  persona,
   tipo,
   anio,
   mes,
@@ -186,6 +212,10 @@ export function LiquidacionPanel({
   eliminarAction,
 }: {
   filas: FilaNomina[];
+  /** Todas las cuentas activas, para el selector del filtro. */
+  personas: { id: string; nombre: string; usuario: string | null }[];
+  /** Id de la persona del filtro; "" = todas. */
+  persona: string;
   tipo: TipoPeriodo;
   anio: number;
   mes: number;
@@ -215,16 +245,28 @@ export function LiquidacionPanel({
     [filas, abierta],
   );
 
+  const [cargando, iniciarNavegacion] = useTransition();
+
+  /** Navega conservando el período y el filtro por persona. */
   const irA = (cambios: Record<string, string>) => {
     const params = new URLSearchParams({
       tipo,
       anio: String(anio),
       mes: String(mes),
       ...(quincena ? { quincena: String(quincena) } : {}),
+      ...(persona ? { persona } : {}),
       ...cambios,
     });
-    router.push(`/admin/nomina?${params.toString()}`);
+    // Los parámetros vacíos (`quincena: ""`, `persona: ""`) no viajan.
+    for (const [clave, valor] of [...params.entries()]) {
+      if (valor === "") params.delete(clave);
+    }
+    iniciarNavegacion(() => {
+      router.push(`/admin/nomina?${params.toString()}`);
+    });
   };
+
+  const personaSel = persona ? personas.find((p) => p.id === persona) ?? null : null;
 
   const totales = useMemo(
     () =>
@@ -253,9 +295,15 @@ export function LiquidacionPanel({
     <div className="space-y-6">
       <AyudaSeccion title="Cómo funciona esta pantalla">{AYUDA_NOMINA}</AyudaSeccion>
 
-      {/* ---------------- Selector de período ---------------- */}
+      {/* ---------------- Selector de período y persona ---------------- */}
       <Card>
         <div className="flex flex-wrap items-end gap-4">
+          <SelectorPersona
+            personas={personas}
+            persona={persona}
+            onCambio={(id) => irA({ persona: id })}
+          />
+
           <div>
             <label
               htmlFor="nomina-tipo"
@@ -351,17 +399,41 @@ export function LiquidacionPanel({
           </p>
         </div>
 
+        {cargando && (
+          <p role="status" className="mt-3 text-sm font-semibold text-brand-dark">
+            Cargando…
+          </p>
+        )}
+
         <p className="mt-4 border-t border-line pt-4 text-xs leading-relaxed text-graphite">
           {AYUDA_NOMINA_PERIODO}
         </p>
       </Card>
+
+      {personaSel && (
+        <div className="flex flex-col items-start gap-3 rounded-2xl border border-brand/30 bg-brand-tint/60 px-4 py-3 text-sm text-brand-deep sm:flex-row sm:items-center">
+          <p className="min-w-0 sm:flex-1">
+            Estás viendo solo a <strong>{personaSel.nombre}</strong>. Los totales,
+            «Liquidar» y el CSV son solo de esta persona.
+          </p>
+          <button
+            type="button"
+            onClick={() => irA({ persona: "" })}
+            disabled={cargando}
+            className="rounded-full border border-brand/40 bg-white px-3.5 py-1.5 text-xs font-semibold text-brand-deep transition-colors hover:border-brand disabled:opacity-60"
+          >
+            Ver a todas las personas
+          </button>
+        </div>
+      )}
 
       {/* ---------------- Avisos ---------------- */}
       {sinConfig.length > 0 && (
         <AyudaSeccion tono="aviso" title="Hay personas sin salario configurado">
           {sinConfig.map((f) => f.nombre).join(", ")}{" "}
           {sinConfig.length === 1 ? "no tiene" : "no tienen"} salario ni tarifas
-          en {nombreMesNomina(mes)} de {anio}, así que no{" "}
+          configurados ni en {nombreMesNomina(mes)} de {anio} ni en ningún mes
+          anterior, así que no{" "}
           {sinConfig.length === 1 ? "se puede liquidar" : "se pueden liquidar"}.
           Configúra{sinConfig.length === 1 ? "lo" : "los"} en{" "}
           <Link
@@ -407,30 +479,45 @@ export function LiquidacionPanel({
           <input type="hidden" name="anio" value={anio} />
           <input type="hidden" name="mes" value={mes} />
           {quincena && <input type="hidden" name="quincena" value={quincena} />}
+          {/* Con el filtro activo, la acción SOLO toca a esa persona. */}
+          {personaSel && <input type="hidden" name="persona" value={personaSel.id} />}
           <button
             type="submit"
-            disabled={enLote || sinCrear.length === 0}
+            disabled={enLote || cargando || sinCrear.length === 0}
             className="inline-flex items-center gap-2 rounded-full bg-brand-dark px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-deep disabled:pointer-events-none disabled:opacity-50"
           >
             <Plus className="h-4 w-4" />
             {enLote
               ? "Creando…"
-              : sinCrear.length === 0
-                ? "Todas liquidadas"
-                : `Liquidar todos (${sinCrear.length})`}
+              : sinCrear.length > 0
+                ? personaSel
+                  ? `Liquidar a ${primerNombre(personaSel.nombre)}`
+                  : `Liquidar todos (${sinCrear.length})`
+                : filas.every((f) => f.liquidacionId)
+                  ? personaSel
+                    ? "Ya está liquidada"
+                    : "Todas liquidadas"
+                  : "Falta configurar el salario"}
           </button>
         </form>
 
         <button
           type="button"
           onClick={() =>
-            descargarCSV(filas, clavePeriodo(tipo, anio, mes, quincena))
+            descargarCSV(
+              filas,
+              `${clavePeriodo(tipo, anio, mes, quincena)}${
+                personaSel ? `_${personaSel.usuario || "persona"}` : ""
+              }`,
+            )
           }
           disabled={filas.length === 0}
           className="inline-flex items-center gap-2 rounded-full border border-line bg-white px-5 py-2.5 text-sm font-semibold text-ink-soft transition-colors hover:border-brand hover:text-brand-dark disabled:opacity-50"
         >
           <Download className="h-4 w-4" />
-          Exportar CSV
+          {personaSel
+            ? `Exportar CSV (solo ${primerNombre(personaSel.nombre)})`
+            : "Exportar CSV"}
         </button>
       </div>
 
@@ -492,7 +579,7 @@ export function LiquidacionPanel({
                     </p>
                   </td>
                   <td className="px-3 py-3 text-right tabular-nums text-graphite">
-                    {f.tieneConfig ? f.dias : "—"}
+                    {f.tieneConfig ? formatearNumero(f.dias) : "—"}
                   </td>
                   <Money valor={f.calculo.basico + f.calculo.auxTransporte} />
                   <Money valor={f.calculo.totalHoras} />
@@ -536,6 +623,7 @@ export function LiquidacionPanel({
           onClose={() => setAbierta("")}
         >
           <DetalleLiquidacion
+            key={`${filaAbierta.employeeId}-${filaAbierta.liquidacionId ?? "nueva"}`}
             fila={filaAbierta}
             tipo={tipo}
             anio={anio}
@@ -630,10 +718,11 @@ function DetalleLiquidacion({
   if (!fila.tieneConfig) {
     return (
       <AyudaSeccion tono="aviso" title="Sin salario configurado">
-        {fila.nombre} todavía no tiene salario ni tarifas en {nombreMesNomina(mes)}{" "}
-        de {anio}. Ve a la pestaña <strong>Configuración</strong>, elige a esta
-        persona y ese mes, escribe su salario y guarda: las siete tarifas se
-        sugieren solas y después puedes ajustarlas.
+        {fila.nombre} no tiene salario ni tarifas configurados ni en{" "}
+        {nombreMesNomina(mes)} de {anio} ni en ningún mes anterior. Ve a la
+        pestaña <strong>Configuración</strong>, elige a esta persona y el mes
+        desde el que rige su salario, escríbelo y guarda: las siete tarifas se
+        sugieren solas, y lo que guardes vale para ese mes y los siguientes.
       </AyudaSeccion>
     );
   }
@@ -681,13 +770,17 @@ function DetalleLiquidacion({
             <tbody>
               <Renglon
                 label="Sueldo del período"
-                detalle={`${fila.dias} días · salario mensual ${formatearPesos(fila.salario)}`}
+                detalle={`${formatearNumero(c.dias)} días · salario mensual ${formatearPesos(c.salarioBasico)}${
+                  !fila.congelada && fila.configDesde
+                    ? ` · configurado en ${nombreMesNomina(fila.configDesde.mes)} de ${fila.configDesde.anio}`
+                    : ""
+                }`}
                 valor={c.basico}
               />
               {c.auxTransporte > 0 && (
                 <Renglon
                   label="Auxilio de transporte"
-                  detalle={`Proporcional a ${fila.dias} días`}
+                  detalle={`Proporcional a ${formatearNumero(c.dias)} días de ${formatearPesos(c.auxTransporteMensual)} al mes`}
                   valor={c.auxTransporte}
                 />
               )}
@@ -700,7 +793,7 @@ function DetalleLiquidacion({
                     label={l.label}
                     detalle={
                       l.sePaga
-                        ? `${formatearHorasNomina(l.minutos)} × ${formatearPesos(l.tarifa)}${
+                        ? `${formatearHorasNomina(l.minutos)} × ${formatearDinero(l.tarifa)}${
                             l.composicion ? ` · ${l.composicion}` : ""
                           }`
                         : `${formatearHorasNomina(l.minutos)} · ya incluidas en el sueldo`
@@ -737,12 +830,12 @@ function DetalleLiquidacion({
             <tbody>
               <Renglon
                 label="Salud"
-                detalle={`${c.pctSalud} % sobre ${formatearPesos(c.baseSeguridadSocial)} (sueldo + horas)`}
+                detalle={`${formatearPorcentaje(c.pctSalud)} % sobre ${formatearPesos(c.baseSeguridadSocial)} (sueldo + horas)`}
                 valor={c.salud}
               />
               <Renglon
                 label="Pensión"
-                detalle={`${c.pctPension} % sobre ${formatearPesos(c.baseSeguridadSocial)}`}
+                detalle={`${formatearPorcentaje(c.pctPension)} % sobre ${formatearPesos(c.baseSeguridadSocial)}`}
                 valor={c.pension}
               />
               {c.descuentosManuales
@@ -785,8 +878,9 @@ function DetalleLiquidacion({
               Días, bonos y descuentos del período
             </h3>
             <p className="mt-1 text-xs leading-relaxed text-graphite">
-              Lo que no sale de las jornadas. Deja en cero lo que no aplique. Las
-              horas y el sueldo se calculan solos.
+              Lo que no sale de las jornadas y aplica SOLO a este período (un bono,
+              un descuento puntual, la cuota de un préstamo). Deja vacío lo que no
+              aplique. Las horas y el sueldo se calculan solos.
             </p>
           </div>
 
@@ -1045,6 +1139,75 @@ function DetalleLiquidacion({
 /* Piezas pequeñas                                                     */
 /* ================================================================== */
 
+/** «Santiago Córdoba Tovar» → «Santiago» (para botones cortos). */
+function primerNombre(nombre: string): string {
+  return nombre.trim().split(/\s+/)[0] || nombre;
+}
+
+/** Desde cuántas personas el selector ofrece un buscador. */
+const UMBRAL_BUSCADOR = 10;
+
+/**
+ * Selector del filtro por persona: «Todas» + cada cuenta activa. Con una lista
+ * larga aparece además un cuadro de búsqueda que acorta las opciones (sin
+ * tildes ni mayúsculas: «cordoba» encuentra a «Córdoba»).
+ */
+function SelectorPersona({
+  personas,
+  persona,
+  onCambio,
+}: {
+  personas: { id: string; nombre: string; usuario: string | null }[];
+  persona: string;
+  onCambio: (id: string) => void;
+}) {
+  const [busqueda, setBusqueda] = useState("");
+  const normalizar = (t: string) =>
+    t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const filtro = normalizar(busqueda.trim());
+  const opciones = filtro
+    ? personas.filter(
+        (p) =>
+          p.id === persona ||
+          normalizar(`${p.nombre} ${p.usuario ?? ""}`).includes(filtro),
+      )
+    : personas;
+
+  return (
+    <div className="min-w-[13rem] flex-1 sm:max-w-xs">
+      <label
+        htmlFor="nomina-persona"
+        className="mb-1.5 block text-sm font-semibold text-ink"
+      >
+        Persona
+      </label>
+      {personas.length > UMBRAL_BUSCADOR && (
+        <input
+          type="search"
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          placeholder="Buscar por nombre o usuario…"
+          aria-label="Buscar persona"
+          className={`${inputClass} mb-2`}
+        />
+      )}
+      <select
+        id="nomina-persona"
+        defaultValue={persona}
+        onChange={(e) => onCambio(e.target.value)}
+        className={inputClass}
+      >
+        <option value="">Todas las personas</option>
+        {opciones.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.nombre}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 function Total({
   label,
   valor,
@@ -1161,14 +1324,11 @@ function CampoManual({
       <p className="mb-2 mt-0.5 text-xs leading-relaxed text-graphite">
         {descripcion}
       </p>
-      <input
+      <CampoDinero
         id={`nomina-${clave}`}
         name={clave}
-        type="number"
-        min={0}
-        step={1}
-        defaultValue={valor}
-        className={inputClass}
+        prefijo="$"
+        valorInicial={valor}
       />
       <input
         name={`nota_${clave}`}

@@ -1,7 +1,8 @@
 /**
  * DATOS DEL VOLANTE DE PAGO — lo que comparten las dos rutas que lo sirven
  * =======================================================================
- * Reúne la liquidación, la configuración del mes, las horas del período y los
+ * Reúne la liquidación, la configuración VIGENTE del mes (la propia o la
+ * heredada, modelo «vigente desde»), las horas del período y los
  * datos de la empresa, y los deja listos para `renderVolante()`.
  *
  * SEGURIDAD
@@ -22,7 +23,7 @@
 import {
   getAdminSettings,
   getLiquidacion,
-  getNominaConfig,
+  getNominaConfigVigente,
   horasDelPeriodo,
 } from "@/lib/admin";
 import { hoyEnColombia } from "@/lib/jornada";
@@ -58,7 +59,7 @@ export async function resolverVolante(id: string): Promise<VolanteResuelto | nul
     getAdminSettings(),
     congelada
       ? Promise.resolve(null)
-      : getNominaConfig(liquidacion.employee_id, liquidacion.anio, liquidacion.mes),
+      : getNominaConfigVigente(liquidacion.employee_id, liquidacion.anio, liquidacion.mes),
     congelada
       ? Promise.resolve({ minutos: minutosVacios(), jornadas: 0, pendientes: 0 })
       : horasDelPeriodo(

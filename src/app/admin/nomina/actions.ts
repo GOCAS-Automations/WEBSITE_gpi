@@ -41,18 +41,23 @@ import { revalidatePath } from "next/cache";
 import { getAdminOrNull } from "@/lib/supabase/auth";
 import {
   getLiquidacion,
-  getNominaConfig,
+  getNominaConfigVigente,
   horasDelPeriodo,
+  listNominaConfigsEmpleado,
   listProfiles,
+  mapaNominaConfigsVigentes,
   nominaConfigAColumnas,
 } from "@/lib/admin";
 import {
   CONCEPTOS_MANUALES,
   calcularLiquidacion,
   construirSnapshot,
+  estadoConfigMes,
   etiquetaPeriodo,
   manualesAJson,
   manualesVacios,
+  mesAnterior,
+  nombreMesNomina,
   normalizarManuales,
   pesos,
   rangoPeriodo,
@@ -60,6 +65,7 @@ import {
   type ConceptosManuales,
   type TipoPeriodo,
 } from "@/lib/nomina";
+import { parsearNumero } from "@/lib/dinero";
 import type { ActionState } from "@/lib/admin-types";
 
 const SIN_PERMISO: ActionState = {
@@ -77,49 +83,35 @@ function text(formData: FormData, key: string): string {
 }
 
 /**
- * Convierte a número lo que venga escrito en un campo de dinero.
+ * Un importe escrito en el formulario, leído con `parsearNumero()` de
+ * `src/lib/dinero.ts` —el MISMO módulo que formatea el campo en el navegador—.
  *
- * Tiene que aguantar las dos formas que llegan de verdad:
- *   · la que escribe una persona con las reglas colombianas — «1.750.095»,
- *     «$ 1.750.095», «9.115,08» —, donde el punto separa los miles;
- *   · la que manda un `<input type="number">` del navegador, que SIEMPRE usa el
- *     punto como separador DECIMAL: «9115.08».
+ * El campo de dinero del panel manda el valor ya limpio («1300000»,
+ * «9115.08»), pero aquí se vuelve a leer con la regla colombiana completa por
+ * si llega escrito a mano («1.300.000», «$ 9.115,08»). Ya hubo un bug grave con
+ * esto: borrar todos los puntos a ciegas convertía «9115.08» en 911.508, cien
+ * veces la tarifa. La regla (y el caso ambiguo de «9.115») está explicada en la
+ * cabecera de `dinero.ts` y probada en `scripts/pruebas-nomina.mjs`.
  *
- * Borrar todos los puntos a ciegas convertía «9115.08» en 911.508 —cien veces
- * la tarifa— y eso ya pasó: se detectó al probar el formulario de
- * configuración de punta a punta. La regla es:
- *   · si hay coma, la coma es el decimal y los puntos son miles;
- *   · si solo hay puntos, son miles, SALVO que haya uno solo y deje uno o dos
- *     dígitos al final («9115.08» → 9115,08; «1.750» → 1750).
+ * Vacío = 0. Un texto que no es un número, o un negativo, NO se convierte en
+ * cero en silencio: devuelve `null` y la acción avisa con el nombre del campo.
  */
-function aNumero(bruto: string): number | null {
-  let valor = bruto.replace(/[\s$]/g, "");
-  if (valor === "") return null;
-
-  if (valor.includes(",")) {
-    valor = valor.replace(/\./g, "").replace(",", ".");
-  } else {
-    const puntos = (valor.match(/\./g) ?? []).length;
-    if (puntos > 1) valor = valor.replace(/\./g, "");
-    else if (puntos === 1 && !/\.\d{1,2}$/.test(valor))
-      valor = valor.replace(".", "");
-  }
-
-  const n = Number(valor);
-  return Number.isFinite(n) ? n : null;
+function leerImporte(
+  formData: FormData,
+  key: string,
+  { decimales }: { decimales: 0 | 2 },
+): number | null {
+  const bruto = text(formData, key);
+  if (bruto === "") return 0;
+  const n = parsearNumero(bruto);
+  if (n === null || n < 0) return null;
+  return decimales === 0 ? pesos(n) : Math.round(n * 100) / 100;
 }
 
-/** Un importe en pesos ENTEROS (sueldos, bonos, descuentos). Nunca negativo. */
-function importe(formData: FormData, key: string): number {
-  const n = aNumero(text(formData, key));
-  return n !== null && n > 0 ? pesos(n) : 0;
-}
-
-/** Un importe con DECIMALES (las tarifas por hora son `numeric(14,2)`). */
-function importeDecimal(formData: FormData, key: string): number {
-  const n = aNumero(text(formData, key));
-  return n !== null && n > 0 ? Math.round(n * 100) / 100 : 0;
-}
+const campoInvalido = (etiqueta: string) =>
+  fail(
+    `El valor de «${etiqueta}» no es un número válido. Escríbelo solo con cifras, con punto para los miles y coma para los decimales (por ejemplo 1.300.000 o 9.115,08).`,
+  );
 
 function entero(formData: FormData, key: string, porDefecto = 0): number {
   const n = Number(text(formData, key));
@@ -172,12 +164,37 @@ function leerPeriodo(formData: FormData): {
 /* Configuración por empleado y mes                                    */
 /* ================================================================== */
 
+/** Las siete tarifas: campo del formulario → clave → etiqueta del aviso. */
+const CAMPOS_TARIFA = [
+  ["valor_hora_base", "horaBase", "Hora de rotación diurna"],
+  ["valor_rotacion_nocturna", "rotacionNocturna", "Rotación nocturna"],
+  ["valor_extra_diurna", "extraDiurna", "Hora extra diurna"],
+  ["valor_extra_nocturna", "extraNocturna", "Hora extra nocturna"],
+  ["valor_festivo", "festivo", "Hora en domingo o festivo"],
+  ["valor_extra_festivo_diurna", "extraFestivoDiurna", "Hora extra diurna en festivo"],
+  ["valor_extra_festivo_nocturna", "extraFestivoNocturna", "Hora extra nocturna en festivo"],
+] as const;
+
+/** «octubre de 2026». */
+const mesTexto = (fecha: { anio: number; mes: number }) =>
+  `${nombreMesNomina(fecha.mes)} de ${fecha.anio}`;
+
+/**
+ * «hasta septiembre de 2026» cuando hay un cambio guardado después (rige hasta
+ * el mes anterior a ese cambio) o «en adelante» cuando no lo hay.
+ */
+const hastaTexto = (siguiente: { anio: number; mes: number } | null) =>
+  siguiente
+    ? `hasta ${mesTexto(mesAnterior(siguiente.anio, siguiente.mes))}`
+    : "en adelante";
+
 /**
  * Guarda el salario, el auxilio, las siete tarifas y los porcentajes de un
- * empleado en un mes.
+ * empleado **desde** un mes (modelo «vigente desde», 18 sep 2026): la fila
+ * rige para ese mes y los siguientes, hasta el próximo cambio guardado.
  *
- * Se hace con `upsert` sobre la clave (empleado, año, mes): la pantalla ya crea
- * la fila al entrar, pero si dos managers guardan a la vez esto no falla.
+ * Es la ÚNICA manera de crear una fila de configuración: ver un mes en la
+ * pantalla ya no crea nada. `upsert` sobre la clave (empleado, año, mes).
  */
 export async function saveNominaConfig(
   _prev: ActionState,
@@ -196,29 +213,44 @@ export async function saveNominaConfig(
   if (!Number.isInteger(mes) || mes < 1 || mes > 12)
     return fail("El mes no es válido.");
 
-  const salario = importe(formData, "salario_basico");
+  const salario = leerImporte(formData, "salario_basico", { decimales: 0 });
+  if (salario === null) return campoInvalido("Salario básico mensual");
   if (salario <= 0)
     return fail(
       "Escribe el salario básico mensual: de él salen el sueldo del período y los valores sugeridos de cada tipo de hora.",
     );
 
-  const pctSalud = importeDecimal(formData, "pct_salud");
-  const pctPension = importeDecimal(formData, "pct_pension");
+  const aux = leerImporte(formData, "aux_transporte", { decimales: 0 });
+  if (aux === null) return campoInvalido("Auxilio de transporte mensual");
+
+  const tarifas = {
+    horaBase: 0,
+    rotacionNocturna: 0,
+    extraDiurna: 0,
+    extraNocturna: 0,
+    festivo: 0,
+    extraFestivoDiurna: 0,
+    extraFestivoNocturna: 0,
+  };
+  for (const [campo, clave, etiqueta] of CAMPOS_TARIFA) {
+    const valor = leerImporte(formData, campo, { decimales: 2 });
+    if (valor === null) return campoInvalido(etiqueta);
+    tarifas[clave] = valor;
+  }
+
+  // Los porcentajes no llevan miles, pero sí coma decimal («4,5»): el mismo
+  // lector los entiende.
+  const pctSalud = leerImporte(formData, "pct_salud", { decimales: 2 });
+  if (pctSalud === null) return campoInvalido("Salud (%)");
+  const pctPension = leerImporte(formData, "pct_pension", { decimales: 2 });
+  if (pctPension === null) return campoInvalido("Pensión (%)");
   if (pctSalud > 100 || pctPension > 100)
     return fail("Los porcentajes de salud y pensión no pueden pasar de 100.");
 
   const datos = {
     salario_basico: salario,
-    aux_transporte: importe(formData, "aux_transporte"),
-    tarifas: {
-      horaBase: importeDecimal(formData, "valor_hora_base"),
-      rotacionNocturna: importeDecimal(formData, "valor_rotacion_nocturna"),
-      extraDiurna: importeDecimal(formData, "valor_extra_diurna"),
-      extraNocturna: importeDecimal(formData, "valor_extra_nocturna"),
-      festivo: importeDecimal(formData, "valor_festivo"),
-      extraFestivoDiurna: importeDecimal(formData, "valor_extra_festivo_diurna"),
-      extraFestivoNocturna: importeDecimal(formData, "valor_extra_festivo_nocturna"),
-    },
+    aux_transporte: aux,
+    tarifas,
     pct_salud: pctSalud,
     pct_pension: pctPension,
   };
@@ -232,9 +264,81 @@ export async function saveNominaConfig(
 
   if (error) return fail(mensajeDeError(error));
 
+  // Hasta cuándo rige: hasta el próximo cambio guardado de esa persona, si lo hay.
+  const { filas } = await listNominaConfigsEmpleado(employeeId);
+  const { siguiente } = estadoConfigMes(filas, anio, mes);
+  const vigencia = siguiente
+    ? ` Rige desde ${mesTexto({ anio, mes })} ${hastaTexto(siguiente)}: en ${mesTexto(siguiente)} hay otro cambio guardado y desde ahí manda ese.`
+    : ` Rige desde ${mesTexto({ anio, mes })} en adelante, hasta que guardes otro cambio.`;
+
   revalidar();
   return ok(
-    "Configuración guardada. Las liquidaciones de ese mes que sigan en borrador se recalculan solas; las ya cerradas no se tocan.",
+    `Configuración guardada.${vigencia} Las liquidaciones en borrador de esos meses se recalculan solas; las ya cerradas no se tocan.`,
+  );
+}
+
+/**
+ * QUITA EL CAMBIO de un mes: borra la fila de ese mes, y ese mes (con los que
+ * lo seguían hasta el próximo cambio) vuelve a heredar del cambio anterior.
+ *
+ * Si no hay ningún cambio anterior, la persona se queda SIN configuración en
+ * esos meses y no se puede liquidar. Eso no se deja pasar por accidente: la
+ * pantalla lo advierte con una confirmación propia y manda
+ * `sin_respaldo_confirmado=1`; sin esa marca, la acción se niega y lo explica.
+ *
+ * Las liquidaciones cerradas no cambian (leen su snapshot); las que sigan en
+ * borrador se recalculan con lo heredado.
+ */
+export async function quitarConfigMes(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await getAdminOrNull();
+  if (!session) return SIN_PERMISO;
+
+  const employeeId = text(formData, "employee_id");
+  if (!employeeId) return fail("Elige primero a la persona.");
+  const anio = entero(formData, "anio");
+  const mes = entero(formData, "mes");
+  if (!Number.isInteger(anio) || anio < 2000 || anio > 2200)
+    return fail("El año no es válido.");
+  if (!Number.isInteger(mes) || mes < 1 || mes > 12)
+    return fail("El mes no es válido.");
+
+  const { filas, error: errorLectura } = await listNominaConfigsEmpleado(employeeId);
+  if (errorLectura)
+    return fail(
+      "No se pudo leer la configuración de esa persona. Recarga la página e inténtalo de nuevo.",
+    );
+
+  const estado = estadoConfigMes(filas, anio, mes);
+  if (!estado.propia)
+    return fail(
+      `En ${mesTexto({ anio, mes })} no hay un cambio propio que quitar: sus valores ya son heredados. Recarga la página.`,
+    );
+
+  if (!estado.alQuitar && text(formData, "sin_respaldo_confirmado") !== "1")
+    return fail(
+      `Si quitas este cambio, la persona queda SIN configuración desde ${mesTexto({ anio, mes })} ${hastaTexto(estado.siguiente)} y no se podrá liquidar, porque no hay ningún mes anterior configurado. Confirma el aviso para hacerlo de todos modos.`,
+    );
+
+  const { data, error } = await session.supabase
+    .from("nomina_config_mensual")
+    .delete()
+    .eq("employee_id", employeeId)
+    .eq("anio", anio)
+    .eq("mes", mes)
+    .select("id");
+
+  if (error) return fail(mensajeDeError(error));
+  if (!data || data.length === 0)
+    return fail("Ese cambio ya no existe. Recarga la página, por favor.");
+
+  revalidar();
+  return ok(
+    estado.alQuitar
+      ? `Cambio quitado. Desde ${mesTexto({ anio, mes })} ${hastaTexto(estado.siguiente)} vuelve a regir la configuración guardada en ${mesTexto(estado.alQuitar)}. Las liquidaciones en borrador se recalculan solas; las cerradas no se tocan.`
+      : `Cambio quitado. Esta persona ya no tiene configuración desde ${mesTexto({ anio, mes })} ${hastaTexto(estado.siguiente)}: no se podrá liquidar en esos meses hasta que guardes una.`,
   );
 }
 
@@ -256,10 +360,11 @@ export async function crearLiquidacion(
   const employeeId = text(formData, "employee_id");
   if (!employeeId) return fail("Falta la persona a liquidar.");
 
-  const config = await getNominaConfig(employeeId, periodo.anio, periodo.mes);
-  if (!config || config.salario_basico <= 0) {
+  // «Vigente desde»: vale la configuración del mes o la heredada de antes.
+  const config = await getNominaConfigVigente(employeeId, periodo.anio, periodo.mes);
+  if (!config) {
     return fail(
-      "Esa persona todavía no tiene salario configurado para ese mes. Ve a la pestaña «Configuración», escribe su salario y vuelve.",
+      "Esa persona no tiene salario configurado ni en ese mes ni en ninguno anterior. Ve a la pestaña «Configuración», escribe su salario y vuelve.",
     );
   }
 
@@ -293,8 +398,14 @@ export async function crearLiquidacion(
 
 /**
  * Crea de golpe los borradores que falten en el período, uno por cada cuenta
- * activa **con salario configurado** en ese mes. Las que no lo tengan se
- * informan por nombre en vez de fallar en silencio.
+ * activa **con salario vigente** en ese mes (el suyo o el heredado de un mes
+ * anterior). Las que no lo tengan se informan por nombre en vez de fallar en
+ * silencio.
+ *
+ * CON EL FILTRO POR PERSONA: si el formulario trae `persona` (el filtro
+ * `?persona=` de la pestaña), actúa SOLO sobre esa persona —lo que se ve— y
+ * el botón lo dice («Liquidar a …»). Nunca crea liquidaciones de gente que no
+ * está en pantalla.
  */
 export async function liquidarTodos(
   _prev: ActionState,
@@ -307,19 +418,26 @@ export async function liquidarTodos(
   if (!periodo) return fail("El período seleccionado no es válido.");
 
   const rango = rangoPeriodo(periodo.tipo, periodo.anio, periodo.mes, periodo.quincena);
-  const perfiles = (await listProfiles()).filter((p) => p.active);
+  const persona = text(formData, "persona");
+  const perfiles = (await listProfiles()).filter(
+    (p) => p.active && (!persona || p.id === persona),
+  );
+  if (persona && perfiles.length === 0)
+    return fail("Esa persona ya no está activa. Quita el filtro y recarga la página.");
+  const configs = await mapaNominaConfigsVigentes(periodo.anio, periodo.mes);
 
   const { data: existentes } = await session.supabase
     .from("nomina_liquidaciones")
     .select("employee_id")
     .eq("anio", periodo.anio)
     .eq("mes", periodo.mes)
-    .eq("tipo", periodo.tipo);
+    .eq("tipo", periodo.tipo)
+    // Sin esto, «Liquidar todos» en la 2.ª quincena daba por liquidado a quien
+    // solo tenía la 1.ª.
+    .match(periodo.quincena ? { quincena: periodo.quincena } : {});
 
   const yaTienen = new Set(
-    (existentes ?? [])
-      .filter(() => true)
-      .map((row) => String(row.employee_id)),
+    (existentes ?? []).map((row) => String(row.employee_id)),
   );
 
   const nuevas: Record<string, unknown>[] = [];
@@ -327,8 +445,7 @@ export async function liquidarTodos(
 
   for (const perfil of perfiles) {
     if (yaTienen.has(perfil.id)) continue;
-    const config = await getNominaConfig(perfil.id, periodo.anio, periodo.mes);
-    if (!config || config.salario_basico <= 0) {
+    if (!configs.has(perfil.id)) {
       sinConfig.push(perfil.full_name);
       continue;
     }
@@ -358,13 +475,17 @@ export async function liquidarTodos(
 
   const avisoSinConfig =
     sinConfig.length > 0
-      ? ` Quedaron por fuera ${sinConfig.length === 1 ? "1 persona" : `${sinConfig.length} personas`} sin salario configurado en este mes (${sinConfig.join(", ")}): configúralas en la pestaña «Configuración».`
+      ? ` Quedaron por fuera ${sinConfig.length === 1 ? "1 persona" : `${sinConfig.length} personas`} sin salario configurado ni en este mes ni en ninguno anterior (${sinConfig.join(", ")}): configúralas en la pestaña «Configuración».`
       : "";
 
   if (nuevas.length === 0) {
     return sinConfig.length > 0
       ? fail(`No se creó ninguna liquidación.${avisoSinConfig}`)
-      : ok("Todas las personas del equipo ya tenían su liquidación en este período.");
+      : ok(
+          persona
+            ? "Esa persona ya tenía su liquidación en este período."
+            : "Todas las personas del equipo ya tenían su liquidación en este período.",
+        );
   }
 
   return ok(
@@ -376,11 +497,14 @@ export async function liquidarTodos(
 /* Editar una liquidación en borrador                                  */
 /* ================================================================== */
 
-/** Lee los conceptos manuales de un formulario, mezclándolos con los guardados. */
+/**
+ * Lee los conceptos manuales de un formulario, mezclándolos con los guardados.
+ * Si un importe no se puede leer devuelve la etiqueta de ese campo.
+ */
 function leerManuales(
   formData: FormData,
   guardados: ConceptosManuales,
-): ConceptosManuales {
+): ConceptosManuales | { invalido: string } {
   const salida: ConceptosManuales = {
     valores: { ...guardados.valores },
     notas: { ...guardados.notas },
@@ -390,7 +514,11 @@ function leerManuales(
     const clave: ConceptoManual = concepto.clave;
     // Solo se pisa lo que el formulario mandó: si un campo no viaja, se
     // conserva lo que había.
-    if (formData.has(clave)) salida.valores[clave] = importe(formData, clave);
+    if (formData.has(clave)) {
+      const valor = leerImporte(formData, clave, { decimales: 0 });
+      if (valor === null) return { invalido: concepto.label };
+      salida.valores[clave] = valor;
+    }
 
     const claveNota = `nota_${clave}`;
     if (formData.has(claveNota)) {
@@ -430,6 +558,7 @@ export async function guardarConceptos(
     return fail("Los días liquidados deben ser un número entre 0 y 31.");
 
   const manuales = leerManuales(formData, normalizarManuales(actual.conceptos));
+  if ("invalido" in manuales) return campoInvalido(manuales.invalido);
 
   const { data, error } = await session.supabase
     .from("nomina_liquidaciones")
@@ -480,14 +609,16 @@ export async function cerrarLiquidacion(
   if (liquidacion.estado !== "borrador")
     return fail("Esta liquidación ya está cerrada.");
 
-  const config = await getNominaConfig(
+  // «Vigente desde»: la configuración del mes o la heredada de antes. Es la
+  // que queda escrita en el snapshot y ya no se mueve.
+  const config = await getNominaConfigVigente(
     liquidacion.employee_id,
     liquidacion.anio,
     liquidacion.mes,
   );
-  if (!config || config.salario_basico <= 0)
+  if (!config)
     return fail(
-      "No se puede cerrar: esa persona no tiene salario configurado en el mes. Configúralo en la pestaña «Configuración».",
+      "No se puede cerrar: esa persona no tiene salario configurado ni en el mes ni en ninguno anterior. Configúralo en la pestaña «Configuración».",
     );
 
   const horas = await horasDelPeriodo(

@@ -21,9 +21,9 @@ import {
   NOMINA_ESTADO_CLASSES,
   NOMINA_ESTADO_LABELS,
   etiquetaPeriodo,
-  formatearPesos,
   normalizarSnapshot,
 } from "@/lib/nomina";
+import { formatearPesos } from "@/lib/dinero";
 import type { NominaLiquidacionRecord } from "@/lib/admin-types";
 import { Badge } from "@/components/admin/ui-base";
 import { Banknote, Download, Info } from "@/lib/icons";

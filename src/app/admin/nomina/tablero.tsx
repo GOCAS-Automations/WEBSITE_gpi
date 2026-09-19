@@ -15,7 +15,7 @@
  * de verdad hace falta para una serie histórica; la pantalla lo marca.
  */
 
-import { listLiquidaciones, listProfiles, mapaNominaConfigs } from "@/lib/admin";
+import { listLiquidaciones, listProfiles, mapaNominaConfigsVigentes } from "@/lib/admin";
 import { hoyEnColombia } from "@/lib/jornada";
 import {
   minutosVacios,
@@ -41,8 +41,9 @@ export async function TableroView({
     listProfiles(),
   ]);
 
-  // Las configuraciones hacen falta solo para los borradores (el resto ya trae
-  // su snapshot): se piden agrupadas por mes para no hacer una consulta por fila.
+  // Las configuraciones VIGENTES («vigente desde»: la del mes o la heredada)
+  // hacen falta solo para los borradores (el resto ya trae su snapshot): se
+  // piden agrupadas por mes para no hacer una consulta por fila.
   const mesesConBorrador = [
     ...new Set(
       liquidaciones
@@ -55,7 +56,7 @@ export async function TableroView({
     await Promise.all(
       mesesConBorrador.map(async (clave) => {
         const [a, m] = clave.split("-").map(Number);
-        return [clave, await mapaNominaConfigs(a, m)] as const;
+        return [clave, await mapaNominaConfigsVigentes(a, m)] as const;
       }),
     ),
   );

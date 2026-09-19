@@ -49,11 +49,16 @@ import {
   NOMINA_ESTADO_LABELS,
   etiquetaPeriodo,
   formatearHorasNomina,
-  formatearPesos,
   type LiquidacionCalculada,
   type NominaEstado,
   type TipoPeriodo,
 } from "@/lib/nomina";
+import {
+  formatearDinero,
+  formatearNumero,
+  formatearPesos,
+  formatearPorcentaje,
+} from "@/lib/dinero";
 import type { EmpresaSettings } from "@/data/site";
 
 /* ------------------------------------------------------------------ */
@@ -407,7 +412,7 @@ function VolanteDocument({
               etiqueta="Período"
               valor={`${fecha(periodo.fechaInicio)} – ${fecha(periodo.fechaFin)}`}
             />
-            <Dato etiqueta="Días" valor={String(datos.dias)} />
+            <Dato etiqueta="Días" valor={formatearNumero(c.dias)} />
             <Dato etiqueta="Fecha de pago" valor={fecha(datos.fechaPago)} />
             <Dato etiqueta="Estado" valor={NOMINA_ESTADO_LABELS[datos.estado]} />
           </View>
@@ -421,16 +426,16 @@ function VolanteDocument({
 
             <Renglon
               concepto="Sueldo del período"
-              nota={`Salario mensual ${formatearPesos(c.salarioBasico)} ÷ 30 × ${datos.dias} días`}
-              cantidad={`${datos.dias} días`}
+              nota={`Salario mensual ${formatearPesos(c.salarioBasico)} ÷ 30 × ${formatearNumero(c.dias)} días`}
+              cantidad={`${formatearNumero(c.dias)} días`}
               valor={formatearPesos(c.basico)}
             />
 
             {c.auxTransporte > 0 && (
               <Renglon
                 concepto="Auxilio de transporte"
-                nota={`Auxilio mensual ${formatearPesos(c.auxTransporteMensual)} ÷ 30 × ${datos.dias} días`}
-                cantidad={`${datos.dias} días`}
+                nota={`Auxilio mensual ${formatearPesos(c.auxTransporteMensual)} ÷ 30 × ${formatearNumero(c.dias)} días`}
+                cantidad={`${formatearNumero(c.dias)} días`}
                 valor={formatearPesos(c.auxTransporte)}
               />
             )}
@@ -445,7 +450,7 @@ function VolanteDocument({
                     : "Ya incluidas en el sueldo del período"
                 }
                 cantidad={formatearHorasNomina(l.minutos)}
-                unitario={l.sePaga ? formatearPesos(l.tarifa) : ""}
+                unitario={l.sePaga ? formatearDinero(l.tarifa) : ""}
                 valor={l.sePaga ? formatearPesos(l.valor) : "incluido"}
                 apagado={!l.sePaga}
               />
@@ -472,14 +477,14 @@ function VolanteDocument({
 
             <Renglon
               concepto="Salud"
-              nota={`${c.pctSalud} % sobre ${formatearPesos(c.baseSeguridadSocial)} (sueldo + horas y recargos)`}
-              cantidad={`${c.pctSalud} %`}
+              nota={`${formatearPorcentaje(c.pctSalud)} % sobre ${formatearPesos(c.baseSeguridadSocial)} (sueldo + horas y recargos)`}
+              cantidad={`${formatearPorcentaje(c.pctSalud)} %`}
               valor={formatearPesos(c.salud)}
             />
             <Renglon
               concepto="Pensión"
-              nota={`${c.pctPension} % sobre ${formatearPesos(c.baseSeguridadSocial)}`}
-              cantidad={`${c.pctPension} %`}
+              nota={`${formatearPorcentaje(c.pctPension)} % sobre ${formatearPesos(c.baseSeguridadSocial)}`}
+              cantidad={`${formatearPorcentaje(c.pctPension)} %`}
               valor={formatearPesos(c.pension)}
             />
 

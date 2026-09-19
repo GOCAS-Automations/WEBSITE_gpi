@@ -331,12 +331,13 @@ export const JORNADA_FILTRO_ESTADO_DEFECTO: JornadaStatus | "todas" = "pendiente
 /* ------------------------------------------------------------------ */
 
 /**
- * Configuración de nómina de un empleado en un mes, tal como está en
- * `nomina_config_mensual`. `id` es `null` cuando el mes todavía no existe en la
- * base de datos y la pantalla muestra los valores sugeridos.
+ * Una fila de `nomina_config_mensual`: la configuración de nómina que un
+ * empleado tiene **desde** ese mes (modelo «vigente desde», 18 sep 2026). Rige
+ * para ese mes y los siguientes hasta la próxima fila; la resolución vive en
+ * `configVigente()` / `estadoConfigMes()` de `src/lib/nomina.ts`.
  */
 export interface NominaConfigRecord {
-  id: string | null;
+  id: string;
   employee_id: string;
   anio: number;
   mes: number;
@@ -345,17 +346,13 @@ export interface NominaConfigRecord {
   tarifas: TarifasNomina;
   pct_salud: number;
   pct_pension: number;
-  /** Fila del mes anterior de la que se copió. `null` = valores sugeridos. */
+  /**
+   * LEGADO del modelo anterior (se copiaba el mes anterior al abrir un mes).
+   * Ya no se escribe ni se lee para decidir nada.
+   */
   copiado_de: string | null;
   updated_at: string | null;
 }
-
-/** De dónde salió la configuración que se está mostrando. */
-export type OrigenNominaConfig =
-  | "existente"
-  | "mes-anterior"
-  | "sugerida"
-  | "sin-guardar";
 
 /** Una liquidación de `nomina_liquidaciones`. */
 export interface NominaLiquidacionRecord {
@@ -438,7 +435,12 @@ export interface FilaNomina {
   jornadas: number;
   pendientes: number;
 
-  /** false = esa persona no tiene salario configurado en el mes. */
+  /**
+   * false = esa persona no tiene salario configurado ni en el mes ni en
+   * ninguno anterior (modelo «vigente desde»).
+   */
   tieneConfig: boolean;
   salario: number;
+  /** Mes en que se guardó la configuración que rige (`null` = sin configurar). */
+  configDesde: { anio: number; mes: number } | null;
 }

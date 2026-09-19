@@ -5,19 +5,27 @@
  * el **volante de pago real** que GPI le entregó a Santiago Córdoba el 15 de
  * septiembre de 2026, más el resto de reglas del módulo (mapeo del desglose de
  * jornadas, composición de la hora festiva nocturna, snapshot congelado y
- * períodos).
+ * períodos). Desde el 18 sep 2026 prueba además:
+ *   · `src/lib/dinero.ts`, el módulo ÚNICO de formato y lectura de dinero en
+ *     formato colombiano (punto de miles, coma decimal) que usan el campo del
+ *     panel, las server actions y el volante — con el caso del bug de las
+ *     tarifas ×100 y el caso ambiguo de un solo punto;
+ *   · la resolución «vigente desde» de la configuración mensual
+ *     (`configVigente` / `estadoConfigMes` de `nomina.ts`).
  *
  * CÓMO SE EJECUTA
  *   node --experimental-strip-types scripts/pruebas-nomina.mjs
  *
- * (Node 22 sabe leer TypeScript quitándole los tipos; por eso `nomina.ts` no
- * importa NADA en tiempo de ejecución, solo tipos. Si alguna vez deja de ser un
- * módulo puro, esta prueba deja de arrancar: es intencional.)
+ * (Node 22 sabe leer TypeScript quitándole los tipos; por eso `nomina.ts` y
+ * `dinero.ts` no importan NADA en tiempo de ejecución, solo tipos. Si alguna
+ * vez dejan de ser módulos puros, esta prueba deja de arrancar: es
+ * intencional.)
  *
  * Sale con código 1 si alguna comprobación falla, para poder encadenarlo.
  */
 
 const nomina = await import("../src/lib/nomina.ts");
+const dinero = await import("../src/lib/dinero.ts");
 
 const {
   CONCEPTOS_HORA,
@@ -25,9 +33,10 @@ const {
   FACTORES_TARIFA,
   calcularLiquidacion,
   construirSnapshot,
+  configVigente,
   derivarTarifas,
+  estadoConfigMes,
   etiquetaPeriodo,
-  formatearPesos,
   manualesVacios,
   minutosVacios,
   normalizarManuales,
@@ -37,6 +46,18 @@ const {
   sumarMinutos,
   tarifaDeConcepto,
 } = nomina;
+
+const {
+  formatearDinero,
+  formatearMiles,
+  formatearNumero,
+  formatearPesos,
+  formatearPorcentaje,
+  parsearNumero,
+  reformatearEntrada,
+  textoDeEntrada,
+  valorLimpio,
+} = dinero;
 
 /* ------------------------------------------------------------------ */
 /* Mini arnés de pruebas                                               */
@@ -413,6 +434,163 @@ comprobar("un salario inválido se trata como 0", basura.basico, 0);
 comprobar("los días se topan en 31", basura.dias, 31);
 comprobar("un porcentaje se topa en 100", basura.pctSalud, 100);
 comprobar("un porcentaje negativo se topa en 0", basura.pctPension, 0);
+
+/* ================================================================== */
+/* 9. Dinero: lectura en formato colombiano (src/lib/dinero.ts)        */
+/* ================================================================== */
+
+grupoDe("Dinero — leer lo que escribe o pega una persona (parsearNumero)");
+
+const casosLectura = [
+  // [texto, esperado, por qué]
+  ["1.300.000", 1_300_000, "miles con punto"],
+  ["9.115,08", 9115.08, "miles con punto y coma decimal"],
+  ["9115,08", 9115.08, "coma decimal sin miles"],
+  ["1300000", 1_300_000, "solo cifras"],
+  ["9115.08", 9115.08, "EL BUG: punto decimal de un <input type=number> (antes se guardaba 911.508)"],
+  ["9.115", 9115, "CASO AMBIGUO: un punto seguido de 3 cifras = miles (formato colombiano)"],
+  ["1.300", 1300, "otro punto de miles con 3 cifras"],
+  ["4,5", 4.5, "porcentaje con coma"],
+  ["4.5", 4.5, "un punto con 1 cifra detrás no puede ser de miles → decimal"],
+  ["12.50", 12.5, "un punto con 2 cifras detrás → decimal"],
+  ["0.125", 0.125, "con cero delante, el punto es decimal"],
+  [" $ 1.300.000 ", 1_300_000, "espacios y signo de pesos"],
+  ["$1.300.000,00", 1_300_000, "con centavos en cero"],
+  ["\u00A0$\u00A09.115,08\u00A0", 9115.08, "espacios duros (copiado de una tabla)"],
+  ["COP 50.000", 50_000, "con la sigla COP"],
+  ["1,300,000.50", 1_300_000.5, "formato inglés pegado de otra hoja: el último separador es el decimal"],
+  ["1,300,000", 1_300_000, "varias comas = miles"],
+  ["-1.500", -1500, "negativo (quien llama decide si lo acepta)"],
+  ["−2.000", -2000, "negativo con el signo menos tipográfico"],
+];
+for (const [texto, esperado, porque] of casosLectura) {
+  comprobar(`«${texto}» → ${esperado} (${porque})`, parsearNumero(texto), esperado);
+}
+
+const casosInvalidos = [
+  ["", "vacío"],
+  ["   ", "solo espacios"],
+  ["$", "solo el signo"],
+  ["abc", "letras"],
+  ["12a", "cifra con letra"],
+  ["1.30.000", "grupo de miles de 2 cifras (error de digitación)"],
+  ["1,2,3", "comas que no son ni miles ni decimal"],
+  ["1.300,000,5", "dos comas decimales"],
+];
+for (const [texto, porque] of casosInvalidos) {
+  comprobar(`«${texto}» → null (${porque})`, parsearNumero(texto), null);
+}
+comprobar("un número ya numérico pasa tal cual", parsearNumero(9115.08), 9115.08);
+comprobar("undefined → null", parsearNumero(undefined), null);
+
+grupoDe("Dinero — escribir con separador de miles");
+
+comprobar("formatearMiles(1300000)", formatearMiles(1_300_000), "1.300.000");
+comprobar("formatearMiles redondea a pesos", formatearMiles(1_255_017.4), "1.255.017");
+comprobar("cuatro cifras también llevan punto", formatearMiles(9115), "9.115");
+comprobar("tres cifras no", formatearMiles(875), "875");
+comprobar("formatearPesos(1255017)", formatearPesos(1_255_017), "$\u00A01.255.017");
+comprobar("formatearPesos negativo", formatearPesos(-42_586), "-$\u00A042.586");
+comprobar("formatearDinero con centavos", formatearDinero(9115.08), "$\u00A09.115,08");
+comprobar("formatearDinero rellena a dos decimales", formatearDinero(9115.5), "$\u00A09.115,50");
+comprobar("formatearDinero sin centavos no los pinta", formatearDinero(10_000), "$\u00A010.000");
+comprobar("formatearNumero(9115.08)", formatearNumero(9115.08), "9.115,08");
+comprobar("formatearNumero(1.25) (un factor)", formatearNumero(1.25), "1,25");
+comprobar("formatearPorcentaje(4)", formatearPorcentaje(4), "4");
+comprobar("formatearPorcentaje(4.5) sin miles y con coma", formatearPorcentaje(4.5), "4,5");
+comprobar("formatearNumero(0)", formatearNumero(0), "0");
+
+// Ida y vuelta: todo lo que se escribe se vuelve a leer igual.
+for (const n of [0, 5, 875, 9115, 9115.08, 9115.5, 1_300_000, 1_750_095, 123_456_789.99]) {
+  comprobar(
+    `ida y vuelta de ${n} (formatearNumero → parsearNumero)`,
+    parsearNumero(formatearNumero(n)),
+    n,
+  );
+}
+
+grupoDe("Dinero — el campo mientras se escribe (reformatearEntrada)");
+
+const entrada = (texto, cursor, opciones) =>
+  JSON.stringify(reformatearEntrada(texto, cursor, opciones));
+const esperado = (texto, cursor) => JSON.stringify({ texto, cursor });
+
+comprobar("escribir 1300000 → 1.300.000, cursor al final", entrada("1300000", 7), esperado("1.300.000", 9));
+comprobar("añadir un 0 a «1.300» → «13.000» sin saltar el cursor", entrada("1.3000", 6), esperado("13.000", 6));
+comprobar("escribir en medio mantiene el cursor tras la misma cifra", entrada("1.3500.000", 4), esperado("13.500.000", 4));
+comprobar("borrar la primera cifra de «1.300.000»", entrada(".300.000", 0), esperado("300.000", 0));
+comprobar("coma decimal en una tarifa", entrada("9.115,08", 8, { decimales: 2 }), esperado("9.115,08", 8));
+comprobar("no deja más de 2 decimales", entrada("9.115,089", 9, { decimales: 2 }), esperado("9.115,08", 8));
+comprobar("en pesos enteros la coma se ignora", entrada("9115,5", 6), esperado("91.155", 6));
+comprobar("«,5» → «0,5»", entrada(",5", 2, { decimales: 2 }), esperado("0,5", 3));
+comprobar("ceros a la izquierda fuera", entrada("0007", 4), esperado("7", 1));
+comprobar("letras fuera, el cursor no se mueve de más", entrada("12a3", 3), esperado("123", 2));
+comprobar("porcentaje: el punto es la coma", entrada("4.5", 3, { decimales: 2, miles: false }), esperado("4,5", 3));
+comprobar("porcentaje: sin puntos de miles", entrada("1000", 4, { decimales: 2, miles: false }), esperado("1000", 4));
+comprobar("vacío", entrada("", 0), esperado("", 0));
+
+comprobar("textoDeEntrada de una tarifa", textoDeEntrada(9115.08, { decimales: 2 }), "9.115,08");
+comprobar("textoDeEntrada de un salario", textoDeEntrada(1_300_000), "1.300.000");
+comprobar("textoDeEntrada de 0 queda vacío", textoDeEntrada(0), "");
+comprobar("…salvo en un porcentaje", textoDeEntrada(0, { decimales: 2, miles: false, vacioSiCero: false }), "0");
+comprobar("valor LIMPIO que viaja al servidor: «1.300.000» → «1300000»", valorLimpio("1.300.000"), "1300000");
+comprobar("valor LIMPIO de «9.115,08» → «9115.08»", valorLimpio("9.115,08"), "9115.08");
+comprobar(
+  "y el servidor lo vuelve a leer igual (ni ×100 ni ÷100)",
+  parsearNumero(valorLimpio("9.115,08")),
+  9115.08,
+);
+comprobar("valor LIMPIO de un campo vacío", valorLimpio(""), "");
+
+/* ================================================================== */
+/* 10. Configuración «vigente desde»                                   */
+/* ================================================================== */
+
+grupoDe("Configuración «vigente desde»: un cambio rige hacia adelante");
+
+const fila = (anio, mes, salario) => ({ anio, mes, salario_basico: salario, id: `${anio}-${mes}` });
+const agosto = fila(2026, 8, 1_300_000);
+let filas = [agosto];
+
+const vig = (a, m) => configVigente(filas, a, m)?.id ?? null;
+comprobar("agosto se usa en agosto", vig(2026, 8), "2026-8");
+comprobar("…lo hereda septiembre", vig(2026, 9), "2026-8");
+comprobar("…octubre", vig(2026, 10), "2026-8");
+comprobar("…diciembre", vig(2026, 12), "2026-8");
+comprobar("…y enero del año siguiente", vig(2027, 1), "2026-8");
+comprobar("julio (antes del primer cambio) no tiene configuración", vig(2026, 7), null);
+
+const octubre = fila(2026, 10, 1_500_000);
+filas = [agosto, octubre];
+comprobar("con un cambio en octubre, septiembre sigue con agosto", vig(2026, 9), "2026-8");
+comprobar("octubre usa su propio cambio", vig(2026, 10), "2026-10");
+comprobar("noviembre hereda octubre", vig(2026, 11), "2026-10");
+comprobar("marzo del año siguiente también", vig(2027, 3), "2026-10");
+
+const estOct = estadoConfigMes(filas, 2026, 10);
+comprobar("octubre: origen «propia»", estOct.origen, "propia");
+comprobar("octubre: al quitar el cambio volvería a agosto", estOct.alQuitar?.id ?? null, "2026-8");
+const estNov = estadoConfigMes(filas, 2026, 11);
+comprobar("noviembre: origen «heredada»", estNov.origen, "heredada");
+comprobar("noviembre: hereda de octubre", estNov.vigente?.id ?? null, "2026-10");
+const estSep = estadoConfigMes(filas, 2026, 9);
+comprobar("septiembre: el próximo cambio es octubre", estSep.siguiente?.id ?? null, "2026-10");
+comprobar("julio: origen «ninguna»", estadoConfigMes(filas, 2026, 7).origen, "ninguna");
+
+// Quitar el cambio de octubre = borrar su fila.
+filas = [agosto];
+comprobar("sin el cambio de octubre, octubre vuelve a heredar agosto", vig(2026, 10), "2026-8");
+comprobar("y noviembre también", vig(2026, 11), "2026-8");
+comprobar("agosto: quitarlo dejaría a la persona sin configuración", estadoConfigMes(filas, 2026, 8).alQuitar, null);
+
+// Las filas vacías del modelo anterior (se creaban en cero al abrir un mes)
+// no cuentan: no tapan lo heredado.
+filas = [agosto, fila(2026, 9, 0)];
+comprobar("una fila en cero (resto del modelo anterior) no tapa lo heredado", vig(2026, 9), "2026-8");
+comprobar("…y septiembre figura como heredado", estadoConfigMes(filas, 2026, 9).origen, "heredada");
+comprobar("…ni cuenta como cambio guardado", estadoConfigMes(filas, 2026, 9).cambios.length, 1);
+comprobar("el orden de las filas no importa", configVigente([octubre, agosto], 2026, 12)?.id ?? null, "2026-10");
+comprobar("diciembre → enero cruza el año", configVigente([fila(2026, 12, 2_000_000)], 2027, 1)?.id ?? null, "2026-12");
 
 /* ------------------------------------------------------------------ */
 
