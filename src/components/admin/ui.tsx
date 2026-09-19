@@ -86,6 +86,36 @@ export const AYUDA_CALENDARIO_NOTAS =
 export const AYUDA_CALENDARIO_RESPONSABLES =
   "Un evento puede tener varios responsables: cuentas del portal —a quienes les aparece en Mi Cuenta y pueden dejar notas— y personas externas (un contratista, el contacto del cliente) cuyo nombre se escribe a mano con la opción «Otro». Los externos quedan registrados, pero no reciben acceso al sistema.";
 
+/* --- Nómina (migración 0011) -------------------------------------- */
+
+/** Qué es el módulo de nómina y de dónde saca las cifras. */
+export const AYUDA_NOMINA =
+  "Aquí se calcula, empleado por empleado, lo que hay que pagarle en cada período. Las horas salen SOLAS de las jornadas que ya aprobaste; el salario y el valor de cada tipo de hora se configuran en la pestaña «Configuración», y los bonos, préstamos y demás se digitan al abrir cada empleado.";
+
+/** Qué es un período y por qué no es texto libre. */
+export const AYUDA_NOMINA_PERIODO =
+  "Se liquida por quincena (del 1 al 15 y del 16 al último día del mes) o por mes completo. El período no se escribe a mano: se elige el mes y la quincena, y las fechas salen del calendario. Los DÍAS liquidados, en cambio, siguen la convención de nómina de mes de 30 días: una quincena completa son 15 días, tenga el mes 28 o 31.";
+
+/** La regla que más confunde: el salario ya paga las horas ordinarias. */
+export const AYUDA_NOMINA_TARIFAS =
+  "El salario básico ya paga las horas ordinarias diurnas: esas NO se suman aparte. Las siete tarifas son pesos por hora que se pagan ADEMÁS del salario. La «hora de rotación diurna» es solo la referencia con la que se calculan las otras. La «rotación nocturna» es un RECARGO: se paga por cada hora ordinaria trabajada de noche, porque la hora en sí ya está en el salario.";
+
+/** De dónde salen los valores sugeridos y qué está pendiente de confirmar. */
+export const AYUDA_NOMINA_SUGERIDAS =
+  "Los valores sugeridos salen del salario (salario ÷ 240 × el factor de cada tipo de hora) usando los factores del Excel que GPI usa hoy. Puedes sobrescribir cualquiera. Ojo con las tres tarifas de domingo y festivo: en el Excel de GPI la hora extra diurna en festivo tiene el mismo valor que la hora ordinaria en festivo, lo que parece un error de la plantilla, así que esa se sugiere con el valor de ley. Conviene confirmar las tres con la gerencia.";
+
+/** Por qué una liquidación cerrada ya no cambia (mismo espíritu que el desglose congelado). */
+export const AYUDA_NOMINA_CERRAR =
+  "Mientras está en BORRADOR, la liquidación se recalcula sola: si apruebas otra jornada o corriges una tarifa, la cifra cambia. Al CERRARLA queda congelada tal como está y ya no se mueve, aunque después se toque un horario o un valor. «Marcar pagada» solo añade la fecha en que se giró. Reabrir vuelve a borrador y borra el cálculo congelado: úsalo únicamente si hay que corregir algo.";
+
+/** Las jornadas pendientes no se pagan. */
+export const AYUDA_NOMINA_PENDIENTES =
+  "Solo entran a la nómina las jornadas APROBADAS. Si en el período quedan jornadas pendientes de revisión, sus horas no se pagan: apruébalas primero en «Jornadas» y la liquidación se actualizará sola mientras siga en borrador.";
+
+/** Qué es el volante y qué lleva. */
+export const AYUDA_NOMINA_VOLANTE =
+  "El volante es el comprobante de nómina que se le entrega al empleado: lleva sus datos, el período con fechas reales, el detalle de horas con su valor, los devengados, los descuentos y el neto a pagar, con espacio para las dos firmas. Se descarga en PDF y el empleado también puede bajarlo desde su Mi Cuenta cuando la liquidación está cerrada o pagada.";
+
 /** Qué es el apodo de una cuenta y quién puede cambiarlo (migración 0010). */
 export const AYUDA_APODO =
   "Nombre corto con el que se identifica a la persona en el calendario y en las tablas (por ejemplo, «YC» para Yeison Camacho). Lo pueden cambiar el administrador y el coordinador; donde hay espacio se sigue mostrando el nombre completo.";

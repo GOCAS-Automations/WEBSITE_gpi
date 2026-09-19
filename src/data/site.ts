@@ -284,8 +284,27 @@ export interface VisibilitySettings {
   nosotrosFaq: boolean;
 }
 
+/**
+ * DATOS DE LA EMPRESA PARA DOCUMENTOS INTERNOS (migración 0011).
+ *
+ * Solo los usa el **volante de pago de nómina**: no salen al sitio público (la
+ * razón social que se publica es `contact.legalName`). Son editables desde
+ * `/admin/ajustes` porque el NIT que imprime el volante actual de GPI
+ * (901.638.649-7) **no coincide** con el que figura en los documentos
+ * comerciales del proyecto (901.877.993-0) y está pendiente de confirmar con el
+ * cliente: tiene que poder corregirse sin tocar código.
+ */
+export interface EmpresaSettings {
+  razonSocial: string;
+  nit: string;
+  ciudad: string;
+  /** Línea al pie del volante (por ejemplo, para qué se entrega). */
+  notaVolante: string;
+}
+
 export interface SiteSettings {
   contact: ContactSettings;
+  empresa: EmpresaSettings;
   hero: HeroSettings;
   excellence: ExcellenceSettings;
   youtube: YouTubeSettings;
@@ -581,6 +600,17 @@ export const nosotrosDefaults: NosotrosSettings = {
   },
 };
 
+/**
+ * Valores iniciales del volante: los que imprime HOY el comprobante de GPI.
+ * El NIT está pendiente de confirmación (ver `EmpresaSettings`).
+ */
+export const empresaDefaults: EmpresaSettings = {
+  razonSocial: "GRUPO DE PROFESIONALES EN INGENIERÍA S.A.S. — GPI S.A.S.",
+  nit: "901.638.649-7",
+  ciudad: "Cali, Valle del Cauca",
+  notaVolante: "Este comprobante se entrega impreso para firma de recibido.",
+};
+
 export const visibilityDefaults: VisibilitySettings = {
   valuesSection: true,
   clientsSection: true,
@@ -609,6 +639,7 @@ export const youtubeDefaults: YouTubeSettings = {
 
 export const siteSettingsDefaults: SiteSettings = {
   contact: contactDefaults,
+  empresa: empresaDefaults,
   hero: heroDefaults,
   excellence: excellenceDefaults,
   youtube: youtubeDefaults,
@@ -751,6 +782,29 @@ export function normalizarContact(value: unknown): ContactSettings {
   }
 
   return contact;
+}
+
+/**
+ * Datos de la empresa para el volante de nómina. Un campo vacío cae en el
+ * respaldo: el comprobante nunca puede salir sin razón social ni NIT.
+ */
+export function normalizarEmpresa(value: unknown): EmpresaSettings {
+  const entrada = isRecord(value) ? value : {};
+  const campo = (clave: keyof EmpresaSettings) =>
+    typeof entrada[clave] === "string" && (entrada[clave] as string).trim() !== ""
+      ? (entrada[clave] as string).trim()
+      : empresaDefaults[clave];
+
+  return {
+    razonSocial: campo("razonSocial"),
+    nit: campo("nit"),
+    ciudad: campo("ciudad"),
+    // La nota al pie SÍ puede quedarse vacía a propósito: es opcional.
+    notaVolante:
+      typeof entrada.notaVolante === "string"
+        ? entrada.notaVolante.trim()
+        : empresaDefaults.notaVolante,
+  };
 }
 
 export function normalizarHero(value: unknown): HeroSettings {
@@ -968,6 +1022,9 @@ export function normalizarSettings(map: Map<string, unknown>): SiteSettings {
 
   return {
     contact: normalizarContact(map.get("contact")),
+    // Sin la clave `empresa` (migración 0011 pendiente) el volante de nómina
+    // sale con los datos que imprime el comprobante actual de GPI.
+    empresa: normalizarEmpresa(map.get("empresa")),
     hero: normalizarHero(map.get("hero")),
     excellence,
     youtube: normalizarYouTube(map.get("youtube")),

@@ -10,6 +10,7 @@ import {
   getMapaHorarios,
   listEventos,
   listJornadas,
+  listLiquidaciones,
 } from "@/lib/admin";
 import { isContentEditorRole, ROLE_LABELS } from "@/lib/roles";
 import { hoyEnColombia } from "@/lib/jornada";
@@ -18,6 +19,7 @@ import { IrAlPanel } from "./IrAlPanel";
 import { JornadaForm } from "./JornadaForm";
 import { MisJornadas } from "./MisJornadas";
 import { MisEventos } from "./MisEventos";
+import { MiNomina } from "./MiNomina";
 import { PasswordForm } from "./PasswordForm";
 import { saveJornada, deleteJornada, changeOwnPassword } from "./actions";
 // La acción de las notas vive con el resto del calendario: es la MISMA para el
@@ -31,6 +33,7 @@ import {
   Clock,
   ClockPlus,
   Calendar,
+  Banknote,
 } from "@/lib/icons";
 
 export const metadata: Metadata = {
@@ -50,24 +53,20 @@ const BYPASS_PORTAL = "portal";
  * EL PORTAL ESTÁ EN PESTAÑAS (18 sep 2026)
  * ========================================
  * La pestaña viaja en la dirección con `?seccion=`, igual que el panel usa
- * `?vista=` en Jornadas y Calendario: el enlace se puede compartir y funciona
- * sin JavaScript. Se llama `seccion` y NO `vista` ni `portal` a propósito:
- * `?portal=1` ya significa otra cosa —«quiero el portal aunque tenga panel»— y
- * sigue funcionando igual, combinado con este (`?portal=1&seccion=eventos`).
+ * `?vista=` en Jornadas, Calendario y Nómina: el enlace se puede compartir y
+ * funciona sin JavaScript. Se llama `seccion` y NO `vista` ni `portal` a
+ * propósito: `?portal=1` ya significa otra cosa —«quiero el portal aunque tenga
+ * panel»— y sigue funcionando igual, combinado con este (`?portal=1&seccion=nomina`).
  *
  * Cambiar de pestaña es una navegación completa, así que un formulario a medio
  * llenar se pierde. Se acepta a conciencia: mantener las tres secciones montadas
  * a la vez para conservar el borrador obligaría a un componente de cliente con
  * estado y a traer todo siempre, y la pestaña por defecto es justamente la del
  * formulario —el empleado entra, registra su jornada y se va—.
- *
- * Son TRES pestañas. La cuarta, «Mi nómina», está construida pero fuera del
- * despliegue: vive en la rama de respaldo `nomina-wip` hasta que GPI termine de
- * probar la nómina (ver `docs/PLAN.md`).
  */
-type SeccionPortal = "jornada" | "eventos" | "clave";
+type SeccionPortal = "jornada" | "eventos" | "nomina" | "clave";
 
-const SECCIONES: SeccionPortal[] = ["jornada", "eventos", "clave"];
+const SECCIONES: SeccionPortal[] = ["jornada", "eventos", "nomina", "clave"];
 
 function normalizarSeccion(valor: string | string[] | undefined): SeccionPortal {
   const v = Array.isArray(valor) ? valor[0] : valor;
@@ -208,7 +207,7 @@ async function PortalEmpleado({
 }) {
   const hoy = hoyEnColombia();
 
-  const [jornadas, config, horarios, eventos] = await Promise.all([
+  const [jornadas, config, horarios, eventos, liquidaciones] = await Promise.all([
     listJornadas({ employeeId: profile.id, limit: 100 }),
     getJornadaConfig(),
     getMapaHorarios(),
@@ -220,6 +219,9 @@ async function PortalEmpleado({
       conNotas: true,
       limit: 30,
     }),
+    // Sus propias liquidaciones. La RLS de la 0011 ya filtra: solo las suyas y
+    // solo cuando están cerradas o pagadas, así que aquí no hace falta nada más.
+    listLiquidaciones({ employeeId: profile.id, limit: 24 }),
   ]);
 
   const conPanel = isContentEditorRole(profile.role);
@@ -227,8 +229,8 @@ async function PortalEmpleado({
   const aprobadas = jornadas.filter((j) => j.status === "aprobada").length;
   const rechazadas = jornadas.filter((j) => j.status === "rechazada").length;
 
-  /* Las tres pestañas. El contador es lo que hay ESPERANDO en cada una: las
-     jornadas por revisar y los eventos asignados. */
+  /* Las cuatro pestañas. El contador es lo que hay ESPERANDO en cada una: las
+     jornadas por revisar, los eventos asignados y los volantes disponibles. */
   const pestanas: {
     value: SeccionPortal;
     label: string;
@@ -250,6 +252,13 @@ async function PortalEmpleado({
       corto: "Eventos",
       icon: Calendar,
       badge: eventos.length,
+    },
+    {
+      value: "nomina",
+      label: "Mi nómina",
+      corto: "Nómina",
+      icon: Banknote,
+      badge: liquidaciones.length,
     },
     {
       value: "clave",
@@ -300,13 +309,13 @@ async function PortalEmpleado({
 
       {/* ---------------- Pestañas del portal ----------------
           La sección viaja en `?seccion=`; `?portal=1` se conserva para que las
-          cuentas con panel no reboten al cambiar de pestaña. En móvil son tres
-          columnas con la etiqueta corta, no una tira con desplazamiento
-          horizontal: así se ven las tres de una vez. */}
+          cuentas con panel no reboten al cambiar de pestaña. En móvil son dos
+          filas de dos, no una tira con desplazamiento horizontal: así se ven
+          las cuatro de una vez. */}
       <div className="border-b border-line bg-white">
         <Container className="py-3">
           <nav aria-label="Secciones de Mi Cuenta">
-            <ul className="grid grid-cols-3 gap-1.5 rounded-2xl border border-line bg-mist p-1.5 sm:inline-flex sm:gap-1 sm:rounded-full sm:p-1">
+            <ul className="grid grid-cols-2 gap-1.5 rounded-2xl border border-line bg-mist p-1.5 sm:inline-flex sm:gap-1 sm:rounded-full sm:p-1">
               {pestanas.map((p) => {
                 const activa = p.value === seccion;
                 const Icon = p.icon;
@@ -451,6 +460,9 @@ async function PortalEmpleado({
             nombrePropio={profile.fullName}
           />
         )}
+
+        {/* ---------------- Mi nómina ---------------- */}
+        {seccion === "nomina" && <MiNomina liquidaciones={liquidaciones} />}
 
         {/* ---------------- Mi contraseña ---------------- */}
         {seccion === "clave" && (

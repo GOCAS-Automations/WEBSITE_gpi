@@ -1176,15 +1176,6 @@ errores de consola, y todas las filas de prueba borradas al terminar.
 
 ## Iteración del 17–18 de septiembre de 2026 — sistema de nómina y volante de pago
 
-> ⛔ **CONSTRUIDO PERO NO DESPLEGADO.** Todo lo que describe esta sección
-> existe y funciona, pero **no está en producción**: el 18 de septiembre GPI
-> pidió publicar primero el calendario y seguir probando la nómina aparte, así
-> que el módulo se sacó del árbol desplegable con un `git revert` (ver la
-> última iteración de este documento). **El código —incluida la migración
-> `0011_nomina.sql`— vive íntegro en la rama `nomina-wip`.** La 0011 **ya está
-> aplicada** en el GPI Project: sus tablas existen vacías y **no hay que
-> revertirlas**.
-
 La segunda funcionalidad que pidió la gerencia en la reunión del 16 de
 septiembre: que los administradores vean **automáticamente la nómina
 desglosada** de cada empleado, a partir de las jornadas ya aprobadas,
@@ -1435,11 +1426,6 @@ panel usa `?vista=`:
   del formulario.
 - Enlaces con `prefetch={false}`, como todo el panel.
 
-> **Hoy son TRES pestañas, no cuatro.** «Mi nómina» salió del despliegue junto
-> con el resto del módulo de nómina (ver la última iteración): en producción
-> quedan *Registrar jornada*, *Mis eventos* y *Mi contraseña*, y en el teléfono
-> se ven en **tres columnas** en vez de dos filas de dos.
-
 ### 5. Verificación
 
 `npm run lint` y `npm run build` en verde. Prueba de punta a punta contra
@@ -1653,6 +1639,52 @@ Playwright contra `localhost`:
   `coordinador` (aprueban jornadas, gestionan cuentas y editan los horarios del
   mes) frente a **Community Manager** (solo contenido del sitio + sus propias
   jornadas).
+
+### Dudas abiertas de NÓMINA (17–18 sep 2026)
+
+Salen del análisis del Excel `NOMINA_LIQUIDACION.xlsx` y del volante real de
+GPI. Ninguna bloquea el módulo —**todo es configurable desde el panel**—, pero
+conviene cerrarlas antes de liquidar de verdad.
+
+1. **Tarifas de domingo y festivo** ⚠️ *(la más importante: es dinero)*. El
+   Excel de GPI usa 2,15 / 2,15 / 2,65 (festivo ordinario / extra diurna
+   festiva / extra nocturna festiva) sobre el valor hora; la ley vigente y los
+   valores por defecto de la webapp (`jornada_config`) dan 1,80 / 2,05 / 2,55.
+   Además, en el Excel «hora en festivo» y «hora extra diurna en festivo»
+   tienen **el mismo** valor, lo que parece una fórmula copiada. ¿Cuáles son
+   las tres tarifas reales?
+2. **Divisor del valor hora**: el Excel usa `salario / 240` («30 días × 8 h»),
+   anterior a la Ley 2101; GPI ya trabaja 42 h semanales. ¿Se mantiene 240 como
+   convención de nómina o se recalcula?
+3. **Auxilio de transporte 2026**: ¿cuál es el valor mensual vigente que debe
+   quedar por defecto? (El Excel tiene un valor viejo en una fórmula sin usar y
+   valores digitados a mano en las filas reales.)
+4. **«Rotación nocturna»**: se implementó como **recargo aditivo** sobre la
+   hora ordinaria nocturna (la hora ya la paga el salario), que es como lo hace
+   el Excel. ¿GPI lo entiende así, o espera digitar un valor absoluto que
+   reemplace el salario de esas horas?
+5. **Hora ordinaria NOCTURNA en festivo**: no existe como tarifa ni en el Excel
+   ni en el pedido de la gerencia. Se paga como **festivo + rotación nocturna**
+   y se muestra como línea propia. ¿Se acepta o quieren una octava tarifa?
+6. **Período**: el único ejemplo real es quincenal. ¿Alguien se liquida por mes
+   completo? (El módulo soporta los dos.)
+7. **Prima y cesantías**: hoy entran como **campos manuales** del período
+   cuando corresponde pagarlas. ¿Se quiere que el sistema las calcule (proceso
+   semestral/anual aparte) o siguen a cargo del contador?
+8. **NIT y razón social del volante** ⚠️: el comprobante actual imprime
+   **901.638.649-7**, pero en los documentos comerciales del proyecto aparece
+   **901.877.993-0**. Se dejó el del comprobante como valor inicial y es
+   editable en `/admin/ajustes`. **Confirmar cuál es el correcto.**
+9. **«Bono» vs «Bono cumplimiento» vs «Comisiones»**: el Excel usa las tres
+   etiquetas en distintas copias del mismo bloque. ¿Son tres conceptos reales y
+   simultáneos o nombres alternativos según el cargo? (Hoy existen los tres.)
+10. **Préstamos por cuotas**: hoy se digita la cuota de cada período. ¿Hace
+    falta que el sistema lleve el **saldo** del préstamo y lo descuente solo
+    hasta agotarlo?
+11. **Costo patronal**: el módulo liquida lo que se le paga al empleado. Las
+    provisiones (cesantías, intereses, vacaciones, prima) y los aportes
+    patronales (caja, pensión, ARL) que el Excel calcula agregados **no** se
+    construyeron. ¿Se quieren en una fase 2 del módulo?
 
 ## Referencias
 

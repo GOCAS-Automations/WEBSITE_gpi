@@ -6,6 +6,7 @@ import { getContentEditorOrNull, type Session } from "@/lib/supabase/auth";
 import {
   contactDefaults,
   esCorreoValido,
+  normalizarEmpresa,
   normalizarExcellence,
   normalizarHome,
   normalizarNosotros,
@@ -1108,6 +1109,46 @@ export async function saveVisibilitySettings(
   formData: FormData,
 ): Promise<ActionState> {
   return guardarVisibilidad(["valuesSection"], formData);
+}
+
+/* ------------------------------------------------------------------ */
+/* Datos de la empresa para el volante de nómina (migración 0011)      */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Razón social, NIT y ciudad que se imprimen en el comprobante de nómina.
+ *
+ * No salen al sitio público (para eso está `contact.legalName`): son datos de
+ * documento interno. Se editan desde aquí porque el NIT del volante actual de
+ * GPI **está pendiente de confirmar** con el cliente y tiene que poder
+ * corregirse sin tocar código. Un campo vacío cae en el respaldo, así que el
+ * volante nunca sale sin razón social ni NIT.
+ */
+export async function saveEmpresaSettings(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await getContentEditorOrNull();
+  if (!session) return NOT_ADMIN;
+
+  // Lectura previa: la clave es pequeña, pero se respeta el mismo patrón que el
+  // resto de los ajustes por si mañana crece.
+  const actual = normalizarEmpresa(await leerSetting(session, "empresa"));
+
+  const value = normalizarEmpresa({
+    razonSocial: text(formData, "razonSocial") || actual.razonSocial,
+    nit: text(formData, "nit") || actual.nit,
+    ciudad: text(formData, "ciudad"),
+    notaVolante: text(formData, "notaVolante"),
+  });
+
+  const estado = await upsertConSesion(session, "empresa", value);
+  if (estado.status === "success") {
+    // El volante se genera en el servidor: las pantallas de nómina tienen que
+    // volver a leer los datos de la empresa.
+    revalidatePath("/admin/nomina");
+  }
+  return estado;
 }
 
 /* El cierre de sesión vive en `src/lib/session-actions.ts` (lo comparten el
