@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Manual de uso del sitio web — GPI</title>
 <meta name="author" content="GOCAS Automations">
-<meta name="description" content="Manual de uso del sitio web de GPI — Grupo de Profesionales en Ingeniería GPI S.A.S. Sitio público, Mi Cuenta y panel de administración. Agosto de 2026.">
+<meta name="description" content="Manual de uso del sitio web de GPI — Grupo de Profesionales en Ingeniería GPI S.A.S. Sitio público, Mi Cuenta y panel de administración. Septiembre de 2026.">
 <style>
   :root{
     --verde:#3dae2b;
@@ -451,7 +451,7 @@
   <div class="regla"></div>
   <p class="sub">gpiprofesionales.com<br>Sitio público · Mi Cuenta · Panel de administración</p>
   <p class="pie">
-    Agosto de 2026<br>
+    Septiembre de 2026<br>
     Elaborado por <strong>GOCAS Automations</strong>
   </p>
 </div>
@@ -511,7 +511,9 @@
         <li><a href="#s5-5"><span class="n">5.5</span> Los tres estados</a></li>
         <li><a href="#s5-6"><span class="n">5.6</span> Mis jornadas: el historial</a></li>
         <li><a href="#s5-7"><span class="n">5.7</span> Corregir o eliminar</a></li>
-        <li><a href="#s5-8"><span class="n">5.8</span> El recorrido completo</a></li>
+        <li><a href="#s5-8"><span class="n">5.8</span> Mis eventos</a></li>
+        <li><a href="#s5-9"><span class="n">5.9</span> Mi nómina</a></li>
+        <li><a href="#s5-10"><span class="n">5.10</span> El recorrido completo</a></li>
       </ol>
     </li>
     <li><a href="#c6"><span class="n">6.</span> El panel de administración</a>
@@ -532,6 +534,8 @@
         <li><a href="#s6-14"><span class="n">6.14</span> Horario laboral del mes</a></li>
         <li><a href="#s6-15"><span class="n">6.15</span> Aprobar o rechazar jornadas</a></li>
         <li><a href="#s6-16"><span class="n">6.16</span> Tablero de métricas</a></li>
+        <li><a href="#s6-17"><span class="n">6.17</span> Calendario interno de programación</a></li>
+        <li><a href="#s6-18"><span class="n">6.18</span> Nómina</a></li>
       </ol>
     </li>
     <li><a href="#c7"><span class="n">7.</span> Cómo se calculan las horas extra</a>
@@ -581,9 +585,9 @@
       </thead>
       <tbody>
         <tr><td>Técnico o profesional de campo</td><td>Los capítulos 3, 5 y 7: cómo entrar, cómo registrar sus jornadas y cómo se cuentan sus horas extra.</td></tr>
-        <tr><td>Coordinador</td><td>Todo. En especial 6.13, 6.14, 6.15 y 6.16: cuentas del equipo, horario del mes, aprobaciones y métricas.</td></tr>
+        <tr><td>Coordinador</td><td>Todo. En especial 6.13 a 6.17: cuentas del equipo (con el apodo), horario del mes, aprobaciones, métricas y calendario interno.</td></tr>
         <tr><td>Community Manager</td><td>Los capítulos 2 y 6.2 a 6.12: el sitio público y la edición de contenido e imágenes.</td></tr>
-        <tr><td>Gerencia / administrador</td><td>Todo, con énfasis en el capítulo 4 (roles), el 6.16 (métricas) y el 7 (cálculo de horas).</td></tr>
+        <tr><td>Gerencia / administrador</td><td>Todo, con énfasis en el capítulo 4 (roles), el 6.16 (métricas), el 6.18 (nómina) y el 7 (cálculo de horas).</td></tr>
       </tbody>
     </table>
   </div>
@@ -971,8 +975,8 @@
 
   <h2 id="s3-4"><span class="num">3.4</span> Cambiar su propia contraseña</h2>
   <ol class="steps">
-    <li>Ingrese al portal y baje hasta la sección <span class="ui">Mi contraseña</span>,
-      la última de la página, identificada con un candado.</li>
+    <li>Ingrese al portal y abra la pestaña <span class="ui">Mi contraseña</span>
+      (<code>/mi-cuenta?seccion=clave</code>), la última de las cuatro (ver 5.1).</li>
     <li>Escriba la nueva clave en <span class="ui">Nueva contraseña</span>. Debe tener
       <strong>al menos 8 caracteres</strong>.</li>
     <li>Repítala exactamente igual en <span class="ui">Repite la nueva contraseña</span>.</li>
@@ -1020,14 +1024,17 @@
   <h2 id="s4-2"><span class="num">4.2</span> Los cuatro roles</h2>
   <div class="kpi-grid">
     <div class="kpi"><b>Administrador</b>Control total: contenido del sitio, horarios,
-      cuentas del equipo y aprobación de jornadas.</div>
+      cuentas del equipo, calendario interno, aprobación de jornadas y la
+      <strong>nómina completa</strong>.</div>
     <div class="kpi"><b>Coordinador</b>Contenido del sitio, horarios del mes, cuentas de
-      empleados (no de administradores) y aprobación de jornadas.</div>
+      empleados (no de administradores), calendario interno y aprobación de jornadas. No
+      administra la nómina: de esa ve solo la suya, como cualquier empleado.</div>
     <div class="kpi"><b>Community Manager</b>Edita todo el contenido del sitio —textos,
-      imágenes y ajustes— y registra sus propias jornadas. No gestiona empleados ni las
-      jornadas de otros.</div>
-    <div class="kpi"><b>Empleado</b>Solo su portal en Mi Cuenta, para registrar sus
-      jornadas y consultar su historial.</div>
+      imágenes y ajustes— y registra sus propias jornadas. No gestiona empleados, ni el
+      calendario, ni las jornadas de otros.</div>
+    <div class="kpi"><b>Empleado</b>Su portal en Mi Cuenta, en pestañas: registrar sus
+      jornadas, ver los eventos del calendario en los que es responsable, consultar su
+      nómina ya cerrada y cambiar su contraseña.</div>
   </div>
   <div class="caja nota">
     <span class="titulo">Para tener en cuenta</span>
@@ -1073,15 +1080,22 @@
         <tr><td>Subir imágenes al sitio</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c no">No</td></tr>
         <tr><td>Apagar y encender secciones del sitio</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c no">No</td></tr>
         <tr><td>Crear y gestionar cuentas del equipo</td><td class="c si">Sí</td><td class="c si">Sí <sup>1</sup></td><td class="c no">No</td><td class="c no">No</td></tr>
+        <tr><td>Editar el <strong>apodo</strong> de una cuenta del equipo</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c no">No</td><td class="c no">No</td></tr>
         <tr><td>Definir el horario laboral del mes</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c no">No</td><td class="c no">No</td></tr>
         <tr><td>Aprobar o rechazar jornadas de otros</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c no">No</td><td class="c no">No</td></tr>
         <tr><td>Ver el tablero de métricas y exportar a Excel</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c no">No</td><td class="c no">No</td></tr>
+        <tr><td>Programar, cerrar y aplazar eventos del calendario</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c no">No</td><td class="c no">No</td></tr>
+        <tr><td>Ver sus eventos asignados y dejar notas (<em>Mis eventos</em>)</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c si">Sí</td></tr>
+        <tr><td><strong>Administrar la nómina</strong> (configurar y liquidar)</td><td class="c si">Sí</td><td class="c no">No <sup>2</sup></td><td class="c no">No</td><td class="c no">No</td></tr>
+        <tr><td>Ver y descargar <strong>su propia</strong> nómina (<em>Mi nómina</em>)</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c si">Sí</td></tr>
         <tr><td>Registrar <strong>sus propias</strong> jornadas</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c si">Sí</td></tr>
         <tr><td>Cambiar su propia contraseña</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c si">Sí</td></tr>
       </tbody>
       <caption><sup>1</sup> Un coordinador gestiona cuentas de coordinador, Community Manager
       y empleado. <strong>No</strong> puede crear administradores ni editar, restablecer la
-      contraseña o eliminar la cuenta de un administrador: eso solo lo hace otro administrador.</caption>
+      contraseña o eliminar la cuenta de un administrador: eso solo lo hace otro administrador.
+      <sup>2</sup> Desde el 18 de septiembre de 2026, a pedido de GPI, la nómina la administra
+      únicamente el administrador; antes de esa fecha el coordinador también podía hacerlo.</caption>
     </table>
   </div>
 
@@ -1109,22 +1123,39 @@
   <h2 id="s5-1"><span class="num">5.1</span> Qué verá al entrar</h2>
   <p>Los empleados y el Community Manager llegan a esta pantalla nada más ingresar; los
   administradores y coordinadores entran al panel y llegan aquí con el botón
-  <span class="ui-wrap">Registrar mi jornada</span>. En cualquiera de los dos casos verá,
-  de arriba abajo:</p>
-  <ol class="steps">
-    <li>Una <strong>barra blanca</strong> con el saludo «Hola, <em>su nombre</em>» y, si lo
-      tiene registrado, su cargo. A la derecha, los botones
-      <span class="ui">← Ir al sitio</span> y <span class="ui">Cerrar sesión</span>.</li>
-    <li>Si su rol le da acceso al panel, un recuadro verde con el botón
-      <span class="ui">Ir al panel</span>.</li>
-    <li>Tres <strong>contadores</strong> grandes con su situación actual:
-      <span class="ui">Pendientes de aprobación</span> (ámbar),
-      <span class="ui">Aprobadas</span> (verde) y
-      <span class="ui">Rechazadas</span> (rojo).</li>
-    <li>La sección <span class="ui">Registrar una jornada</span>.</li>
-    <li>La sección <span class="ui">Mis jornadas</span> con todo su historial.</li>
-    <li>La sección <span class="ui">Mi contraseña</span>.</li>
-  </ol>
+  <span class="ui-wrap">Registrar mi jornada</span>. Arriba está la
+  <strong>barra blanca</strong> con el saludo «Hola, <em>su nombre</em>» y, si lo tiene
+  registrado, su cargo; a la derecha, los botones <span class="ui">← Ir al sitio</span> y
+  <span class="ui">Cerrar sesión</span>, y, si su rol le da acceso al panel, un recuadro
+  verde con el botón <span class="ui">Ir al panel</span>.</p>
+
+  <p>Desde el 18 de septiembre de 2026 el portal ya no es una sola página larga: son
+  <strong>cuatro pestañas</strong>, y la pestaña viaja en la dirección —igual que en el
+  panel—, así que el enlace se puede compartir:</p>
+  <div class="tabla-wrap">
+    <table class="keep">
+      <thead><tr><th style="width:26%">Pestaña</th><th style="width:26%">Dirección</th><th>Qué tiene</th></tr></thead>
+      <tbody>
+        <tr><td><span class="ui">Registrar jornada</span> <em>(la que abre por defecto)</em></td><td><code>/mi-cuenta</code></td><td>Los tres contadores, el formulario y el historial «Mis jornadas» (5.2 a 5.7).</td></tr>
+        <tr><td><span class="ui">Mis eventos</span></td><td><code>?seccion=eventos</code></td><td>Los eventos del calendario asignados, de hoy en adelante, con la caja para dejar notas (5.8).</td></tr>
+        <tr><td><span class="ui">Mi nómina</span></td><td><code>?seccion=nomina</code></td><td>Las liquidaciones ya cerradas o pagadas y el volante para descargar (5.9).</td></tr>
+        <tr><td><span class="ui">Mi contraseña</span></td><td><code>?seccion=clave</code></td><td>Cambiar la contraseña (ver 3.4).</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>En el celular las pestañas se ven en <strong>dos filas de dos</strong>, con el nombre
+  corto (<em>Jornada · Eventos · Nómina · Clave</em>). Las tres primeras llevan un
+  contador: las jornadas que están esperando revisión, los eventos asignados y los
+  volantes disponibles. Quien no tenga eventos o volantes ve un mensaje explicando qué va
+  a aparecer ahí, no una pestaña en blanco.</p>
+  <div class="caja warn">
+    <span class="titulo">Atención</span>
+    <p>Al cambiar de pestaña se pierde lo que estuviera escribiendo en el formulario de
+    jornada: <strong>regístrela primero y después mire lo demás</strong>.</p>
+  </div>
+  <p>Las secciones 5.2 a 5.7 de este capítulo describen la pestaña
+  <span class="ui">Registrar jornada</span>; las secciones 5.8 y 5.9, las pestañas
+  <span class="ui">Mis eventos</span> y <span class="ui">Mi nómina</span>.</p>
 
   <h2 id="s5-2"><span class="num">5.2</span> Registrar una jornada, paso a paso</h2>
   <ol class="steps">
@@ -1153,6 +1184,17 @@
   aprobación». Los campos marcados con asterisco verde son obligatorios; si falta alguno,
   el sistema se lo dirá con un mensaje concreto en lugar de guardar a medias. La orden de
   trabajo y las observaciones son los dos campos opcionales.</p>
+
+  <div class="caja warn">
+    <span class="titulo">Atención — no se pueden registrar dos jornadas que se crucen</span>
+    <p>Si el horario que escribe se cruza con otra jornada suya que no esté rechazada, el
+    sistema <strong>no la deja guardar</strong>: le muestra cuál es la otra jornada, con su
+    fecha y sus horas. Si lo que pasó fue que salió y volvió el mismo día, no registre dos
+    tramos: <strong>edite</strong> la jornada que ya tenía y regístrela desde la primera
+    entrada hasta la última salida (puede contar la interrupción en
+    <span class="ui">Observaciones</span>). Si el día ya tenía otra jornada que no se cruza
+    en el horario, el sistema igual se lo recuerda, aunque sí lo deja guardar.</p>
+  </div>
 
   <div class="caja tip">
     <span class="titulo">Consejo</span>
@@ -1233,7 +1275,8 @@
     <li>Un resumen del desglose de horas en etiquetas pequeñas.</li>
   </ul>
   <p>Si todavía no ha registrado nada, verá un recuadro que se lo dice y lo invita a usar
-  el formulario de arriba.</p>
+  el formulario de arriba. Con más de diez jornadas, la lista se reparte en páginas de diez
+  (ver 6.1).</p>
 
   <h2 id="s5-7"><span class="num">5.7</span> Corregir o eliminar una jornada pendiente</h2>
   <ol class="steps">
@@ -1254,7 +1297,40 @@
     crearla.</p>
   </div>
 
-  <h2 id="s5-8"><span class="num">5.8</span> El recorrido completo</h2>
+  <h2 id="s5-8"><span class="num">5.8</span> Mis eventos</h2>
+  <p>En la pestaña <span class="ui">Mis eventos</span> (<code>/mi-cuenta?seccion=eventos</code>)
+  cada persona ve <strong>solo</strong> los eventos del calendario interno (ver 6.17) de
+  hoy en adelante en los que figura como responsable: el día, la hora, qué hay que hacer,
+  con quién lo comparte y el estado, con los mismos colores del panel —gris programado,
+  verde cumplido, rojo incompleto y ámbar aplazado—. Con más de diez eventos, la lista se
+  reparte en páginas de diez.</p>
+  <ul class="check">
+    <li>Puede <strong>dejar una nota</strong> en cualquiera de sus eventos, para contar
+      cómo va o qué encontró.</li>
+    <li><strong>No puede</strong> crear, editar ni cerrar eventos: eso es del
+      administrador y del coordinador.</li>
+  </ul>
+  <div class="caja nota">
+    <span class="titulo">Para tener en cuenta</span>
+    <p>Si no tiene ningún evento asignado, la pestaña no queda en blanco: muestra un
+    mensaje explicando qué va a aparecer ahí en cuanto lo incluyan como responsable de
+    algo.</p>
+  </div>
+
+  <h2 id="s5-9"><span class="num">5.9</span> Mi nómina</h2>
+  <p>En la pestaña <span class="ui">Mi nómina</span> (<code>/mi-cuenta?seccion=nomina</code>)
+  cada persona ve <strong>solo sus</strong> liquidaciones, y <strong>solo cuando están
+  cerradas o pagadas</strong> (ver 6.18): el período, el neto, el estado, la fecha de pago
+  y el botón para descargar su volante en PDF. Con más de diez liquidaciones, la lista se
+  reparte en páginas de diez.</p>
+  <div class="caja nota">
+    <span class="titulo">Para tener en cuenta</span>
+    <p>Las liquidaciones en <strong>borrador</strong> no aparecen aquí a propósito: sus
+    cifras todavía pueden cambiar. Si no tiene ninguna liquidación cerrada, la pestaña lo
+    explica en vez de quedar vacía y muda.</p>
+  </div>
+
+  <h2 id="s5-10"><span class="num">5.10</span> El recorrido completo</h2>
   <div class="flujo">
     <div class="paso"><b>1. El empleado</b>registra su jornada en Mi Cuenta y ve la vista previa de horas</div>
     <div class="flecha">→</div>
@@ -1304,36 +1380,40 @@
   <h3>El menú de secciones</h3>
   <p>En computador aparece como una <strong>columna a la izquierda</strong> que acompaña
   el desplazamiento; en celular, como una <strong>fila de pestañas</strong> que se desliza
-  con el dedo, justo debajo de la barra superior. La sección activa se ve en verde. Desde
-  agosto de 2026 tiene <strong>seis entradas</strong>, siempre en el mismo orden:</p>
+  con el dedo, justo debajo de la barra superior. La sección activa se ve en verde. Hoy
+  tiene <strong>ocho entradas</strong>, siempre en el mismo orden —dos de ellas,
+  <strong>Calendario</strong> y <strong>Nómina</strong>, se sumaron en septiembre de
+  2026—:</p>
   <div class="mapa">
     <b>Dashboard</b> · la pantalla de bienvenida con accesos a todo
     <b style="display:block;margin-top:.5em">Contenido del sitio</b> — visible para administrador, coordinador y Community Manager; abre un índice con una tarjeta por pantalla
     <ul>
       <li><strong>Página de inicio</strong> · primera pantalla, «Quiénes somos» con sus cifras, los títulos de servicios, valores y clientes, la banda oscura y el cierre</li>
       <li><strong>Página Nosotros</strong> · toda la página Nosotros: presentación, misión y visión, galería, línea de tiempo, video y cierre</li>
-      <li><strong>Cabeceras de páginas y pie del sitio</strong> · los textos e imágenes de cabecera de Servicios, Proyectos y Contacto, y la descripción del pie (nueva)</li>
+      <li><strong>Cabeceras de páginas y pie del sitio</strong> · los textos e imágenes de cabecera de Servicios, Proyectos y Contacto, y la descripción del pie</li>
       <li><strong>Servicios</strong> · los once servicios</li>
       <li><strong>Proyectos</strong> · los proyectos ejecutados</li>
       <li><strong>Clientes</strong> · los logos de la portada</li>
       <li><strong>FAQ</strong> · las preguntas frecuentes</li>
       <li><strong>Valores</strong> · los valores corporativos</li>
     </ul>
-    <b style="display:block;margin-top:.5em">Equipo · Horarios · Jornadas</b> — solo administrador y coordinador
+    <b style="display:block;margin-top:.5em">Equipo · Horarios · Jornadas · Calendario</b> — solo administrador y coordinador
     <ul>
-      <li><strong>Equipo</strong> · las cuentas del personal</li>
+      <li><strong>Equipo</strong> · las cuentas del personal, con su apodo (ver 6.13)</li>
       <li><strong>Horarios</strong> · el horario laboral de cada mes</li>
       <li><strong>Jornadas</strong> · aprobaciones y tablero de métricas</li>
+      <li><strong>Calendario</strong> · agenda de eventos, notas y métricas de cumplimiento (ver 6.17)</li>
     </ul>
-    <b style="display:block;margin-top:.5em">Ajustes</b> · datos de contacto, redes sociales, el correo del formulario y la visibilidad de los valores en todo el sitio
+    <b style="display:block;margin-top:.5em">Nómina</b> · liquidación, configuración y tablero — <strong>solo administrador</strong> (ver 6.18)
+    <b style="display:block;margin-top:.5em">Ajustes</b> · datos de contacto, redes sociales, el correo del formulario, los datos de la empresa para el volante de nómina y la visibilidad de los valores en todo el sitio
   </div>
   <div class="caja nota">
     <span class="titulo">Para tener en cuenta</span>
-    <p>El menú tenía antes <strong>doce</strong> entradas y ocho eran pantallas de contenido:
-    se leía como un inventario. Ahora esas ocho viven agrupadas detrás de
-    <strong>Contenido del sitio</strong>. <strong>Ninguna dirección cambió</strong>: si tenía
-    guardado un enlace directo a alguna de esas pantallas, sigue funcionando igual — solo se
-    reorganizó el menú para llegar a ellas.</p>
+    <p>El menú tenía originalmente <strong>doce</strong> entradas y ocho eran pantallas de
+    contenido: se leía como un inventario. Esas ocho viven agrupadas detrás de
+    <strong>Contenido del sitio</strong>, y luego se sumaron Calendario y Nómina.
+    <strong>Ninguna dirección cambió</strong>: si tenía guardado un enlace directo a alguna
+    pantalla, sigue funcionando igual — solo se reorganizó el menú para llegar a ellas.</p>
   </div>
 
   <h3>El Dashboard</h3>
@@ -1341,8 +1421,9 @@
   hacer, ofrece el enlace <span class="ui-wrap">Registrar mi jornada</span> y presenta una
   tarjeta por cada sección del menú, con un contador cuando aplica («11 elementos») y el
   enlace <span class="ui">Administrar</span>. Está dividido en dos grupos, igual que el menú:
-  <strong>Gestión interna</strong> (Equipo, Horarios, Jornadas — solo administrador y
-  coordinador) y <strong>El sitio web</strong> (Contenido del sitio y Contacto y ajustes).
+  <strong>Gestión interna</strong> (Equipo, Horarios, Jornadas y Calendario —solo
+  administrador y coordinador— y Nómina, solo para el administrador) y
+  <strong>El sitio web</strong> (Contenido del sitio y Contacto y ajustes).
   Abajo hay tarjetas de ayuda permanente sobre el guardado, la visibilidad y las imágenes.</p>
 
   <h3>Cómo volver atrás</h3>
@@ -1357,6 +1438,25 @@
   mientras editaba; ahora es lo primero que se lee. En las pantallas de un solo formulario
   (crear o editar un servicio, por ejemplo) el aviso dice en cambio que hay «un solo botón,
   al final».</p>
+
+  <h3>Tablas con diez filas por página</h3>
+  <p>Desde el 19 de septiembre de 2026, <strong>cualquier tabla o listado de registros</strong>
+  del panel —y del portal Mi Cuenta— muestra como máximo <strong>diez filas</strong>, con el
+  mismo control debajo en todas partes: «Mostrando 11–20 de 33» · <span class="ui">Anterior</span>
+  · Página [<em>número escribible</em>] de 4 · <span class="ui">Siguiente</span>. Si todo cabe
+  en una sola página, el control ni siquiera aparece.</p>
+  <p>En las pantallas cuyos filtros viajan en la dirección —Aprobaciones (6.15), Notas del
+  calendario (6.17), Liquidación de nómina (6.18), los listados de contenido, Equipo (6.13)
+  y Mi nómina (5.9)— la página también queda en la dirección (<code>?pagina=2</code>): así
+  sobrevive a una recarga y se puede compartir. <strong>Cambiar cualquier filtro devuelve
+  siempre a la página 1.</strong></p>
+  <div class="caja tip">
+    <span class="titulo">Consejo</span>
+    <p>La paginación nunca recorta lo que se exporta ni lo que se liquida:
+    <span class="ui">Exportar CSV</span> descarga siempre <strong>todo lo filtrado</strong>,
+    no solo la página visible, y <span class="ui-wrap">Liquidar todos</span> sigue creando
+    las liquidaciones de <strong>todo</strong> el período.</p>
+  </div>
 
   <h2 id="s6-2"><span class="num">6.2</span> Página de inicio</h2>
   <p>Sección <span class="ui">Página de inicio</span> del menú. Reúne todo lo que se ve en la
@@ -1679,13 +1779,14 @@
   contacta a GPI y el único interruptor de visibilidad que afecta a más de una página. Desde
   agosto de 2026 el hero, las cifras y el video de las páginas <strong>ya no están
   aquí</strong>: se editan en <span class="ui">Página de inicio</span> (6.2) y
-  <span class="ui">Página Nosotros</span> (6.3). Quedan <strong>dos tarjetas
+  <span class="ui">Página Nosotros</span> (6.3). Quedan <strong>tres tarjetas
   independientes, cada una con su propio botón de guardar</strong>.</p>
   <div class="tabla-wrap">
     <table>
       <thead><tr><th style="width:30%">Tarjeta</th><th>Qué contiene</th></tr></thead>
       <tbody>
         <tr><td><strong>Datos de contacto</strong><br><span class="ui-wrap">Guardar contacto</span></td><td>Nombre corto, razón social, tagline, dirección completa (calle, barrio, ciudad, departamento, país), coordenadas del mapa, la lista de <strong>teléfonos / WhatsApp</strong>, el <strong>WhatsApp principal</strong>, la lista de <strong>correos</strong>, el <strong>correo del formulario de contacto</strong>, Facebook, Instagram, canal de YouTube, horario de atención, el mapa de Google y la dirección del sitio.</td></tr>
+        <tr><td><strong>Datos de la empresa para nómina</strong><br><span class="ui-wrap">Guardar datos de la empresa</span></td><td>Razón social, NIT, ciudad y una nota opcional al pie: lo que se imprime en el encabezado del volante de pago de la sección Nómina (ver 6.18). <strong>No sale al sitio público.</strong></td></tr>
         <tr><td><strong>Visibilidad en todo el sitio</strong><br><span class="ui-wrap">Guardar visibilidad</span></td><td>Un único interruptor, <span class="ui-wrap">Valores corporativos</span>: apaga los valores <strong>a la vez</strong> en el inicio y en Nosotros (ver 6.12). El resto de los interruptores vive en la pantalla de la página a la que pertenece.</td></tr>
       </tbody>
     </table>
@@ -1821,12 +1922,13 @@
   coordinador. Aquí se crean las cuentas con las que el personal ingresa al portal.</p>
 
   <h3>La lista del equipo</h3>
-  <p>Cada fila muestra el nombre completo, la etiqueta del rol, el usuario y el cargo, y
-  la fecha de creación. Las cuentas desactivadas se ven con fondo ámbar y la etiqueta
-  <span class="ui">Inactiva</span>; su propia cuenta lleva la etiqueta
-  <span class="ui">Tú</span>. A la derecha, el botón <span class="ui">Gestionar</span>.
-  Arriba hay un buscador que filtra por nombre, usuario, cédula o cargo, y el botón verde
-  <span class="ui">Nueva cuenta</span>.</p>
+  <p>Cada fila muestra el nombre completo (con el <strong>apodo</strong> entre paréntesis,
+  cuando lo tiene), la etiqueta del rol, el usuario y el cargo, y la fecha de creación. Las
+  cuentas desactivadas se ven con fondo ámbar y la etiqueta <span class="ui">Inactiva</span>;
+  su propia cuenta lleva la etiqueta <span class="ui">Tú</span>. A la derecha, el botón
+  <span class="ui">Gestionar</span>. Arriba hay un buscador que filtra por nombre, usuario,
+  cédula, cargo <strong>o apodo</strong>, y el botón verde <span class="ui">Nueva
+  cuenta</span>.</p>
   <p>Al final de la pantalla, la tarjeta <span class="ui-wrap">¿Qué puede hacer cada
   rol?</span> recuerda los permisos de los cuatro roles.</p>
 
@@ -1844,6 +1946,8 @@
     <li><span class="ui">Rol</span> — <strong>obligatorio</strong>. Viene puesto en
       <em>Empleado</em>. Bajo el selector aparece la descripción de lo que puede hacer el rol
       elegido, para no equivocarse. Un coordinador no verá la opción <em>Administrador</em>.</li>
+    <li><span class="ui-wrap">Apodo (opcional)</span> — un nombre corto, por ejemplo «YC».
+      Ver el detalle abajo.</li>
     <li><span class="ui-wrap">Cédula (opcional)</span> — el documento de identidad, útil
       para nómina.</li>
     <li><span class="ui-wrap">Cargo (opcional)</span> — por ejemplo «Técnico electricista».
@@ -1853,6 +1957,21 @@
       para poder escribirle. <strong>No se usa para iniciar sesión.</strong></li>
     <li>Pulse <span class="ui-wrap">Crear cuenta y generar contraseña</span>.</li>
   </ol>
+
+  <h3>El apodo</h3>
+  <p>El <strong>apodo</strong> es un nombre corto —«YC» para Yeison Camacho— que el sistema
+  usa donde el nombre completo no cabe: las fichas de responsables del calendario interno,
+  la agenda del mes, la tabla de notas y las gráficas por responsable (ver 6.17). Donde sí
+  hay espacio —el detalle de un evento, este mismo formulario— se ve el nombre completo con
+  el apodo entre paréntesis, y al pasar el mouse siempre aparece el nombre entero.</p>
+  <ul class="check">
+    <li>Es <strong>opcional</strong>: sin apodo, en todas partes se sigue viendo el nombre
+      completo.</li>
+    <li>Lo cambian el <strong>administrador y el coordinador</strong>. El <strong>Community
+      Manager</strong> lo ve en un campo gris que no se puede editar, y el sistema descarta
+      el dato si de todos modos llega desde una cuenta que no es administradora ni
+      coordinadora.</li>
+  </ul>
 
   <h3>La contraseña que se muestra una sola vez</h3>
   <div class="caja warn">
@@ -1886,10 +2005,11 @@
   pendientes, más un acceso directo a <span class="ui-wrap">Ver sus jornadas</span>.
   Debajo, tres bloques:</p>
   <ol class="steps">
-    <li><strong>Datos de la cuenta.</strong> Se puede cambiar el nombre, el rol, la cédula,
-      el cargo, el teléfono y el correo de contacto. El <strong>usuario no se puede
-      cambiar</strong>: es la identidad de la cuenta. Si hace falta otro, se crea una cuenta
-      nueva. Pulse <span class="ui">Guardar cambios</span>.</li>
+    <li><strong>Datos de la cuenta.</strong> Se puede cambiar el nombre, el rol, el apodo
+      (solo administrador y coordinador), la cédula, el cargo, el teléfono y el correo de
+      contacto. El <strong>usuario no se puede cambiar</strong>: es la identidad de la
+      cuenta. Si hace falta otro, se crea una cuenta nueva. Pulse
+      <span class="ui">Guardar cambios</span>.</li>
     <li><strong>Activar o desactivar.</strong> El interruptor
       <span class="ui-wrap">Estado de la cuenta</span> pasa de <span class="ui">Activa</span>
       a <span class="ui">Inactiva</span>. Una cuenta inactiva no puede iniciar sesión pero
@@ -2017,7 +2137,8 @@
   </ul>
   <p>Mientras la lista se actualiza aparece un breve <em>Actualizando…</em> junto al botón
   Limpiar. Bajo los filtros se indica cuántas jornadas se encontraron. Vienen ordenadas de
-  la más reciente a la más antigua.</p>
+  la más reciente a la más antigua y, con más de diez, en páginas de diez (ver 6.1); cambiar
+  cualquier filtro devuelve a la página 1.</p>
   <div class="caja tip">
     <span class="titulo">Consejo</span>
     <p>La dirección de la página guarda los filtros que puso, así que puede copiarla y
@@ -2173,12 +2294,14 @@
   <p>Al final está la tabla <span class="ui-wrap">Detalle de jornadas</span>, con una fila
   por turno: empleado, fecha, orden de trabajo, inicio, fin, duración, horas extra y estado.
   Junto a la hora de fin aparece <em>+1d</em> cuando el turno terminó al día siguiente.
-  Muestra 50 filas por página, con los botones <span class="ui">Anterior</span> y
-  <span class="ui">Siguiente</span>.</p>
+  Se reparte en páginas de <strong>diez filas</strong> (ver 6.1), con los botones
+  <span class="ui">Anterior</span> y <span class="ui">Siguiente</span>.</p>
   <ol class="steps">
     <li>Ajuste los filtros hasta ver exactamente lo que necesita liquidar (por ejemplo, el
       mes completo y <em>Solo aprobadas</em>).</li>
-    <li>Pulse <span class="ui">Exportar CSV</span>, arriba a la derecha de la tabla.</li>
+    <li>Pulse <span class="ui">Exportar CSV</span>, arriba a la derecha de la tabla. Descarga
+      <strong>todas</strong> las jornadas filtradas, no solo las diez que se ven en
+      pantalla.</li>
     <li>Se descargará un archivo con el nombre del período. Ábralo con Excel: viene
       preparado para que las columnas queden separadas y las tildes se vean bien en español,
       con las horas en decimales y coma decimal.</li>
@@ -2190,10 +2313,274 @@
   </ol>
   <div class="caja tip">
     <span class="titulo">Consejo</span>
-    <p>La exportación entrega <strong>exactamente lo que está viendo en pantalla</strong>,
-    con los filtros aplicados. Para el archivo que va a nómina, filtre siempre por
-    <em>Solo aprobadas</em>: así no se cuelan jornadas que todavía pueden cambiar.</p>
+    <p>La exportación entrega <strong>todo lo que dejaron pasar los filtros</strong>, no
+    solo la página de diez filas que se ve en pantalla. Para el archivo que va a nómina,
+    filtre siempre por <em>Solo aprobadas</em>: así no se cuelan jornadas que todavía
+    pueden cambiar.</p>
   </div>
+
+  <h2 id="s6-17"><span class="num">6.17</span> Calendario interno de programación</h2>
+  <p>Sección <span class="ui">Calendario</span> del menú. Solo para administrador y
+  coordinador. Es la agenda de trabajo de GPI: aquí se programa lo que hay que hacer, con
+  su día, su hora y sus responsables, y después se cierra contando cómo salió.</p>
+
+  <p>La pantalla tiene <strong>tres pestañas</strong>, y la pestaña viaja en la dirección,
+  así que el enlace se puede compartir por WhatsApp:</p>
+  <div class="tabla-wrap">
+    <table class="keep">
+      <thead><tr><th style="width:22%">Pestaña</th><th>Para qué</th></tr></thead>
+      <tbody>
+        <tr><td><span class="ui">Calendario</span></td><td>La cuadrícula del mes y la agenda de abajo, para programar y cerrar eventos.</td></tr>
+        <tr><td><span class="ui">Notas</span></td><td>Todo el seguimiento escrito, con filtros por evento, autor y fechas. Paginada de diez en diez (ver 6.1).</td></tr>
+        <tr><td><span class="ui">Métricas</span></td><td>Cuántos eventos se cumplen, cuántos se aplazan y cómo se reparte la carga entre el equipo.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Programar un evento</h3>
+  <ol class="steps">
+    <li>Pulse <span class="ui-wrap">Nuevo evento</span> (o el <strong>+</strong> que aparece
+      sobre el día al pasar el mouse: así el formulario abre con esa fecha ya puesta).</li>
+    <li>Escriba el <strong>título</strong> —es lo que se lee en la casilla del calendario,
+      así que mejor corto—, el <strong>día</strong>, la <strong>hora de inicio y de
+      fin</strong> y, si hace falta, una <strong>descripción</strong> con el detalle.</li>
+    <li>Elija los <strong>responsables</strong>: marque en la lista a las cuentas del
+      portal (hay buscador por nombre y cargo) o use <span class="ui">Otro</span> (alguien
+      sin cuenta en el portal) para escribir a mano el nombre de quien no tiene cuenta —el
+      contacto del cliente, un contratista—. Puede agregar varios de cada tipo.</li>
+    <li>Al guardar, el evento nace <strong>programado</strong>.</li>
+  </ol>
+  <div class="caja nota">
+    <span class="titulo">Para tener en cuenta</span>
+    <p>Las cuentas del portal que queden como responsables ven el evento en su
+    <em>Mi Cuenta → Mis eventos</em> (ver 5.8) y pueden dejar notas ahí. Un responsable
+    marcado con <span class="ui">Otro</span> queda registrado en la ficha, pero no recibe
+    acceso al sistema.</p>
+  </div>
+
+  <h3>Cerrar un evento</h3>
+  <p>Al abrir un evento —pulsando su ficha en el calendario o en la agenda— aparecen las
+  acciones que tienen sentido para su estado. <strong>No es solo una decisión de
+  pantalla: el sistema rechaza lo mismo que esconde</strong>, por si alguien llega con la
+  página desactualizada.</p>
+  <div class="tabla-wrap">
+    <table>
+      <thead><tr><th style="width:26%">Acción</th><th>Qué significa</th></tr></thead>
+      <tbody>
+        <tr><td><span class="ui">Marcar cumplido</span></td><td>Se hizo completo. Es el cierre normal.</td></tr>
+        <tr><td><span class="ui">Marcar incompleto</span></td><td>No se hizo o quedó a medias. Pide dejar una nota explicando qué faltó.</td></tr>
+        <tr><td><span class="ui-wrap">Aplazar a otra fecha</span></td><td>El evento se mueve a un día nuevo, queda <strong>aplazado</strong> y el sistema recuerda para cuándo estaba al principio. La fecha nueva tiene que ser <strong>posterior</strong> a la que tiene ahora: aplazar es mover hacia adelante, nunca hacia atrás.</td></tr>
+        <tr><td><span class="ui-wrap">Reprogramar a otra fecha</span></td><td>Es el mismo botón, pero sobre un evento <strong>incompleto</strong>: se decidió repetirlo, así que se mueve de día y vuelve a quedar abierto.</td></tr>
+        <tr><td><span class="ui-wrap">Devolver a su fecha original</span></td><td>Deshace el aplazamiento: el evento regresa a su día original y queda <strong>programado</strong>, como si nunca se hubiera movido.</td></tr>
+        <tr><td><span class="ui">Reabrir</span></td><td>Vuelve a dejar pendiente un evento que ya estaba cerrado.</td></tr>
+        <tr><td><span class="ui-wrap">Editar datos</span></td><td>Cambia título, fecha, horas, descripción o responsables.</td></tr>
+        <tr><td><span class="ui-wrap">Eliminar evento</span></td><td>Lo borra para siempre, con todas sus notas.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="caja warn">
+    <span class="titulo">Atención — solo salen los botones que tienen sentido</span>
+    <p><strong>Un evento cumplido no se aplaza</strong>: ya se hizo; si en realidad no se
+    hizo, primero reábralo o márquelo incompleto, y después muévalo de fecha.
+    <strong>«Devolver a su fecha original» solo aparece en un evento abierto que alguna
+    vez se movió</strong> —en la práctica, uno aplazado—: en uno ya cerrado esa fecha es
+    historia y no se puede borrar; para corregirla, primero se reabre. Y
+    <strong>«Reabrir» no siempre devuelve a «programado»</strong>: si el evento ya se
+    movió de fecha alguna vez, vuelve a quedar «aplazado», y el botón lo anuncia
+    («Reabrir (queda programado)» o «Reabrir (queda aplazado)»).</p>
+  </div>
+  <div class="caja warn">
+    <span class="titulo">Atención — marcar incompleto no es eliminar</span>
+    <p>Marcar incompleto deja constancia de que la actividad no salió, con su nota, que es
+    lo que se revisa a fin de mes. <span class="ui">Eliminar evento</span> lo hace
+    desaparecer para siempre junto con su historia, y no se puede deshacer: úselo solo
+    para limpiar eventos de prueba o creados por error. Por eso pide dos confirmaciones.</p>
+  </div>
+  <p>Los colores del calendario son siempre los mismos: <strong>gris</strong> programado,
+  <strong>verde</strong> cumplido, <strong>rojo</strong> incompleto y <strong>ámbar</strong>
+  aplazado. Los <strong>festivos nacionales</strong> salen marcados, los mismos que usa el
+  cálculo de horas extra (ver 7.6).</p>
+
+  <h3>Las notas</h3>
+  <p>Son el seguimiento de cada evento: qué se hizo, qué faltó o por qué se movió de
+  fecha. Las escribe un administrador o un coordinador desde el detalle del evento o desde
+  la pestaña <span class="ui">Notas</span>, y también <strong>cualquier
+  responsable</strong> desde su Mi Cuenta. Cada nota queda firmada con el nombre de quien
+  la escribió y su fecha. No se pintan en la cuadrícula del mes —convertirían cada casilla
+  en un muro de texto—: se leen en la pestaña Notas y dentro de cada evento.</p>
+
+  <h3>Las métricas</h3>
+  <p>Se calculan sobre el <strong>rango de fechas</strong> que elija, que empieza en el mes
+  en curso. Cada bloque tiene su botón <span class="ui">Ayuda</span> con lo que significa
+  cada dato.</p>
+  <div class="caja nota">
+    <span class="titulo">La regla de oro</span>
+    <p>Un evento cuenta en el período de la <strong>fecha que tiene ahora</strong>. Si
+    estaba para el 30 de septiembre y se aplazó al 5 de octubre, sale de septiembre y
+    entra en octubre. Para que eso no se lea como «desapareció trabajo», cuando alguna
+    actividad se aplaza <strong>fuera</strong> del rango elegido aparece un aviso ámbar
+    con cuántas fueron.</p>
+  </div>
+  <div class="tabla-wrap">
+    <table>
+      <thead><tr><th style="width:24%">Indicador</th><th>Qué cuenta</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Eventos del período</strong></td><td>Todas las actividades con fecha dentro del rango, sin importar su estado. Debajo, cuántas están cerradas, cuántas sin cerrar y cuántas notas hay entre todas.</td></tr>
+        <tr><td><strong>Cumplidos</strong></td><td>Se hicieron completas. El porcentaje es sobre el total del período.</td></tr>
+        <tr><td><strong>Incompletos</strong></td><td>No salieron o quedaron a medias.</td></tr>
+        <tr><td><strong>Aplazados</strong></td><td>Se movieron de fecha y siguen abiertas: todavía hay que hacerlas.</td></tr>
+        <tr><td><strong>Programados</strong></td><td>Pendientes, en su fecha original, sin haberse movido nunca.</td></tr>
+        <tr><td><strong>Tasa de cumplimiento</strong></td><td>Cumplidos entre (cumplidos + incompletos): de lo que ya se cerró, qué porcentaje salió completo. Lo programado y lo aplazado queda fuera de la cuenta. Sin nada cerrado muestra «—», nunca 0 %.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Debajo, las gráficas muestran el reparto por estado, la evolución del año completo
+  alrededor de hoy (no usa el filtro de fechas, la tarjeta lo avisa), la carga por
+  responsable (incluidos los externos, marcados como tales y en gris) y los eventos con
+  más notas; y una tabla de <strong>cumplimiento por responsable</strong>, cuyo porcentaje
+  se calcula distinto: cumplidos entre <em>todos</em> sus eventos del rango, incluidos los
+  que siguen abiertos.</p>
+
+  <h2 id="s6-18"><span class="num">6.18</span> Nómina</h2>
+  <p>Sección <span class="ui">Nómina</span> del menú. <strong>Solo para el
+  administrador.</strong> Aquí se calcula, persona por persona y período por período, lo
+  que hay que pagarle a cada empleado: el sueldo, las horas y recargos que salen solos de
+  las jornadas ya aprobadas, y los bonos y descuentos que el administrador digita.</p>
+  <div class="caja warn">
+    <span class="titulo">Atención — el coordinador no administra la nómina</span>
+    <p>Desde el 18 de septiembre de 2026, a pedido de GPI, esta sección la maneja
+    únicamente el administrador. El coordinador conserva todo lo demás del panel
+    —contenido, equipo, horarios, jornadas y el calendario completo—, y de la nómina ve
+    solo la suya, igual que cualquier empleado (ver 5.9).</p>
+  </div>
+
+  <p>La pantalla tiene <strong>tres pestañas</strong>, y la pestaña viaja en la
+  dirección:</p>
+  <div class="tabla-wrap">
+    <table class="keep">
+      <thead><tr><th style="width:22%">Pestaña</th><th>Para qué</th></tr></thead>
+      <tbody>
+        <tr><td><span class="ui">Liquidación</span></td><td>El período en curso, persona por persona, con su desglose y su volante. Abre con la quincena de hoy preseleccionada.</td></tr>
+        <tr><td><span class="ui">Configuración</span></td><td>Salario, tarifas por hora y aportes de cada empleado, vigentes desde el mes en que se guardan.</td></tr>
+        <tr><td><span class="ui">Tablero</span></td><td>Totales por período, reparto por concepto y por persona, e historial.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>El orden de trabajo</h3>
+  <ol class="steps">
+    <li><strong>Apruebe las jornadas</strong> del período, en Jornadas (ver 6.15). Solo las
+      aprobadas se pagan: si queda alguna pendiente, la pantalla lo avisa y sus horas no
+      entran.</li>
+    <li><strong>Configure</strong> el salario y las tarifas de cada persona, en la pestaña
+      Configuración. Solo hace falta una vez: lo que se guarda en un mes rige para ese mes
+      y todos los siguientes, hasta que se guarde otro cambio (ver «vigente desde», más
+      abajo).</li>
+    <li><strong>Cree las liquidaciones</strong> del período con el botón
+      <span class="ui-wrap">Liquidar todos</span>, o una a una desde el detalle. Con el
+      filtro <span class="ui">Persona</span> puede trabajar con una sola persona a la
+      vez.</li>
+    <li><strong>Revise el desglose</strong> de cada persona y digite lo que no sale de las
+      jornadas: bonificación, auxilios, comisiones, prima, vacaciones, bono de
+      cumplimiento, otros devengados, préstamos y otros descuentos.</li>
+    <li><strong>Cierre</strong> la liquidación: ahí queda congelada.</li>
+    <li><strong>Marque pagada</strong> cuando se gire, con su fecha, y descargue el
+      volante.</li>
+  </ol>
+  <div class="caja nota">
+    <span class="titulo">Para tener en cuenta</span>
+    <p>Si intenta liquidar sin haber aprobado todas las jornadas del período, la pantalla
+    avisa cuántas quedaron pendientes: sus horas simplemente no entran en el cálculo hasta
+    que se aprueben.</p>
+  </div>
+
+  <h3>Cómo se calcula</h3>
+  <ul class="check">
+    <li>El <strong>salario básico ya paga las horas ordinarias diurnas</strong>: se
+      muestran en el desglose para cuadrar el total de horas, pero no se suman aparte.</li>
+    <li>Las <strong>siete tarifas por hora</strong> se pagan <strong>además</strong> del
+      salario: rotación diurna (la referencia con la que se calculan las demás), rotación
+      nocturna (un recargo sobre la hora ordinaria de noche), hora extra diurna, hora
+      extra nocturna, hora en domingo o festivo, extra diurna en festivo y extra nocturna
+      en festivo.</li>
+    <li>La hora ordinaria <strong>nocturna en festivo</strong> no tiene tarifa propia: se
+      paga como «hora en festivo + rotación nocturna», con línea propia en el desglose y
+      en el volante para que se pueda revisar.</li>
+    <li>El sueldo del período sale de <em>salario ÷ 30 × días liquidados</em> (convención
+      colombiana: una quincena completa son 15 días, tenga el mes 28 o 31), y el auxilio
+      de transporte se reparte con la misma regla.</li>
+    <li>Salud y pensión se calculan sobre el sueldo del período más las horas y recargos,
+      <strong>sin</strong> incluir el auxilio de transporte ni los bonos.</li>
+    <li>Todo se paga en <strong>pesos enteros</strong>, redondeando línea por línea, así
+      que el volante cuadra al sumarlo a mano.</li>
+  </ul>
+
+  <h3>La configuración se hereda («vigente desde»)</h3>
+  <p>Lo que se guarda para una persona en un mes <strong>rige desde ese mes en
+  adelante</strong>, hasta el próximo mes en que se guarde otro cambio: no hace falta
+  abrir cada mes uno por uno. Arriba del formulario, la pantalla dice siempre de dónde
+  salen los valores —<span class="ui-wrap">Configurado en este mes</span>,
+  <span class="ui-wrap">Heredado de …</span> o <span class="ui">Sin configurar</span>—, y
+  debajo aparece la lista de <span class="ui-wrap">Cambios guardados</span> de la persona.
+  Si un mes se configuró por error, el botón <span class="ui-wrap">Quitar el cambio de
+  …</span> lo borra y el mes vuelve a heredar el anterior.</p>
+  <div class="caja tip">
+    <span class="titulo">Consejo</span>
+    <p>El botón <span class="ui-wrap">Usar los valores sugeridos</span> propone las siete
+    tarifas con el <strong>mínimo que pide la ley ese mes</strong>: valor de la hora =
+    salario ÷ 210 (con la jornada de 42 horas semanales) y el recargo dominical y festivo
+    vigente —90 % desde el 1 de julio de 2026—. Después se puede subir cualquiera a mano,
+    nunca hace falta bajarla: si una tarifa queda por debajo del mínimo legal, el
+    formulario la marca en ámbar. Es un aviso, <strong>no un bloqueo</strong>: GPI puede
+    pagar más que la ley, nunca menos.</p>
+  </div>
+
+  <h3>Borrador, cerrada, pagada</h3>
+  <div class="tabla-wrap">
+    <table class="keep">
+      <thead><tr><th style="width:20%">Estado</th><th>Qué significa</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Borrador</strong></td><td>Se puede editar y se recalcula sola: si se aprueba otra jornada o se corrige una tarifa, la cifra cambia.</td></tr>
+        <tr><td><strong>Cerrada</strong></td><td>El cálculo quedó congelado. Cambiar después un horario, una tarifa o una jornada ya no la altera.</td></tr>
+        <tr><td><strong>Pagada</strong></td><td>Cerrada y ya girada, con su fecha de pago.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="caja warn">
+    <span class="titulo">Atención — reabrir no es eliminar</span>
+    <p><span class="ui">Reabrir</span> devuelve la liquidación a borrador y borra el
+    cálculo congelado: es el mecanismo para corregir y volver a cerrar, igual que devolver
+    una jornada a pendiente (ver 6.15). <span class="ui">Eliminar</span> hace desaparecer
+    la liquidación y su volante para siempre.</p>
+  </div>
+
+  <h3>El volante de pago y el tablero</h3>
+  <p>El <strong>volante de pago</strong> es un PDF real: se descarga desde el detalle de
+  cada persona, desde el historial del <span class="ui">Tablero</span> y desde el propio
+  Mi Cuenta del empleado. Lleva el logo de GPI, la razón social y el NIT que estén en
+  Ajustes (ver 6.10), el empleado con su cédula y cargo, el período con fechas reales, la
+  tabla de devengados y descuentos, el neto a pagar destacado y las firmas de «Recibí
+  conforme» y «Firma autorizada». Si la liquidación todavía está en borrador, el volante
+  sale marcado como <strong>BORRADOR</strong>.</p>
+  <p>El <span class="ui">Tablero</span> muestra, sobre el filtro elegido, el neto pagado,
+  el total devengado, lo que costaron las horas y cuántas liquidaciones hay sin cerrar; la
+  nómina por período de los últimos doce; el reparto por concepto y por persona; y el
+  historial completo, paginado de diez en diez, con enlace al volante de cada
+  liquidación.</p>
+
+  <h3>El período por defecto y el filtro por persona</h3>
+  <p>Al entrar a Liquidación sin un período elegido, la pantalla abre <strong>el mes en
+  curso y la quincena de hoy</strong>, con la fecha de Colombia (del 1 al 15, primera
+  quincena; del 16 en adelante, segunda). Arriba está el selector
+  <span class="ui">Persona</span>: con una elegida, la tabla y los totales son solo de esa
+  persona, <span class="ui-wrap">Liquidar todos</span> pasa a llamarse
+  <span class="ui-wrap">Liquidar a &lt;nombre&gt;</span> y crea solo su liquidación, y
+  <span class="ui">Exportar CSV</span> descarga solo lo suyo.</p>
+
+  <h3>Datos de la empresa para el volante</h3>
+  <p>Se editan en <span class="ui">Ajustes</span> → <span class="ui-wrap">Datos de la
+  empresa para nómina</span>: razón social, NIT, ciudad y una línea opcional al pie del
+  comprobante. No salen al sitio público (ver 6.10).</p>
 </section>
 
 <!-- ==================== 7. HORAS EXTRA ==================== -->
@@ -2734,7 +3121,7 @@
     <table class="keep">
       <thead><tr><th style="width:22%">Usuario</th><th style="width:32%">Contraseña</th><th>Rol</th></tr></thead>
       <tbody>
-        <tr><td><code>admin</code></td><td><code>Kt7#mQx4-Rv9zBp2</code></td><td>Administrador</td></tr>
+        <tr><td><code>admin</code></td><td>Se entrega por un canal privado</td><td>Administrador</td></tr>
       </tbody>
     </table>
   </div>
@@ -2771,7 +3158,7 @@
 
   <div class="pie-doc">
     Manual de uso del sitio web de GPI — Grupo de Profesionales en Ingeniería GPI S.A.S<br>
-    Agosto de 2026 · Elaborado por GOCAS Automations
+    Septiembre de 2026 · Elaborado por GOCAS Automations
   </div>
 </section>
 
