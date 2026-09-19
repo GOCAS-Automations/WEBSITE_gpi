@@ -246,7 +246,7 @@ con su propia pantalla desde la 0007.
 
 | Objeto | Para qué sirve |
 | --- | --- |
-| Tabla `nomina_config_mensual` | El **salario**, el auxilio de transporte, las **siete tarifas por hora** y los porcentajes de salud y pensión de un empleado **en un mes**. Se copia sola del mes anterior, igual que `horarios_mensuales` |
+| Tabla `nomina_config_mensual` | El **salario**, el auxilio de transporte, las **siete tarifas por hora** y los porcentajes de salud y pensión de un empleado **desde un mes**. Una fila rige para ese mes y los siguientes hasta la próxima fila de esa persona (modelo «vigente desde», 18 sep 2026); ver un mes ya no crea filas |
 | Tabla `nomina_liquidaciones` | La nómina de un empleado **en un período** (quincena 1, quincena 2 o mes completo): días liquidados, conceptos manuales, estado (`borrador` → `cerrada` → `pagada`) y el **snapshot congelado** del cálculo |
 | Clave `site_settings.empresa` | Razón social, NIT y ciudad que se imprimen en el **volante de pago**. Se editan en `/admin/ajustes` |
 
@@ -1686,7 +1686,7 @@ La pantalla tiene **tres pestañas** y la pestaña viaja en la dirección:
 | Pestaña | Dirección | Para qué |
 | --- | --- | --- |
 | Liquidación | `/admin/nomina` | El período en curso, persona por persona, con su desglose y su volante |
-| Configuración | `/admin/nomina?vista=configuracion` | Salario, tarifas por hora y aportes de cada empleado, mes a mes |
+| Configuración | `/admin/nomina?vista=configuracion` | Salario, tarifas por hora y aportes de cada empleado, **vigentes desde** el mes en que se guardan |
 | Tablero | `/admin/nomina?vista=tablero` | Totales por período, reparto por concepto y por persona, e historial |
 
 ### El orden de trabajo (importante)
@@ -1694,11 +1694,13 @@ La pantalla tiene **tres pestañas** y la pestaña viaja en la dirección:
 1. **Aprueba las jornadas** del período en *Jornadas*. Solo las aprobadas se
    pagan: si queda alguna pendiente, la pantalla lo avisa y sus horas **no**
    entran.
-2. **Configura** el salario y las tarifas de cada persona para ese mes
-   (pestaña *Configuración*). Solo hace falta la primera vez: el mes siguiente
-   se copia solo.
+2. **Configura** el salario y las tarifas de cada persona (pestaña
+   *Configuración*). Solo hace falta **una vez**: lo que guardas en un mes rige
+   para ese mes y **todos los siguientes**, hasta que guardes otro cambio. No
+   hay que abrir cada mes (ver *La configuración se hereda* más abajo).
 3. **Crea las liquidaciones** del período (botón **Liquidar todos**, o una a
-   una desde el detalle).
+   una desde el detalle). Con el filtro **Persona** puedes trabajar con una
+   sola persona (ver *El filtro por persona*).
 4. **Revisa el desglose** de cada persona y digita lo que no sale de las
    jornadas: bonificación, auxilios, comisiones, prima, vacaciones, bono de
    cumplimiento, otros devengados, préstamos y otros descuentos.
@@ -1733,6 +1735,63 @@ La pantalla tiene **tres pestañas** y la pestaña viaja en la dirección:
   transporte ni los bonos.
 - Todo se paga en **pesos enteros**, redondeando línea por línea, así que el
   volante **cuadra al sumarlo a mano**.
+
+### La configuración se hereda («vigente desde»)
+
+Desde el 18 de septiembre de 2026 la configuración **no se copia mes a mes**:
+se **hereda hacia adelante**.
+
+- Lo que guardas para una persona en un mes **rige desde ese mes en
+  adelante**, hasta el próximo mes en que guardes otro cambio. Si configuras a
+  alguien en agosto, septiembre, octubre, diciembre y enero del año siguiente
+  usan lo de agosto **sin que nadie los abra**.
+- **Un aumento se guarda en el mes en que empieza.** Si en marzo le suben el
+  salario a alguien, abre **marzo**, cambia el salario y guarda: enero y
+  febrero se quedan como estaban y de marzo en adelante se paga lo nuevo.
+- **Mirar un mes no cambia nada.** Solo el botón **Guardar desde …** crea o
+  cambia algo. (Antes, abrir un mes lo creaba copiando el anterior; si el
+  anterior no existía, lo creaba en cero. Ya no.)
+- Arriba del formulario, la pantalla dice siempre de dónde salen los valores:
+
+  | Aviso | Qué significa |
+  | --- | --- |
+  | **Configurado en este mes** | Hay un cambio guardado justo en este mes. Rige desde aquí hasta el próximo cambio |
+  | **Heredado de agosto de 2026** | Este mes no tiene cambio propio: usa el último guardado antes. Si guardas aquí, el cambio rige desde este mes en adelante y los anteriores no se tocan |
+  | **Sin configurar** | Ni este mes ni ninguno anterior tiene configuración: esta persona todavía no se puede liquidar |
+
+  Debajo aparece la lista de **Cambios guardados** de la persona (mes y
+  salario); al pulsar uno se abre ese mes.
+- **Quitar el cambio de un mes.** Si un mes se configuró por error, el botón
+  **«Quitar el cambio de <mes>»** borra ese cambio y el mes vuelve a heredar lo
+  del cambio anterior. Pide confirmación y dice a qué vuelve. Si **no hay
+  ningún mes anterior configurado**, avisa con un mensaje fuerte de que la
+  persona quedará **sin configuración** (y no se podrá liquidar) y solo sigue si
+  lo confirmas.
+- **Las liquidaciones cerradas o pagadas nunca cambian**, se toque lo que se
+  toque aquí: guardan su cálculo congelado. Las que siguen en **borrador** se
+  recalculan solas con lo que rija.
+
+> **Un monto que solo aplica UNA vez no va en la configuración.** Un bono, un
+> descuento puntual o la cuota de un préstamo se repetirían todos los meses
+> siguientes. Esos van en los **conceptos de la liquidación** de ese período
+> (pestaña *Liquidación* → **Abrir** la persona → *Días, bonos y descuentos del
+> período*).
+
+> Nota técnica: las filas en **cero** que dejó el sistema anterior al abrir un
+> mes (se creaban vacías) **no cuentan como configuración**: el formulario nunca
+> deja guardar un salario en cero, así que se ignoran y no tapan lo heredado.
+> No hace falta borrarlas.
+
+### Cómo se escriben los importes
+
+Todos los campos de dinero (salario, auxilio, las siete tarifas y los
+conceptos de la liquidación) **ponen solos los puntos de miles** mientras
+escribes: tecleas `1300000` y ves `1.300.000`. Los **centavos van con coma**:
+`9.115,08`. También puedes **pegar** un valor copiado de otra parte
+(`9.115,08`, `$ 1.300.000`, incluso `9115.08` o `1,300,000.50` de una hoja en
+inglés) y queda bien. Los porcentajes de salud y pensión no llevan miles pero
+aceptan coma: `4,5`. En todas las pantallas, en el tablero, en *Mi nómina* y en
+el volante, las cifras salen con el mismo formato (`$ 1.300.000`, `$ 9.115,08`).
 
 ### Los valores sugeridos
 
@@ -1783,13 +1842,30 @@ autorizada*). Si la liquidación todavía está en borrador, el documento sale
 El archivo se llama `volante_<usuario>_<período>.pdf`, por ejemplo
 `volante_scordoba_2026-08-Q2.pdf`.
 
+### El filtro por persona
+
+Arriba de la pestaña *Liquidación* está el selector **Persona** («Todas las
+personas» o una cuenta; con una lista larga aparece además un buscador). El
+filtro **queda en la dirección** (`?persona=…`), así que se mantiene al recargar
+la página y al cambiar de mes o de quincena. Con una persona elegida:
+
+- la tabla, los **totales** y los avisos son solo de esa persona, y un aviso
+  verde lo recuerda («Estás viendo solo a …» con el botón *Ver a todas las
+  personas*);
+- **«Liquidar todos» pasa a llamarse «Liquidar a <nombre>»** y crea **solo** la
+  liquidación de esa persona: nunca crea las de quien no está en pantalla;
+- **Exportar CSV** pasa a **«Exportar CSV (solo <nombre>)»** y el archivo lleva
+  el usuario en el nombre: `nomina_GPI_2027-02-Q1_oprueba.csv`.
+
 ### El CSV del período
 
-El botón **Exportar CSV** baja todo el período: una fila por persona con los
-días, el sueldo, **las horas de cada concepto**, los totales, los descuentos y
-el neto. Igual que el CSV de jornadas, usa `;` como separador, lleva BOM UTF-8 y
-**todos los números van con coma decimal**, así que Excel en español los suma
-sin retocar nada.
+El botón **Exportar CSV** baja el período (o solo la persona filtrada): una fila
+por persona con los días, el sueldo, **las horas de cada concepto**, los
+totales, los descuentos y el neto. Igual que el CSV de jornadas, usa `;` como
+separador, lleva BOM UTF-8 y **todos los números van con coma decimal y SIN
+puntos de miles** (`1300000`, no `1.300.000`), a propósito: así Excel en
+español los reconoce como números y los suma sin retocar nada. Es lo único del
+módulo que no lleva separador de miles.
 
 ### El tablero
 

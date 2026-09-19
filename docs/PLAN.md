@@ -1198,6 +1198,8 @@ coordinador), con tres pestañas:
 - **Configuración** — por empleado y mes: salario básico, auxilio de transporte,
   las **siete tarifas por hora**, y los porcentajes de salud y pensión. Al abrir
   un mes nuevo **se copia solo del mes anterior**, igual que `/admin/horarios`.
+  *(Reemplazado el 18 sep 2026 por el modelo «vigente desde»: ver la iteración
+  «cuatro ajustes de la nómina» más abajo.)*
 - **Tablero** — KPIs, nómina por período (últimos doce), reparto por concepto,
   neto por persona e **historial** filtrable con enlace al volante de cada uno.
 
@@ -1573,6 +1575,153 @@ la API con un token válido. Por eso la 0012 crea `is_admin_activo()`, que es
   (`git cherry-pick`) para que llegue ya con los permisos correctos.
 - Queda **pendiente de probar a fondo** el módulo completo con el plan de
   `docs/PRUEBAS_CALENDARIO_NOMINA.md` cuando se decida desplegarlo.
+
+---
+
+## Iteración del 18 de septiembre de 2026 — cuatro ajustes de la nómina tras probarla César
+
+> Trabajo en la rama **`nomina-wip`** (la nómina sigue fuera del despliegue).
+> **Sin migración nueva**: `nomina_config_mensual` ya guardaba empleado + año +
+> mes, que es todo lo que el modelo nuevo necesita. `copiado_de` queda como
+> columna legada (ya no se escribe ni se lee).
+
+César probó la nómina en local y pidió cuatro cosas.
+
+### 1. Separadores de miles en todo el dinero
+
+- **Un solo módulo para leer y escribir dinero: `src/lib/dinero.ts`**, puro (sin
+  `"use client"` ni importaciones), que usan el navegador, las server actions y
+  el volante. Formato colombiano: **punto de miles, coma decimal**
+  (`1.300.000`, `9.115,08`). No usa `Intl.NumberFormat`: según la versión de
+  los datos de idioma, «es» agrupa o no los números de cuatro cifras y usa
+  espacios duros distintos, y una diferencia entre servidor y navegador rompe
+  la hidratación.
+- **`parsearNumero()`** es la regla de lectura única. El caso ambiguo de **un
+  solo punto** se resuelve así: es de **miles** si lo siguen exactamente tres
+  cifras y hay algo distinto de cero delante (`9.115` = 9115, como se escribe en
+  Colombia); si no, es **decimal** (`9115.08`, `4.5`, `0.125`), porque un
+  separador de miles siempre va seguido de tres cifras. Con coma y punto a la
+  vez manda el que va **último** (así también entra `1,300,000.50` pegado de una
+  hoja en inglés). Los grupos de miles se validan: `1.30.000` no es un número y
+  el servidor lo dice en vez de adivinar. El bug de antes (`9115.08` guardado
+  como 911.508) queda cubierto por una prueba explícita.
+- **`CampoDinero`** (`src/components/admin/CampoDinero.tsx`): campo de texto con
+  `inputMode` decimal/numérico que pone los miles mientras se escribe sin que
+  el cursor salte (`reformatearEntrada()`, pura y probada), borra la cifra de al
+  lado al pulsar ← sobre un punto, lee lo **pegado** con `parsearNumero` y manda
+  al servidor el valor **limpio** en un `<input type="hidden">`. En las tarifas,
+  un punto tecleado **al final de una cifra de 4 dígitos o más** se toma como la
+  coma decimal (el del teclado numérico: `9115.08` → `9.115,08`); en el resto de
+  casos el punto se ignora porque los miles los pone el campo. Se usa en el
+  salario, el auxilio, las siete tarifas, los porcentajes (sin miles, con coma:
+  `4,5`) y los nueve conceptos manuales de la liquidación.
+- **Las server actions** leen con el mismo `parsearNumero` (`leerImporte` en
+  `src/app/admin/nomina/actions.ts`, que reemplaza a `aNumero`). Un valor que no
+  es número, o negativo, ya **no se convierte en cero en silencio**: la acción
+  responde con el nombre del campo.
+- **Visualización**: tabla y detalle de la liquidación (incluidas las tarifas
+  con centavos, `$ 9.115,08`, que antes salían redondeadas), configuración
+  (valores sugeridos y factores), tablero, historial, «Mi nómina» y el **volante
+  PDF** (valor unitario con centavos, porcentajes con coma, días).
+- **Excepción a propósito: el CSV** sigue con números **sin miles** y coma
+  decimal (`decimalCSV`), para que Excel los reconozca como números.
+
+### 2. Bug: en Configuración, al cambiar de persona o de mes seguían los valores anteriores
+
+**Causa**: el salario y las tarifas vivían en `useState(config…)` y el auxilio y
+los porcentajes en `defaultValue`; los dos se leen **una sola vez**, al montar.
+Cambiar de persona o de mes navega a la misma página con otros parámetros y
+React **reutiliza** el componente montado, así que el formulario seguía con lo
+de antes hasta recargar.
+
+**Arreglo de raíz**, con dos `key`: la de fuera (`configuracion.tsx`) es
+**persona + año + mes** y monta un formulario nuevo al cambiar cualquiera; la de
+dentro es **la fila que rige + su `updated_at`**, así que después de guardar o
+de quitar un cambio los campos vuelven a leer la base sin perder el aviso de
+«guardado». El mismo patrón estaba en la **Liquidación**: el panel entero lleva
+ahora `key` de período + persona (el detalle abierto, los campos con
+`defaultValue` y el aviso de «Liquidar todos» se quedaban con lo del período
+anterior) y el detalle, `key` por persona + liquidación. Mientras se navega,
+la pantalla dice «Cargando…» (`useTransition`) en vez de enseñar lo viejo como
+si fuera lo nuevo.
+
+### 3. La configuración se hereda: modelo «vigente desde»
+
+- **Regla**: la configuración efectiva de una persona en el mes M es **la fila
+  válida más reciente con (año, mes) ≤ M**. Vive en `configVigente()` y
+  `estadoConfigMes()` de `src/lib/nomina.ts` (puras, probadas) y la usan la
+  Configuración, la Liquidación (tabla, «Liquidar todos», crear, cerrar), el
+  Tablero y el volante: `getNominaConfigVigente` y `mapaNominaConfigsVigentes`
+  en `src/lib/admin.ts`.
+- **Ver un mes no crea filas**: `asegurarNominaConfig` desapareció. Solo
+  **guardar** (`saveNominaConfig`) crea o cambia la fila de ese mes.
+- **Quitar el cambio de un mes** (`quitarConfigMes`): borra la fila y el mes
+  vuelve a heredar. Con confirmación que dice a qué vuelve; si no hay ningún mes
+  anterior, la confirmación avisa que la persona queda **sin configuración** y
+  el servidor exige además una marca explícita (`sin_respaldo_confirmado`).
+- **Filas en cero = no son configuración.** El formulario nunca deja guardar
+  salario 0, así que una fila en cero solo puede ser un resto del modelo
+  anterior (se creaban vacías al abrir un mes). Se ignoran: no tapan lo
+  heredado y no hace falta borrarlas. **En la base de César hay cuatro** (ver
+  abajo).
+- La pantalla dice de dónde salen los valores («Configurado en este mes» /
+  «Heredado de agosto de 2026 — si guardas aquí, el cambio rige desde este mes
+  en adelante» / «Sin configurar»), hasta cuándo rigen y la lista de cambios
+  guardados de la persona. La ayuda `AYUDA_NOMINA_CONFIG` explica, en llano, que
+  un aumento se guarda en el mes en que empieza y que **un monto de una sola
+  vez va en los conceptos de la liquidación, no en la configuración**.
+- **Las liquidaciones cerradas o pagadas no se tocan**: siguen leyendo su
+  snapshot (`obtenerLiquidacion`). De paso, el detalle y el CSV toman el
+  salario **del cálculo** (el congelado en una cerrada) y no el de la
+  configuración de hoy.
+
+### 4. Filtro por persona en la Liquidación
+
+- Selector **Persona** («Todas las personas» + cada cuenta activa; buscador sin
+  tildes si hay más de diez) persistido en la URL como **`?persona=<id>`**:
+  sobrevive a recargar y a cambiar de período. Un id que no es de una cuenta
+  activa se ignora.
+- El filtro se aplica en el **servidor**, así que totales, avisos, botones y CSV
+  trabajan con lo que se ve. Aviso verde «Estás viendo solo a …» con *Ver a
+  todas las personas*.
+- **«Liquidar todos» con el filtro activo actúa SOLO sobre lo que se ve**: el
+  botón pasa a **«Liquidar a <nombre>»** y la acción recibe `persona`; nunca
+  crea liquidaciones de quien no está en pantalla.
+- **CSV**: exporta lo filtrado; el botón dice **«Exportar CSV (solo <nombre>)»**
+  y el archivo lleva el usuario: `nomina_GPI_2027-02-Q1_oprueba.csv`.
+- De paso se corrigió un fallo de «Liquidar todos»: en la **2.ª quincena** daba
+  por liquidado a quien solo tenía la 1.ª (no filtraba por quincena).
+
+### Otros ajustes visuales
+
+- Pestañas de la nómina a 390 px: se salían de la pantalla (scroll
+  horizontal); ahora ocupan el ancho y aprietan el relleno en móvil.
+- Tablero: los KPI pasan a dos columnas (un importe con miles no se parte y a
+  cuatro columnas se montaba sobre el icono); «liquidaciónes» → «liquidaciones».
+
+### Datos de César en la base (estado al terminar)
+
+Las filas de César quedaron **intactas** (comparadas contra el listado tomado al
+empezar). En `nomina_config_mensual` hay **cuatro filas en cero** creadas solas
+por el modelo anterior al abrir meses —`admin` sep-2026, `dgomez` ago-2026 y
+sep-2026, `scordoba` ago-2026—; con el modelo nuevo **se ignoran** (no cuentan
+como configuración), así que no estorban, pero pueden borrarse cuando César
+quiera. La única configuración real es la de `scordoba` desde sep-2026, y su
+liquidación de la 2.ª quincena de septiembre sigue en borrador.
+
+### Verificación
+
+- `node --experimental-strip-types scripts/pruebas-nomina.mjs`: **168/168** (los
+  de antes + lectura/escritura de dinero, el campo mientras se escribe y la
+  resolución «vigente desde»).
+- `npm run lint` y `npm run build` en verde.
+- `next start` + Playwright contra **localhost** como `admin`, con datos de
+  prueba propios (cuenta «Operario de prueba» y la nómina del propio admin),
+  borrados al final: escribir y pegar importes, guardar y comprobar el valor
+  exacto en la base, cambiar de persona y de mes sin recargar, heredar y quitar
+  cambios, liquidar cuatro meses después sin abrir la Configuración, filtro por
+  persona con recarga, volante PDF rasterizado y CSV sin miles; capturas a 1440
+  y 390, **cero errores de consola**.
 
 ---
 
