@@ -5,7 +5,7 @@
  * ================================================================
  * Las tres pestañas son la MISMA página con otro `?vista=`. Las rutas del panel
  * son dinámicas y los enlaces van con `prefetch={false}` (arreglo de «el panel
- * se traba», ver `app/admin/loading.tsx`), así que entre el clic y la respuesta
+ * se traba»), así que entre el clic y la respuesta
  * del servidor hay un viaje de ida y vuelta. Para que el clic SIEMPRE se note
  * al instante:
  *   · la pestaña pulsada se marca como activa EN EL MISMO CLIC (estado

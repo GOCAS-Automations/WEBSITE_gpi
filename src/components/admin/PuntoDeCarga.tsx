@@ -21,7 +21,7 @@ import { useLinkStatus } from "next/link";
  *
  * Se pinta SIEMPRE, con `opacity-0` en reposo, para que aparecer no desplace el
  * texto. Va oculto a los lectores de pantalla: el aviso de carga se lo da el
- * esqueleto de `app/admin/loading.tsx`, y dos anuncios a la vez sobran.
+ * esqueleto de la pantalla, y dos anuncios a la vez sobran.
  */
 export function PuntoDeCarga({ className = "" }: { className?: string }) {
   const { pending } = useLinkStatus();

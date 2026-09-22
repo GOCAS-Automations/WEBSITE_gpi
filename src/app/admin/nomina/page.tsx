@@ -34,8 +34,11 @@
  *     al cambiar de pestaña, de período o de persona se monta de nuevo y
  *     enseña su esqueleto (`esqueletos.tsx`) mientras llegan los datos;
  *   · la pestaña pulsada se marca en el mismo clic (`PestanasNomina`).
- * `prefetch={false}`, `app/admin/loading.tsx` y `PuntoDeCarga` siguen en su
- * sitio: son el arreglo de «el panel se traba» y esto se apoya en ellos.
+ * `prefetch={false}` y `PuntoDeCarga` siguen en su sitio: son lo que queda del
+ * arreglo de «el panel se traba» y esto se apoya en ellos. El `loading.tsx` del
+ * segmento, en cambio, se eliminó el 22 sep 2026 porque colgaba las server
+ * actions (ver AGENTS.md); este `<Suspense>` es de la PÁGINA y ese sí es
+ * seguro.
  */
 
 import { Suspense } from "react";

@@ -6,11 +6,11 @@
  * selectores, totales, tabla; formulario; indicadores y gráficas— para que el
  * cambio no «salte» cuando llegan los datos.
  *
- * Por qué hace falta aquí y no basta `app/admin/loading.tsx`: esa frontera
- * envuelve el segmento `nomina`, y cambiar de pestaña solo cambia `?vista=`.
- * En Next 16 la frontera de carga de una página NO se vuelve a montar cuando
- * solo cambian los parámetros de búsqueda, así que la pantalla anterior se
- * quedaba congelada hasta tener todos los datos nuevos. Un `<Suspense>` con
+ * Por qué hace falta aquí: cambiar de pestaña solo cambia `?vista=`, y sin una
+ * frontera propia la pantalla anterior se queda congelada hasta tener todos los
+ * datos nuevos. (El `app/admin/loading.tsx` del segmento tampoco serviría: no se
+ * volvía a montar al cambiar solo los parámetros de búsqueda, y además se
+ * eliminó el 22 sep 2026 porque colgaba las server actions.) Un `<Suspense>` con
  * una `key` distinta por pestaña y parámetros sí se monta de nuevo y enseña su
  * esqueleto en cuanto el servidor empieza a responder.
  */
@@ -118,7 +118,7 @@ export function EsqueletoNomina({ vista }: { vista: VistaNomina }) {
   return (
     <>
       {/* El esqueleto es decorativo; el cambio sí se anuncia (fuera del
-          contenedor `aria-hidden`, igual que en `app/admin/loading.tsx`). */}
+          contenedor `aria-hidden`). */}
       <p className="sr-only" role="status">
         Cargando la nómina…
       </p>

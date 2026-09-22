@@ -24,7 +24,7 @@
  *
  * Es un endurecimiento, NO la causa del "se traba" que reportó GPI —esa
  * resultó ser la falta de frontera de carga en `/admin`, documentada en
- * `src/app/admin/loading.tsx`—, pero es una carrera real y barata de cerrar:
+ * el esqueleto del panel—, pero es una carrera real y barata de cerrar:
  * el enlace de verdad, cuando llega, sí refresca. Va de la mano de
  * `prefetch={false}` en la navegación del panel (ver `AdminShell`).
  */
