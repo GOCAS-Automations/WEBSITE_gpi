@@ -2520,10 +2520,12 @@
   adelante</strong>, hasta el próximo mes en que se guarde otro cambio: no hace falta
   abrir cada mes uno por uno. Arriba del formulario, la pantalla dice siempre de dónde
   salen los valores —<span class="ui-wrap">Configurado en este mes</span>,
-  <span class="ui-wrap">Heredado de …</span> o <span class="ui">Sin configurar</span>—, y
-  debajo aparece la lista de <span class="ui-wrap">Cambios guardados</span> de la persona.
-  Si un mes se configuró por error, el botón <span class="ui-wrap">Quitar el cambio de
-  …</span> lo borra y el mes vuelve a heredar el anterior.</p>
+  <span class="ui-wrap">Heredado de …</span>, <span class="ui-wrap">Sin configuración desde
+  … (herencia suspendida)</span> o <span class="ui">Sin configurar</span>—, y debajo
+  aparece la lista de <span class="ui-wrap">Cambios guardados</span> de la persona. Si un
+  mes se configuró por error, el botón <span class="ui-wrap">Quitar el cambio de este
+  mes</span> lo borra y el mes vuelve a heredar el anterior.</p>
+
   <div class="caja tip">
     <span class="titulo">Consejo</span>
     <p>El botón <span class="ui-wrap">Usar los valores sugeridos</span> propone las siete
@@ -2534,6 +2536,32 @@
     formulario la marca en ámbar. Es un aviso, <strong>no un bloqueo</strong>: GPI puede
     pagar más que la ley, nunca menos.</p>
   </div>
+
+  <h3>Dejar a alguien sin configuración (retiro o licencia)</h3>
+  <p>Cuando una persona se retira o sale a una licencia sin sueldo, abra en Configuración
+  el <strong>primer mes en que ya no se le paga</strong> y pulse
+  <span class="ui-wrap">Dejar sin configuración desde este mes</span>. Desde ese mes en
+  adelante deja de heredar su configuración y no se le liquida, hasta que se guarde un
+  cambio nuevo; los meses anteriores no se tocan. El botón solo aparece en un mes que
+  hereda. Para deshacerlo, abra ese mismo mes y pulse
+  <span class="ui-wrap">Quitar el cambio de este mes</span>: vuelve la herencia. Si la
+  persona regresa más adelante, basta con guardar su configuración en el mes de
+  regreso.</p>
+  <p>Antes de quitar un cambio o de dejar a alguien sin configuración, una ventana de
+  confirmación explica qué va a pasar con sus liquidaciones, y dice
+  <strong>cuántas y de qué períodos</strong> se eliminarían:</p>
+  <div class="tabla-wrap">
+    <table class="keep">
+      <thead><tr><th style="width:38%">Liquidación</th><th>Qué le pasa</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Cerrada o pagada</strong></td><td>Nada, nunca: conserva su cálculo y su volante.</td></tr>
+        <tr><td><strong>Borrador</strong> de un mes que sigue con configuración (heredada)</td><td>Se conserva, con los bonos y descuentos que tenga escritos, y se recalcula con la configuración heredada. El detalle dice con cuál se está calculando.</td></tr>
+        <tr><td><strong>Borrador</strong> de un mes que queda sin configuración</td><td>Se elimina, porque ya no hay con qué calcularlo. La persona vuelve a aparecer como sin configurar.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Una liquidación cerrada de un mes que ya no tiene configuración <strong>no se puede
+  reabrir</strong>: el sistema pide configurar primero a la persona en ese mes.</p>
 
   <h3>Borrador, cerrada, pagada</h3>
   <div class="tabla-wrap">
