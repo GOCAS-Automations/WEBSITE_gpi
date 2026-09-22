@@ -62,7 +62,7 @@ el sitio vive en **https://www.gpiprofesionales.com**.
 | Títulos del inicio y de las cabeceras de página (pulido final) | `supabase/migrations/0008…`, `site_settings.home` (cuatro bloques nuevos), `site_settings.paginas`, `/admin/inicio`, `/admin/paginas` |
 | Menú del panel agrupado en un hub (pulido final) | `/admin/contenido`, `RUTAS_CONTENIDO` en `src/lib/admin-types.ts`, `src/components/admin/AdminShell.tsx` |
 | «Mi Cuenta» rebota al panel para roles de contenido (pulido final) | `src/app/mi-cuenta/IrAlPanel.tsx`, portal en `/mi-cuenta?portal=1` |
-| Arreglo del bug «el panel se traba» (pulido final) | `src/app/admin/loading.tsx`, `src/components/admin/PuntoDeCarga.tsx`, `prefetch={false}` en `AdminShell` |
+| Arreglo del bug «el panel se traba» (pulido final) | `src/components/admin/PuntoDeCarga.tsx`, `prefetch={false}` en `AdminShell` (el `app/admin/loading.tsx` que lo acompañaba se eliminó el 22 sep 2026: colgaba las server actions) |
 | Galería de Nosotros en carrusel con peek desde la 3.ª foto (pulido final + ajustes del 13 ago: peek y sin puntos) | `src/components/sections/GaleriaAliados.tsx` |
 | Teléfono obligatorio en el formulario de contacto (cierre, 13 ago) | `supabase/migrations/0009_telefono_mensajes.sql`, `src/lib/contacto-types.ts`, `src/components/sections/ContactForm.tsx` |
 
@@ -691,6 +691,11 @@ manualmente era la única forma de que el navegador abandonara la carrera de
 navegaciones canceladas.
 
 **El arreglo, en tres piezas que dependen entre sí:**
+
+> **Corrección del 22 de septiembre de 2026**: la primera pieza,
+> `src/app/admin/loading.tsx`, **se eliminó**: era la causa del cuelgue de las
+> server actions («Guardando…» para siempre). Quedan las otras dos, que son las
+> que quitan la sensación de panel congelado. Ver la iteración de ese día.
 
 1. **`src/app/admin/loading.tsx`** — el `<Suspense>` que le faltaba al
    segmento. Con él, la navegación se confirma **al instante**: la URL cambia,
@@ -1991,8 +1996,9 @@ medido con `performance.now()` de la propia página):
 - `<Suspense key={pestaña + parámetros}>` en `page.tsx` con esqueletos por
   pestaña (`esqueletos.tsx`), y pestañas en un componente de cliente
   (`PestanasNomina`) que marca la pulsada **en el mismo clic** y lleva el
-  `PuntoDeCarga`. `prefetch={false}`, `app/admin/loading.tsx` y `PuntoDeCarga`
-  siguen en su sitio.
+  `PuntoDeCarga`. `prefetch={false}` y `PuntoDeCarga` siguen en su sitio (el
+  `app/admin/loading.tsx` se eliminó el 22 sep 2026: colgaba las server
+  actions; el `<Suspense>` de dentro de la página se queda).
 - Los ~300 ms entre que llegan los datos y se ven son la regla de React de no
   revelar el contenido antes de 300 ms desde que apareció el esqueleto (evita
   parpadeos); contra Supabase desde Vercel, datos y esqueleto llegan casi a la
@@ -2055,7 +2061,7 @@ regla es `efectoEnBorradores()` de `nomina.ts`):
   licencia)» y la regla de los borradores en lenguaje llano; PDF regenerado
   (53 páginas, las mismas que antes; sin títulos huérfanos ni tablas partidas).
 
-### Hallazgo que queda abierto: un guardado que a veces no «termina» en pantalla
+### Hallazgo: un guardado que a veces no «termina» en pantalla
 
 En las pruebas con Playwright, **alrededor de 1 de cada 10–20 acciones** de la
 nómina (guardar configuración, crear una liquidación) se queda en
@@ -2064,9 +2070,10 @@ servidor llegó completa. **Pasa igual en la versión desplegada** (medido sobre
 commit `ab19007`: 2 de 12 guardados), así que no lo introdujo esta iteración.
 Descartados: la precarga de los enlaces del encabezado público (con todos en
 `prefetch={false}` siguió pasando, 1 de 20) y errores de consola (no hay
-ninguno). Recargar la página muestra el dato guardado. Conviene investigarlo
-aparte (candidato: cómo aplica el router de Next 16 la respuesta de una acción
-con `revalidatePath`).
+ninguno). Recargar la página muestra el dato guardado.
+
+> **Resuelto el mismo 22 de septiembre**: era `app/admin/loading.tsx`. Detalle
+> completo en la iteración siguiente.
 
 ### Datos (estado al terminar)
 
@@ -2092,6 +2099,122 @@ septiembre.
   configuración → rechazo con mensaje; el huérfano de septiembre se ve como
   tal. **29/29**, cero errores de consola. Capturas a 1440 y 390 de los tres
   estados y de las confirmaciones, revisadas.
+
+---
+
+## Iteración del 22 de septiembre de 2026 — el bug de «Guardando…» que no terminaba nunca
+
+**Qué reportaba el cliente.** De vez en cuando, al guardar la configuración de
+nómina o crear una liquidación, el botón se quedaba en «Guardando…» /
+«Creando…» para siempre. El dato **sí** quedaba guardado (al recargar aparecía),
+no había errores en consola y la respuesta del servidor llegaba entera. No era
+de la nómina ni de esta iteración: pasaba igual en lo desplegado.
+
+### 1. Cómo se reprodujo
+
+`next build` + `next start` contra `localhost` y un bucle de Playwright que
+repite la misma acción decenas de veces, registrando de cada intento la petición
+POST de la acción (envío, cabeceras y **fin** del stream), el texto del botón y
+el tiempo. Instrumentando además `fetch` y `history.pushState/replaceState` en
+la página se vio lo esencial:
+
+- en los cuelgues la respuesta **termina completa** (`POST-fin`, decenas de KB),
+  pero **no hay `history.replaceState`**: el router nunca confirma el re-render;
+- **no hay una segunda petición** del segmento que falta (ni `_rsc` ni nada);
+- el DOM se queda con los datos viejos y no hay ni un error de consola;
+- esperando 15–60 s más, no se destraba solo.
+
+Y la pista que lo resolvió: **la tasa de cuelgue crece con el tamaño de la
+respuesta**. Midiendo en dos pantallas:
+
+| Pantalla | Tamaño de la respuesta | Cuelgues (antes) |
+| --- | --- | --- |
+| Nómina → Configuración (guardar) | ~53 KB | 3/30 y 1/24 |
+| Calendario → Notas (guardar nota) | ~56 KB | 26/40 |
+| Calendario → Notas, con la tabla más llena | ~65 KB | **40/40** |
+
+Es decir: **no era de la nómina**, era de todo el panel, y con la tabla llena se
+volvía determinista — que es lo que permitió cerrarlo rápido.
+
+### 2. La causa: `app/admin/loading.tsx`
+
+Un `loading.tsx` es la frontera de carga **del segmento**: Next envuelve la
+página en un `<Suspense>` a nivel de router. Eso es justo lo que permite que la
+respuesta de una server action se parta en dos:
+
+1. la acción llama a `revalidatePath`, así que su respuesta trae —en el mismo
+   stream— el **re-render de la ruta** (es como funciona Next 16: una sola
+   petición lleva el resultado de la acción y la UI nueva);
+2. como el segmento tiene frontera de carga, React puede **descargar el
+   cascarón antes de que la página esté lista**: primera oleada = layout +
+   esqueleto; segunda oleada, cientos de ms después = el contenido de la página;
+3. el cliente siembra con esa respuesta una navegación, el segmento de página
+   llega **parcial**, el router **no vuelve a pedir lo que falta** y la
+   transición de React que sostiene el `pending` de `useActionState` no confirma
+   nunca. El dato está guardado, la respuesta llegó entera y el botón se queda
+   en «Guardando…» hasta recargar.
+
+Por eso la probabilidad dependía del tamaño y de lo que tardase la página
+respecto al layout: es la probabilidad de que la respuesta se parta en dos
+oleadas. (La nómina colgaba menos porque su `page.tsx` no espera datos: los pide
+dentro de un `<Suspense>` propio.)
+
+### 3. El arreglo
+
+**Se elimina `src/app/admin/loading.tsx`.** Con eso la respuesta de la acción
+llega de una pieza y el cuelgue desaparece.
+
+Lo que se conserva del arreglo de «el panel se traba» (17 sep): **`PuntoDeCarga`
+en cada enlace del panel y `prefetch={false}`**, que es la mitad que de verdad
+quita la sensación de panel congelado. Medido después de quitar la frontera: la
+navegación del menú confirma en **533 ms de mediana** (16 transiciones) y, tras
+**12 clics en ráfaga** cada 120 ms, la última navegación se completa igual — no
+vuelve el «toca recargar».
+
+Si una pantalla quiere esqueleto, va un **`<Suspense>` dentro de la página**,
+como hace `/admin/nomina` con sus pestañas: esa frontera es de React, no de
+segmento, y no reproduce el fallo (50/50 guardados limpios).
+
+### 4. Red de seguridad: el vigilante de acciones
+
+Aunque la causa esté corregida, ninguna pantalla debería quedarse muda
+esperando una respuesta que quizá no llegue (una red lenta basta). Por eso
+**todas** las acciones del panel y del portal pasan de `useActionState` a
+**`useAccionPanel`** (`src/components/admin/ui-base.tsx`), que es el mismo hook
+con un vigilante de tiempo: si a los **9 s** (`ESPERA_MAXIMA_ACCION_MS`) no hay
+respuesta, apaga el «pendiente» —el botón se reactiva y deja de decir
+«Guardando…»— y enciende **`VigilanteDeAcciones`**, el aviso ámbar fijo abajo
+(«La respuesta se demoró más de lo normal. Es muy probable que el cambio sí se
+haya guardado: actualiza para verlo») con un botón **Actualizar** que recarga la
+pantalla. El aviso se monta UNA vez por pantalla: en `AdminShell` y en
+`/mi-cuenta`. Son 23 puntos de uso en 13 archivos (nómina, calendario, jornadas,
+equipo, horarios, contenido y las cuatro pestañas del portal).
+
+Apagar el «pendiente» no destraba nada en React —si la transición estaba
+colgada, lo sigue estando—, por eso la salida que ofrece el aviso es recargar.
+
+### 5. Verificación
+
+- Bucles con `next build` + `next start` contra `localhost`, como admin:
+  **configuración de nómina 0/50**, **notas del calendario 0/40** (con la misma
+  tabla llena que antes daba 40/40) y **crear liquidación 0/20**. Cero errores
+  de consola en las tres.
+- El vigilante, probado bloqueando a propósito la respuesta de la acción: el
+  aviso sale, el botón vuelve a quedar utilizable y «Actualizar» devuelve la
+  pantalla. Revisado a **1440 y 390 px** (sin desbordes).
+- `scripts/pruebas-nomina.mjs` **249/249**, `scripts/pruebas-jornada.mjs`
+  **74/74**; `lint` y `build` limpios.
+
+### 6. Datos
+
+Listado inicial y final (hash por fila) de `nomina_config_mensual`,
+`nomina_liquidaciones`, `eventos`, `evento_responsables`, `evento_notas`,
+`profiles`, `jornadas`, `horarios_mensuales`, `site_faqs`, `site_values` y
+`site_settings`: **idéntico**. Todo lo de las pruebas se hizo con `oprueba` en
+**2027** (12 configuraciones y 20 liquidaciones) y con un evento de prueba
+creado para el bucle de notas; todo se borró al terminar. Los datos de César
+—configuración de `oprueba` de septiembre de 2026 y su liquidación cerrada— no
+se tocaron.
 
 ---
 
