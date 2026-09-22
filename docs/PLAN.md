@@ -30,6 +30,7 @@ el sitio vive en **https://www.gpiprofesionales.com**.
 | 4k | Cierre del proyecto (13 ago) | ✅ Completa | Correo del formulario **activo en producción** con el SMTP Workspace de GoDaddy (`smtpout.secureserver.net:465`); **teléfono obligatorio** en el formulario de contacto, con la migración 0009 **aplicada**; carrusel de la galería de Nosotros sin puntos indicadores; y QA final del sitio. Con esto son **nueve** las migraciones, todas aplicadas. |
 | 4l | Calendario interno de programación (17–18 sep) | ✅ Desplegado | `/admin/calendario` (Calendario · Notas · Métricas) para managers y «Mis eventos» en el portal; aplazar solo hacia adelante y «Devolver a su fecha original»; campo **apodo**, editable por admin y coordinador. Migración 0010 aplicada. |
 | 4m | Nómina y volante de pago (17–19 sep) | ✅ Desplegada (19 sep) | `/admin/nomina` (Liquidación · Configuración · Tablero) **solo para el administrador**, volante en PDF y «Mi nómina» en el portal; dinero con punto de miles, configuración «vigente desde» y filtro por persona. Migraciones 0011 y 0012 aplicadas. |
+| 4n | Nómina tras la prueba de César (22 sep) | ✅ Hecho (commits locales, **sin desplegar**) | Pestañas de nómina rápidas (clic → contenido de 0,82–0,89 s a ~0,46 s, con la pestaña marcada al instante y esqueleto), **«Dejar sin configuración desde este mes»** (corte, migración **0013 aplicada**) y la **regla de los borradores** al quitar o suspender la configuración. |
 | 5 | Deploy en Vercel desde el repo de GitHub + variables de entorno | ✅ Completa | **https://website-gpi.vercel.app** — despliega solo con cada push a `main`; las 3 env vars configuradas (incl. `SUPABASE_SERVICE_ROLE_KEY` sin prefijo). Verificado en vivo: 7 cabeceras de seguridad, 9 rutas 200, `/admin` protegido. |
 | 6 | Apuntar dominio `gpiprofesionales.com` de GoDaddy → Vercel | ✅ Completa | **19 ago 2026** — raíz con A `216.198.79.1` y `www` en CNAME; `www` es el dominio principal (el raíz redirige 308, alineado con sitemap/canónicas); certificado emitido y verificación completa en vivo. MX y SPF del correo intactos. |
 | 7 | Extra cotizable aparte: chatbot IA | 💡 Planeado | Claude Haiku 4.5 vía `/api/chat`, con conocimiento del contenido del sitio (servicios, proyectos, contacto) y captura de leads hacia Supabase. No incluido en la cotización actual. |
@@ -1930,6 +1931,167 @@ registro por día.
   otra aprobada se rechaza con el mensaje explicativo (en 1440 y 390 px).
   **Cero errores de consola** y las tablas de la base idénticas antes y
   después.
+
+## Iteración del 22 de septiembre de 2026 — nómina: pestañas rápidas, «dejar sin configuración» y la regla de los borradores
+
+César probó la nómina en producción y pidió tres cambios. Quedan en **commits
+locales de `main`, sin push**: el 22 sep César se reúne con GPI para mostrar el
+módulo y ese día no se despliega. **Migración 0013 aplicada** en el GPI Project
+(compatible con el código desplegado, que la ignora).
+
+### 1. Navegación lenta entre Liquidación, Configuración y Tablero
+
+**Medido antes de tocar nada** (`next build` + `next start`, sesión de admin,
+localhost contra Supabase, ~115 ms por viaje; mediana de 5; en el navegador,
+medido con `performance.now()` de la propia página):
+
+| | Antes | Después |
+| --- | --- | --- |
+| Servidor, documento completo — Liquidación | 836–901 ms | 301 ms |
+| Servidor — Configuración | 652–684 ms | 297 ms |
+| Servidor — Tablero | 777–788 ms | 279 ms |
+| Servidor — Liquidación, otro período / persona | 690–1.032 ms | 285–292 ms |
+| Clic → pestaña marcada | 820–890 ms (se marcaba al final) | **1–2 ms** |
+| Clic → esqueleto visible | — (no había: la pantalla vieja se quedaba quieta) | ~150 ms |
+| Clic → contenido — Configuración / Tablero / Liquidación | 890 / 821 / 870 ms | 461 / 461 / 463 ms |
+| Cambio de quincena / de persona | 832 / 724 ms | 465 / 455 ms |
+
+**Qué lo hacía lento:**
+
+- **La sesión, dos veces y en serie.** `getUser()` y después el perfil (dos
+  viajes), en el layout de `/admin` y otra vez en la página, y solo después
+  empezaban los datos.
+- **Liquidación: consultas N+1.** `horasDelPeriodo` por **cada persona**: dos
+  `listJornadas` (aprobadas y pendientes), cada una con su consulta de nombres
+  a `profiles` —cuatro viajes por cabeza—, más otra consulta de nombres detrás
+  de `listLiquidaciones`.
+- **Tablero:** una consulta de configuración **por cada mes** con borradores, y
+  los nombres en serie detrás de las liquidaciones.
+- **Ninguna señal:** en Next 16 la frontera `loading.tsx` de una página **no se
+  vuelve a montar cuando solo cambian los parámetros de búsqueda** (la clave del
+  segmento es `__PAGE__` sin la búsqueda; comprobado en `layout-router.js`), así
+  que la pestaña vieja seguía marcada y la pantalla quieta hasta tener todo.
+
+**Qué se hizo:**
+
+- `getSessionProfile()` (`src/lib/supabase/auth.ts`) con `cache()` de React
+  —una lectura por petición, nada compartido entre usuarios— y el perfil pedido
+  **en paralelo** con `getUser()` por un cliente aparte con el token
+  (`getTokenSupabase`), porque el cliente de la sesión encola sus peticiones
+  detrás de `getUser()`. Solo se acepta si `getUser()` confirma el mismo id.
+- Cada vista hace `requireAdmin()` **en la misma tanda** (`Promise.all`) que sus
+  lecturas; la página ya no espera la sesión para pintar cabecera y pestañas.
+  Sigue siendo la barrera autoritativa: no se pinta un dato hasta que responde,
+  y redirige igual si no es administrador.
+- Liquidación: **una** consulta de jornadas del período para todo el equipo
+  (`leerJornadasNomina` + `horasPorEmpleado`, por tandas de 1000),
+  `listLiquidaciones({ nombres: false })` y toda la configuración en una lectura
+  (`listNominaConfigsPorEmpleado`). Configuración y Tablero: una sola tanda en
+  paralelo, configuración entera de una vez (la tabla es pequeña).
+- `<Suspense key={pestaña + parámetros}>` en `page.tsx` con esqueletos por
+  pestaña (`esqueletos.tsx`), y pestañas en un componente de cliente
+  (`PestanasNomina`) que marca la pulsada **en el mismo clic** y lleva el
+  `PuntoDeCarga`. `prefetch={false}`, `app/admin/loading.tsx` y `PuntoDeCarga`
+  siguen en su sitio.
+- Los ~300 ms entre que llegan los datos y se ven son la regla de React de no
+  revelar el contenido antes de 300 ms desde que apareció el esqueleto (evita
+  parpadeos); contra Supabase desde Vercel, datos y esqueleto llegan casi a la
+  vez.
+
+### 2. Qué pasa con las liquidaciones al quitar la configuración
+
+Decisión de César, aplicada en el **servidor** y en la **misma transacción** que
+quita la configuración (función `nomina_aplicar_cambio_config` de la 0013; la
+regla es `efectoEnBorradores()` de `nomina.ts`):
+
+- **Cerradas o pagadas**: no se tocan jamás.
+- **Borradores** de los meses afectados (desde el mes del cambio hasta antes del
+  próximo cambio): si el mes **sigue** con configuración heredada, se
+  **conservan** con sus conceptos y se recalculan (el detalle dice «Se calcula
+  con la configuración guardada en … (heredada)»); si queda **sin ninguna**, se
+  **eliminan** y la persona vuelve a salir como sin configurar.
+- La **confirmación** (ventana propia, ya no `window.confirm`) dice antes
+  cuántos borradores y de qué períodos se eliminarían, y cuántos se conservan.
+  La pantalla manda sus ids; si al llegar al servidor la cuenta es otra, la
+  acción no hace nada y pide recargar.
+- **Reabrir** una cerrada de un mes sin configuración se rechaza: «configura
+  primero a la persona en ese mes».
+- Un **borrador huérfano** de antes (el de la 2.ª quincena de septiembre de una
+  cuenta cuya única fila de configuración es un resto en cero) se ve marcado
+  «Sin configuración», **sin cifras** (nunca en cero ni viejas), fuera de los
+  totales, del CSV y del Tablero, con su aviso y su botón «Eliminar el
+  borrador»; el volante de un huérfano no se imprime.
+
+### 3. «Dejar sin configuración desde este mes» (suspender la herencia)
+
+- **Datos (0013)**: `nomina_config_mensual.sin_configuracion boolean not null
+  default false`. Una fila con `true` es un **corte**: sin configuración desde
+  ese mes hasta el próximo cambio. No se reutiliza «salario 0» (esas filas son
+  restos del modelo anterior y se ignoran). No hizo falta relajar ninguna
+  restricción: un corte va con los valores por defecto (0), que las
+  restricciones `>= 0` ya aceptan.
+- **Regla única**: `configVigente()` / `estadoConfigMes()` entienden el corte
+  (si el cambio más reciente ≤ M es un corte → sin configuración).
+  `estadoConfigMes` gana `origen: "suspendida"`, `corte` y `cambioDelMes`.
+- **Pantalla**: tres estados distinguibles —«Configurado en este mes»,
+  «Heredado de X» y «Sin configuración desde X (herencia suspendida)»—; botón
+  **«Dejar sin configuración desde este mes»** en un mes que hereda; en un mes
+  con corte propio, «Quitar el cambio de este mes» restaura la herencia; la
+  lista de *Cambios guardados* muestra los cortes en ámbar. Guardar en un mes
+  con corte lo convierte en configuración.
+- Acciones `quitarConfigMes` / `cortarHerenciaConfig` con `getAdminOrNull()` y
+  validación (no se corta un mes con configuración propia, ni uno ya
+  suspendido, ni uno sin nada que heredar). Ayudas `AYUDA_NOMINA_CORTE` y
+  `AYUDA_NOMINA_BORRADORES`.
+
+### Otros
+
+- Los textos `AYUDA_*` pasan a `src/components/admin/ayudas.ts` (puro); `ui.tsx`
+  los reexporta. `ConfigNominaForm` y `LiquidacionPanel` —los únicos
+  componentes de cliente que importaban de `ui.tsx`— importan ahora de ahí.
+- Los tramos de vigencia se escriben «solo en noviembre de 2026» cuando el
+  próximo cambio es al mes siguiente (antes: «desde noviembre hasta noviembre»).
+- Manual del cliente, 6.18: «Dejar a alguien sin configuración (retiro o
+  licencia)» y la regla de los borradores en lenguaje llano; PDF regenerado
+  (53 páginas, las mismas que antes; sin títulos huérfanos ni tablas partidas).
+
+### Hallazgo que queda abierto: un guardado que a veces no «termina» en pantalla
+
+En las pruebas con Playwright, **alrededor de 1 de cada 10–20 acciones** de la
+nómina (guardar configuración, crear una liquidación) se queda en
+«Guardando…» / «Creando…» aunque **el dato sí se guardó** y la respuesta del
+servidor llegó completa. **Pasa igual en la versión desplegada** (medido sobre el
+commit `ab19007`: 2 de 12 guardados), así que no lo introdujo esta iteración.
+Descartados: la precarga de los enlaces del encabezado público (con todos en
+`prefetch={false}` siguió pasando, 1 de 20) y errores de consola (no hay
+ninguno). Recargar la página muestra el dato guardado. Conviene investigarlo
+aparte (candidato: cómo aplica el router de Next 16 la respuesta de una acción
+con `revalidatePath`).
+
+### Datos (estado al terminar)
+
+Listado inicial y final de `nomina_config_mensual` (5 filas) y
+`nomina_liquidaciones` (2 filas) **idéntico** (hash por fila). Todo lo de las
+pruebas se hizo con `oprueba` en meses de noviembre de 2026 en adelante y se
+borró. Datos de César que se conservan: la configuración de `oprueba` de
+septiembre de 2026 y su liquidación **cerrada** de la 2.ª quincena de
+septiembre.
+
+### Verificación
+
+- `scripts/pruebas-nomina.mjs` **249/249** (41 nuevas: corte y regla de los
+  borradores) y `scripts/pruebas-jornada.mjs` **74/74**; `lint` y `build`
+  limpios.
+- Playwright contra **localhost** como admin: tiempos de las tres pestañas
+  (tabla de arriba); quitar un cambio con borrador que sigue heredando → el
+  borrador se conserva con su bono; suspender la herencia en un mes heredado →
+  la confirmación cuenta y nombra los 2 borradores, y el mes y los siguientes
+  quedan sin configuración; quitar el corte → vuelve la herencia; corte +
+  cambio posterior → vuelve a haber configuración; quitar el último cambio → el
+  borrador desaparece y la cerrada no se toca; reabrir una cerrada sin
+  configuración → rechazo con mensaje; el huérfano de septiembre se ve como
+  tal. **29/29**, cero errores de consola. Capturas a 1440 y 390 de los tres
+  estados y de las confirmaciones, revisadas.
 
 ---
 

@@ -18,7 +18,7 @@ la gestión de cuentas y el registro de jornadas (horas extra).
 > pendientes: es la referencia de qué hace cada migración y el procedimiento
 > por si algún día hubiera que montar el proyecto en un Supabase nuevo.
 
-Hay **doce** migraciones y se aplican **en orden**:
+Hay **trece** migraciones y se aplican **en orden**:
 
 | Archivo | Qué añade |
 | --- | --- |
@@ -34,6 +34,7 @@ Hay **doce** migraciones y se aplican **en orden**:
 | `supabase/migrations/0010_calendario.sql` | **Calendario interno**: `eventos`, `evento_responsables` y `evento_notas` con su RLS, y el campo `profiles.apodo` |
 | `supabase/migrations/0011_nomina.sql` | **Nómina**: `nomina_config_mensual` (salario y tarifas por empleado y mes) y `nomina_liquidaciones` (la nómina de un período, con su cálculo congelado), más los datos de la empresa para el volante (`site_settings.empresa`) |
 | `supabase/migrations/0012_nomina_solo_admin.sql` | La nómina pasa a ser **solo del administrador**: las políticas de las dos tablas cambian de `is_manager()` a `is_admin_activo()` (helper nuevo = admin **con la cuenta activa**). La política de «lo propio» queda intacta, que es la que deja a cada quien ver su volante |
+| `supabase/migrations/0013_nomina_corte_configuracion.sql` | **Dejar sin configuración desde un mes** (un «corte»): columna `nomina_config_mensual.sin_configuracion` y la función `nomina_aplicar_cambio_config`, que quita un cambio o escribe un corte y elimina **en la misma transacción** los borradores que quedan sin configuración |
 
 Para cada una:
 
@@ -284,6 +285,33 @@ nómina ve **solo la suya**, como cualquier empleado.
 > **Ya está aplicada** en el GPI Project: se aplicó el 18 sep 2026, antes de
 > que el código de nómina se desplegara (19 sep), porque solo endurecía permisos
 > sobre tablas vacías. No hay que volver a aplicarla.
+
+### ¿Qué añade la 0013? (22 sep 2026)
+
+La configuración de nómina funciona «vigente desde»: lo guardado en un mes rige
+ese mes y los siguientes hasta el próximo cambio. Faltaba poder **cortar esa
+herencia** en un mes que la hereda —alguien que se retira o sale a una licencia
+sin sueldo—.
+
+| Objeto | Para qué sirve |
+| --- | --- |
+| Columna `nomina_config_mensual.sin_configuracion` | `true` = **corte**: la persona queda **sin configuración desde ese mes** hasta el próximo cambio. Es una fila de cambio más: borrarla («Quitar el cambio de este mes») deshace el corte y el mes vuelve a heredar. No se usa «salario 0» para esto: esas filas son restos del modelo anterior y se ignoran |
+| Función `nomina_aplicar_cambio_config(empleado, año, mes, acción, borradores)` | `quitar` borra la fila del mes; `cortar` escribe el corte. En la **misma transacción** elimina los borradores que le pasa la aplicación (los de los meses que se quedan sin configuración). Nunca toca una cerrada o pagada: el filtro `estado = 'borrador'` va en el propio `DELETE`. Es `security invoker`: manda la RLS de la 0012 (solo administrador activo) |
+
+**La regla de los borradores** (la aplica el servidor al quitar un cambio o
+dejar un mes sin configuración; la pantalla la anuncia antes en su confirmación):
+
+- liquidaciones **cerradas o pagadas**: no se tocan jamás;
+- **borradores** de meses que **siguen teniendo configuración** (heredada de un
+  mes anterior): se conservan, con sus conceptos, y se recalculan solos;
+- **borradores** de meses que se quedan **sin ninguna configuración**: se
+  **eliminan**, y la persona vuelve a salir como «sin configurar».
+
+**Reabrir** una liquidación cerrada de un mes que ya no tiene configuración se
+rechaza con un mensaje («configura primero a la persona en ese mes»).
+
+> **Ya está aplicada** en el GPI Project (22 sep 2026). Es compatible con el
+> código anterior: ese código no lee la columna nueva ni llama a la función.
 
 ### Si el bloque del usuario admin de la 0001 falla
 
@@ -1716,7 +1744,7 @@ uno había, que es justo lo que se quiere mirar a fin de mes.
 
 ## 15. Nómina — `/admin/nomina`
 
-Solo para el **administrador** (migraciones 0011 y 0012). Aquí se calcula, persona
+Solo para el **administrador** (migraciones 0011, 0012 y 0013). Aquí se calcula, persona
 por persona y período por período, **lo que hay que pagarle a cada empleado**:
 el sueldo, las horas y recargos que salen **solos** de las jornadas ya
 aprobadas, y los bonos y descuentos que el administrador digita.
@@ -1797,16 +1825,43 @@ se **hereda hacia adelante**.
   | --- | --- |
   | **Configurado en este mes** | Hay un cambio guardado justo en este mes. Rige desde aquí hasta el próximo cambio |
   | **Heredado de agosto de 2026** | Este mes no tiene cambio propio: usa el último guardado antes. Si guardas aquí, el cambio rige desde este mes en adelante y los anteriores no se tocan |
+  | **Herencia suspendida** — *Sin configuración desde octubre de 2026* | Desde ese mes se dejó a la persona **sin configuración** (un corte: retiro, licencia sin sueldo). No se liquida hasta el próximo cambio |
   | **Sin configurar** | Ni este mes ni ninguno anterior tiene configuración: esta persona todavía no se puede liquidar |
 
   Debajo aparece la lista de **Cambios guardados** de la persona (mes y
-  salario); al pulsar uno se abre ese mes.
+  salario, o *sin configuración* en ámbar para los cortes); al pulsar uno se
+  abre ese mes.
 - **Quitar el cambio de un mes.** Si un mes se configuró por error, el botón
-  **«Quitar el cambio de <mes>»** borra ese cambio y el mes vuelve a heredar lo
-  del cambio anterior. Pide confirmación y dice a qué vuelve. Si **no hay
-  ningún mes anterior configurado**, avisa con un mensaje fuerte de que la
-  persona quedará **sin configuración** (y no se podrá liquidar) y solo sigue si
-  lo confirmas.
+  **«Quitar el cambio de este mes»** borra ese cambio y el mes vuelve a heredar
+  lo del cambio anterior. Sobre un corte, **deshace la suspensión**. Si no queda
+  **ningún mes anterior configurado**, la persona queda **sin configuración** (y
+  no se podrá liquidar) y la confirmación lo dice con un aviso fuerte.
+- **Dejar sin configuración desde este mes** (22 sep 2026). En un mes que
+  **hereda**, este botón corta la herencia: la persona queda **sin
+  configuración desde ese mes en adelante**, hasta que guardes un cambio nuevo.
+  Es para cuando alguien se retira o sale a una licencia sin sueldo. Los meses
+  anteriores no se tocan. Se deshace abriendo ese mes y pulsando **«Quitar el
+  cambio de este mes»**; o, si solo quieres volver a pagarle desde un mes
+  posterior, guarda ahí su configuración.
+- **La confirmación dice qué pasa con las liquidaciones** antes de hacer nada
+  (regla del 22 sep 2026):
+
+  | Liquidación | Qué le pasa |
+  | --- | --- |
+  | **Cerrada o pagada** | Nada, jamás: conserva su cálculo congelado y su volante |
+  | **Borrador** de un mes que **sigue** con configuración (heredada) | Se **conserva** con sus conceptos (bonos, préstamos…) y se recalcula con la heredada; el detalle dice «Se calcula con la configuración guardada en … (heredada)» |
+  | **Borrador** de un mes que se queda **sin ninguna** configuración | Se **elimina** en la misma operación. La confirmación dice **cuántos y de qué períodos** antes de aceptar |
+
+  Si entre que abres la confirmación y la aceptas alguien crea o cierra una
+  liquidación de esa persona, la acción no hace nada y pide recargar: nunca se
+  elimina un borrador que no apareció en la confirmación.
+- **Reabrir** una liquidación cerrada de un mes que ya no tiene configuración
+  **no se deja**: el mensaje pide configurar primero a la persona en ese mes.
+  Mientras tanto la liquidación sigue cerrada, con su volante.
+- Un **borrador sin configuración** que venga de antes de esta regla se ve en
+  la *Liquidación* marcado en ámbar, **sin cifras** (nunca en cero ni con
+  cifras viejas), con su aviso y un botón para eliminarlo; si configuras el
+  mes, se recalcula y conserva sus conceptos.
 - **Las liquidaciones cerradas o pagadas nunca cambian**, se toque lo que se
   toque aquí: guardan su cálculo congelado. Las que siguen en **borrador** se
   recalculan solas con lo que rija.
