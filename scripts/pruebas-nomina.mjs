@@ -20,6 +20,12 @@
  *   · las tarifas sugeridas con la LEY del mes (divisor 210 con 42 h, recargo
  *     dominical por fecha) y el aviso de «por debajo del mínimo legal», contra
  *     `src/lib/ley-laboral.ts` (auditoría legal del 19 sep 2026).
+ * Y desde el 22 sep 2026:
+ *   · el CORTE de configuración («dejar sin configuración desde este mes»,
+ *     migración 0013) dentro de `configVigente` / `estadoConfigMes`;
+ *   · la REGLA DE LOS BORRADORES al quitar o suspender la configuración
+ *     (`efectoEnBorradores`): qué borradores se eliminan, cuáles se conservan
+ *     y que las cerradas y pagadas no se tocan nunca.
  *
  * El cálculo de HORAS (`jornada.ts`) tiene su propia batería:
  * `scripts/pruebas-jornada.mjs`.
@@ -660,6 +666,133 @@ comprobar("…y septiembre figura como heredado", estadoConfigMes(filas, 2026, 9
 comprobar("…ni cuenta como cambio guardado", estadoConfigMes(filas, 2026, 9).cambios.length, 1);
 comprobar("el orden de las filas no importa", configVigente([octubre, agosto], 2026, 12)?.id ?? null, "2026-10");
 comprobar("diciembre → enero cruza el año", configVigente([fila(2026, 12, 2_000_000)], 2027, 1)?.id ?? null, "2026-12");
+
+/* ================================================================== */
+/* 10 b. Corte: «dejar sin configuración desde este mes» (22 sep 2026)  */
+/* ================================================================== */
+
+grupoDe("Corte de configuración: sin configuración desde N hasta el próximo cambio");
+
+const { cambiosDeConfig, efectoEnBorradores, esCorte, filasTrasCortar, filasTrasQuitar } = nomina;
+const corte = (anio, mes) => ({
+  anio,
+  mes,
+  salario_basico: 0,
+  sin_configuracion: true,
+  id: `corte-${anio}-${mes}`,
+});
+
+filas = [agosto, corte(2026, 10)];
+comprobar("con corte en octubre, septiembre sigue heredando agosto", vig(2026, 9), "2026-8");
+comprobar("octubre (el mes del corte) queda sin configuración", vig(2026, 10), null);
+comprobar("…noviembre también", vig(2026, 11), null);
+comprobar("…y enero del año siguiente", vig(2027, 1), null);
+
+const corteOct = estadoConfigMes(filas, 2026, 10);
+comprobar("octubre: origen «suspendida»", corteOct.origen, "suspendida");
+comprobar("octubre: el corte que rige es el suyo", corteOct.corte?.id ?? null, "corte-2026-10");
+comprobar("octubre: su cambio del mes es el corte", corteOct.cambioDelMes?.id ?? null, "corte-2026-10");
+comprobar("octubre: no tiene configuración propia", corteOct.propia, null);
+comprobar("octubre: quitar el corte devolvería agosto", corteOct.alQuitar?.id ?? null, "2026-8");
+const corteDic = estadoConfigMes(filas, 2026, 12);
+comprobar("diciembre: «suspendida» por el corte de octubre", corteDic.origen, "suspendida");
+comprobar("diciembre: el corte que rige es el de octubre", corteDic.corte?.id ?? null, "corte-2026-10");
+comprobar("diciembre: no tiene cambio propio", corteDic.cambioDelMes, null);
+comprobar("septiembre: el próximo cambio es el corte", estadoConfigMes(filas, 2026, 9).siguiente?.id ?? null, "corte-2026-10");
+comprobar("el corte cuenta como cambio guardado (2 cambios)", estadoConfigMes(filas, 2026, 9).cambios.length, 2);
+comprobarQue("esCorte distingue el corte", esCorte(corte(2026, 10)) && !esCorte(agosto));
+
+// Un cambio POSTERIOR al corte vuelve a dar configuración.
+const enero27 = fila(2027, 1, 1_600_000);
+filas = [agosto, corte(2026, 10), enero27];
+comprobar("cambio en enero tras el corte: diciembre sigue sin configuración", vig(2026, 12), null);
+comprobar("…enero vuelve a tener configuración", vig(2027, 1), "2027-1");
+comprobar("…y febrero la hereda", vig(2027, 2), "2027-1");
+comprobar("…octubre: el corte rige hasta el próximo cambio (enero)", estadoConfigMes(filas, 2026, 10).siguiente?.id ?? null, "2027-1");
+
+// Quitar el corte = borrar su fila: vuelve la herencia.
+filas = filasTrasQuitar([agosto, corte(2026, 10)], 2026, 10);
+comprobar("sin el corte, octubre vuelve a heredar agosto", vig(2026, 10), "2026-8");
+comprobar("…y noviembre también", vig(2026, 11), "2026-8");
+comprobar("…y octubre figura como heredado", estadoConfigMes(filas, 2026, 10).origen, "heredada");
+
+// La marca manda: un corte nunca es configuración, tenga el salario que tenga;
+// y un resto en cero SIN la marca sigue sin ser corte (se ignora).
+comprobar(
+  "un corte con salario escrito sigue siendo corte",
+  configVigente([agosto, { ...fila(2026, 10, 9_999_999), sin_configuracion: true }], 2026, 11)?.id ?? null,
+  null,
+);
+comprobar(
+  "un resto en cero sin la marca NO corta la herencia",
+  configVigente([agosto, fila(2026, 10, 0)], 2026, 11)?.id ?? null,
+  "2026-8",
+);
+comprobar(
+  "cambiosDeConfig: el corte entra, el resto en cero no",
+  cambiosDeConfig([agosto, fila(2026, 9, 0), corte(2026, 10)]).map((f) => f.id).join(","),
+  "2026-8,corte-2026-10",
+);
+comprobar(
+  "cortar sobre un resto en cero lo reemplaza por el corte",
+  configVigente(filasTrasCortar([agosto, fila(2026, 10, 0)], 2026, 10), 2026, 10),
+  null,
+);
+comprobar("julio (antes de todo) sigue en «ninguna»", estadoConfigMes([agosto, corte(2026, 10)], 2026, 7).origen, "ninguna");
+
+/* ------------------------------------------------------------------ */
+
+grupoDe("Regla de los borradores al quitar o suspender la configuración");
+
+const liq = (id, anio, mes, estado) => ({ id, anio, mes, estado });
+const liquidacionesPersona = [
+  liq("b-jul", 2026, 7, "borrador"),
+  liq("b-sep", 2026, 9, "borrador"),
+  liq("b-oct", 2026, 10, "borrador"),
+  liq("c-oct", 2026, 10, "cerrada"),
+  liq("b-nov", 2026, 11, "borrador"),
+  liq("p-nov", 2026, 11, "pagada"),
+  liq("b-feb27", 2027, 2, "borrador"),
+];
+const ids = (lista) => lista.map((l) => l.id).join(",");
+const base = [agosto, enero27];
+
+// 1. Suspender desde octubre: oct–dic quedan sin configuración.
+let efecto = efectoEnBorradores(liquidacionesPersona, filasTrasCortar(base, 2026, 10), { anio: 2026, mes: 10 });
+comprobar("cortar en octubre elimina los borradores de oct y nov", ids(efecto.eliminar), "b-oct,b-nov");
+comprobar("…y no conserva ninguno (esos meses no tienen configuración)", efecto.conservar.length, 0);
+comprobar("…el efecto llega hasta diciembre (enero tiene su cambio)", `${efecto.hasta?.anio}-${efecto.hasta?.mes}`, "2026-12");
+comprobarQue(
+  "…septiembre (antes), febrero 2027 (después del próximo cambio), cerradas y pagadas: fuera",
+  !/b-sep|b-feb27|c-oct|p-nov|b-jul/.test(ids([...efecto.eliminar, ...efecto.conservar])),
+);
+
+// 2. Quitar agosto sin nada antes: ago–dic quedan sin configuración.
+efecto = efectoEnBorradores(liquidacionesPersona, filasTrasQuitar(base, 2026, 8), { anio: 2026, mes: 8 });
+comprobar("quitar el único cambio elimina los borradores de ago–dic", ids(efecto.eliminar), "b-sep,b-oct,b-nov");
+comprobarQue("…nunca una cerrada ni una pagada", !/c-oct|p-nov/.test(ids(efecto.eliminar)));
+comprobarQue("…ni un borrador de antes del cambio (julio)", !ids(efecto.eliminar).includes("b-jul"));
+
+// 3. Quitar agosto CON respaldo (junio): los borradores se conservan.
+const junio = fila(2026, 6, 1_200_000);
+efecto = efectoEnBorradores(liquidacionesPersona, filasTrasQuitar([junio, agosto, enero27], 2026, 8), { anio: 2026, mes: 8 });
+comprobar("con junio detrás, quitar agosto no elimina ningún borrador", efecto.eliminar.length, 0);
+comprobar("…y conserva los de ago–dic (heredan junio)", ids(efecto.conservar), "b-sep,b-oct,b-nov");
+
+// 4. Quitar el corte: el mes vuelve a heredar, así que nada se elimina.
+efecto = efectoEnBorradores(liquidacionesPersona, filasTrasQuitar([agosto, corte(2026, 10)], 2026, 10), { anio: 2026, mes: 10 });
+comprobar("quitar el corte no elimina borradores", efecto.eliminar.length, 0);
+comprobar("…y los de octubre en adelante siguen (heredan agosto)", ids(efecto.conservar), "b-oct,b-nov,b-feb27");
+comprobar("…sin límite: no hay un cambio posterior", efecto.hasta, null);
+
+// 5. Un huérfano de ANTES, fuera del rango afectado, no se toca.
+efecto = efectoEnBorradores(
+  [liq("b-oct", 2026, 10, "borrador"), liq("b-dic-huerfano", 2026, 12, "borrador")],
+  filasTrasCortar([agosto, corte(2026, 12)], 2026, 10),
+  { anio: 2026, mes: 10 },
+);
+comprobar("cortar en octubre con otro corte en diciembre: solo oct–nov", ids(efecto.eliminar), "b-oct");
+comprobar("…el efecto termina en noviembre", `${efecto.hasta?.anio}-${efecto.hasta?.mes}`, "2026-11");
 
 /* ================================================================== */
 /* 11. Período por defecto de la liquidación (19 sep 2026)             */

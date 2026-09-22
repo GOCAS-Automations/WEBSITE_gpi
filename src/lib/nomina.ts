@@ -1091,8 +1091,8 @@ export function decimalCSV(valor: number): string {
  * -------------------------------------------------------
  * Una fila de `nomina_config_mensual` guardada en el mes M **rige para M y
  * para todos los meses siguientes, hasta que exista otra fila más reciente**.
- * La configuración efectiva de un empleado en el mes M es, por tanto, la fila
- * VÁLIDA más reciente con (año, mes) ≤ M.
+ * La configuración efectiva de un empleado en el mes M sale, por tanto, del
+ * CAMBIO más reciente con (año, mes) ≤ M.
  *
  * Consecuencias que hay que tener presentes:
  *   · **Ver un mes no crea filas.** Solo guardar crea o actualiza la fila de
@@ -1107,18 +1107,41 @@ export function decimalCSV(valor: number): string {
  *   · Las liquidaciones CERRADAS no se enteran de nada de esto: leen su
  *     snapshot congelado (`obtenerLiquidacion`).
  *
- * «VÁLIDA» = con salario mayor que cero. El formulario nunca deja guardar un
- * salario en cero, así que una fila así solo puede ser un resto del modelo
- * anterior (las que se creaban vacías al abrir un mes). Tomarla en serio
- * dejaría a la persona «configurada en cero» y taparía lo heredado; por eso
- * se ignora, como si no existiera, y no hace falta borrarla.
+ * DOS CLASES DE CAMBIO (22 sep 2026)
+ * ----------------------------------
+ *   · **Configuración**: una fila con salario mayor que cero. Rige desde su mes.
+ *   · **Corte** («suspender la herencia»): una fila con `sin_configuracion =
+ *     true` (migración 0013). Significa «SIN configuración desde este mes en
+ *     adelante», hasta el próximo cambio. Es lo que se usa cuando alguien se
+ *     retira o sale a una licencia no remunerada. Como es una fila de cambio más,
+ *     «Quitar el cambio de este mes» sobre ella la borra y el mes vuelve a
+ *     heredar. Su salario y sus tarifas no significan nada (van en cero).
+ *
+ * Lo que NO es un cambio: una fila con salario 0 y sin la marca de corte. El
+ * formulario nunca deja guardar un salario en cero, así que una fila así solo
+ * puede ser un resto del modelo anterior (las que se creaban vacías al abrir un
+ * mes). Tomarla en serio dejaría a la persona «configurada en cero» y taparía
+ * lo heredado; por eso se ignora, como si no existiera. **El corte NO se
+ * expresa con salario 0**: tiene su propia columna, justamente para no
+ * confundirse con esos restos.
  */
 
-/** Lo mínimo que necesita la resolución: el mes y el salario de cada fila. */
+/** Lo mínimo que necesita la resolución: el mes, el salario y la marca de corte. */
 export interface FilaConfigMensual {
   anio: number;
   mes: number;
   salario_basico: number;
+  /**
+   * `true` = fila de CORTE: sin configuración desde este mes (migración
+   * 0013). Ausente o `false` = fila normal.
+   */
+  sin_configuracion?: boolean;
+}
+
+/** Un mes concreto: (año, mes). */
+export interface MesNomina {
+  anio: number;
+  mes: number;
 }
 
 /** Número correlativo de un mes, para comparar (año, mes) de un vistazo. */
@@ -1131,28 +1154,34 @@ export function mesAnterior(anio: number, mes: number): { anio: number; mes: num
   return mes === 1 ? { anio: anio - 1, mes: 12 } : { anio, mes: mes - 1 };
 }
 
-/** ¿La fila cuenta como configuración? Ver «VÁLIDA» arriba. */
-export function esConfigValida(fila: FilaConfigMensual): boolean {
-  return numeroSeguro(fila.salario_basico) > 0;
+/** ¿La fila es un CORTE («sin configuración desde este mes»)? */
+export function esCorte(fila: FilaConfigMensual): boolean {
+  return fila.sin_configuracion === true;
 }
 
-/** Las filas válidas, de la más antigua a la más reciente. */
+/** ¿La fila es una CONFIGURACIÓN que se puede usar para liquidar? */
+export function esConfigValida(fila: FilaConfigMensual): boolean {
+  return !esCorte(fila) && numeroSeguro(fila.salario_basico) > 0;
+}
+
+/** ¿La fila cuenta como cambio (configuración o corte)? Los restos en cero, no. */
+export function esCambioConfig(fila: FilaConfigMensual): boolean {
+  return esCorte(fila) || esConfigValida(fila);
+}
+
+/**
+ * Los cambios de la persona —configuraciones Y cortes—, del más antiguo al más
+ * reciente. Los restos en cero del modelo anterior quedan fuera.
+ */
 export function cambiosDeConfig<T extends FilaConfigMensual>(filas: readonly T[]): T[] {
   return filas
-    .filter(esConfigValida)
+    .filter(esCambioConfig)
     .slice()
     .sort((a, b) => indiceMes(a.anio, a.mes) - indiceMes(b.anio, b.mes));
 }
 
-/**
- * **REGLA ÚNICA de la configuración de un mes**: la fila válida más reciente
- * con (año, mes) ≤ el mes pedido, o `null` si no hay ninguna (la persona no
- * tiene salario configurado ni en ese mes ni antes).
- *
- * `filas` pueden ser las de un solo empleado o de varios mezclados: quien
- * llama es responsable de pasar solo las de la persona que le interesa.
- */
-export function configVigente<T extends FilaConfigMensual>(
+/** El cambio (configuración o corte) más reciente con (año, mes) ≤ el pedido. */
+function cambioVigente<T extends FilaConfigMensual>(
   filas: readonly T[],
   anio: number,
   mes: number,
@@ -1161,7 +1190,7 @@ export function configVigente<T extends FilaConfigMensual>(
   let mejor: T | null = null;
   let mejorIndice = -Infinity;
   for (const fila of filas) {
-    if (!esConfigValida(fila)) continue;
+    if (!esCambioConfig(fila)) continue;
     const indice = indiceMes(fila.anio, fila.mes);
     if (indice <= tope && indice > mejorIndice) {
       mejor = fila;
@@ -1171,23 +1200,54 @@ export function configVigente<T extends FilaConfigMensual>(
   return mejor;
 }
 
-/** De dónde sale la configuración que rige en un mes. */
-export type OrigenConfigMes = "propia" | "heredada" | "ninguna";
+/**
+ * **REGLA ÚNICA de la configuración de un mes**: la del cambio más reciente con
+ * (año, mes) ≤ el mes pedido. Devuelve `null` —la persona no se puede
+ * liquidar— si no hay ningún cambio antes o si el más reciente es un CORTE.
+ *
+ * `filas` pueden ser las de un solo empleado o de varios mezclados: quien
+ * llama es responsable de pasar solo las de la persona que le interesa.
+ */
+export function configVigente<T extends FilaConfigMensual>(
+  filas: readonly T[],
+  anio: number,
+  mes: number,
+): T | null {
+  const cambio = cambioVigente(filas, anio, mes);
+  return cambio && !esCorte(cambio) ? cambio : null;
+}
+
+/**
+ * De dónde sale la configuración que rige en un mes:
+ *   · `propia`     — se guardó en ese mismo mes;
+ *   · `heredada`   — viene de un cambio anterior;
+ *   · `suspendida` — el cambio que rige es un CORTE: sin configuración desde
+ *                    el mes del corte (herencia suspendida);
+ *   · `ninguna`    — nunca se configuró nada antes.
+ */
+export type OrigenConfigMes = "propia" | "heredada" | "suspendida" | "ninguna";
 
 export interface EstadoConfigMes<T extends FilaConfigMensual> {
-  /** La fila que rige en el mes (propia o heredada), o `null`. */
+  /** La CONFIGURACIÓN que rige en el mes (propia o heredada), o `null`. */
   vigente: T | null;
   origen: OrigenConfigMes;
-  /** La fila guardada EN este mes, si es válida. */
+  /** La configuración guardada EN este mes, si la hay (no un corte). */
   propia: T | null;
+  /** El corte que rige el mes (el de este mes o uno anterior), si lo hay. */
+  corte: T | null;
+  /** El cambio —configuración o corte— guardado EN este mes, si lo hay. */
+  cambioDelMes: T | null;
   /**
-   * Lo que regiría si se quitara el cambio de este mes: la fila vigente del
-   * mes anterior. `null` = la persona quedaría SIN configuración.
+   * Lo que regiría si se quitara el cambio de este mes: la configuración
+   * vigente del mes anterior. `null` = la persona quedaría SIN configuración.
    */
   alQuitar: T | null;
   /** El próximo cambio guardado DESPUÉS de este mes: hasta ahí rige este. */
   siguiente: T | null;
-  /** Todos los cambios válidos de la persona, del más antiguo al más reciente. */
+  /**
+   * Todos los cambios de la persona —configuraciones y cortes—, del más
+   * antiguo al más reciente (`esCorte()` los distingue).
+   */
   cambios: T[];
 }
 
@@ -1199,17 +1259,124 @@ export function estadoConfigMes<T extends FilaConfigMensual>(
 ): EstadoConfigMes<T> {
   const cambios = cambiosDeConfig(filas);
   const aqui = indiceMes(anio, mes);
-  const propia = cambios.find((f) => indiceMes(f.anio, f.mes) === aqui) ?? null;
+  const cambioDelMes = cambios.find((f) => indiceMes(f.anio, f.mes) === aqui) ?? null;
   const anterior = mesAnterior(anio, mes);
   const alQuitar = configVigente(cambios, anterior.anio, anterior.mes);
-  const vigente = propia ?? alQuitar;
+  const rige = cambioVigente(cambios, anio, mes);
+  const corte = rige && esCorte(rige) ? rige : null;
+  const vigente = rige && !esCorte(rige) ? rige : null;
+  const propia = cambioDelMes && !esCorte(cambioDelMes) ? cambioDelMes : null;
   const siguiente = cambios.find((f) => indiceMes(f.anio, f.mes) > aqui) ?? null;
   return {
     vigente,
-    origen: propia ? "propia" : vigente ? "heredada" : "ninguna",
+    origen: propia ? "propia" : vigente ? "heredada" : corte ? "suspendida" : "ninguna",
     propia,
+    corte,
+    cambioDelMes,
     alQuitar,
     siguiente,
     cambios,
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/* Qué les pasa a los borradores cuando se quita la configuración      */
+/* ------------------------------------------------------------------ */
+
+/**
+ * LA REGLA DE LOS BORRADORES (22 sep 2026, decisión de César)
+ * ----------------------------------------------------------
+ * Cuando se QUITA un cambio o se SUSPENDE la herencia desde el mes N, los meses
+ * afectados son N y los siguientes, hasta el mes anterior al próximo cambio
+ * guardado (o sin límite, si no hay otro). En esos meses:
+ *   · las liquidaciones **cerradas o pagadas** NO se tocan jamás: siguen con
+ *     su cálculo congelado;
+ *   · los **borradores** de un mes que SIGUE teniendo configuración (heredada
+ *     de un mes anterior) se CONSERVAN: se recalculan solos con la heredada y
+ *     guardan sus conceptos manuales (bonos, préstamos…);
+ *   · los **borradores** de un mes que queda SIN ninguna configuración se
+ *     ELIMINAN en la misma operación (sus cifras ya no se pueden calcular) y la
+ *     persona vuelve a salir en la Liquidación como «sin configurar».
+ * Los borradores de meses NO afectados no se miran: si alguno ya estaba sin
+ * configuración de antes, la Liquidación lo muestra como tal con su aviso.
+ *
+ * Es una función pura: la usan la pantalla (para decir en la confirmación
+ * cuántos borradores y de qué períodos se eliminarían) y la server action
+ * (para eliminarlos de verdad), con las mismas filas, así que no pueden
+ * contradecirse.
+ */
+
+/** Lo mínimo de una liquidación para aplicar la regla. */
+export interface LiquidacionDeMes {
+  anio: number;
+  mes: number;
+  estado: string;
+}
+
+export interface EfectoEnBorradores<L extends LiquidacionDeMes> {
+  /** Borradores de meses afectados que quedan sin configuración: se eliminan. */
+  eliminar: L[];
+  /** Borradores de meses afectados que siguen con configuración: se conservan. */
+  conservar: L[];
+  /** Desde qué mes y hasta cuál (incluido; `null` = sin límite) llega el efecto. */
+  desde: MesNomina;
+  hasta: MesNomina | null;
+}
+
+/** Las filas tal como quedarían al QUITAR el cambio del mes (se borra su fila). */
+export function filasTrasQuitar<T extends FilaConfigMensual>(
+  filas: readonly T[],
+  anio: number,
+  mes: number,
+): T[] {
+  return filas.filter((f) => !(f.anio === anio && f.mes === mes));
+}
+
+/**
+ * Las filas tal como quedarían al SUSPENDER la herencia desde el mes: la fila de
+ * ese mes (si había un resto en cero) se reemplaza por un corte.
+ */
+export function filasTrasCortar<T extends FilaConfigMensual>(
+  filas: readonly T[],
+  anio: number,
+  mes: number,
+): FilaConfigMensual[] {
+  return [
+    ...filasTrasQuitar(filas, anio, mes),
+    { anio, mes, salario_basico: 0, sin_configuracion: true },
+  ];
+}
+
+/**
+ * Aplica la regla de los borradores a las liquidaciones de UNA persona.
+ * `filasDespues` = sus filas de configuración tal como quedarán
+ * (`filasTrasQuitar` / `filasTrasCortar`); `desde` = el mes del cambio.
+ */
+export function efectoEnBorradores<L extends LiquidacionDeMes>(
+  liquidaciones: readonly L[],
+  filasDespues: readonly FilaConfigMensual[],
+  desde: MesNomina,
+): EfectoEnBorradores<L> {
+  const inicio = indiceMes(desde.anio, desde.mes);
+  const proximo =
+    cambiosDeConfig(filasDespues).find((f) => indiceMes(f.anio, f.mes) > inicio) ?? null;
+  const fin = proximo ? indiceMes(proximo.anio, proximo.mes) : Infinity;
+
+  const eliminar: L[] = [];
+  const conservar: L[] = [];
+  for (const l of liquidaciones) {
+    if (l.estado !== "borrador") continue; // cerradas y pagadas: jamás
+    const indice = indiceMes(l.anio, l.mes);
+    if (indice < inicio || indice >= fin) continue; // mes no afectado
+    if (configVigente(filasDespues, l.anio, l.mes)) conservar.push(l);
+    else eliminar.push(l);
+  }
+
+  const orden = (a: L, b: L) => indiceMes(a.anio, a.mes) - indiceMes(b.anio, b.mes);
+  return {
+    eliminar: eliminar.sort(orden),
+    conservar: conservar.sort(orden),
+    desde: { anio: desde.anio, mes: desde.mes },
+    hasta: proximo ? mesAnterior(proximo.anio, proximo.mes) : null,
   };
 }
