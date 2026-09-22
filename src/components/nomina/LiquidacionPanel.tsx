@@ -41,7 +41,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useActionState, useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { ModalPanel } from "@/components/calendario/ModalPanel";
 import {
   AyudaSeccion,
@@ -50,6 +50,7 @@ import {
   EmptyState,
   inputClass,
   Paginacion,
+  useAccionPanel,
 } from "@/components/admin/ui-base";
 import { paginar } from "@/lib/paginacion";
 import {
@@ -355,7 +356,7 @@ export function LiquidacionPanel({
   const conPendientes = filas.filter((f) => f.pendientes > 0);
   const sinCrear = filas.filter((f) => f.liquidacionId === null && f.tieneConfig);
 
-  const [estadoLote, accionLote, enLote] = useActionState(
+  const [estadoLote, accionLote, enLote] = useAccionPanel(
     liquidarTodosAction,
     idleState,
   );
@@ -816,12 +817,12 @@ function DetalleLiquidacion({
   reabrirAction: Accion;
   eliminarAction: Accion;
 }) {
-  const [crearEstado, crear, creando] = useActionState(crearAction, idleState);
-  const [guardarEstado, guardar, guardando] = useActionState(guardarAction, idleState);
-  const [cerrarEstado, cerrar, cerrando] = useActionState(cerrarAction, idleState);
-  const [pagarEstado, pagar, pagando] = useActionState(pagarAction, idleState);
-  const [reabrirEstado, reabrir, reabriendo] = useActionState(reabrirAction, idleState);
-  const [borrarEstado, borrar, borrando] = useActionState(eliminarAction, idleState);
+  const [crearEstado, crear, creando] = useAccionPanel(crearAction, idleState);
+  const [guardarEstado, guardar, guardando] = useAccionPanel(guardarAction, idleState);
+  const [cerrarEstado, cerrar, cerrando] = useAccionPanel(cerrarAction, idleState);
+  const [pagarEstado, pagar, pagando] = useAccionPanel(pagarAction, idleState);
+  const [reabrirEstado, reabrir, reabriendo] = useAccionPanel(reabrirAction, idleState);
+  const [borrarEstado, borrar, borrando] = useAccionPanel(eliminarAction, idleState);
   const [mostrarPago, setMostrarPago] = useState(false);
   /**
    * Cuál fue la ÚLTIMA acción que se envió.

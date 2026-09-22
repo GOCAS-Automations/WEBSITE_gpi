@@ -37,8 +37,21 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition, type ReactNode } from "react";
-import { ChevronDown, ChevronLeft, ChevronRight, Info } from "@/lib/icons";
+import {
+  useActionState,
+  useEffect,
+  useState,
+  useSyncExternalStore,
+  useTransition,
+  type ReactNode,
+} from "react";
+import {
+  AlertTriangle,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Info,
+} from "@/lib/icons";
 import {
   FILAS_POR_PAGINA,
   hrefConPagina,
@@ -691,4 +704,133 @@ export function usePaginaLocal<T>(
     setPagina(1);
   }
   return { ...paginar(lista, reiniciar ? 1 : pagina, porPagina), setPagina };
+}
+
+/* ------------------------------------------------------------------ */
+/* Vigilante de las acciones que no responden                          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Cuánto se espera la respuesta de una acción antes de avisar. Pasado ese
+ * tiempo el botón deja de decir «Guardando…», se vuelve a poder pulsar y
+ * aparece el aviso de `VigilanteDeAcciones` con el botón «Actualizar».
+ */
+export const ESPERA_MAXIMA_ACCION_MS = 9000;
+
+/** Cuántas acciones de la pantalla llevan demasiado tiempo esperando. */
+let demorasActivas = 0;
+const oyentesDemora = new Set<() => void>();
+
+function avisarDemora() {
+  for (const oyente of oyentesDemora) oyente();
+}
+
+function suscribirDemora(oyente: () => void) {
+  oyentesDemora.add(oyente);
+  return () => {
+    oyentesDemora.delete(oyente);
+  };
+}
+
+/**
+ * `useActionState` con un VIGILANTE DE TIEMPO — la red de seguridad del panel.
+ * ===========================================================================
+ * Se usa igual que `useActionState` y devuelve lo mismo (más un cuarto valor,
+ * `demorado`, por si una pantalla quiere reaccionar), con dos añadidos:
+ *
+ *   · si la respuesta tarda más de `ESPERA_MAXIMA_ACCION_MS`, el «pendiente»
+ *     que devuelve se apaga SOLO: el botón se reactiva y deja de decir
+ *     «Guardando…»;
+ *   · en ese momento aparece el aviso de `VigilanteDeAcciones` («la respuesta
+ *     se demoró… actualiza para verlo»), que se monta una sola vez por pantalla
+ *     —en `AdminShell` y en el portal— y ofrece el botón «Actualizar».
+ *
+ * POR QUÉ EXISTE
+ * --------------
+ * Hubo un fallo en el que la server action devolvía su respuesta COMPLETA y aun
+ * así el botón se quedaba en «Guardando…» para siempre, con el dato ya escrito
+ * en la base: el router no llegaba a aplicar el re-render que viaja con esa
+ * respuesta y la transición de React no terminaba nunca, así que `pending` no
+ * volvía a bajar. La causa —la frontera de carga del segmento `/admin`, ver
+ * AGENTS.md— está corregida, pero la lección queda: **ninguna pantalla puede
+ * quedarse muda esperando una respuesta que quizá nunca llegue** (una red lenta
+ * o un despliegue a medias bastan). Con esto, a los ~9 s la persona recupera el
+ * control y sabe qué hacer.
+ *
+ * Ojo: apagar «pendiente» no cancela nada en React —si la transición estaba
+ * colgada, lo sigue estando—, por eso la salida que ofrece el aviso es recargar
+ * la pantalla, que siempre enseña lo que quedó guardado.
+ */
+export function useAccionPanel<Estado>(
+  accion: (previo: Awaited<Estado>, datos: FormData) => Estado | Promise<Estado>,
+  inicial: Awaited<Estado>,
+  esperaMaximaMs: number = ESPERA_MAXIMA_ACCION_MS,
+): [Awaited<Estado>, (datos: FormData) => void, boolean, boolean] {
+  const [estado, formAction, pendiente] = useActionState(accion, inicial);
+  const [demorado, setDemorado] = useState(false);
+
+  // El aviso se apaga en cuanto cambia el estado de la acción (empieza otra o
+  // termina la que había). Se hace DURANTE el render, no en un efecto: así no
+  // se pinta un fotograma con el aviso de la acción anterior.
+  const [pendienteAnterior, setPendienteAnterior] = useState(pendiente);
+  if (pendienteAnterior !== pendiente) {
+    setPendienteAnterior(pendiente);
+    if (demorado) setDemorado(false);
+  }
+
+  useEffect(() => {
+    if (!pendiente) return;
+    const reloj = setTimeout(() => setDemorado(true), esperaMaximaMs);
+    return () => clearTimeout(reloj);
+  }, [pendiente, esperaMaximaMs]);
+
+  useEffect(() => {
+    if (!demorado) return;
+    demorasActivas += 1;
+    avisarDemora();
+    return () => {
+      demorasActivas -= 1;
+      avisarDemora();
+    };
+  }, [demorado]);
+
+  return [estado, formAction, pendiente && !demorado, demorado];
+}
+
+/**
+ * El aviso que sale cuando alguna acción de la pantalla lleva demasiado tiempo
+ * sin responder. Va montado UNA sola vez (en `AdminShell` y en el portal) y se
+ * pinta fijo abajo y centrado, por encima de todo: se ve igual en 1440 y en
+ * 390 px y no desplaza el formulario que la persona está usando.
+ */
+export function VigilanteDeAcciones() {
+  const hayDemora = useSyncExternalStore(
+    suscribirDemora,
+    () => demorasActivas > 0,
+    () => false,
+  );
+
+  if (!hayDemora) return null;
+
+  return (
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-4 pb-4">
+      <div
+        role="alert"
+        className="pointer-events-auto flex w-full max-w-xl flex-wrap items-center gap-x-3 gap-y-2.5 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3.5 text-sm leading-relaxed text-amber-900 shadow-soft"
+      >
+        <AlertTriangle className="h-5 w-5 shrink-0" />
+        <p className="min-w-[10rem] flex-1">
+          La respuesta se demoró más de lo normal. Es muy probable que el cambio
+          sí se haya guardado: actualiza para verlo.
+        </p>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="inline-flex items-center gap-1.5 rounded-full bg-amber-700 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-amber-800"
+        >
+          Actualizar
+        </button>
+      </div>
+    </div>
+  );
 }

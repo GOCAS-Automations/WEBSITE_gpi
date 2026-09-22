@@ -39,9 +39,9 @@
  * original», que es la operación inversa.
  */
 
-import { useActionState, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { idleState, type ActionState } from "@/lib/admin-types";
-import { Badge } from "@/components/admin/ui-base";
+import { Badge, useAccionPanel } from "@/components/admin/ui-base";
 import {
   AlertTriangle,
   Calendar,
@@ -356,7 +356,7 @@ function BotonEstado({
   className: string;
   icono?: React.ReactNode;
 }) {
-  const [state, formAction, pendiente] = useActionState(action, idleState);
+  const [state, formAction, pendiente] = useAccionPanel(action, idleState);
 
   return (
     <form
@@ -401,7 +401,7 @@ function BotonDevolverFecha({
   evento: EventoRecord;
   fechaOriginal: string;
 }) {
-  const [state, formAction, pendiente] = useActionState(action, idleState);
+  const [state, formAction, pendiente] = useAccionPanel(action, idleState);
 
   return (
     <form
@@ -448,7 +448,7 @@ function FormularioAplazar({
   action: Accion;
   evento: EventoRecord;
 }) {
-  const [state, formAction, pendiente] = useActionState(action, idleState);
+  const [state, formAction, pendiente] = useAccionPanel(action, idleState);
   const [abierto, setAbierto] = useState(false);
 
   // Aplazar es mover HACIA ADELANTE: lo más pronto posible es el día siguiente.
@@ -534,7 +534,7 @@ function BotonEliminar({
   evento: EventoRecord;
   onEliminado: () => void;
 }) {
-  const [state, formAction, pendiente] = useActionState(action, idleState);
+  const [state, formAction, pendiente] = useAccionPanel(action, idleState);
   const [abierto, setAbierto] = useState(false);
 
   // El evento ya no existe: quedarse con su ficha abierta mostraría datos de

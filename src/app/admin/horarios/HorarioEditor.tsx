@@ -11,7 +11,8 @@
  * amarillas del Excel que usaba GPI. Nada se guarda hasta pulsar "Guardar".
  */
 
-import { useActionState, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useAccionPanel } from "@/components/admin/ui-base";
 import {
   DIAS_ORDEN,
   DIA_LABELS,
@@ -49,7 +50,7 @@ export function HorarioEditor({
   /** Horario predeterminado de GPI, para el botón de restablecer. */
   horarioPorDefecto: HorarioDias;
 }) {
-  const [state, formAction, pending] = useActionState(action, idleState);
+  const [state, formAction, pending] = useAccionPanel(action, idleState);
   const [dias, setDias] = useState<HorarioDias>(() => clonarHorario(diasIniciales));
   const [restablecido, setRestablecido] = useState(false);
 

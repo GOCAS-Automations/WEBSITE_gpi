@@ -1,9 +1,9 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 import { idleState, type ActionState } from "@/lib/admin-types";
 import { AlertTriangle, Check, Close, Info, Trash } from "@/lib/icons";
-import { inputClass } from "@/components/admin/ui-base";
+import { inputClass, useAccionPanel } from "@/components/admin/ui-base";
 
 type Accion = (state: ActionState, formData: FormData) => Promise<ActionState>;
 
@@ -24,11 +24,11 @@ export function ReviewActions({
   approve: Accion;
   reject: Accion;
 }) {
-  const [aprobarState, aprobarAction, aprobando] = useActionState(
+  const [aprobarState, aprobarAction, aprobando] = useAccionPanel(
     approve,
     idleState,
   );
-  const [rechazarState, rechazarAction, rechazando] = useActionState(
+  const [rechazarState, rechazarAction, rechazando] = useAccionPanel(
     reject,
     idleState,
   );
@@ -130,7 +130,7 @@ export function ReopenAction({
   id: string;
   action: Accion;
 }) {
-  const [state, formAction, pending] = useActionState(action, idleState);
+  const [state, formAction, pending] = useAccionPanel(action, idleState);
 
   return (
     <form
@@ -182,7 +182,7 @@ export function DeleteJornadaAction({
   fecha: string;
   action: Accion;
 }) {
-  const [state, formAction, pending] = useActionState(action, idleState);
+  const [state, formAction, pending] = useAccionPanel(action, idleState);
   const [abierto, setAbierto] = useState(false);
 
   return (

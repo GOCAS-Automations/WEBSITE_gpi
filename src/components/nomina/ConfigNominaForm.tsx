@@ -48,12 +48,13 @@
  */
 
 import { useRouter } from "next/navigation";
-import { useActionState, useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import {
   AyudaSeccion,
   Card,
   CardTitle,
   inputClass,
+  useAccionPanel,
 } from "@/components/admin/ui-base";
 import {
   AYUDA_NOMINA_BORRADORES,
@@ -247,10 +248,10 @@ export function ConfigNominaForm({
   const router = useRouter();
   const [cargando, iniciarNavegacion] = useTransition();
   const [confirmar, setConfirmar] = useState<Confirmacion>(null);
-  const [state, formAction, pending] = useActionState(action, idleState);
+  const [state, formAction, pending] = useAccionPanel(action, idleState);
   // Las dos acciones de la ventana de confirmación la cierran al terminar: la
   // pantalla ya se habrá vuelto a pintar con la configuración nueva.
-  const [quitarState, quitarFormAction, quitando] = useActionState(
+  const [quitarState, quitarFormAction, quitando] = useAccionPanel(
     async (previo: ActionState, datos: FormData) => {
       const r = await quitarAction(previo, datos);
       setConfirmar(null);
@@ -258,7 +259,7 @@ export function ConfigNominaForm({
     },
     idleState,
   );
-  const [cortarState, cortarFormAction, cortando] = useActionState(
+  const [cortarState, cortarFormAction, cortando] = useAccionPanel(
     async (previo: ActionState, datos: FormData) => {
       const r = await cortarAction(previo, datos);
       setConfirmar(null);

@@ -21,6 +21,7 @@ import { MisJornadas } from "./MisJornadas";
 import { MisEventos } from "./MisEventos";
 import { MiNomina } from "./MiNomina";
 import { leerPagina } from "@/lib/paginacion";
+import { VigilanteDeAcciones } from "@/components/admin/ui-base";
 import { PasswordForm } from "./PasswordForm";
 import { saveJornada, deleteJornada, changeOwnPassword } from "./actions";
 // La acción de las notas vive con el resto del calendario: es la MISMA para el
@@ -495,6 +496,10 @@ async function PortalEmpleado({
           </section>
         )}
       </Container>
+
+      {/* Aviso de «esta acción no respondió», una sola vez para todo el portal
+          (lo alimenta `useAccionPanel`; ver `components/admin/ui-base.tsx`). */}
+      <VigilanteDeAcciones />
     </div>
   );
 }

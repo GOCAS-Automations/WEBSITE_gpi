@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useAccionPanel } from "@/components/admin/ui-base";
+import { useState } from "react";
 import type { ReactNode } from "react";
 import {
   idleCredentialState,
@@ -136,7 +137,7 @@ export function CredentialForm({
   backLabel?: string;
   variant?: "primary" | "neutral";
 }) {
-  const [state, formAction, pending] = useActionState(
+  const [state, formAction, pending] = useAccionPanel(
     action,
     idleCredentialState,
   );
@@ -211,7 +212,7 @@ export function DeleteAccountForm({
   /** Usuario del portal (o el correo, en las cuentas antiguas). */
   usuario: string;
 }) {
-  const [state, formAction, pending] = useActionState(action, idleState);
+  const [state, formAction, pending] = useAccionPanel(action, idleState);
   const [confirmacion, setConfirmacion] = useState("");
 
   const coincide = confirmacion.trim().toLowerCase() === usuario.toLowerCase();

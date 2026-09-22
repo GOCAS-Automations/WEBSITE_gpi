@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { PuntoDeCarga } from "./PuntoDeCarga";
+import { VigilanteDeAcciones } from "./ui-base";
 import { isManagerRole, ROLE_LABELS, type UserRole } from "@/lib/roles";
 import {
   Banknote,
@@ -126,7 +127,7 @@ function useIsActive() {
  * Es la pata que hace falta para que `PuntoDeCarga` funcione: `useLinkStatus`
  * no tiene estado pendiente que mostrar si la ruta ya venía precargada. El
  * arreglo completo del «se traba» que reportó GPI son tres piezas —esta,
- * `PuntoDeCarga` y `app/admin/loading.tsx`, donde está el diagnóstico—.
+ * `PuntoDeCarga`, donde está el diagnóstico—.
  */
 export function AdminShell({
   identificador,
@@ -265,6 +266,10 @@ export function AdminShell({
 
         <main className="min-w-0 flex-1 pb-10">{children}</main>
       </div>
+
+      {/* Aviso de «esta acción no respondió»: se monta UNA sola vez para todo
+          el panel y lo alimenta `useAccionPanel` (ver `ui-base.tsx`). */}
+      <VigilanteDeAcciones />
     </div>
   );
 }

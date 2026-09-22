@@ -14,9 +14,9 @@
  * firmando con su propia cuenta.
  */
 
-import { useActionState, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { idleState, type ActionState } from "@/lib/admin-types";
-import { inputClass } from "@/components/admin/ui-base";
+import { inputClass, useAccionPanel } from "@/components/admin/ui-base";
 import { Plus } from "@/lib/icons";
 import { LIMITES_EVENTO } from "@/lib/calendario";
 
@@ -40,7 +40,7 @@ export function NotaForm({
   /** Prefijo del `id` del campo: en una pantalla puede haber varios. */
   idCampo?: string;
 }) {
-  const [state, formAction, pendiente] = useActionState(action, idleState);
+  const [state, formAction, pendiente] = useAccionPanel(action, idleState);
   const formulario = useRef<HTMLFormElement>(null);
 
   // Al guardar, el campo se vacía: dejar el texto anterior invita a mandarlo

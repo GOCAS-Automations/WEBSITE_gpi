@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
 import { idleState, type ActionState } from "@/lib/admin-types";
+import { useAccionPanel } from "@/components/admin/ui-base";
 import { Lock } from "@/lib/icons";
 
 const campoClase =
@@ -13,7 +13,7 @@ export function PasswordForm({
 }: {
   action: (state: ActionState, formData: FormData) => Promise<ActionState>;
 }) {
-  const [state, formAction, pending] = useActionState(action, idleState);
+  const [state, formAction, pending] = useAccionPanel(action, idleState);
 
   return (
     <form action={formAction} className="space-y-4">

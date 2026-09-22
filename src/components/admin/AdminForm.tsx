@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useAccionPanel } from "@/components/admin/ui-base";
 import type { ReactNode } from "react";
 import { idleState, type ActionState } from "@/lib/admin-types";
 import { Check, Trash } from "@/lib/icons";
@@ -26,7 +26,7 @@ export function AdminForm({
   backLabel?: string;
   className?: string;
 }) {
-  const [state, formAction, pending] = useActionState(action, idleState);
+  const [state, formAction, pending] = useAccionPanel(action, idleState);
 
   return (
     <form action={formAction} className={`space-y-5 ${className}`}>
@@ -91,7 +91,7 @@ export function DeleteForm({
   label?: string;
   confirmMessage?: string;
 }) {
-  const [state, formAction, pending] = useActionState(action, idleState);
+  const [state, formAction, pending] = useAccionPanel(action, idleState);
 
   return (
     <form

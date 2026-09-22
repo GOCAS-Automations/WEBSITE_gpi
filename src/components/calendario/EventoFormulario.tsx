@@ -13,9 +13,9 @@
  * (cerrar una actividad es una decisión, no un campo de formulario).
  */
 
-import { useActionState, useEffect } from "react";
+import { useEffect } from "react";
 import { idleState, type ActionState } from "@/lib/admin-types";
-import { Field, TextArea, AyudaSeccion } from "@/components/admin/ui-base";
+import { Field, TextArea, AyudaSeccion, useAccionPanel } from "@/components/admin/ui-base";
 import { Check } from "@/lib/icons";
 import { LIMITES_EVENTO, type EventoRecord } from "@/lib/calendario";
 import { SelectorResponsables, type OpcionPerfil } from "./SelectorResponsables";
@@ -37,7 +37,7 @@ export function EventoFormulario({
   action: Accion;
   onListo: () => void;
 }) {
-  const [state, formAction, pendiente] = useActionState(action, idleState);
+  const [state, formAction, pendiente] = useAccionPanel(action, idleState);
 
   useEffect(() => {
     if (state.status === "success") onListo();

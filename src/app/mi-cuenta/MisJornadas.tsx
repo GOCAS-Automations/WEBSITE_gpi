@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 import {
   idleState,
   JORNADA_STATUS_CLASSES,
@@ -21,7 +21,7 @@ import {
 import type { MapaHorarios } from "@/lib/horarios";
 import { JornadaBreakdown } from "@/components/jornadas/JornadaBreakdown";
 import { JornadaForm } from "./JornadaForm";
-import { Paginacion, usePaginaLocal } from "@/components/admin/ui-base";
+import { Paginacion, usePaginaLocal, useAccionPanel } from "@/components/admin/ui-base";
 import { Pencil, Trash } from "@/lib/icons";
 
 type Accion = (state: ActionState, formData: FormData) => Promise<ActionState>;
@@ -249,7 +249,7 @@ function EliminarJornada({
   fecha: string;
   action: Accion;
 }) {
-  const [state, formAction, pending] = useActionState(action, idleState);
+  const [state, formAction, pending] = useAccionPanel(action, idleState);
 
   return (
     <form

@@ -8,8 +8,8 @@
  * confirmación del navegador, como el resto de borrados del panel.
  */
 
-import { useActionState } from "react";
 import { idleState, type ActionState } from "@/lib/admin-types";
+import { useAccionPanel } from "@/components/admin/ui-base";
 import { Trash } from "@/lib/icons";
 
 export function BorrarNota({
@@ -22,7 +22,7 @@ export function BorrarNota({
   evento: string;
   action: (state: ActionState, formData: FormData) => Promise<ActionState>;
 }) {
-  const [state, formAction, pendiente] = useActionState(action, idleState);
+  const [state, formAction, pendiente] = useAccionPanel(action, idleState);
 
   return (
     <form

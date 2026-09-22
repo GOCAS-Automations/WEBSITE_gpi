@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useAccionPanel } from "@/components/admin/ui-base";
 import { idleState, type ActionState, type JornadaRecord } from "@/lib/admin-types";
 import {
   calcularJornada,
@@ -46,7 +47,7 @@ export function JornadaForm({
   onCancel?: () => void;
   submitLabel?: string;
 }) {
-  const [state, formAction, pending] = useActionState(action, idleState);
+  const [state, formAction, pending] = useAccionPanel(action, idleState);
 
   const inicial = useMemo(() => {
     if (!jornada) {
