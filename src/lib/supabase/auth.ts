@@ -1,6 +1,7 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getServerSupabase } from "./server";
+import { getServerSupabase, getTokenSupabase } from "./server";
 import {
   isContentEditorRole,
   isEmployeeRole,
@@ -34,27 +35,76 @@ export interface Session {
 }
 
 /**
+ * El `sub` (id de la cuenta) que DICE el token de acceso de la cookie, sin
+ * verificarlo. Solo sirve para adelantar la lectura del perfil en paralelo con
+ * `getUser()`: el resultado se usa únicamente si `getUser()` —que sí verifica
+ * el token contra Supabase Auth— confirma el mismo id. Se lee del token y no de
+ * `session.user` para no disparar el aviso de «getSession no es seguro».
+ */
+function subDelToken(token: string | undefined): string | null {
+  if (!token) return null;
+  try {
+    const cuerpo = token.split(".")[1];
+    if (!cuerpo) return null;
+    const json = JSON.parse(Buffer.from(cuerpo, "base64url").toString("utf8"));
+    return typeof json?.sub === "string" ? json.sub : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Lee la sesión actual y el perfil (rol) del usuario.
  * Devuelve `null` si Supabase no está configurado o no hay sesión válida.
  *
  * Tolera que la migración 0002 aún no esté aplicada: si faltan las columnas
  * `active`, `cargo` o `phone` se asumen los valores por defecto.
+ *
+ * RENDIMIENTO (22 sep 2026). Es lo primero que hace CADA pantalla del panel
+ * (el layout de `/admin` y otra vez la página), y eran dos viajes en serie a
+ * Supabase —`getUser()` y después el perfil— de ~115 ms cada uno. Ahora:
+ *   · `cache()` de React: una sola lectura por petición aunque la pidan el
+ *     layout y la página (la caché es de ESA petición: nada se comparte entre
+ *     usuarios ni entre peticiones);
+ *   · el perfil se pide EN PARALELO con `getUser()`, con el id que trae el
+ *     token, y solo se acepta si `getUser()` confirma ese mismo id; si no
+ *     coinciden, se vuelve a leer con el id verificado. La seguridad no cambia:
+ *     manda `getUser()`, y PostgREST verifica el token por su cuenta en la
+ *     consulta del perfil.
  */
-export async function getSessionProfile(): Promise<Session | null> {
+export const getSessionProfile = cache(async (): Promise<Session | null> => {
   const supabase = await getServerSupabase();
   if (!supabase) return null;
 
+  // Local: lee la cookie (el proxy ya refrescó la sesión en esta petición).
   const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
+    data: { session: sesionCookie },
+  } = await supabase.auth.getSession();
+  const token = sesionCookie?.access_token;
+  const idTentativo = subDelToken(token);
+  // La lectura adelantada va por un cliente APARTE que lleva el token tal cual:
+  // el cliente de la sesión encola sus peticiones detrás de `getUser()` (el
+  // candado interno de supabase-js), y por ahí no habría paralelo.
+  const lector = token && idTentativo ? getTokenSupabase(token) : null;
+
+  const [
+    {
+      data: { user },
+      error,
+    },
+    perfilTentativo,
+  ] = await Promise.all([
+    supabase.auth.getUser(),
+    lector && idTentativo
+      ? lector.from("profiles").select("*").eq("id", idTentativo).maybeSingle()
+      : Promise.resolve(null),
+  ]);
   if (error || !user) return null;
 
-  const { data } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .maybeSingle();
+  const { data } =
+    perfilTentativo && idTentativo === user.id
+      ? perfilTentativo
+      : await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
 
   const email = data?.email ?? user.email ?? "";
   // `username` llega `undefined` mientras la migración 0003 no esté aplicada:
@@ -78,7 +128,7 @@ export async function getSessionProfile(): Promise<Session | null> {
       active: data?.active !== false,
     },
   };
-}
+});
 
 /** Sesión válida y cuenta activa; `null` en cualquier otro caso. */
 export async function getActiveSession(): Promise<Session | null> {

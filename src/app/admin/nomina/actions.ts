@@ -27,6 +27,15 @@
  *    mecanismo para recalcular, igual que devolver una jornada a pendiente.
  *  · **Eliminar** borra la liquidación entera. Es lo único irreversible.
  *
+ * QUITAR O SUSPENDER LA CONFIGURACIÓN (22 sep 2026)
+ * -------------------------------------------------
+ * `quitarConfigMes` y `cortarHerenciaConfig` aplican la REGLA DE LOS
+ * BORRADORES (`efectoEnBorradores()` de `nomina.ts`) en la misma operación:
+ * cerradas y pagadas, intactas; borradores de meses que siguen heredando,
+ * conservados; borradores de meses que quedan sin configuración, eliminados.
+ * Y `reabrirLiquidacion` se niega si el mes ya no tiene configuración: no deja
+ * un borrador que no se puede calcular.
+ *
  * LEER, MEZCLAR, ESCRIBIR
  * -----------------------
  * Los conceptos manuales viven en un solo jsonb (`conceptos`) y varias pantallas
@@ -53,8 +62,12 @@ import {
   CONCEPTOS_MANUALES,
   calcularLiquidacion,
   construirSnapshot,
+  efectoEnBorradores,
   estadoConfigMes,
   etiquetaPeriodo,
+  etiquetaPeriodoCorta,
+  filasTrasCortar,
+  filasTrasQuitar,
   manualesAJson,
   manualesVacios,
   mesAnterior,
@@ -182,21 +195,30 @@ const mesTexto = (fecha: { anio: number; mes: number }) =>
   `${nombreMesNomina(fecha.mes)} de ${fecha.anio}`;
 
 /**
- * «hasta septiembre de 2026» cuando hay un cambio guardado después (rige hasta
- * el mes anterior a ese cambio) o «en adelante» cuando no lo hay.
+ * El tramo en que rige algo que empieza en `desde` y dura hasta el próximo
+ * cambio: «desde octubre de 2026 en adelante», «desde octubre de 2026 hasta
+ * diciembre de 2026» o, si el próximo cambio es al mes siguiente, «solo en
+ * octubre de 2026».
  */
-const hastaTexto = (siguiente: { anio: number; mes: number } | null) =>
-  siguiente
-    ? `hasta ${mesTexto(mesAnterior(siguiente.anio, siguiente.mes))}`
-    : "en adelante";
+const vigencia = (
+  desde: { anio: number; mes: number },
+  siguiente: { anio: number; mes: number } | null,
+) => {
+  if (!siguiente) return `desde ${mesTexto(desde)} en adelante`;
+  const hasta = mesAnterior(siguiente.anio, siguiente.mes);
+  if (hasta.anio === desde.anio && hasta.mes === desde.mes) return `solo en ${mesTexto(desde)}`;
+  return `desde ${mesTexto(desde)} hasta ${mesTexto(hasta)}`;
+};
 
 /**
  * Guarda el salario, el auxilio, las siete tarifas y los porcentajes de un
  * empleado **desde** un mes (modelo «vigente desde», 18 sep 2026): la fila
  * rige para ese mes y los siguientes, hasta el próximo cambio guardado.
  *
- * Es la ÚNICA manera de crear una fila de configuración: ver un mes en la
- * pantalla ya no crea nada. `upsert` sobre la clave (empleado, año, mes).
+ * Es la ÚNICA manera de crear una fila de configuración (los CORTES los
+ * escribe `cortarHerenciaConfig`): ver un mes en la pantalla ya no crea nada.
+ * `upsert` sobre la clave (empleado, año, mes); guardar en un mes con corte lo
+ * reemplaza por esta configuración.
  */
 export async function saveNominaConfig(
   _prev: ActionState,
@@ -257,20 +279,26 @@ export async function saveNominaConfig(
     pct_pension: pctPension,
   };
 
-  const { error } = await session.supabase
+  // `sin_configuracion: false`: guardar sobre un mes con CORTE lo convierte en
+  // configuración (la herencia vuelve a correr desde aquí).
+  const fila = { employee_id: employeeId, anio, mes, ...nominaConfigAColumnas(datos) };
+  let { error } = await session.supabase
     .from("nomina_config_mensual")
-    .upsert(
-      { employee_id: employeeId, anio, mes, ...nominaConfigAColumnas(datos) },
-      { onConflict: "employee_id,anio,mes" },
-    );
+    .upsert({ ...fila, sin_configuracion: false }, { onConflict: "employee_id,anio,mes" });
+  if (error && faltaColumnaCorte(error)) {
+    // Migración 0013 sin aplicar: se guarda como siempre.
+    ({ error } = await session.supabase
+      .from("nomina_config_mensual")
+      .upsert(fila, { onConflict: "employee_id,anio,mes" }));
+  }
 
   if (error) return fail(mensajeDeError(error));
 
   // Hasta cuándo rige: hasta el próximo cambio guardado de esa persona, si lo hay.
   const { filas } = await listNominaConfigsEmpleado(employeeId);
   const { siguiente } = estadoConfigMes(filas, anio, mes);
-  const vigencia = siguiente
-    ? ` Rige desde ${mesTexto({ anio, mes })} ${hastaTexto(siguiente)}: en ${mesTexto(siguiente)} hay otro cambio guardado y desde ahí manda ese.`
+  const tramo = siguiente
+    ? ` Rige ${vigencia({ anio, mes }, siguiente)}: en ${mesTexto(siguiente)} hay otro cambio guardado y desde ahí manda ese.`
     : ` Rige desde ${mesTexto({ anio, mes })} en adelante, hasta que guardes otro cambio.`;
 
   // Aviso (no bloqueo) si alguna tarifa queda por debajo del mínimo legal del
@@ -286,24 +314,54 @@ export async function saveNominaConfig(
 
   revalidar();
   return ok(
-    `Configuración guardada.${vigencia} Las liquidaciones en borrador de esos meses se recalculan solas; las ya cerradas no se tocan.${avisoLegal}`,
+    `Configuración guardada.${tramo} Las liquidaciones en borrador de esos meses se recalculan solas; las ya cerradas no se tocan.${avisoLegal}`,
   );
 }
 
 /**
- * QUITA EL CAMBIO de un mes: borra la fila de ese mes, y ese mes (con los que
- * lo seguían hasta el próximo cambio) vuelve a heredar del cambio anterior.
- *
- * Si no hay ningún cambio anterior, la persona se queda SIN configuración en
- * esos meses y no se puede liquidar. Eso no se deja pasar por accidente: la
- * pantalla lo advierte con una confirmación propia y manda
- * `sin_respaldo_confirmado=1`; sin esa marca, la acción se niega y lo explica.
- *
- * Las liquidaciones cerradas no cambian (leen su snapshot); las que sigan en
- * borrador se recalculan con lo heredado.
+ * ¿El error dice que falta la columna `sin_configuracion` (migración 0013 sin
+ * aplicar)? Entonces se guarda sin ella, como antes.
  */
-export async function quitarConfigMes(
-  _prev: ActionState,
+function faltaColumnaCorte(error: { code?: string | null; message?: string | null }): boolean {
+  return error.code === "PGRST204" || /sin_configuracion/i.test(error.message ?? "");
+}
+
+/** «2.ª quincena · octubre 2026, mes completo · noviembre 2026». */
+const listaPeriodos = (
+  liquidaciones: { tipo: TipoPeriodo; anio: number; mes: number; quincena: 1 | 2 | null }[],
+) =>
+  liquidaciones
+    .map((l) => etiquetaPeriodoCorta(l.tipo, l.anio, l.mes, l.quincena))
+    .join(", ");
+
+const borradoresTexto = (n: number) => (n === 1 ? "1 borrador" : `${n} borradores`);
+
+/**
+ * QUITAR EL CAMBIO de un mes o SUSPENDER LA HERENCIA desde un mes: las dos
+ * acciones comparten todo menos la fila que dejan en ese mes.
+ *
+ *   · `quitar` borra la fila (configuración o corte) del mes: ese mes y los que
+ *     lo seguían hasta el próximo cambio vuelven a heredar del cambio anterior
+ *     —o se quedan sin configuración si no hay ninguno—.
+ *   · `cortar` escribe un CORTE en un mes que HEREDA: sin configuración desde
+ *     ese mes hasta el próximo cambio (retiro, licencia no remunerada…).
+ *
+ * LA REGLA DE LOS BORRADORES (`efectoEnBorradores()` de `nomina.ts`) se aplica
+ * aquí, en el servidor y EN LA MISMA OPERACIÓN (la función
+ * `nomina_aplicar_cambio_config` de la 0013, una sola transacción):
+ *   · cerradas y pagadas: no se tocan jamás;
+ *   · borradores de meses que siguen con configuración heredada: se conservan
+ *     (con sus conceptos) y se recalculan solos;
+ *   · borradores de meses que quedan sin configuración: se ELIMINAN.
+ *
+ * La pantalla muestra en la confirmación cuántos borradores y de qué períodos
+ * se eliminarán, y manda sus ids en `borradores_confirmados`. Si al llegar aquí
+ * la cuenta es otra (alguien creó o cerró una liquidación mientras tanto), la
+ * acción se niega: nunca se elimina un borrador que no se vio en la
+ * confirmación.
+ */
+async function aplicarCambioConfig(
+  accion: "quitar" | "cortar",
   formData: FormData,
 ): Promise<ActionState> {
   const session = await getAdminOrNull();
@@ -318,41 +376,169 @@ export async function quitarConfigMes(
   if (!Number.isInteger(mes) || mes < 1 || mes > 12)
     return fail("El mes no es válido.");
 
-  const { filas, error: errorLectura } = await listNominaConfigsEmpleado(employeeId);
-  if (errorLectura)
+  const [{ filas, error: errorLectura }, borradoresLeidos] = await Promise.all([
+    listNominaConfigsEmpleado(employeeId),
+    session.supabase
+      .from("nomina_liquidaciones")
+      .select("id, tipo, anio, mes, quincena, estado")
+      .eq("employee_id", employeeId)
+      .eq("estado", "borrador"),
+  ]);
+  if (errorLectura || borradoresLeidos.error)
     return fail(
-      "No se pudo leer la configuración de esa persona. Recarga la página e inténtalo de nuevo.",
+      "No se pudo leer la configuración o las liquidaciones de esa persona. Recarga la página e inténtalo de nuevo.",
     );
 
+  const borradores = (borradoresLeidos.data ?? []).map((row) => ({
+    id: String(row.id),
+    tipo: (row.tipo === "mes" ? "mes" : "quincena") as TipoPeriodo,
+    anio: Number(row.anio),
+    mes: Number(row.mes),
+    quincena: (Number(row.quincena) === 1 || Number(row.quincena) === 2
+      ? Number(row.quincena)
+      : null) as 1 | 2 | null,
+    estado: String(row.estado),
+  }));
+
+  const esteMes = mesTexto({ anio, mes });
   const estado = estadoConfigMes(filas, anio, mes);
-  if (!estado.propia)
+
+  if (accion === "quitar" && !estado.cambioDelMes)
     return fail(
-      `En ${mesTexto({ anio, mes })} no hay un cambio propio que quitar: sus valores ya son heredados. Recarga la página.`,
+      `En ${esteMes} no hay un cambio propio que quitar: sus valores vienen de otro mes. Recarga la página.`,
+    );
+  if (accion === "cortar" && estado.origen !== "heredada")
+    return fail(
+      estado.origen === "propia"
+        ? `${esteMes} tiene su propia configuración guardada. Si quieres dejarlo sin configuración, primero quita ese cambio y después suspende la herencia.`
+        : estado.origen === "suspendida"
+          ? `La herencia ya está suspendida en ${esteMes}: esta persona no tiene configuración en ese mes. Recarga la página.`
+          : `En ${esteMes} no hay nada que suspender: esta persona no tiene configuración ni en ese mes ni en los anteriores.`,
     );
 
-  if (!estado.alQuitar && text(formData, "sin_respaldo_confirmado") !== "1")
+  const filasDespues =
+    accion === "quitar" ? filasTrasQuitar(filas, anio, mes) : filasTrasCortar(filas, anio, mes);
+  const efecto = efectoEnBorradores(borradores, filasDespues, { anio, mes });
+  const quedaSinConfig = accion === "cortar" || !estado.alQuitar;
+
+  // Lo que vio la persona en la confirmación tiene que ser exactamente esto.
+  if (quedaSinConfig && text(formData, "confirmado") !== "1")
     return fail(
-      `Si quitas este cambio, la persona queda SIN configuración desde ${mesTexto({ anio, mes })} ${hastaTexto(estado.siguiente)} y no se podrá liquidar, porque no hay ningún mes anterior configurado. Confirma el aviso para hacerlo de todos modos.`,
+      `Si sigues, esta persona queda SIN configuración ${vigencia({ anio, mes }, estado.siguiente)} y no se podrá liquidar en esos meses. Confirma el aviso para hacerlo.`,
+    );
+  const confirmados = new Set(
+    text(formData, "borradores_confirmados")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
+  );
+  const aEliminar = efecto.eliminar.map((l) => l.id);
+  if (
+    confirmados.size !== aEliminar.length ||
+    aEliminar.some((id) => !confirmados.has(id))
+  )
+    return fail(
+      "Las liquidaciones de esta persona cambiaron mientras tenías abierta la pantalla, así que no se hizo nada. Recarga la página y vuelve a confirmar: el aviso dirá qué borradores se eliminarían ahora.",
     );
 
-  const { data, error } = await session.supabase
-    .from("nomina_config_mensual")
-    .delete()
-    .eq("employee_id", employeeId)
-    .eq("anio", anio)
-    .eq("mes", mes)
-    .select("id");
+  const { data, error } = await session.supabase.rpc("nomina_aplicar_cambio_config", {
+    p_employee: employeeId,
+    p_anio: anio,
+    p_mes: mes,
+    p_accion: accion,
+    p_borradores: aEliminar,
+  });
 
-  if (error) return fail(mensajeDeError(error));
-  if (!data || data.length === 0)
-    return fail("Ese cambio ya no existe. Recarga la página, por favor.");
+  if (error) {
+    const sinFuncion =
+      error.code === "PGRST202" || /nomina_aplicar_cambio_config/i.test(error.message ?? "");
+    if (!sinFuncion) {
+      if (error.code === "P0002")
+        return fail("Ese cambio ya no existe. Recarga la página, por favor.");
+      return fail(mensajeDeError(error));
+    }
+    // Migración 0013 sin aplicar: suspender la herencia no existe todavía.
+    if (accion === "cortar")
+      return fail(
+        "Para suspender la herencia falta aplicar la migración supabase/migrations/0013_nomina_corte_configuracion.sql en el SQL Editor de Supabase.",
+      );
+    // Quitar sí: en dos pasos, como antes, y después los borradores.
+    const borrado = await session.supabase
+      .from("nomina_config_mensual")
+      .delete()
+      .eq("employee_id", employeeId)
+      .eq("anio", anio)
+      .eq("mes", mes)
+      .select("id");
+    if (borrado.error) return fail(mensajeDeError(borrado.error));
+    if (!borrado.data || borrado.data.length === 0)
+      return fail("Ese cambio ya no existe. Recarga la página, por favor.");
+    if (aEliminar.length > 0) {
+      const { error: errorBorradores } = await session.supabase
+        .from("nomina_liquidaciones")
+        .delete()
+        .in("id", aEliminar)
+        .eq("employee_id", employeeId)
+        .eq("estado", "borrador");
+      if (errorBorradores) return fail(mensajeDeError(errorBorradores));
+    }
+  } else if (!data) {
+    return fail("No se pudo completar la operación. Recarga la página e inténtalo de nuevo.");
+  }
 
   revalidar();
+
+  const rango = vigencia({ anio, mes }, estado.siguiente);
+  const eliminados =
+    efecto.eliminar.length > 0
+      ? ` Se ${efecto.eliminar.length === 1 ? "eliminó" : "eliminaron"} ${borradoresTexto(efecto.eliminar.length)} de liquidación que ${efecto.eliminar.length === 1 ? "quedaba" : "quedaban"} sin configuración (${listaPeriodos(efecto.eliminar)}).`
+      : "";
+  const conservados =
+    efecto.conservar.length > 0
+      ? ` ${efecto.conservar.length === 1 ? "El borrador" : `Los ${efecto.conservar.length} borradores`} de esos meses se ${efecto.conservar.length === 1 ? "conserva" : "conservan"} con sus conceptos y se ${efecto.conservar.length === 1 ? "recalcula" : "recalculan"} con esa configuración.`
+      : "";
+  const cerradas = " Las liquidaciones cerradas y pagadas no se tocaron.";
+
+  if (accion === "cortar")
+    return ok(
+      `Herencia suspendida: esta persona queda sin configuración ${rango}.${eliminados}${cerradas} Para deshacerlo, vuelve a ${esteMes} y usa «Quitar el cambio de este mes».`,
+    );
   return ok(
     estado.alQuitar
-      ? `Cambio quitado. Desde ${mesTexto({ anio, mes })} ${hastaTexto(estado.siguiente)} vuelve a regir la configuración guardada en ${mesTexto(estado.alQuitar)}. Las liquidaciones en borrador se recalculan solas; las cerradas no se tocan.`
-      : `Cambio quitado. Esta persona ya no tiene configuración desde ${mesTexto({ anio, mes })} ${hastaTexto(estado.siguiente)}: no se podrá liquidar en esos meses hasta que guardes una.`,
+      ? `Cambio quitado. ${rango.charAt(0).toUpperCase()}${rango.slice(1)} vuelve a regir la configuración guardada en ${mesTexto(estado.alQuitar)}.${conservados}${eliminados}${cerradas}`
+      : `Cambio quitado. Esta persona ya no tiene configuración ${rango}: no se podrá liquidar en esos meses hasta que guardes una.${eliminados}${cerradas}`,
   );
+}
+
+/**
+ * QUITA EL CAMBIO de un mes —una configuración o un corte—: borra la fila de
+ * ese mes, y ese mes (con los que lo seguían hasta el próximo cambio) vuelve a
+ * heredar del cambio anterior. Sobre un CORTE, esto deshace la suspensión.
+ *
+ * Si no hay ningún cambio anterior, la persona se queda SIN configuración en
+ * esos meses: la pantalla lo advierte en su confirmación y manda
+ * `confirmado=1`; sin esa marca, la acción se niega y lo explica. Los
+ * borradores de esos meses siguen la regla de `aplicarCambioConfig`.
+ */
+export async function quitarConfigMes(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return aplicarCambioConfig("quitar", formData);
+}
+
+/**
+ * SUSPENDE LA HERENCIA desde un mes que hereda (22 sep 2026): guarda un CORTE
+ * —«sin configuración desde este mes»— que rige hasta el próximo cambio. Para
+ * un empleado que se retira o sale a una licencia no remunerada. Se deshace con
+ * «Quitar el cambio de este mes» sobre el mes del corte. Los borradores de los
+ * meses que quedan sin configuración se eliminan en la misma operación.
+ */
+export async function cortarHerenciaConfig(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return aplicarCambioConfig("cortar", formData);
 }
 
 /* ================================================================== */
@@ -735,6 +921,18 @@ export async function reabrirLiquidacion(
 
   const id = text(formData, "id");
   if (!id) return fail("Falta el identificador de la liquidación.");
+
+  // Reabrir recalcula EN VIVO con la configuración del mes: si el mes ya no
+  // tiene ninguna (se quitó o se suspendió la herencia después de cerrarla),
+  // el borrador no se podría calcular. Se niega y se explica.
+  const actual = await getLiquidacion(id);
+  if (!actual)
+    return fail("Esa liquidación ya no existe. Recarga la página, por favor.");
+  const config = await getNominaConfigVigente(actual.employee_id, actual.anio, actual.mes);
+  if (!config)
+    return fail(
+      `No se puede reabrir: ${actual.employee_name || "esta persona"} no tiene configuración en ${mesTexto(actual)} (se quitó o se suspendió después de cerrar esta liquidación). Configura primero a la persona en ese mes, en la pestaña «Configuración», y vuelve a intentarlo. Mientras tanto la liquidación sigue cerrada, con su cálculo congelado y su volante.`,
+    );
 
   const { data, error } = await session.supabase
     .from("nomina_liquidaciones")

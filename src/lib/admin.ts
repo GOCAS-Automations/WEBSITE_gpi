@@ -1152,6 +1152,8 @@ function rowToNominaConfig(row: Record<string, unknown>): NominaConfigRecord {
     tarifas,
     pct_salud: numeroSeguro(row.pct_salud, 4),
     pct_pension: numeroSeguro(row.pct_pension, 4),
+    // Columna de la 0013: `undefined` mientras no esté aplicada → no es corte.
+    sin_configuracion: row.sin_configuracion === true,
     copiado_de: typeof row.copiado_de === "string" ? row.copiado_de : null,
     updated_at: typeof row.updated_at === "string" ? row.updated_at : null,
   };
@@ -1185,9 +1187,52 @@ export function nominaConfigAColumnas(
  * Una fila guardada en el mes M rige para M y los meses siguientes hasta la
  * próxima fila de esa persona. Estas lecturas NUNCA crean filas: solo leen y
  * resuelven con `configVigente()` / `estadoConfigMes()` de `src/lib/nomina.ts`,
- * que es la regla única. Crear o cambiar una fila es cosa exclusiva de
- * `saveNominaConfig` (guardar) y quitarla, de `quitarConfigMes`.
+ * que es la regla única (y la que entiende los CORTES de la 0013: una fila con
+ * `sin_configuracion = true` deja a la persona sin configuración desde su mes).
+ * Crear o cambiar una fila es cosa exclusiva de `saveNominaConfig` (guardar),
+ * `cortarHerenciaConfig` (suspender la herencia) y `quitarConfigMes` (quitar).
  */
+
+/**
+ * TODAS las filas de configuración, agrupadas por empleado (de la más antigua a
+ * la más reciente). Una sola consulta: la tabla tiene una fila por cambio y por
+ * persona, así que es pequeña, y leerla entera evita una consulta por mes o por
+ * persona (lo que hacía lento el Tablero). `hasta` recorta a los meses ≤ ese.
+ */
+export async function listNominaConfigsPorEmpleado(
+  hasta?: { anio: number; mes: number },
+): Promise<{ porEmpleado: Map<string, NominaConfigRecord[]>; error: "sin-tabla" | "lectura" | null }> {
+  const supabase = await getServerSupabase();
+  if (!supabase) return { porEmpleado: new Map(), error: "lectura" };
+
+  try {
+    let query = supabase
+      .from("nomina_config_mensual")
+      .select("*")
+      .order("anio", { ascending: true })
+      .order("mes", { ascending: true });
+    if (hasta) {
+      query = query.or(
+        `anio.lt.${hasta.anio},and(anio.eq.${hasta.anio},mes.lte.${hasta.mes})`,
+      );
+    }
+
+    const { data, error } = await query;
+    if (error)
+      return { porEmpleado: new Map(), error: faltaTablaNomina(error) ? "sin-tabla" : "lectura" };
+
+    const porEmpleado = new Map<string, NominaConfigRecord[]>();
+    for (const row of data ?? []) {
+      const config = rowToNominaConfig(row);
+      const lista = porEmpleado.get(config.employee_id) ?? [];
+      lista.push(config);
+      porEmpleado.set(config.employee_id, lista);
+    }
+    return { porEmpleado, error: null };
+  } catch {
+    return { porEmpleado: new Map(), error: "lectura" };
+  }
+}
 
 /** La fila guardada EXACTAMENTE en ese mes (válida o no), o `null`. */
 export async function getNominaConfigDelMes(
@@ -1262,34 +1307,13 @@ export async function mapaNominaConfigsVigentes(
   anio: number,
   mes: number,
 ): Promise<Map<string, NominaConfigRecord>> {
-  const supabase = await getServerSupabase();
-  if (!supabase) return new Map();
-
-  try {
-    const { data, error } = await supabase
-      .from("nomina_config_mensual")
-      .select("*")
-      .or(`anio.lt.${anio},and(anio.eq.${anio},mes.lte.${mes})`);
-
-    if (error || !data) return new Map();
-
-    const porEmpleado = new Map<string, NominaConfigRecord[]>();
-    for (const row of data) {
-      const config = rowToNominaConfig(row);
-      const lista = porEmpleado.get(config.employee_id) ?? [];
-      lista.push(config);
-      porEmpleado.set(config.employee_id, lista);
-    }
-
-    const salida = new Map<string, NominaConfigRecord>();
-    for (const [employeeId, filas] of porEmpleado) {
-      const vigente = configVigente(filas, anio, mes);
-      if (vigente) salida.set(employeeId, vigente);
-    }
-    return salida;
-  } catch {
-    return new Map();
+  const { porEmpleado } = await listNominaConfigsPorEmpleado({ anio, mes });
+  const salida = new Map<string, NominaConfigRecord>();
+  for (const [employeeId, filas] of porEmpleado) {
+    const vigente = configVigente(filas, anio, mes);
+    if (vigente) salida.set(employeeId, vigente);
   }
+  return salida;
 }
 
 /* --- Liquidaciones ------------------------------------------------- */
@@ -1325,6 +1349,11 @@ export interface LiquidacionFilters {
   quincena?: 1 | 2;
   estado?: NominaLiquidacionRecord["estado"];
   limit?: number;
+  /**
+   * `false` = no resolver los nombres contra `profiles` (ahorra una consulta en
+   * serie). Lo usan las pestañas de nómina, que ya tienen la lista de cuentas.
+   */
+  nombres?: boolean;
 }
 
 /**
@@ -1361,6 +1390,7 @@ export async function listLiquidaciones(
     if (error || !data) return [];
 
     const liquidaciones = data.map(rowToLiquidacion);
+    if (filters.nombres === false) return liquidaciones;
     const ids = [...new Set(liquidaciones.map((l) => l.employee_id))];
     if (ids.length === 0) return liquidaciones;
 
@@ -1459,25 +1489,100 @@ export async function horasDelPeriodo(
   config?: JornadaConfig,
   horarios?: MapaHorarios,
 ): Promise<HorasPeriodo> {
-  const [jornadaConfig, mapaHorarios] = await Promise.all([
+  const [jornadaConfig, mapaHorarios, jornadas] = await Promise.all([
     config ? Promise.resolve(config) : getJornadaConfig(),
     horarios ? Promise.resolve(horarios) : getMapaHorarios(),
+    leerJornadasNomina(desde, hasta, employeeId),
   ]);
 
-  const [aprobadas, pendientes] = await Promise.all([
-    listJornadas({ status: "aprobada", employeeId, from: desde, to: hasta, limit: 500 }),
-    listJornadas({ status: "pendiente", employeeId, from: desde, to: hasta, limit: 500 }),
-  ]);
-
-  const desgloses = aprobadas.map(
-    (j) => obtenerDesglose(j, jornadaConfig, mapaHorarios).desglose,
+  return (
+    horasPorEmpleado(jornadas, jornadaConfig, mapaHorarios).get(employeeId) ?? {
+      minutos: minutosVacios(),
+      jornadas: 0,
+      pendientes: 0,
+    }
   );
+}
 
-  return {
-    minutos: aprobadas.length > 0 ? sumarMinutos(desgloses) : minutosVacios(),
-    jornadas: aprobadas.length,
-    pendientes: pendientes.length,
-  };
+/**
+ * Las jornadas APROBADAS y PENDIENTES de un rango de fechas —de una persona o,
+ * sin `employeeId`, de todo el equipo— en UNA sola consulta y sin resolver
+ * nombres (la nómina no los necesita).
+ *
+ * Antes la pestaña «Liquidación» llamaba a `horasDelPeriodo` por cada persona:
+ * dos `listJornadas` (aprobadas y pendientes) y cada una con su consulta de
+ * nombres, cuatro viajes a Supabase por persona. Con esto es uno para todos.
+ * Se lee por tandas de 1000 (el tope de filas de PostgREST) por si el rango
+ * fuera largo; una quincena del equipo son unas pocas decenas.
+ */
+export async function leerJornadasNomina(
+  desde: string,
+  hasta: string,
+  employeeId?: string,
+): Promise<JornadaRecord[]> {
+  const supabase = await getServerSupabase();
+  if (!supabase) return [];
+
+  const TANDA = 1000;
+  const salida: JornadaRecord[] = [];
+  try {
+    for (let inicio = 0; inicio < 20 * TANDA; inicio += TANDA) {
+      let query = supabase
+        .from("jornadas")
+        .select("*")
+        .in("status", ["aprobada", "pendiente"])
+        .gte("work_date", desde)
+        .lte("work_date", hasta)
+        .order("work_date", { ascending: true })
+        .order("id", { ascending: true })
+        .range(inicio, inicio + TANDA - 1);
+      if (employeeId) query = query.eq("employee_id", employeeId);
+
+      const { data, error } = await query;
+      if (error || !data) break;
+      salida.push(...data.map(rowToJornada));
+      if (data.length < TANDA) break;
+    }
+  } catch {
+    // Sin jornadas legibles, la liquidación se calcula sin horas: igual que antes.
+  }
+  return salida;
+}
+
+/**
+ * Suma, por empleado, las horas de las jornadas APROBADAS (con su desglose
+ * congelado, `obtenerDesglose()`) y cuenta las PENDIENTES. Las demás se ignoran.
+ */
+export function horasPorEmpleado(
+  jornadas: readonly JornadaRecord[],
+  jornadaConfig: JornadaConfig,
+  horarios: MapaHorarios,
+): Map<string, HorasPeriodo> {
+  const aprobadas = new Map<string, JornadaRecord[]>();
+  const pendientes = new Map<string, number>();
+  for (const j of jornadas) {
+    if (j.status === "aprobada") {
+      const lista = aprobadas.get(j.employee_id) ?? [];
+      lista.push(j);
+      aprobadas.set(j.employee_id, lista);
+    } else if (j.status === "pendiente") {
+      pendientes.set(j.employee_id, (pendientes.get(j.employee_id) ?? 0) + 1);
+    }
+  }
+
+  const salida = new Map<string, HorasPeriodo>();
+  for (const id of new Set([...aprobadas.keys(), ...pendientes.keys()])) {
+    const suyas = aprobadas.get(id) ?? [];
+    salida.set(id, {
+      minutos:
+        suyas.length > 0
+          ? sumarMinutos(suyas.map((j) => obtenerDesglose(j, jornadaConfig, horarios).desglose))
+          : minutosVacios(),
+      jornadas: suyas.length,
+      pendientes: pendientes.get(id) ?? 0,
+    });
+  }
+  return salida;
 }
 
 /** Conteo rápido de nómina para la tarjeta del dashboard. */

@@ -69,6 +69,10 @@ export async function resolverVolante(id: string): Promise<VolanteResuelto | nul
         ),
   ]);
 
+  // Borrador HUÉRFANO (su mes ya no tiene configuración, 22 sep 2026): no hay
+  // con qué calcularlo, y un volante en cero no le sirve a nadie. No se imprime.
+  if (!congelada && !config) return null;
+
   const resuelta = obtenerLiquidacion(liquidacion.snapshot, () => ({
     config: {
       salarioBasico: config?.salario_basico ?? 0,

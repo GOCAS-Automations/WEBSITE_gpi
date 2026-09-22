@@ -18,6 +18,21 @@ export function getPublicSupabase(): SupabaseClient | null {
 }
 
 /**
+ * Cliente de LECTURA que manda un token de acceso tal cual, sin manejar
+ * sesión (sin cookies, sin refresco, sin candado de auth). Lo usa
+ * `getSessionProfile()` para leer el perfil EN PARALELO con `getUser()`: el
+ * cliente de la sesión serializa sus peticiones detrás de `getUser()`.
+ * PostgREST verifica el token en cada consulta y RLS se aplica igual que con
+ * el cliente de la sesión; no lo uses para escribir.
+ */
+export function getTokenSupabase(accessToken: string): SupabaseClient | null {
+  if (!isSupabaseConfigured()) return null;
+  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    accessToken: async () => accessToken,
+  });
+}
+
+/**
  * Cliente de servidor ligado a la sesión del usuario (cookies).
  *
  * En Next.js 16 `cookies()` es asíncrono. Desde un Server Component no se

@@ -13,11 +13,25 @@
  * su desglose valía la última vez que alguien abrió la liquidación... o, si
  * nunca se ha cerrado, con los conceptos manuales y el sueldo, que es lo que
  * de verdad hace falta para una serie histórica; la pantalla lo marca.
+ *
+ * Un borrador HUÉRFANO (su mes ya no tiene configuración) no entra en las
+ * cifras: no hay con qué calcularlo, y pintarlo en cero falsearía las series.
+ *
+ * RENDIMIENTO (22 sep 2026): la sesión, las liquidaciones, las cuentas y TODA
+ * la configuración se piden en paralelo, en una sola tanda. Antes se pedía la
+ * configuración con una consulta por cada mes que tuviera un borrador, y los
+ * nombres con otra consulta en serie detrás de las liquidaciones.
  */
 
-import { listLiquidaciones, listProfiles, mapaNominaConfigsVigentes } from "@/lib/admin";
+import {
+  listLiquidaciones,
+  listNominaConfigsPorEmpleado,
+  listProfiles,
+} from "@/lib/admin";
+import { requireAdmin } from "@/lib/supabase/auth";
 import { hoyEnColombia } from "@/lib/jornada";
 import {
+  configVigente,
   minutosVacios,
   normalizarManuales,
   obtenerLiquidacion,
@@ -36,33 +50,27 @@ export async function TableroView({
   estado: string;
   tipo: string;
 }) {
-  const [liquidaciones, perfiles] = await Promise.all([
-    listLiquidaciones({ limit: 400 }),
+  // Barrera autoritativa en la misma tanda que los datos (ver `liquidacion.tsx`).
+  const [, liquidaciones, perfiles, configs] = await Promise.all([
+    requireAdmin(),
+    listLiquidaciones({ limit: 400, nombres: false }),
     listProfiles(),
+    // Las configuraciones solo hacen falta para los borradores (el resto trae
+    // su snapshot); la tabla es pequeña y se lee entera, de una vez.
+    listNominaConfigsPorEmpleado(),
   ]);
 
-  // Las configuraciones VIGENTES («vigente desde»: la del mes o la heredada)
-  // hacen falta solo para los borradores (el resto ya trae su snapshot): se
-  // piden agrupadas por mes para no hacer una consulta por fila.
-  const mesesConBorrador = [
-    ...new Set(
-      liquidaciones
-        .filter((l) => l.estado === "borrador")
-        .map((l) => `${l.anio}-${l.mes}`),
-    ),
-  ];
+  const nombres = new Map(perfiles.map((p) => [p.id, p.full_name]));
 
-  const configsPorMes = new Map(
-    await Promise.all(
-      mesesConBorrador.map(async (clave) => {
-        const [a, m] = clave.split("-").map(Number);
-        return [clave, await mapaNominaConfigsVigentes(a, m)] as const;
-      }),
-    ),
-  );
+  const filas: FilaHistorial[] = [];
+  for (const l of liquidaciones) {
+    const config =
+      l.estado === "borrador"
+        ? configVigente(configs.porEmpleado.get(l.employee_id) ?? [], l.anio, l.mes)
+        : null;
+    // Huérfano: borrador sin configuración vigente. Fuera de las cifras.
+    if (l.estado === "borrador" && !config) continue;
 
-  const filas: FilaHistorial[] = liquidaciones.map((l) => {
-    const config = configsPorMes.get(`${l.anio}-${l.mes}`)?.get(l.employee_id) ?? null;
     const manuales = normalizarManuales(l.conceptos);
 
     const resuelta = obtenerLiquidacion(l.snapshot, () => ({
@@ -82,10 +90,10 @@ export async function TableroView({
 
     const c = resuelta.calculo;
 
-    return {
+    filas.push({
       id: l.id,
       employeeId: l.employee_id,
-      nombre: l.employee_name ?? "",
+      nombre: nombres.get(l.employee_id) ?? "",
       tipo: l.tipo,
       anio: l.anio,
       mes: l.mes,
@@ -101,8 +109,8 @@ export async function TableroView({
       devengado: c.totalDevengado,
       descuentos: c.totalDescuentos,
       neto: c.neto,
-    };
-  });
+    });
+  }
 
   return (
     <NominaDashboard

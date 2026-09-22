@@ -25,6 +25,15 @@
  *     (`nomina_GPI_2026-09-Q2_oprueba.csv`) y el botón lo dice.
  * El filtro viaja en la URL: sobrevive a recargar y a cambiar de período.
  *
+ * SIN CONFIGURACIÓN (22 sep 2026)
+ * -------------------------------
+ * Una fila sin configuración vigente —nunca configurada, herencia suspendida
+ * o un borrador HUÉRFANO— no tiene cifras que valgan: la tabla pinta «—»
+ * (`cifrasValidas`), no entra en los totales y el CSV la deja en blanco. Nunca
+ * cifras viejas ni ceros. El borrador huérfano se marca como tal, con su aviso
+ * y la opción de eliminarlo. Una liquidación CERRADA sí enseña sus cifras
+ * aunque el mes ya no tenga configuración: su snapshot manda.
+ *
  * DINERO: todo importe se pinta con `src/lib/dinero.ts` (punto de miles, coma
  * decimal) y los conceptos manuales se escriben con `CampoDinero`. El CSV es la
  * excepción a propósito: números sin miles para que Excel los sume.
@@ -49,7 +58,7 @@ import {
   AYUDA_NOMINA_PENDIENTES,
   AYUDA_NOMINA_PERIODO,
   AYUDA_NOMINA_VOLANTE,
-} from "@/components/admin/ui";
+} from "@/components/admin/ayudas";
 import { idleState, type ActionState, type FilaNomina } from "@/lib/admin-types";
 import {
   CONCEPTOS_MANUALES_DESCUENTOS,
@@ -81,6 +90,21 @@ const MESES_OPCIONES = Array.from({ length: 12 }, (_, i) => ({
   value: String(i + 1),
   label: nombreMesNomina(i + 1),
 }));
+
+/**
+ * ¿Las cifras de la fila valen? Sí si la liquidación está congelada (su
+ * snapshot manda aunque hoy el mes ya no tenga configuración) o si hay
+ * configuración vigente para calcularla en vivo. Si no —nadie configurado, o
+ * un borrador HUÉRFANO—, la pantalla pinta «—», nunca cifras viejas ni ceros,
+ * y la fila no entra en los totales.
+ */
+function cifrasValidas(f: FilaNomina): boolean {
+  return f.congelada || f.tieneConfig;
+}
+
+/** «octubre de 2026». */
+const mesTexto = (m: { anio: number; mes: number }) =>
+  `${nombreMesNomina(m.mes)} de ${m.anio}`;
 
 /* ================================================================== */
 /* Exportación a CSV                                                   */
@@ -136,8 +160,21 @@ function descargarCSV(filas: FilaNomina[], etiquetaArchivo: string): void {
       horasDeMinutos(fila.calculo.lineasHoras.find((l) => l.clave === clave)?.minutos ?? 0),
     );
 
-  const cuerpo = filas.map((f) =>
-    [
+  const cuerpo = filas.map((f) => {
+    // Sin configuración (y sin cálculo congelado) no hay cifras: la fila sale
+    // con sus datos y las columnas de dinero en blanco, nunca en cero.
+    if (!cifrasValidas(f)) {
+      return [
+        f.nombre,
+        f.usuario ?? "",
+        f.cedula ?? "",
+        f.cargo ?? "",
+        f.huerfana ? "Borrador sin configuración" : "Sin configurar",
+        ...Array.from({ length: encabezados.length - 6 }, () => ""),
+        "Sin configuración en el mes: no se puede liquidar",
+      ].map(campo);
+    }
+    return [
       f.nombre,
       f.usuario ?? "",
       f.cedula ?? "",
@@ -167,8 +204,8 @@ function descargarCSV(filas: FilaNomina[], etiquetaArchivo: string): void {
       String(f.jornadas),
       String(f.pendientes),
       f.congelada ? "Congelado al cerrar" : "Provisional (borrador)",
-    ].map(campo),
-  );
+    ].map(campo);
+  });
 
   const contenido = [encabezados.map(campo), ...cuerpo]
     .map((f) => f.join(";"))
@@ -297,7 +334,7 @@ export function LiquidacionPanel({
 
   const totales = useMemo(
     () =>
-      filas.reduce(
+      filas.filter(cifrasValidas).reduce(
         (acc, f) => ({
           devengado: acc.devengado + f.calculo.totalDevengado,
           descuentos: acc.descuentos + f.calculo.totalDescuentos,
@@ -309,7 +346,10 @@ export function LiquidacionPanel({
     [filas],
   );
 
-  const sinConfig = filas.filter((f) => !f.tieneConfig);
+  // Sin configuración y sin liquidación que la sustituya (las cerradas leen su
+  // snapshot y no cuentan); los borradores huérfanos tienen su propio aviso.
+  const sinConfig = filas.filter((f) => !f.tieneConfig && !f.liquidacionId);
+  const huerfanas = filas.filter((f) => f.huerfana);
   // Configuraciones que pagan menos que la ley del mes: aviso, no bloqueo.
   const bajoMinimo = filas.filter((f) => f.tarifasBajoMinimo.length > 0);
   const conPendientes = filas.filter((f) => f.pendientes > 0);
@@ -459,12 +499,18 @@ export function LiquidacionPanel({
       {/* ---------------- Avisos ---------------- */}
       {sinConfig.length > 0 && (
         <AyudaSeccion tono="aviso" title="Hay personas sin salario configurado">
-          {sinConfig.map((f) => f.nombre).join(", ")}{" "}
+          {sinConfig
+            .map((f) =>
+              f.sinConfigDesde
+                ? `${f.nombre} (herencia suspendida desde ${mesTexto(f.sinConfigDesde)})`
+                : f.nombre,
+            )
+            .join(", ")}{" "}
           {sinConfig.length === 1 ? "no tiene" : "no tienen"} salario ni tarifas
-          configurados ni en {nombreMesNomina(mes)} de {anio} ni en ningún mes
-          anterior, así que no{" "}
+          vigentes en {nombreMesNomina(mes)} de {anio}, así que no{" "}
           {sinConfig.length === 1 ? "se puede liquidar" : "se pueden liquidar"}.
-          Configúra{sinConfig.length === 1 ? "lo" : "los"} en{" "}
+          Si hay que pagarle{sinConfig.length === 1 ? "" : "s"}, configúra
+          {sinConfig.length === 1 ? "lo" : "los"} en{" "}
           <Link
             prefetch={false}
             href={`/admin/nomina?vista=configuracion&anio=${anio}&mes=${mes}&empleado=${sinConfig[0].employeeId}`}
@@ -473,6 +519,26 @@ export function LiquidacionPanel({
             la pestaña Configuración
           </Link>
           .
+        </AyudaSeccion>
+      )}
+
+      {huerfanas.length > 0 && (
+        <AyudaSeccion tono="aviso" title="Hay borradores sin configuración">
+          {huerfanas.map((f) => f.nombre).join(", ")}{" "}
+          {huerfanas.length === 1 ? "tiene un borrador" : "tienen borradores"} de
+          este período, pero {nombreMesNomina(mes)} de {anio} ya no tiene
+          configuración para {huerfanas.length === 1 ? "esa persona" : "esas personas"}{" "}
+          (se quitó o se suspendió después de crearlo). Sus cifras ya no valen y no
+          se muestran. Abre la persona para eliminar el borrador, o configura el
+          mes en{" "}
+          <Link
+            prefetch={false}
+            href={`/admin/nomina?vista=configuracion&anio=${anio}&mes=${mes}&empleado=${huerfanas[0].employeeId}`}
+            className="font-semibold text-amber-900 underline"
+          >
+            la pestaña Configuración
+          </Link>{" "}
+          y el borrador se recalculará conservando sus conceptos.
         </AyudaSeccion>
       )}
 
@@ -621,6 +687,14 @@ export function LiquidacionPanel({
                     <p className="font-semibold text-ink">{f.nombre}</p>
                     <p className="text-xs text-graphite">
                       {f.cargo || "Sin cargo"}
+                      {!cifrasValidas(f) && f.sinConfigDesde && (
+                        <span
+                          className="ml-2 font-semibold text-amber-700"
+                          title={`Sin configuración desde ${mesTexto(f.sinConfigDesde)}`}
+                        >
+                          · herencia suspendida
+                        </span>
+                      )}
                       {f.pendientes > 0 && (
                         <span className="ml-2 font-semibold text-amber-700">
                           · {f.pendientes} jornada{f.pendientes === 1 ? "" : "s"}{" "}
@@ -630,17 +704,23 @@ export function LiquidacionPanel({
                     </p>
                   </td>
                   <td className="px-3 py-3 text-right tabular-nums text-graphite">
-                    {f.tieneConfig ? formatearNumero(f.dias) : "—"}
+                    {cifrasValidas(f) ? formatearNumero(f.dias) : "—"}
                   </td>
-                  <Money valor={f.calculo.basico + f.calculo.auxTransporte} />
-                  <Money valor={f.calculo.totalHoras} />
-                  <Money valor={f.calculo.totalDevengadosManuales} />
-                  <Money valor={f.calculo.totalDescuentos} />
+                  <Money valor={cifrasValidas(f) ? f.calculo.basico + f.calculo.auxTransporte : null} />
+                  <Money valor={cifrasValidas(f) ? f.calculo.totalHoras : null} />
+                  <Money valor={cifrasValidas(f) ? f.calculo.totalDevengadosManuales : null} />
+                  <Money valor={cifrasValidas(f) ? f.calculo.totalDescuentos : null} />
                   <td className="px-3 py-3 text-right font-bold tabular-nums text-ink">
-                    {f.tieneConfig ? formatearMiles(f.calculo.neto) : "—"}
+                    {cifrasValidas(f) ? formatearMiles(f.calculo.neto) : "—"}
                   </td>
                   <td className="px-3 py-3">
-                    {f.estado ? (
+                    {f.huerfana ? (
+                      <span title="Borrador sin configuración: ábrelo para eliminarlo o configura el mes">
+                        <Badge className="bg-amber-100 text-amber-800">
+                          Sin configuración
+                        </Badge>
+                      </span>
+                    ) : f.estado ? (
                       <Badge className={NOMINA_ESTADO_CLASSES[f.estado]}>
                         {NOMINA_ESTADO_LABELS[f.estado]}
                       </Badge>
@@ -773,16 +853,118 @@ function DetalleLiquidacion({
   const ocupado =
     creando || guardando || cerrando || pagando || reabriendo || borrando;
 
-  /* --- Sin configuración: no hay nada que liquidar --- */
-  if (!fila.tieneConfig) {
+  const hrefConfig = `/admin/nomina?vista=configuracion&anio=${anio}&mes=${mes}&empleado=${fila.employeeId}`;
+
+  /* --- Sin configuración y sin liquidación: no hay nada que liquidar --- */
+  if (!fila.tieneConfig && !fila.liquidacionId) {
     return (
-      <AyudaSeccion tono="aviso" title="Sin salario configurado">
-        {fila.nombre} no tiene salario ni tarifas configurados ni en{" "}
-        {nombreMesNomina(mes)} de {anio} ni en ningún mes anterior. Ve a la
-        pestaña <strong>Configuración</strong>, elige a esta persona y el mes
-        desde el que rige su salario, escríbelo y guarda: las siete tarifas se
-        sugieren solas, y lo que guardes vale para ese mes y los siguientes.
+      <AyudaSeccion
+        tono="aviso"
+        title={
+          fila.sinConfigDesde
+            ? `Sin configuración desde ${mesTexto(fila.sinConfigDesde)} (herencia suspendida)`
+            : "Sin salario configurado"
+        }
+      >
+        {fila.sinConfigDesde ? (
+          <>
+            A {fila.nombre} se le dejó sin configuración desde{" "}
+            {mesTexto(fila.sinConfigDesde)} (por ejemplo, por un retiro o una
+            licencia sin sueldo), así que no se le liquida en{" "}
+            {nombreMesNomina(mes)} de {anio}. Si hay que volver a pagarle, ve a la
+            pestaña <strong>Configuración</strong> y guarda su configuración desde
+            el mes que corresponda, o quita el corte en {mesTexto(fila.sinConfigDesde)}.
+          </>
+        ) : (
+          <>
+            {fila.nombre} no tiene salario ni tarifas configurados ni en{" "}
+            {nombreMesNomina(mes)} de {anio} ni en ningún mes anterior. Ve a la
+            pestaña <strong>Configuración</strong>, elige a esta persona y el mes
+            desde el que rige su salario, escríbelo y guarda: las siete tarifas se
+            sugieren solas, y lo que guardes vale para ese mes y los siguientes.
+          </>
+        )}
       </AyudaSeccion>
+    );
+  }
+
+  /* --- Borrador HUÉRFANO: existe, pero su mes ya no tiene configuración --- */
+  if (fila.huerfana && fila.liquidacionId) {
+    const conceptos = [...CONCEPTOS_MANUALES_DEVENGADOS, ...CONCEPTOS_MANUALES_DESCUENTOS].filter(
+      (c) => (fila.manuales.valores[c.clave] ?? 0) > 0,
+    );
+    return (
+      <div className="space-y-5">
+        <AyudaSeccion tono="aviso" title="Borrador sin configuración">
+          Este borrador se creó cuando {nombreMesNomina(mes)} de {anio} tenía
+          configuración para {fila.nombre}, pero después se quitó
+          {fila.sinConfigDesde
+            ? ` (herencia suspendida desde ${mesTexto(fila.sinConfigDesde)})`
+            : ""}
+          . Sin salario ni tarifas no hay con qué calcularlo, así que sus cifras no
+          se muestran ni se pueden cerrar. Tienes dos caminos:{" "}
+          <Link
+            prefetch={false}
+            href={hrefConfig}
+            className="font-semibold text-amber-900 underline"
+          >
+            configurar el mes
+          </Link>{" "}
+          (el borrador se recalcula solo y conserva sus conceptos) o eliminarlo.
+        </AyudaSeccion>
+
+        {conceptos.length > 0 && (
+          <div className="rounded-2xl border border-line px-4 py-3 text-sm">
+            <p className="font-semibold text-ink">Conceptos escritos en este borrador</p>
+            <ul className="mt-2 space-y-1 text-graphite">
+              {conceptos.map((c) => (
+                <li key={c.clave} className="flex justify-between gap-3">
+                  <span>{c.label}</span>
+                  <span className="tabular-nums">
+                    {formatearPesos(fila.manuales.valores[c.clave] ?? 0)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {mensaje?.message && (
+          <p
+            role="status"
+            className={`rounded-xl border px-4 py-3 text-sm ${
+              mensaje.status === "success"
+                ? "border-brand/30 bg-brand-tint text-brand-deep"
+                : "border-red-200 bg-red-50 text-red-700"
+            }`}
+          >
+            {mensaje.message}
+          </p>
+        )}
+
+        <form
+          action={borrar}
+          onSubmit={(event) => {
+            setUltima("borrar");
+            if (
+              !window.confirm(
+                `¿Eliminar el borrador de ${fila.nombre}?\n\nSu mes ya no tiene configuración, así que no se puede calcular. Se pierden los conceptos que tenía escritos.`,
+              )
+            )
+              event.preventDefault();
+          }}
+        >
+          <input type="hidden" name="id" value={fila.liquidacionId} />
+          <button
+            type="submit"
+            disabled={ocupado}
+            className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold text-ink-soft transition-colors hover:border-red-300 hover:bg-red-50 hover:text-red-600 disabled:opacity-60"
+          >
+            <Trash className="h-4 w-4" />
+            {borrando ? "Eliminando…" : "Eliminar el borrador"}
+          </button>
+        </form>
+      </div>
     );
   }
 
@@ -808,8 +990,39 @@ function DetalleLiquidacion({
               {new Date(fila.calculadoEn).toLocaleDateString("es-CO")}.
             </>
           )}
+          {/* Con qué configuración se calcula lo que está en vivo. */}
+          {!fila.congelada && fila.configDesde && (
+            <>
+              {" "}
+              <strong className="text-ink">
+                Se calcula con la configuración guardada en{" "}
+                {mesTexto(fila.configDesde)}
+                {fila.configHeredada ? " (heredada)" : ""}.
+              </strong>
+            </>
+          )}
         </p>
       </div>
+
+      {fila.congelada && !fila.tieneConfig && (
+        <AyudaSeccion tono="aviso" title="El mes ya no tiene configuración">
+          Esta liquidación conserva su cálculo congelado y su volante, pero{" "}
+          {nombreMesNomina(mes)} de {anio} ya no tiene configuración para{" "}
+          {fila.nombre}
+          {fila.sinConfigDesde
+            ? ` (herencia suspendida desde ${mesTexto(fila.sinConfigDesde)})`
+            : ""}
+          . Para reabrirla, primero{" "}
+          <Link
+            prefetch={false}
+            href={hrefConfig}
+            className="font-semibold text-amber-900 underline"
+          >
+            configura a la persona en ese mes
+          </Link>
+          .
+        </AyudaSeccion>
+      )}
 
       {fila.pendientes > 0 && (
         <AyudaSeccion tono="aviso" title="Jornadas sin aprobar en el período">
@@ -1313,10 +1526,11 @@ function Th({
   );
 }
 
-function Money({ valor }: { valor: number }) {
+/** Una celda de dinero. `null` = sin cifra que mostrar (sin configuración). */
+function Money({ valor }: { valor: number | null }) {
   return (
     <td className="px-3 py-3 text-right tabular-nums text-graphite">
-      {valor === 0 ? "—" : formatearMiles(valor)}
+      {valor === null || valor === 0 ? "—" : formatearMiles(valor)}
     </td>
   );
 }

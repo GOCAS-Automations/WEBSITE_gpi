@@ -9,17 +9,23 @@
  * guardado).
  *
  * Lo que hace que sea usable para quien no es de nómina:
- *  · arriba dice SIEMPRE de dónde salen los valores que se ven: «Configurado en
- *    este mes», «Heredado de agosto de 2026» o «Sin configurar», y hasta cuándo
- *    rigen; con el botón para quitar el cambio de un mes;
+ *  · arriba dice SIEMPRE de dónde salen los valores que se ven, con uno de
+ *    estos estados: «Configurado en este mes», «Heredado de agosto de 2026»,
+ *    «Sin configuración desde octubre de 2026 (herencia suspendida)» o «Sin
+ *    configurar», y hasta cuándo rigen;
+ *  · deja QUITAR el cambio de un mes (vuelve a heredar) y, en un mes que
+ *    hereda, DEJARLO SIN CONFIGURACIÓN desde ese mes (un corte: retiro,
+ *    licencia no remunerada). Las dos cosas piden confirmación en una ventana
+ *    que dice ANTES qué borradores de liquidación se eliminarían —los de los
+ *    meses que se quedan sin configuración— y cuáles se conservan; las
+ *    liquidaciones cerradas y pagadas no se tocan nunca;
  *  · al escribir el salario, las siete tarifas SUGERIDAS se recalculan en vivo
  *    y se ofrecen con un botón («Usar los valores sugeridos»), en vez de
  *    obligar a hacer siete multiplicaciones a mano;
  *  · todos los importes se escriben y se leen con separador de miles
  *    (`CampoDinero` + `src/lib/dinero.ts`);
- *  · si las tarifas festivas quedan incoherentes (una hora EXTRA en festivo
- *    valiendo menos que una hora ordinaria en festivo, que es justo lo que
- *    pasa con los números del Excel de GPI) sale un aviso en ámbar.
+ *  · si una tarifa queda por debajo del mínimo legal del mes sale un aviso en
+ *    ámbar (aviso, no bloqueo).
  *
  * EL BUG DE «AL CAMBIAR DE PERSONA SIGUEN LOS VALORES DE ANTES» (18 sep 2026)
  * --------------------------------------------------------------------------
@@ -33,8 +39,9 @@
  *     cualquiera de los tres monta un formulario nuevo, con los avisos en
  *     blanco;
  *   · la de dentro (`claveFuente`) es la fila que rige + su `updated_at`:
- *     después de guardar o de quitar un cambio, los campos se vuelven a leer de
- *     la base en vez de quedarse con lo tecleado, sin perder el aviso de «guardado».
+ *     después de guardar, quitar un cambio o suspender la herencia, los campos
+ *     se vuelven a leer de la base en vez de quedarse con lo tecleado, sin
+ *     perder el aviso de «guardado».
  *
  * Las piezas de interfaz vienen de `ui-base`, no de `ui.tsx`: ver la nota de
  * `LiquidacionPanel`.
@@ -49,11 +56,14 @@ import {
   inputClass,
 } from "@/components/admin/ui-base";
 import {
+  AYUDA_NOMINA_BORRADORES,
   AYUDA_NOMINA_CONFIG,
+  AYUDA_NOMINA_CORTE,
   AYUDA_NOMINA_SUGERIDAS,
   AYUDA_NOMINA_TARIFAS,
-} from "@/components/admin/ui";
+} from "@/components/admin/ayudas";
 import { CampoDinero } from "@/components/admin/CampoDinero";
+import { ModalPanel } from "@/components/calendario/ModalPanel";
 import { idleState, type ActionState } from "@/lib/admin-types";
 import {
   derivarTarifas,
@@ -66,7 +76,7 @@ import {
   type TarifasNomina,
 } from "@/lib/nomina";
 import { formatearDinero, formatearNumero, formatearPesos } from "@/lib/dinero";
-import { Check, Trash } from "@/lib/icons";
+import { Check, Close, Trash, Undo } from "@/lib/icons";
 
 type Accion = (state: ActionState, formData: FormData) => Promise<ActionState>;
 
@@ -85,19 +95,44 @@ export interface LegalMesVista extends ParametrosTarifas {
   horasSemanales: number;
 }
 
+/**
+ * Qué pasaría con los borradores de liquidación de la persona si se hiciera la
+ * acción (`efectoEnBorradores()` de `nomina.ts`, calculado en el servidor).
+ */
+export interface EfectoBorradoresVista {
+  /** Los que se ELIMINARÍAN: sus meses quedan sin configuración. */
+  eliminar: { id: string; etiqueta: string }[];
+  /** Cuántos se conservan (siguen con configuración heredada). */
+  conservar: number;
+}
+
 /** De dónde salen los valores del mes que se está viendo. */
 export interface EstadoConfigVista {
   origen: OrigenConfigMes;
-  /** Mes en que se guardó la configuración que rige (`null` = ninguna). */
+  /**
+   * Mes del cambio que rige: la configuración (propia o heredada) o, si la
+   * herencia está suspendida, el corte. `null` = nunca se configuró.
+   */
   desde: Mes | null;
+  /** Qué hay guardado EN este mes: una configuración, un corte o nada. */
+  cambioDelMes: "configuracion" | "corte" | null;
   /** Lo que regiría si se quita el cambio de este mes (`null` = nada). */
   alQuitar: Mes | null;
+  /**
+   * Cuando `alQuitar` es `null` porque el mes anterior tiene la herencia
+   * SUSPENDIDA (y no porque nunca se configuró): el mes de ese corte.
+   */
+  alQuitarCorte: Mes | null;
   /** Próximo cambio guardado después de este mes (hasta ahí rige este). */
-  siguiente: Mes | null;
-  /** Todos los cambios guardados de la persona, en orden. */
-  cambios: (Mes & { salario: number })[];
+  siguiente: (Mes & { corte: boolean }) | null;
+  /** Todos los cambios guardados de la persona —configuraciones y cortes—, en orden. */
+  cambios: (Mes & { salario: number; corte: boolean })[];
   /** Fila que rige + su última edición: la `key` de los campos. */
   claveFuente: string;
+  /** Efecto en los borradores de «Quitar el cambio» (`null` = no hay cambio). */
+  alQuitarBorradores: EfectoBorradoresVista | null;
+  /** Efecto en los borradores de «Dejar sin configuración» (`null` = no aplica). */
+  alCortarBorradores: EfectoBorradoresVista | null;
 }
 
 /** Las siete tarifas, en el orden y con el texto que ve el administrador. */
@@ -162,15 +197,28 @@ const MESES_OPCIONES = Array.from({ length: 12 }, (_, i) => ({
 /** «agosto de 2026». */
 const mesTexto = (m: Mes) => `${nombreMesNomina(m.mes)} de ${m.anio}`;
 
-/** «hasta septiembre de 2026» o «en adelante». */
-const hastaTexto = (siguiente: Mes | null) =>
-  siguiente
-    ? `hasta ${mesTexto(mesAnterior(siguiente.anio, siguiente.mes))}`
-    : "en adelante";
+/**
+ * El tramo en que rige algo que empieza en `desde` y dura hasta el próximo
+ * cambio: «desde octubre de 2026 en adelante», «desde octubre de 2026 hasta
+ * diciembre de 2026» o, si el próximo cambio es al mes siguiente, «solo en
+ * octubre de 2026».
+ */
+const vigencia = (desde: Mes, siguiente: Mes | null) => {
+  if (!siguiente) return `desde ${mesTexto(desde)} en adelante`;
+  const hasta = mesAnterior(siguiente.anio, siguiente.mes);
+  if (hasta.anio === desde.anio && hasta.mes === desde.mes) return `solo en ${mesTexto(desde)}`;
+  return `desde ${mesTexto(desde)} hasta ${mesTexto(hasta)}`;
+};
+
+/** «1 borrador» / «3 borradores». */
+const borradores = (n: number) => (n === 1 ? "1 borrador" : `${n} borradores`);
+
+type Confirmacion = "quitar" | "cortar" | null;
 
 export function ConfigNominaForm({
   action,
   quitarAction,
+  cortarAction,
   empleados,
   seleccionado,
   anio,
@@ -181,6 +229,7 @@ export function ConfigNominaForm({
 }: {
   action: Accion;
   quitarAction: Accion;
+  cortarAction: Accion;
   empleados: { id: string; nombre: string; cargo: string | null }[];
   seleccionado: string;
   anio: number;
@@ -197,16 +246,32 @@ export function ConfigNominaForm({
 }) {
   const router = useRouter();
   const [cargando, iniciarNavegacion] = useTransition();
+  const [confirmar, setConfirmar] = useState<Confirmacion>(null);
   const [state, formAction, pending] = useActionState(action, idleState);
+  // Las dos acciones de la ventana de confirmación la cierran al terminar: la
+  // pantalla ya se habrá vuelto a pintar con la configuración nueva.
   const [quitarState, quitarFormAction, quitando] = useActionState(
-    quitarAction,
+    async (previo: ActionState, datos: FormData) => {
+      const r = await quitarAction(previo, datos);
+      setConfirmar(null);
+      return r;
+    },
     idleState,
   );
-  /** Cuál de las dos acciones habló por última vez (su aviso es el que se ve). */
-  const [ultima, setUltima] = useState<"guardar" | "quitar" | "">("");
+  const [cortarState, cortarFormAction, cortando] = useActionState(
+    async (previo: ActionState, datos: FormData) => {
+      const r = await cortarAction(previo, datos);
+      setConfirmar(null);
+      return r;
+    },
+    idleState,
+  );
+  /** Cuál de las acciones habló por última vez (su aviso es el que se ve). */
+  const [ultima, setUltima] = useState<"guardar" | "quitar" | "cortar" | "">("");
 
   const persona = empleados.find((e) => e.id === seleccionado);
   const mesActual: Mes = { anio, mes };
+  const ocupado = pending || quitando || cortando || cargando;
 
   const irA = (cambios: Record<string, string>) => {
     const params = new URLSearchParams({
@@ -221,7 +286,14 @@ export function ConfigNominaForm({
     });
   };
 
-  const aviso = ultima === "quitar" ? quitarState : ultima === "guardar" ? state : idleState;
+  const aviso =
+    ultima === "quitar"
+      ? quitarState
+      : ultima === "cortar"
+        ? cortarState
+        : ultima === "guardar"
+          ? state
+          : idleState;
 
   return (
     <div className="space-y-6">
@@ -316,12 +388,14 @@ export function ConfigNominaForm({
         mesActual={mesActual}
         estado={estado}
         onIrAMes={(m) => irA({ anio: String(m.anio), mes: String(m.mes) })}
-        quitarFormAction={quitarFormAction}
-        quitando={quitando}
-        ocupado={pending || quitando || cargando}
-        onQuitar={() => setUltima("quitar")}
-        seleccionado={seleccionado}
+        ocupado={ocupado}
+        onPedir={setConfirmar}
       />
+
+      {/* El aviso de quitar o suspender va aquí, junto al estado del mes. */}
+      {(ultima === "quitar" || ultima === "cortar") &&
+        aviso.status !== "idle" &&
+        aviso.message && <Aviso estado={aviso} />}
 
       <AyudaSeccion title="Qué paga cada tarifa">{AYUDA_NOMINA_TARIFAS}</AyudaSeccion>
 
@@ -336,7 +410,8 @@ export function ConfigNominaForm({
         <input type="hidden" name="mes" value={mes} />
 
         {/* Los campos se vuelven a montar cuando cambia la fila que rige (al
-            guardar o al quitar un cambio): así enseñan lo que hay en la base. */}
+            guardar, al quitar un cambio o al suspender la herencia): así
+            enseñan lo que hay en la base. */}
         <fieldset
           key={estado.claveFuente}
           disabled={cargando}
@@ -349,23 +424,14 @@ export function ConfigNominaForm({
           />
         </fieldset>
 
-        {aviso.status !== "idle" && aviso.message && (
-          <p
-            role="status"
-            className={`rounded-xl border px-4 py-3 text-sm ${
-              aviso.status === "success"
-                ? "border-brand/30 bg-brand-tint text-brand-deep"
-                : "border-red-200 bg-red-50 text-red-700"
-            }`}
-          >
-            {aviso.message}
-          </p>
+        {ultima === "guardar" && aviso.status !== "idle" && aviso.message && (
+          <Aviso estado={aviso} />
         )}
 
         <div className="flex flex-wrap items-center gap-3">
           <button
             type="submit"
-            disabled={pending || quitando || cargando}
+            disabled={ocupado}
             className="inline-flex items-center gap-2 rounded-full bg-brand-dark px-6 py-2.5 text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-deep disabled:pointer-events-none disabled:opacity-60"
           >
             {pending ? (
@@ -378,19 +444,54 @@ export function ConfigNominaForm({
             )}
           </button>
           <p className="max-w-md text-xs leading-relaxed text-graphite">
-            Rige desde {mesTexto(mesActual)} {hastaTexto(estado.siguiente)}
+            Rige {vigencia(mesActual, estado.siguiente)}
             {estado.siguiente
-              ? `: en ${mesTexto(estado.siguiente)} hay otro cambio guardado.`
+              ? estado.siguiente.corte
+                ? `: desde ${mesTexto(estado.siguiente)} la herencia está suspendida.`
+                : `: en ${mesTexto(estado.siguiente)} hay otro cambio guardado.`
               : ", hasta que guardes otro cambio."}
           </p>
         </div>
       </form>
+
+      {/* ---------------- Confirmación de quitar / suspender ---------------- */}
+      {confirmar && (
+        <ConfirmarCambio
+          accion={confirmar}
+          persona={persona?.nombre ?? "Esta persona"}
+          mesActual={mesActual}
+          estado={estado}
+          seleccionado={seleccionado}
+          formAction={confirmar === "quitar" ? quitarFormAction : cortarFormAction}
+          enviando={confirmar === "quitar" ? quitando : cortando}
+          onEnviar={() => setUltima(confirmar)}
+          onCerrar={() => {
+            if (!quitando && !cortando) setConfirmar(null);
+          }}
+        />
+      )}
     </div>
   );
 }
 
+/** El mensaje de una acción, en verde o en rojo. */
+function Aviso({ estado }: { estado: ActionState }) {
+  return (
+    <p
+      role="status"
+      className={`rounded-xl border px-4 py-3 text-sm ${
+        estado.status === "success"
+          ? "border-brand/30 bg-brand-tint text-brand-deep"
+          : "border-red-200 bg-red-50 text-red-700"
+      }`}
+    >
+      {estado.message}
+    </p>
+  );
+}
+
 /* ================================================================== */
-/* De dónde salen los valores (y quitar el cambio de un mes)           */
+/* De dónde salen los valores (y los botones de quitar / suspender)    */
 /* ================================================================== */
 
 function OrigenDeLosValores({
@@ -398,23 +499,18 @@ function OrigenDeLosValores({
   mesActual,
   estado,
   onIrAMes,
-  quitarFormAction,
-  quitando,
   ocupado,
-  onQuitar,
-  seleccionado,
+  onPedir,
 }: {
   persona: string;
   mesActual: Mes;
   estado: EstadoConfigVista;
   onIrAMes: (m: Mes) => void;
-  quitarFormAction: (formData: FormData) => void;
-  quitando: boolean;
   ocupado: boolean;
-  onQuitar: () => void;
-  seleccionado: string;
+  onPedir: (accion: Confirmacion) => void;
 }) {
   const esteMes = mesTexto(mesActual);
+  const corteAqui = estado.cambioDelMes === "corte";
 
   return (
     <Card className="space-y-4">
@@ -434,15 +530,17 @@ function OrigenDeLosValores({
             ? "Configurado en este mes"
             : estado.origen === "heredada"
               ? "Heredado"
-              : "Sin configurar"}
+              : estado.origen === "suspendida"
+                ? "Herencia suspendida"
+                : "Sin configurar"}
         </span>
 
         <div className="min-w-0 text-sm leading-relaxed text-graphite sm:flex-1">
           {estado.origen === "propia" && (
             <p>
               Lo que ves se guardó para <strong className="text-ink">{persona}</strong>{" "}
-              en <strong className="text-ink">{esteMes}</strong> y rige desde este mes{" "}
-              {hastaTexto(estado.siguiente)}.
+              en <strong className="text-ink">{esteMes}</strong> y rige{" "}
+              {vigencia(mesActual, estado.siguiente)}.
             </p>
           )}
           {estado.origen === "heredada" && estado.desde && (
@@ -450,9 +548,22 @@ function OrigenDeLosValores({
               <strong className="text-ink">
                 Heredado de {mesTexto(estado.desde)}
               </strong>{" "}
-              — si guardas aquí, el cambio rige desde {esteMes}{" "}
-              {hastaTexto(estado.siguiente)}; {mesTexto(estado.desde)} y los meses
+              — si guardas aquí, el cambio rige {vigencia(mesActual, estado.siguiente)};{" "}
+              {mesTexto(estado.desde)} y los meses
               anteriores no se tocan.
+            </p>
+          )}
+          {estado.origen === "suspendida" && estado.desde && (
+            <p>
+              <strong className="text-ink">
+                Sin configuración desde {corteAqui ? "este mes" : mesTexto(estado.desde)}{" "}
+                (herencia suspendida)
+              </strong>{" "}
+              — {persona} no se puede liquidar{" "}
+              {vigencia(estado.desde, estado.siguiente)}.{" "}
+              {corteAqui
+                ? "Para deshacerlo, quita este cambio: el mes vuelve a heredar la configuración anterior."
+                : `Para deshacerlo, abre ${mesTexto(estado.desde)} y quita ese cambio. Si solo quieres volver a pagar desde ${esteMes}, escribe aquí la configuración y guarda.`}
             </p>
           )}
           {estado.origen === "ninguna" && (
@@ -460,8 +571,7 @@ function OrigenDeLosValores({
               <strong className="text-ink">{persona}</strong> no tiene nómina
               configurada ni en {esteMes} ni en ningún mes anterior, así que todavía
               no se puede liquidar. Escribe su <strong>salario básico mensual</strong>{" "}
-              (las siete tarifas se sugieren solas) y guarda: regirá desde {esteMes}{" "}
-              {hastaTexto(estado.siguiente)}.
+              (las siete tarifas se sugieren solas) y guarda: regirá {vigencia(mesActual, estado.siguiente)}.
             </p>
           )}
         </div>
@@ -478,63 +588,231 @@ function OrigenDeLosValores({
                 type="button"
                 onClick={() => onIrAMes(c)}
                 disabled={actual || ocupado}
-                title={`Salario ${formatearPesos(c.salario)}`}
+                title={
+                  c.corte
+                    ? "Sin configuración desde este mes (herencia suspendida)"
+                    : `Salario ${formatearPesos(c.salario)}`
+                }
                 className={`rounded-full border px-3 py-1 font-semibold capitalize transition-colors ${
-                  actual
-                    ? "border-brand bg-brand-tint text-brand-deep"
-                    : "border-line bg-white text-ink-soft hover:border-brand hover:text-brand-dark"
+                  c.corte
+                    ? actual
+                      ? "border-amber-400 bg-amber-100 text-amber-900"
+                      : "border-amber-200 bg-amber-50 text-amber-800 hover:border-amber-400"
+                    : actual
+                      ? "border-brand bg-brand-tint text-brand-deep"
+                      : "border-line bg-white text-ink-soft hover:border-brand hover:text-brand-dark"
                 } disabled:cursor-default`}
               >
                 {nombreMesNomina(c.mes).slice(0, 3)} {c.anio} ·{" "}
-                <span className="normal-case">{formatearPesos(c.salario)}</span>
+                <span className="normal-case">
+                  {c.corte ? "sin configuración" : formatearPesos(c.salario)}
+                </span>
               </button>
             );
           })}
         </div>
       )}
 
-      {estado.origen === "propia" && (
-        <form
-          action={quitarFormAction}
-          onSubmit={(event) => {
-            onQuitar();
-            const mensaje = estado.alQuitar
-              ? `¿Quitar el cambio de ${esteMes}?\n\n${persona} volverá a heredar la configuración guardada en ${mesTexto(estado.alQuitar)}, desde ${esteMes} ${hastaTexto(estado.siguiente)}. Las liquidaciones en borrador se recalculan; las cerradas no cambian.`
-              : `¡OJO! ${persona} NO tiene ningún mes anterior configurado.\n\nSi quitas el cambio de ${esteMes}, quedará SIN configuración desde ${esteMes} ${hastaTexto(estado.siguiente)} y NO se podrá liquidar en esos meses.\n\n¿Quitarlo de todos modos?`;
-            if (!window.confirm(mensaje)) event.preventDefault();
-          }}
-          className="flex flex-col items-start gap-3 border-t border-line pt-4 sm:flex-row sm:items-center"
-        >
-          <input type="hidden" name="employee_id" value={seleccionado} />
-          <input type="hidden" name="anio" value={mesActual.anio} />
-          <input type="hidden" name="mes" value={mesActual.mes} />
-          {!estado.alQuitar && (
-            <input type="hidden" name="sin_respaldo_confirmado" value="1" />
-          )}
+      {estado.cambioDelMes && (
+        <div className="flex flex-col items-start gap-3 border-t border-line pt-4 sm:flex-row sm:items-center">
           <button
-            type="submit"
+            type="button"
+            onClick={() => onPedir("quitar")}
             disabled={ocupado}
-            className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold text-ink-soft transition-colors hover:border-amber-300 hover:bg-amber-50 hover:text-amber-800 disabled:opacity-60"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold text-ink-soft transition-colors hover:border-amber-300 hover:bg-amber-50 hover:text-amber-800 disabled:opacity-60"
           >
-            <Trash className="h-4 w-4" />
-            {quitando ? "Quitando…" : `Quitar el cambio de ${nombreMesNomina(mesActual.mes)}`}
+            {corteAqui ? <Undo className="h-4 w-4" /> : <Trash className="h-4 w-4" />}
+            Quitar el cambio de este mes
           </button>
           <p className="min-w-0 text-xs leading-relaxed text-graphite sm:flex-1">
             {estado.alQuitar ? (
               <>
                 {esteMes} volvería a heredar lo guardado en{" "}
-                <strong>{mesTexto(estado.alQuitar)}</strong>.
+                <strong>{mesTexto(estado.alQuitar)}</strong>
+                {corteAqui ? ": se deshace la suspensión." : "."}
               </>
             ) : (
               <span className="font-semibold text-amber-800">
-                No hay ningún mes anterior configurado: si lo quitas, esta persona
-                se queda sin configuración y no se podrá liquidar.
+                {estado.alQuitarCorte
+                  ? `El mes anterior no tiene configuración (herencia suspendida desde ${mesTexto(estado.alQuitarCorte)}): si lo quitas, esta persona se queda sin configuración también desde ${esteMes}.`
+                  : corteAqui
+                    ? "No hay ningún mes anterior configurado: aunque quites el corte, esta persona seguiría sin configuración."
+                    : "No hay ningún mes anterior configurado: si lo quitas, esta persona se queda sin configuración y no se podrá liquidar."}
               </span>
             )}
           </p>
-        </form>
+        </div>
+      )}
+
+      {estado.origen === "heredada" && estado.desde && (
+        <div className="flex flex-col items-start gap-3 border-t border-line pt-4 sm:flex-row sm:items-center">
+          <button
+            type="button"
+            onClick={() => onPedir("cortar")}
+            disabled={ocupado}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold text-ink-soft transition-colors hover:border-amber-300 hover:bg-amber-50 hover:text-amber-800 disabled:opacity-60"
+          >
+            <Close className="h-4 w-4" />
+            Dejar sin configuración desde este mes
+          </button>
+          <p className="min-w-0 text-xs leading-relaxed text-graphite sm:flex-1">
+            {AYUDA_NOMINA_CORTE}
+          </p>
+        </div>
       )}
     </Card>
+  );
+}
+
+/* ================================================================== */
+/* Ventana de confirmación                                             */
+/* ================================================================== */
+
+/**
+ * La confirmación de «Quitar el cambio» y de «Dejar sin configuración». Es una
+ * ventana (no un `window.confirm`) porque tiene que ENUMERAR los borradores que
+ * se eliminarían, y el servidor solo acepta la acción si la lista que se
+ * confirmó es la misma que él calcula (`borradores_confirmados`).
+ */
+function ConfirmarCambio({
+  accion,
+  persona,
+  mesActual,
+  estado,
+  seleccionado,
+  formAction,
+  enviando,
+  onEnviar,
+  onCerrar,
+}: {
+  accion: "quitar" | "cortar";
+  persona: string;
+  mesActual: Mes;
+  estado: EstadoConfigVista;
+  seleccionado: string;
+  formAction: (formData: FormData) => void;
+  enviando: boolean;
+  onEnviar: () => void;
+  onCerrar: () => void;
+}) {
+  const esteMes = mesTexto(mesActual);
+  const efecto =
+    (accion === "quitar" ? estado.alQuitarBorradores : estado.alCortarBorradores) ?? {
+      eliminar: [],
+      conservar: 0,
+    };
+  const quedaSinConfig = accion === "cortar" || !estado.alQuitar;
+  const corteAqui = estado.cambioDelMes === "corte";
+  const rango = vigencia(mesActual, estado.siguiente);
+
+  const titulo =
+    accion === "cortar"
+      ? `¿Dejar sin configuración desde ${nombreMesNomina(mesActual.mes)}?`
+      : corteAqui
+        ? `¿Quitar la suspensión de ${nombreMesNomina(mesActual.mes)}?`
+        : `¿Quitar el cambio de ${nombreMesNomina(mesActual.mes)}?`;
+
+  return (
+    <ModalPanel titulo={titulo} descripcion={persona} onClose={onCerrar} ancho="max-w-xl">
+      <form action={formAction} onSubmit={onEnviar} className="space-y-4 text-sm leading-relaxed text-graphite">
+        <input type="hidden" name="employee_id" value={seleccionado} />
+        <input type="hidden" name="anio" value={mesActual.anio} />
+        <input type="hidden" name="mes" value={mesActual.mes} />
+        <input type="hidden" name="confirmado" value="1" />
+        <input
+          type="hidden"
+          name="borradores_confirmados"
+          value={efecto.eliminar.map((b) => b.id).join(",")}
+        />
+
+        {/* Qué pasa con la configuración */}
+        {accion === "cortar" ? (
+          <p>
+            <strong className="text-ink">{persona}</strong> quedará{" "}
+            <strong className="text-ink">sin configuración {rango}</strong>: deja de
+            heredar lo guardado en {estado.desde ? mesTexto(estado.desde) : "el mes anterior"}{" "}
+            y no se podrá liquidar en esos meses hasta que guardes un cambio nuevo.
+            Los meses anteriores no se tocan. Se deshace con «Quitar el cambio de
+            este mes» en {esteMes}.
+          </p>
+        ) : estado.alQuitar ? (
+          <p>
+            {rango.charAt(0).toUpperCase() + rango.slice(1)},{" "}
+            <strong className="text-ink">{persona}</strong> volverá a heredar la
+            configuración guardada en{" "}
+            <strong className="text-ink">{mesTexto(estado.alQuitar)}</strong>.
+          </p>
+        ) : (
+          <p className="font-semibold text-amber-800">
+            {estado.alQuitarCorte
+              ? `El mes anterior no tiene configuración (herencia suspendida desde ${mesTexto(estado.alQuitarCorte)}), así que ${persona} quedará SIN configuración ${rango} y no se podrá liquidar en esos meses.`
+              : `${persona} no tiene ningún mes anterior configurado: quedará SIN configuración ${rango} y no se podrá liquidar en esos meses.`}
+          </p>
+        )}
+
+        {/* Qué pasa con las liquidaciones */}
+        {efecto.eliminar.length > 0 ? (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900">
+            <p className="font-bold">
+              Se {efecto.eliminar.length === 1 ? "eliminará" : "eliminarán"}{" "}
+              {borradores(efecto.eliminar.length)} de liquidación
+            </p>
+            <p className="mt-1">
+              {efecto.eliminar.length === 1 ? "Su mes queda" : "Sus meses quedan"} sin
+              configuración, así que ya no se {efecto.eliminar.length === 1 ? "puede" : "pueden"}{" "}
+              calcular:
+            </p>
+            <ul className="mt-2 list-disc space-y-0.5 pl-5">
+              {efecto.eliminar.map((b) => (
+                <li key={b.id}>{b.etiqueta}</li>
+              ))}
+            </ul>
+          </div>
+        ) : quedaSinConfig ? (
+          <p>No hay borradores de liquidación en esos meses: no se elimina ninguno.</p>
+        ) : null}
+
+        {efecto.conservar > 0 && (
+          <p>
+            {efecto.conservar === 1
+              ? "El borrador de esos meses se conserva"
+              : `Los ${efecto.conservar} borradores de esos meses se conservan`}{" "}
+            con sus conceptos (bonos, préstamos…) y se recalcula
+            {efecto.conservar === 1 ? "" : "n"} con la configuración heredada.
+          </p>
+        )}
+
+        <p className="rounded-xl bg-mist/70 px-3.5 py-2.5 text-xs">
+          {AYUDA_NOMINA_BORRADORES}
+        </p>
+
+        <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onCerrar}
+            disabled={enviando}
+            className="rounded-full border border-line bg-white px-5 py-2.5 text-sm font-semibold text-ink-soft transition-colors hover:border-brand hover:text-brand-dark disabled:opacity-60"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            disabled={enviando}
+            className="inline-flex items-center justify-center gap-2 rounded-full bg-amber-600 px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition-colors hover:bg-amber-700 disabled:opacity-60"
+          >
+            {enviando
+              ? accion === "cortar"
+                ? "Guardando…"
+                : "Quitando…"
+              : accion === "cortar"
+                ? "Sí, dejar sin configuración"
+                : corteAqui
+                  ? "Sí, quitar la suspensión"
+                  : "Sí, quitar el cambio"}
+          </button>
+        </div>
+      </form>
+    </ModalPanel>
   );
 }
 

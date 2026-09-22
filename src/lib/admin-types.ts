@@ -347,6 +347,13 @@ export interface NominaConfigRecord {
   pct_salud: number;
   pct_pension: number;
   /**
+   * `true` = fila de CORTE (migración 0013, «suspender la herencia»): SIN
+   * configuración desde este mes hasta el próximo cambio. Su salario y sus
+   * tarifas van en cero y no significan nada. `false` también mientras la
+   * columna no exista.
+   */
+  sin_configuracion: boolean;
+  /**
    * LEGADO del modelo anterior (se copiaba el mes anterior al abrir un mes).
    * Ya no se escribe ni se lee para decidir nada.
    */
@@ -437,12 +444,26 @@ export interface FilaNomina {
 
   /**
    * false = esa persona no tiene salario configurado ni en el mes ni en
-   * ninguno anterior (modelo «vigente desde»).
+   * ninguno anterior (modelo «vigente desde»), o que su herencia está
+   * suspendida (un corte).
    */
   tieneConfig: boolean;
   salario: number;
   /** Mes en que se guardó la configuración que rige (`null` = sin configurar). */
   configDesde: { anio: number; mes: number } | null;
+  /** `true` si la configuración que rige se guardó en un mes ANTERIOR al período. */
+  configHeredada: boolean;
+  /**
+   * Mes del CORTE que deja a la persona sin configuración («herencia
+   * suspendida desde…»). `null` si no hay corte de por medio.
+   */
+  sinConfigDesde: { anio: number; mes: number } | null;
+  /**
+   * BORRADOR HUÉRFANO: hay una liquidación en borrador pero su mes ya no tiene
+   * configuración (se creó antes de que se quitara). Sus cifras no valen: la
+   * pantalla no las pinta, lo avisa y deja eliminarlo o configurar el mes.
+   */
+  huerfana: boolean;
   /**
    * Tarifas de la configuración que rige que quedan POR DEBAJO del mínimo
    * legal del mes (nombres). Solo se calcula para lo que se liquida en vivo

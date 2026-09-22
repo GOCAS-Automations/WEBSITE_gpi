@@ -5,7 +5,8 @@
  *     con su desglose, sus conceptos manuales y su volante en PDF.
  *   · "Configuración": salario, tarifas por hora y aportes de cada empleado,
  *     **vigentes desde** el mes en que se guardan (rigen hacia adelante hasta
- *     el próximo cambio; ver un mes no crea nada).
+ *     el próximo cambio; ver un mes no crea nada), y los cortes («dejar sin
+ *     configuración desde este mes»).
  *   · "Tablero": KPIs, gráficas e historial por empleado.
  *
  * La pestaña viaja en la URL (`?vista=configuracion`), igual que en jornadas y
@@ -17,49 +18,39 @@
  * Manager administran la nómina (pedido de GPI, 18 sep 2026)— y la barrera
  * autoritativa es `requireAdmin()`. El coordinador ve SU propia nómina en
  * `/mi-cuenta?seccion=nomina`, como cualquier empleado.
+ *
+ * NAVEGACIÓN RÁPIDA ENTRE PESTAÑAS (22 sep 2026)
+ * ----------------------------------------------
+ * Antes, cambiar de pestaña tardaba 0,7–0,95 s sin ninguna señal: la página
+ * esperaba la sesión (dos viajes a Supabase) y luego sus datos (dos a cuatro
+ * viajes más, y en la Liquidación cuatro consultas POR PERSONA), y la pestaña
+ * vieja seguía marcada hasta el final. Ahora:
+ *   · esta página NO espera nada antes de pintar la cabecera y las pestañas:
+ *     cada vista hace `requireAdmin()` EN LA MISMA TANDA que sus lecturas
+ *     (`Promise.all`) y no pinta un solo dato hasta que la sesión responde;
+ *     `requireAdmin()` redirige igual que antes si no es administrador
+ *     (el cascarón que alcanza a verse no lleva datos);
+ *   · el contenido va en un `<Suspense>` con `key` por pestaña y parámetros:
+ *     al cambiar de pestaña, de período o de persona se monta de nuevo y
+ *     enseña su esqueleto (`esqueletos.tsx`) mientras llegan los datos;
+ *   · la pestaña pulsada se marca en el mismo clic (`PestanasNomina`).
+ * `prefetch={false}`, `app/admin/loading.tsx` y `PuntoDeCarga` siguen en su
+ * sitio: son el arreglo de «el panel se traba» y esto se apoya en ellos.
  */
 
-import Link from "next/link";
-import { requireAdmin } from "@/lib/supabase/auth";
+import { Suspense } from "react";
 import { AdminPageHeader } from "@/components/admin/ui";
-import { BarChart, ClipboardList, Sliders } from "@/lib/icons";
+import { PestanasNomina, type VistaNomina } from "@/components/nomina/PestanasNomina";
 import { LiquidacionView } from "./liquidacion";
 import { ConfiguracionView } from "./configuracion";
 import { TableroView } from "./tablero";
+import { EsqueletoNomina } from "./esqueletos";
 import { leerPagina } from "@/lib/paginacion";
 
 /** Depende de la sesión: nunca se cachea. */
 export const dynamic = "force-dynamic";
 
-type Vista = "liquidacion" | "configuracion" | "tablero";
-
-const PESTANAS: {
-  value: Vista;
-  label: string;
-  href: string;
-  icon: (props: { className?: string }) => React.ReactNode;
-}[] = [
-  {
-    value: "liquidacion",
-    label: "Liquidación",
-    href: "/admin/nomina",
-    icon: ClipboardList,
-  },
-  {
-    value: "configuracion",
-    label: "Configuración",
-    href: "/admin/nomina?vista=configuracion",
-    icon: Sliders,
-  },
-  {
-    value: "tablero",
-    label: "Tablero",
-    href: "/admin/nomina?vista=tablero",
-    icon: BarChart,
-  },
-];
-
-const DESCRIPCIONES: Record<Vista, string> = {
+const DESCRIPCIONES: Record<VistaNomina, string> = {
   liquidacion:
     "Lo que hay que pagarle a cada persona en el período: el sueldo, las horas y recargos que salen de las jornadas aprobadas, los bonos y descuentos que tú digitas, y el neto.",
   configuracion:
@@ -84,16 +75,32 @@ export default async function AdminNominaPage({
     pagina?: string;
   }>;
 }) {
-  // Barrera autoritativa: solo el administrador.
-  await requireAdmin();
-
   const params = await searchParams;
-  const vista: Vista =
+  const vista: VistaNomina =
     params.vista === "configuracion"
       ? "configuracion"
       : params.vista === "tablero"
         ? "tablero"
         : "liquidacion";
+
+  // Una `key` distinta por pestaña y parámetros = un `<Suspense>` nuevo = el
+  // esqueleto aparece en cuanto se navega (ver `esqueletos.tsx`). Las server
+  // actions refrescan con los MISMOS parámetros, así que no lo disparan: el
+  // formulario y su aviso se quedan donde estaban.
+  const clave = [
+    vista,
+    params.tipo,
+    params.anio,
+    params.mes,
+    params.quincena,
+    params.empleado,
+    params.persona,
+    params.estado,
+    params.abrir,
+    params.pagina,
+  ]
+    .map((v) => v ?? "")
+    .join("|");
 
   return (
     <>
@@ -103,59 +110,34 @@ export default async function AdminNominaPage({
         breadcrumb={[{ label: "Panel", href: "/admin" }, { label: "Nómina" }]}
       />
 
-      {/* ---------------- Pestañas ---------------- */}
-      <nav aria-label="Vistas de nómina" className="mb-6">
-        {/* En móvil ocupa todo el ancho y aprieta el relleno: a 390 px las tres
-            pestañas con su relleno de escritorio se salían de la pantalla. */}
-        <ul className="flex w-full justify-between gap-1 rounded-full border border-line bg-white p-1 shadow-soft sm:inline-flex sm:w-auto sm:justify-start">
-          {PESTANAS.map((p) => {
-            const activa = p.value === vista;
-            const Icon = p.icon;
-            return (
-              <li key={p.value}>
-                <Link
-                  prefetch={false}
-                  href={p.href}
-                  aria-current={activa ? "page" : undefined}
-                  className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-2 text-[13px] font-semibold transition-colors sm:px-4 sm:text-sm ${
-                    activa
-                      ? "bg-brand-dark text-white shadow-soft"
-                      : "text-ink-soft hover:bg-mist"
-                  }`}
-                >
-                  <Icon className="h-4 w-4" />
-                  {p.label}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
+      <PestanasNomina vista={vista} />
 
-      {vista === "configuracion" ? (
-        <ConfiguracionView
-          empleadoId={params.empleado ?? ""}
-          anio={params.anio}
-          mes={params.mes}
-        />
-      ) : vista === "tablero" ? (
-        <TableroView
-          empleadoId={params.empleado ?? ""}
-          anio={params.anio}
-          estado={params.estado ?? ""}
-          tipo={params.tipo ?? ""}
-        />
-      ) : (
-        <LiquidacionView
-          tipo={params.tipo}
-          anio={params.anio}
-          mes={params.mes}
-          quincena={params.quincena}
-          persona={params.persona ?? ""}
-          abrir={params.abrir ?? ""}
-          pagina={leerPagina(params.pagina)}
-        />
-      )}
+      <Suspense key={clave} fallback={<EsqueletoNomina vista={vista} />}>
+        {vista === "configuracion" ? (
+          <ConfiguracionView
+            empleadoId={params.empleado ?? ""}
+            anio={params.anio}
+            mes={params.mes}
+          />
+        ) : vista === "tablero" ? (
+          <TableroView
+            empleadoId={params.empleado ?? ""}
+            anio={params.anio}
+            estado={params.estado ?? ""}
+            tipo={params.tipo ?? ""}
+          />
+        ) : (
+          <LiquidacionView
+            tipo={params.tipo}
+            anio={params.anio}
+            mes={params.mes}
+            quincena={params.quincena}
+            persona={params.persona ?? ""}
+            abrir={params.abrir ?? ""}
+            pagina={leerPagina(params.pagina)}
+          />
+        )}
+      </Suspense>
     </>
   );
 }
