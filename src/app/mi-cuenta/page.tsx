@@ -14,6 +14,7 @@ import {
 } from "@/lib/admin";
 import { isContentEditorRole, ROLE_LABELS } from "@/lib/roles";
 import { hoyEnColombia } from "@/lib/jornada";
+import { partesFecha, primerDiaMes, ultimoDiaMes } from "@/lib/calendario";
 import { LoginForm } from "./LoginForm";
 import { IrAlPanel } from "./IrAlPanel";
 import { JornadaForm } from "./JornadaForm";
@@ -89,6 +90,17 @@ function hrefSeccion(seccion: SeccionPortal, pidePortal: boolean): string {
   return partes.length === 0 ? "/mi-cuenta" : `/mi-cuenta?${partes.join("&")}`;
 }
 
+/** Primer valor de un parámetro repetible de la dirección. */
+function unico(valor: string | string[] | undefined): string | undefined {
+  return Array.isArray(valor) ? valor[0] : valor;
+}
+
+/** El parámetro como número entero, o el de respaldo. */
+function entero(valor: string | string[] | undefined, porDefecto: number) {
+  const n = Number(unico(valor));
+  return Number.isInteger(n) ? n : porDefecto;
+}
+
 export default async function MiCuentaPage({
   searchParams,
 }: {
@@ -121,6 +133,8 @@ export default async function MiCuentaPage({
         seccion={normalizarSeccion(params.seccion)}
         pidePortal={pidePortal}
         pagina={leerPagina(params.pagina)}
+        anioParam={params.anio}
+        mesParam={params.mes}
       />
     );
   }
@@ -203,6 +217,8 @@ async function PortalEmpleado({
   seccion,
   pidePortal,
   pagina,
+  anioParam,
+  mesParam,
 }: {
   profile: SessionProfile;
   seccion: SeccionPortal;
@@ -213,25 +229,47 @@ async function PortalEmpleado({
    * URL; las demás son de cliente). Cambiar de pestaña no la arrastra.
    */
   pagina: number;
+  /** `?anio=&mes=` del calendario de «Mis eventos», como en `/admin/calendario`. */
+  anioParam?: string | string[];
+  mesParam?: string | string[];
 }) {
   const hoy = hoyEnColombia();
+  const hoyPartes = partesFecha(hoy)!;
 
-  const [jornadas, config, horarios, eventos, liquidaciones] = await Promise.all([
-    listJornadas({ employeeId: profile.id, limit: 100 }),
-    getJornadaConfig(),
-    getMapaHorarios(),
-    // Solo los suyos y solo de hoy en adelante: el portal es para trabajar, no
-    // para consultar el historial del calendario.
-    listEventos({
-      responsableId: profile.id,
-      desde: hoy,
-      conNotas: true,
-      limit: 30,
-    }),
-    // Sus propias liquidaciones. La RLS de la 0011 ya filtra: solo las suyas y
-    // solo cuando están cerradas o pagadas, así que aquí no hace falta nada más.
-    listLiquidaciones({ employeeId: profile.id, limit: 24 }),
-  ]);
+  // Mes que se está viendo en «Mis eventos». Por defecto, el mes en curso en
+  // hora de COLOMBIA (nunca la del servidor): igual que en `/admin/calendario`.
+  const anio = Math.min(Math.max(entero(anioParam, hoyPartes.anio), 2000), 2200);
+  const mes = Math.min(Math.max(entero(mesParam, hoyPartes.mes), 1), 12);
+
+  const [jornadas, config, horarios, eventos, eventosMes, liquidaciones] =
+    await Promise.all([
+      listJornadas({ employeeId: profile.id, limit: 100 }),
+      getJornadaConfig(),
+      getMapaHorarios(),
+      // Los suyos de hoy en adelante: es lo que alimenta el CONTADOR de la
+      // pestaña («lo que tienes esperando»), que no cambia al pasear por los
+      // meses del calendario. Sin notas: solo se cuenta.
+      listEventos({
+        responsableId: profile.id,
+        desde: hoy,
+        limit: 30,
+      }),
+      // Los suyos DEL MES que se está viendo, con sus notas: es lo que pinta la
+      // cuadrícula. Solo se pide en su pestaña, para no traerlo en las otras
+      // tres. `responsableId` filtra en la consulta y la RLS de la 0010 vuelve
+      // a filtrar en la base: por ningún camino llega un evento ajeno.
+      seccion === "eventos"
+        ? listEventos({
+            responsableId: profile.id,
+            desde: primerDiaMes(anio, mes),
+            hasta: ultimoDiaMes(anio, mes),
+            conNotas: true,
+          })
+        : Promise.resolve([]),
+      // Sus propias liquidaciones. La RLS de la 0011 ya filtra: solo las suyas y
+      // solo cuando están cerradas o pagadas, así que aquí no hace falta nada más.
+      listLiquidaciones({ employeeId: profile.id, limit: 24 }),
+    ]);
 
   const conPanel = isContentEditorRole(profile.role);
   const pendientes = jornadas.filter((j) => j.status === "pendiente").length;
@@ -466,8 +504,12 @@ async function PortalEmpleado({
         {/* ---------------- Mis eventos ---------------- */}
         {seccion === "eventos" && (
           <MisEventos
-            eventos={eventos}
+            eventos={eventosMes}
             agregarNota={agregarNotaEvento}
+            anio={anio}
+            mes={mes}
+            hoy={hoy}
+            hrefBase={hrefSeccion("eventos", pidePortal)}
             nombrePropio={profile.fullName}
           />
         )}

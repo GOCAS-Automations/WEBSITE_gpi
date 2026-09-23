@@ -10,9 +10,11 @@
  *
  * DECISIONES DE DISEÑO
  * --------------------
- *  · La cuadrícula está hecha a mano con `construirMes()` (ver
- *    `src/lib/calendario.ts`). No entra ninguna librería de calendario: son
- *    quince líneas de aritmética de fechas y el panel ya carga Recharts.
+ *  · La cuadrícula, la barra del mes y la leyenda viven desde el 23 sep 2026 en
+ *    `CuadriculaMes.tsx`, COMPARTIDAS con el portal del empleado
+ *    (`/mi-cuenta?seccion=eventos`): así no hay dos calendarios que se vayan
+ *    separando. Está hecha a mano con `construirMes()` (ver
+ *    `src/lib/calendario.ts`); no entra ninguna librería de calendario.
  *  · La semana empieza en LUNES, como los calendarios colombianos.
  *  · Los FESTIVOS salen de la misma regla que usan las jornadas
  *    (`nombreFestivo` → `festivosDelAnio` de `src/lib/ley-laboral.ts`,
@@ -30,45 +32,27 @@
  * enseña los datos frescos.
  */
 
-import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import type { ActionState } from "@/lib/admin-types";
 import { formatearFechaLarga } from "@/lib/jornada";
 import {
-  agruparPorFecha,
-  construirMes,
-  DIAS_SEMANA,
-  EVENTO_ESTADO_CHIP,
   EVENTO_ESTADO_CLASSES,
-  EVENTO_ESTADO_COLOR,
   EVENTO_ESTADO_LABELS,
-  EVENTO_ESTADOS,
   formatearRangoHoras,
-  mesAnterior,
-  mesSiguiente,
   nombreCompletoResponsable,
   nombreMes,
   resumirResponsables,
   type EventoRecord,
 } from "@/lib/calendario";
 import { Badge, Paginacion, usePaginaLocal } from "@/components/admin/ui-base";
-import {
-  Calendar,
-  ChevronLeft,
-  ChevronRight,
-  Clock,
-  Plus,
-  Users,
-} from "@/lib/icons";
+import { Clock, Plus, Users } from "@/lib/icons";
+import { BarraMes, CuadriculaMes, LeyendaEstados } from "./CuadriculaMes";
 import { ModalPanel } from "./ModalPanel";
 import { EventoDetalle } from "./EventoDetalle";
 import { EventoFormulario } from "./EventoFormulario";
 import type { OpcionPerfil } from "./SelectorResponsables";
 
 type Accion = (state: ActionState, formData: FormData) => Promise<ActionState>;
-
-/** Cuántas fichas caben en una casilla antes de resumir con «+N más». */
-const CHIPS_POR_DIA = 3;
 
 export function CalendarioPanel({
   eventos,
@@ -99,22 +83,13 @@ export function CalendarioPanel({
   eliminar: Accion;
   agregarNota: Accion;
 }) {
-  const acciones = {
-    cambiarEstado,
-    aplazar,
-    devolverFechaOriginal,
-    eliminar,
-    agregarNota,
-  };
   const [detalleId, setDetalleId] = useState<string | null>(null);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [creandoEn, setCreandoEn] = useState<string | null>(null);
 
-  const semanas = useMemo(() => construirMes(anio, mes), [anio, mes]);
   // La agenda del mes se pagina de 10 en 10 (regla del panel); cambiar de mes
   // vuelve a la primera página.
   const agenda = usePaginaLocal(eventos, `${anio}-${mes}`);
-  const porFecha = useMemo(() => agruparPorFecha(eventos), [eventos]);
 
   const detalle = detalleId
     ? (eventos.find((e) => e.id === detalleId) ?? null)
@@ -123,8 +98,6 @@ export function CalendarioPanel({
     ? (eventos.find((e) => e.id === editandoId) ?? null)
     : null;
 
-  const anterior = mesAnterior(anio, mes);
-  const siguiente = mesSiguiente(anio, mes);
   const urlMes = (a: number, m: number) => `/admin/calendario?anio=${a}&mes=${m}`;
 
   function cerrarTodo() {
@@ -136,39 +109,7 @@ export function CalendarioPanel({
   return (
     <div className="space-y-5">
       {/* ---------------- Barra del mes ---------------- */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-1.5">
-          <Link
-            prefetch={false}
-            href={urlMes(anterior.anio, anterior.mes)}
-            aria-label={`Ver ${nombreMes(anterior.anio, anterior.mes)}`}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-line bg-white text-ink-soft transition-colors hover:border-brand hover:text-brand-dark"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Link>
-          {/* `first-letter:uppercase` y no `capitalize`: con `capitalize` el
-              mes se leería «Septiembre De 2026», con la preposición en mayúscula. */}
-          <h2 className="min-w-[10.5rem] text-center text-lg font-extrabold text-ink first-letter:uppercase sm:min-w-[12rem] sm:text-xl">
-            {nombreMes(anio, mes)}
-          </h2>
-          <Link
-            prefetch={false}
-            href={urlMes(siguiente.anio, siguiente.mes)}
-            aria-label={`Ver ${nombreMes(siguiente.anio, siguiente.mes)}`}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-line bg-white text-ink-soft transition-colors hover:border-brand hover:text-brand-dark"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Link>
-          <Link
-            prefetch={false}
-            href="/admin/calendario"
-            className="ml-1 inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3.5 py-2 text-sm font-semibold text-ink-soft transition-colors hover:border-brand hover:text-brand-dark"
-          >
-            <Calendar className="h-4 w-4" />
-            Hoy
-          </Link>
-        </div>
-
+      <BarraMes anio={anio} mes={mes} hrefMes={urlMes} hrefHoy="/admin/calendario">
         {puedeAdministrar && (
           <button
             type="button"
@@ -179,27 +120,10 @@ export function CalendarioPanel({
             Nuevo evento
           </button>
         )}
-      </div>
+      </BarraMes>
 
       {/* ---------------- Leyenda ---------------- */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-2xl border border-line bg-white px-4 py-2.5">
-        <span className="text-xs font-bold uppercase tracking-wide text-graphite">
-          Colores
-        </span>
-        {EVENTO_ESTADOS.map((estado) => (
-          <span
-            key={estado}
-            className="inline-flex items-center gap-1.5 text-xs text-graphite"
-          >
-            <span
-              aria-hidden="true"
-              className="inline-block h-3 w-3 shrink-0 rounded-sm"
-              style={{ background: EVENTO_ESTADO_COLOR[estado] }}
-            />
-            {EVENTO_ESTADO_LABELS[estado]}
-          </span>
-        ))}
-      </div>
+      <LeyendaEstados />
 
       {/* La agenda se pone al lado SOLO en pantallas muy anchas (≥1536 px). En
           un portátil de 1440 px, robarle 21rem a la cuadrícula dejaba casillas
@@ -207,122 +131,14 @@ export function CalendarioPanel({
           lo ancho y la agenda debajo. */}
       <div className="grid gap-5 2xl:grid-cols-[minmax(0,1fr)_21rem]">
         {/* ---------------- Cuadrícula ---------------- */}
-        <div className="overflow-hidden rounded-2xl border border-line bg-white shadow-soft">
-          <div className="grid grid-cols-7 border-b border-line bg-mist/70">
-            {DIAS_SEMANA.map((d) => (
-              <div
-                key={d.largo}
-                className="px-1 py-2 text-center text-[11px] font-bold uppercase tracking-wide text-graphite"
-              >
-                <span className="sm:hidden">{d.corto}</span>
-                <span className="hidden capitalize sm:inline">{d.largo}</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-7">
-            {semanas.flat().map((celda) => {
-              const delDia = porFecha.get(celda.fecha) ?? [];
-              const esHoy = celda.fecha === hoy;
-              return (
-                <div
-                  key={celda.fecha}
-                  className={`group relative min-h-[4.75rem] border-b border-r border-line p-1 last:border-r-0 sm:min-h-[7rem] sm:p-1.5 ${
-                    celda.delMes ? "bg-white" : "bg-mist/40"
-                  } ${celda.finDeSemana && celda.delMes ? "bg-mist/30" : ""}`}
-                >
-                  <div className="flex items-start justify-between gap-1">
-                    <span
-                      className={`inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-xs font-bold ${
-                        esHoy
-                          ? "bg-brand-dark text-white"
-                          : celda.delMes
-                            ? "text-ink"
-                            : "text-graphite/50"
-                      }`}
-                    >
-                      {celda.dia}
-                    </span>
-                    {puedeAdministrar && celda.delMes && (
-                      <button
-                        type="button"
-                        onClick={() => setCreandoEn(celda.fecha)}
-                        aria-label={`Programar un evento el ${formatearFechaLarga(celda.fecha)}`}
-                        className="inline-flex h-5 w-5 items-center justify-center rounded-full text-graphite opacity-0 transition-all hover:bg-brand-tint hover:text-brand-deep focus-visible:opacity-100 group-hover:opacity-100"
-                      >
-                        <Plus className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                  </div>
-
-                  {celda.festivo && (
-                    <p
-                      className="mt-0.5 truncate text-[10px] font-semibold text-brand-deep"
-                      title={celda.festivo}
-                    >
-                      <span className="hidden sm:inline">{celda.festivo}</span>
-                      <span className="sm:hidden">Festivo</span>
-                    </p>
-                  )}
-
-                  {/* Escritorio: fichas con la hora y el título */}
-                  <ul className="mt-1 hidden space-y-1 sm:block">
-                    {delDia.slice(0, CHIPS_POR_DIA).map((evento) => (
-                      <li key={evento.id}>
-                        {/* Dos líneas —hora arriba, título abajo— porque en una
-                            sola, con casillas de ~120 px, del título no se
-                            alcanzaba a leer ni la primera palabra. */}
-                        <button
-                          type="button"
-                          onClick={() => setDetalleId(evento.id)}
-                          title={`${evento.horaInicio} · ${evento.titulo}`}
-                          className={`block w-full rounded-md border-l-[3px] px-1.5 py-1 text-left text-[11px] font-semibold leading-tight transition-colors ${
-                            EVENTO_ESTADO_CHIP[evento.estado]
-                          }`}
-                        >
-                          <span className="block text-[10px] font-bold opacity-80">
-                            {evento.horaInicio}
-                          </span>
-                          <span className="block truncate">{evento.titulo}</span>
-                        </button>
-                      </li>
-                    ))}
-                    {delDia.length > CHIPS_POR_DIA && (
-                      <li>
-                        <button
-                          type="button"
-                          onClick={() => setDetalleId(delDia[CHIPS_POR_DIA].id)}
-                          className="w-full rounded-md px-1.5 py-0.5 text-left text-[11px] font-semibold text-brand-dark hover:underline"
-                        >
-                          +{delDia.length - CHIPS_POR_DIA} más
-                        </button>
-                      </li>
-                    )}
-                  </ul>
-
-                  {/* Móvil: puntos de color; el detalle se lee en la agenda */}
-                  {delDia.length > 0 && (
-                    <div className="mt-1 flex flex-wrap gap-0.5 sm:hidden">
-                      {delDia.slice(0, 4).map((evento) => (
-                        <span
-                          key={evento.id}
-                          aria-hidden="true"
-                          className="h-1.5 w-1.5 rounded-full"
-                          style={{
-                            background: EVENTO_ESTADO_COLOR[evento.estado],
-                          }}
-                        />
-                      ))}
-                      <span className="sr-only">
-                        {delDia.length} evento(s) este día
-                      </span>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        <CuadriculaMes
+          eventos={eventos}
+          anio={anio}
+          mes={mes}
+          hoy={hoy}
+          onEvento={setDetalleId}
+          onCrear={puedeAdministrar ? setCreandoEn : undefined}
+        />
 
         {/* ---------------- Agenda del mes ---------------- */}
         <aside className="rounded-2xl border border-line bg-white p-4 shadow-soft sm:p-5">
@@ -403,10 +219,19 @@ export function CalendarioPanel({
         >
           <EventoDetalle
             evento={detalle}
-            acciones={acciones}
-            puedeAdministrar={puedeAdministrar}
-            onEditar={() => setEditandoId(detalle.id)}
-            onCerrar={cerrarTodo}
+            agregarNota={agregarNota}
+            manager={
+              puedeAdministrar
+                ? {
+                    cambiarEstado,
+                    aplazar,
+                    devolverFechaOriginal,
+                    eliminar,
+                    onEditar: () => setEditandoId(detalle.id),
+                    onCerrar: cerrarTodo,
+                  }
+                : null
+            }
           />
         </ModalPanel>
       )}

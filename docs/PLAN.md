@@ -2218,6 +2218,120 @@ se tocaron.
 
 ---
 
+## Iteración del 23 de septiembre de 2026 — «Mis eventos» pasa a ser un calendario
+
+**Qué pidió el cliente.** Xiomara, al ver el módulo del calendario, pidió que en
+el portal del empleado (`/mi-cuenta?seccion=eventos`) los eventos **se vean como
+calendario, igual que en el panel**, y no como la lista que había hasta ahora —
+pero solo con los eventos en los que esa persona figura como responsable.
+
+### 1. Una sola cuadrícula para las dos pantallas
+
+La vista mensual del panel se partió en piezas reutilizables:
+**`src/components/calendario/CuadriculaMes.tsx`** (Client Component) exporta
+
+- **`BarraMes`** — «‹ septiembre de 2026 › · Hoy», con los enlaces que le pase
+  quien la use (`hrefMes(anio, mes)` y `hrefHoy`), porque el panel navega a
+  `/admin/calendario?anio=&mes=` y el portal a
+  `/mi-cuenta?seccion=eventos&anio=&mes=` (arrastrando `portal=1` si vino);
+- **`LeyendaEstados`** — los cuatro colores;
+- **`CuadriculaMes`** — la cuadrícula: semanas de lunes a domingo, festivos de
+  `festivosDelAnio`, «hoy» marcado, fichas de color en escritorio y puntos en
+  móvil.
+
+`CalendarioPanel` quedó como el envoltorio del panel (agenda del mes, ventanas
+de detalle / formulario / creación) y **no cambió de comportamiento**: lo que
+antes tenía escrito dentro ahora lo llama. Las dos diferencias entre pantallas
+viajan por props: `onCrear` (el «+» de cada día, que el portal **no** pasa) y
+`onSeleccionarDia` (la selección de un día, que solo usa el portal). Sin
+`onSeleccionarDia` la cuadrícula se comporta exactamente como antes.
+
+**Detalle del evento: el mismo componente.** `EventoDetalle` cambió de API — en
+vez de `acciones` + `puedeAdministrar` + `onEditar` + `onCerrar`, recibe
+`agregarNota` y un objeto **`manager: AccionesManager | null`**. El portal pasa
+`manager={null}`: así ninguna server action de manager entra siquiera en el
+grafo de esa pantalla. No es la barrera (las actions siguen pidiendo
+`getManagerOrNull()` y RLS lo comprueba otra vez), pero tampoco hay por qué
+mandarle al empleado referencias a acciones que no puede ejecutar.
+
+### 2. El móvil (390 px)
+
+La cuadrícula de siete columnas **cabe** en un teléfono, pero una ficha con
+texto dentro de una casilla de ~50 px no se lee. La decisión, de las dos que
+estaban sobre la mesa, fue **cuadrícula + agenda del día seleccionado**:
+
+- la casilla enseña puntos del color del estado (hasta cuatro, y «+N» si hay
+  más) y **se toca entera** — una capa `absolute inset-0 sm:hidden` encima del
+  contenido, con su `sr-only` («Ver el jueves, 10 de septiembre de 2026: 1
+  evento(s)») para quien use lector de pantalla;
+- el día elegido queda con fondo verde claro y anillo de marca;
+- justo debajo de la cuadrícula aparece la **agenda de ese día**, con fichas
+  grandes (título, rango de horas y estado) que se pulsan con el pulgar y abren
+  el detalle;
+- sin día elegido, esa tarjeta dice qué hacer («Los días con actividad llevan un
+  punto de color. Tócalo para ver qué hay»), en vez de quedarse muda.
+
+En escritorio esa tarjeta no se pinta (`sm:hidden`): allí lo pulsable son las
+fichas de la casilla, como en el panel. Medido con Playwright: `scrollWidth` =
+390 px, **cero scroll horizontal**.
+
+### 3. Lo que se conserva
+
+- La **agenda del mes** sigue debajo del calendario, paginada de 10 en 10 con el
+  control `Paginacion` (`usePaginaLocal`, que vuelve a la página 1 al cambiar de
+  mes) — es el complemento de la cuadrícula, no la vista principal.
+- El **contador de la pestaña** no cambia de significado: sigue siendo «lo que
+  tienes esperando», es decir los eventos propios **de hoy en adelante**. Por eso
+  la página hace dos lecturas: la de siempre para el contador (sin notas) y otra
+  **solo cuando la pestaña es `eventos`** con el mes que se está viendo y sus
+  notas. Las cuatro pestañas siguen entrando en un único `Promise.all`.
+- El empleado **no** puede crear, editar, aplazar, cerrar ni eliminar: ni ve los
+  botones ni el servidor se lo aceptaría.
+
+### 4. Seguridad: no se relajó nada
+
+No se tocó ninguna política ni se usó la clave de servicio para traer eventos.
+La lectura es `listEventos({ responsableId, desde, hasta, conNotas })`: filtra
+por responsable en la consulta **y** la RLS de la 0010 vuelve a filtrar en la
+base. El único uso de la clave de servicio sigue siendo `mapaDePerfiles`, para
+resolver los nombres de los compañeros.
+
+Comprobado en vivo con un empleado que tenía tres eventos propios y, en el mismo
+mes, **tres ajenos** (uno de otro empleado, otro creado a propósito con otro
+responsable y el «Evento de Prueba» de César): ni en la cuadrícula, ni en la
+agenda, ni en el **HTML de la respuesta**, ni pidiendo el mes a mano por la URL
+(`?seccion=eventos&anio=2026&mes=9`), ni navegando a otro mes aparece ninguno —
+tampoco la nota «confidencial» del evento ajeno.
+
+### 5. Verificación
+
+`npm run lint`, `npm run build` y las dos baterías (`pruebas-nomina.mjs` 249/249
+y `pruebas-jornada.mjs` 74/74) en verde. Con `next start` + Playwright contra
+`localhost`, **44 comprobaciones en verde y cero errores de consola**: la
+cuadrícula con sus eventos y sin ninguno ajeno, la navegación de mes (que
+conserva sesión, pestaña y `?anio=&mes=` en la URL), el detalle con título,
+fecha, horas, descripción, estado, responsables y notas, el guardado de una nota
+nueva, la ausencia de los siete botones de manager, el móvil de 390 px (tocar un
+día → su agenda → el detalle) y, como admin, que `/admin/calendario` sigue
+intacto con «Nuevo evento» y los cuatro botones de cierre.
+
+Capturas revisadas a ojo en 1440 y 390 px (pestaña y detalle abierto). El único
+arreglo que salió de mirarlas: el fondo del día seleccionado se decidía con dos
+utilidades de fondo en la misma cadena de clases (`bg-white` y `bg-brand-tint`),
+que no se resuelven por el orden en que están escritas sino por el del CSS
+generado; ahora es una sola clase elegida con un ternario.
+
+**Datos.** Listado inicial y final de `eventos`, `evento_responsables` y
+`evento_notas`: **idéntico** (2 / 5 / 2 filas). Se crearon cuatro eventos de
+prueba con sus responsables y notas, y se borraron al terminar (las notas y los
+responsables se van por `on delete cascade`). Las contraseñas del archivo de
+credenciales ya no son válidas —GPI las cambió en producción—, así que el QA
+corrió con **dos cuentas temporales** (`qaempleado` y `qaadmin`) creadas para
+esto y **eliminadas** al final: `profiles` volvió a sus nueve filas. No se tocó
+el «Evento de Prueba» de César ni nada de `oprueba`.
+
+---
+
 ## Decisiones técnicas
 
 - **Fallback estático primero**: toda la capa de contenido (`src/lib/content.ts`)

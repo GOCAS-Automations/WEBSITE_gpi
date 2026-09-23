@@ -7,6 +7,13 @@
  * qué hay que hacer, el hilo de notas y —solo para managers— los botones que
  * lo cierran, lo aplazan, lo editan o lo eliminan.
  *
+ * LA MISMA FICHA SIRVE EN EL PORTAL (23 sep 2026). `/mi-cuenta?seccion=eventos`
+ * la abre con `manager={null}`: el empleado ve el título, la fecha, las horas,
+ * la descripción, el estado, los responsables y el hilo de notas, y puede
+ * ESCRIBIR una nota. No ve —ni podría ejecutar— ninguna acción de manager: las
+ * server actions piden `getManagerOrNull()` y las políticas de la 0010 vuelven
+ * a comprobarlo en la base.
+ *
  * CERRAR ≠ ELIMINAR, y aquí hay que decirlo igual que en las jornadas:
  * «Incompleto» deja constancia de que la actividad no salió y conserva sus
  * notas; «Eliminar» borra el evento y su historia. Por eso eliminar pasa por
@@ -71,28 +78,36 @@ import { NotaForm } from "./NotaForm";
 
 type Accion = (state: ActionState, formData: FormData) => Promise<ActionState>;
 
-export interface AccionesEvento {
+/**
+ * Lo que SOLO puede hacer un manager. Va en un objeto aparte —y opcional— a
+ * propósito: el portal del empleado (`/mi-cuenta?seccion=eventos`) pasa
+ * `manager={null}` y así ninguna de estas server actions entra siquiera en el
+ * grafo de su pantalla. Esconder botones nunca fue la barrera (las actions
+ * comprueban el rol y RLS lo comprueba otra vez), pero tampoco hace falta
+ * enviarle al empleado referencias a acciones que no puede ejecutar.
+ */
+export interface AccionesManager {
   cambiarEstado: Accion;
   aplazar: Accion;
   /** Deshacer el aplazamiento: volver al día original. */
   devolverFechaOriginal: Accion;
   eliminar: Accion;
-  agregarNota: Accion;
+  /** Abrir el formulario de edición (estado de la pantalla, no una action). */
+  onEditar: () => void;
+  /** Cerrar la ficha cuando el evento deja de existir. */
+  onCerrar: () => void;
 }
 
 export function EventoDetalle({
   evento,
-  acciones,
-  puedeAdministrar,
-  onEditar,
-  onCerrar,
+  agregarNota,
+  manager,
 }: {
   evento: EventoRecord;
-  acciones: AccionesEvento;
-  /** true = manager: ve los botones de cierre, aplazamiento y borrado. */
-  puedeAdministrar: boolean;
-  onEditar: () => void;
-  onCerrar: () => void;
+  /** Escribir una nota: la puede hacer cualquier responsable (lo decide RLS). */
+  agregarNota: Accion;
+  /** Acciones de manager, o `null` en el portal del empleado (solo lectura). */
+  manager: AccionesManager | null;
 }) {
   // Matriz estado → acciones (ver la cabecera del archivo). La misma función la
   // aplican las server actions, así que esto solo evita el error, no lo impide.
@@ -193,7 +208,7 @@ export function EventoDetalle({
       </section>
 
       {/* ---------------- Acciones (solo managers) ---------------- */}
-      {puedeAdministrar && (
+      {manager && (
         <section className="space-y-3 rounded-2xl border border-line bg-white p-4">
           <h3 className="text-xs font-bold uppercase tracking-wide text-graphite">
             Cerrar o mover el evento
@@ -202,7 +217,7 @@ export function EventoDetalle({
           <div className="flex flex-wrap gap-2">
             {permitido.cumplido && (
               <BotonEstado
-                action={acciones.cambiarEstado}
+                action={manager.cambiarEstado}
                 id={evento.id}
                 estado="cumplido"
                 etiqueta="Marcar cumplido"
@@ -214,7 +229,7 @@ export function EventoDetalle({
             )}
             {permitido.incompleto && (
               <BotonEstado
-                action={acciones.cambiarEstado}
+                action={manager.cambiarEstado}
                 id={evento.id}
                 estado="incompleto"
                 etiqueta="Marcar incompleto"
@@ -229,7 +244,7 @@ export function EventoDetalle({
                 «aplazado» si ya se había movido de fecha. */}
             {permitido.reabrir && (
               <BotonEstado
-                action={acciones.cambiarEstado}
+                action={manager.cambiarEstado}
                 id={evento.id}
                 estado="programado"
                 etiqueta={
@@ -248,7 +263,7 @@ export function EventoDetalle({
             )}
             <button
               type="button"
-              onClick={onEditar}
+              onClick={manager.onEditar}
               className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold text-ink-soft transition-colors hover:border-brand hover:text-brand-dark"
             >
               <Pencil className="h-4 w-4" />
@@ -261,7 +276,7 @@ export function EventoDetalle({
               esa fecha es historia y no se toca. */}
           {permitido.devolverFechaOriginal && evento.fechaOriginal && (
             <BotonDevolverFecha
-              action={acciones.devolverFechaOriginal}
+              action={manager.devolverFechaOriginal}
               evento={evento}
               fechaOriginal={evento.fechaOriginal}
             />
@@ -270,7 +285,7 @@ export function EventoDetalle({
           {/* Aplazar: todo menos lo que ya se hizo. Cuando no se puede, en vez
               de dejar un hueco mudo se explica por qué y qué hacer. */}
           {permitido.aplazar ? (
-            <FormularioAplazar action={acciones.aplazar} evento={evento} />
+            <FormularioAplazar action={manager.aplazar} evento={evento} />
           ) : (
             <p className="flex items-start gap-2 rounded-xl border border-line bg-mist/70 px-4 py-2.5 text-xs leading-relaxed text-graphite">
               <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
@@ -284,9 +299,9 @@ export function EventoDetalle({
 
           <div className="border-t border-line pt-3">
             <BotonEliminar
-              action={acciones.eliminar}
+              action={manager.eliminar}
               evento={evento}
-              onEliminado={onCerrar}
+              onEliminado={manager.onCerrar}
             />
           </div>
         </section>
@@ -324,7 +339,7 @@ export function EventoDetalle({
         <div className="rounded-2xl border border-line bg-white p-4">
           <NotaForm
             eventoId={evento.id}
-            action={acciones.agregarNota}
+            action={agregarNota}
             idCampo={`nota-${evento.id}`}
           />
         </div>
