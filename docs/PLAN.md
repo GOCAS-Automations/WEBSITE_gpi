@@ -2527,6 +2527,231 @@ comentarios de `src/data/site.ts` que lo daban por pendiente.
   una cuenta temporal de administrador, **eliminada al terminar**. Las tablas
   quedaron idénticas y no se tocó nada de septiembre de 2026.
 
+## Iteración del 23 de septiembre de 2026 — permisos de falta, faltas registradas y su descuento
+
+GPI lleva los permisos **en papel**: un formato llamado «SOLICITUD DE PERMISO»
+(código XP C2 C91) con nombre, cédula, fecha de diligenciamiento, cargo, motivo,
+fecha del permiso, si aporta soporte, si el permiso es **remunerado**,
+reemplazo, observaciones y las firmas del colaborador y del aprobador. Esta
+iteración lo lleva al sistema completo y, además, lo conecta con la nómina: una
+falta **aprobada y no remunerada** descuenta.
+
+**Migración 0014, aplicada.** Crea la tabla `permisos` y el bucket **privado**
+`permisos-soportes`.
+
+### 1. El modelo de datos
+
+`public.permisos` (una fila por solicitud o por falta registrada):
+
+| Campo | Qué guarda |
+| --- | --- |
+| `employee_id` | de quién es (→ `profiles`, `on delete cascade`) |
+| `tipo` | `dia` (uno o varios días) · `horas` (un tramo de un solo día) |
+| `fecha_inicio` / `fecha_fin` | el rango; iguales cuando es un día o `horas` |
+| `hora_inicio` / `hora_fin` | solo en `horas`, con `fin > inicio` |
+| `motivo` | obligatorio, no vacío |
+| `reemplazo` · `observaciones` | opcionales, como en el papel |
+| `soporte_path` · `soporte_nombre` | la ruta en el bucket privado y el nombre original |
+| `remunerado_solicitado` | lo que **pide** el colaborador |
+| `remunerado` | lo que **decide** el aprobador (`null` mientras esté pendiente) |
+| `estado` | `pendiente` → `aprobado` \| `rechazado` |
+| `nota_revision` · `revisado_por` · `revisado_at` | la respuesta |
+| `origen` | `solicitud` · `registro_admin` |
+| `creado_por` · `created_at` · `updated_at` | trazabilidad |
+
+Tres restricciones hacen imposible un estado incoherente: el rango de fechas
+(`fecha_fin >= fecha_inicio`), la coherencia de las horas (`horas` = un solo día
+con sus dos horas y `fin > inicio`; `dia` sin horas) y la del pago (`pendiente`
+exige `remunerado is null`; `aprobado` exige que NO lo sea). Índices por
+empleado, por fechas y por estado.
+
+**Dos columnas para «remunerado» y no una.** La casilla del papel hace dos
+papeles a la vez —lo que se pide y lo que se concede— y eso es justo lo que
+después se discute. Separarlas deja constancia de las dos cosas; en la pantalla
+de aprobación la casilla llega marcada con lo que se pidió, pero manda el
+aprobador.
+
+### 2. RLS
+
+Mismo reparto que las jornadas:
+
+- cualquier cuenta **activa** crea y ve **las suyas**, y las **edita o anula solo
+  mientras sigan `pendiente`**. La política de inserción propia exige además
+  `estado = 'pendiente'`, `origen = 'solicitud'`, `remunerado is null` y
+  `revisado_por is null`: **nadie puede aprobarse un permiso a sí mismo**, ni
+  manipulando el formulario;
+- los **managers** (`is_manager()` = admin y coordinador) ven todas, aprueban,
+  rechazan, reabren, registran faltas de cualquier persona y eliminan;
+- `anon` no tiene nada.
+
+### 3. El soporte vive en un bucket PRIVADO
+
+Un soporte es una incapacidad o una citación médica: un dato de salud. **No
+puede ir a `site-images`**, que es público y cualquiera con la URL leería. La
+0014 crea `permisos-soportes` con `public = false`, `file_size_limit` de 5 MB y
+`allowed_mime_types` limitado a PDF, JPG y PNG, más sus políticas (cada quien su
+carpeta; los managers, todo).
+
+El camino completo:
+
+1. **Subida** — por **server action**, nunca desde el navegador, con la clave de
+   SERVICIO (`src/lib/soportes.ts`). El tipo y el tamaño se validan **en el
+   servidor** (`validarSoporte`), además del propio límite del bucket. La ruta es
+   `permisos/<employee_id>/<permiso_id>/<marca de tiempo>-<archivo>`, así que un
+   permiso eliminado se limpia entero. El permiso se inserta PRIMERO (la ruta
+   necesita su id) y, si la subida falla, se guarda igual sin soporte y el
+   mensaje lo dice: mejor eso que perder lo que la persona escribió.
+2. **Descarga** — por el route handler `GET /api/permisos/[id]/soporte`, que
+   comprueba (a) sesión activa, (b) que el permiso exista *para esa sesión* —lo
+   filtra RLS— y (c) que quien pide sea **el dueño o un manager**, y solo
+   entonces emite una **URL firmada de 60 s** y redirige. Todos los fallos
+   responden **404**: pedir el id de otra persona y pedir uno inventado se ven
+   igual.
+3. `next.config.ts` sube `experimental.serverActions.bodySizeLimit` a **6 MB**:
+   el archivo viaja dentro de la server action y el tope por defecto (1 MB)
+   rechazaría una incapacidad escaneada. El tope real de 5 MB lo siguen poniendo
+   el servidor y el bucket.
+
+### 4. El portal: `/mi-cuenta?seccion=permisos`
+
+Quinta pestaña del portal (en móvil, dos filas: tres y dos). El nombre, la
+cédula y el cargo salen del perfil y la fecha de diligenciamiento es la de hoy
+en Colombia: el colaborador solo escribe lo suyo. Puede pedir día completo (con
+rango) o por horas, marcar «pido que sea remunerado», decir quién lo reemplaza,
+adjuntar el soporte, **corregir o anular** mientras siga pendiente, leer la
+respuesta y **descargar su propio soporte**. Historial de 10 en 10 con el
+`Paginacion` de siempre.
+
+### 5. El panel: tercera pestaña de `/admin/jornadas`
+
+**Dónde ponerlo y por qué.** Se evaluaron las dos opciones del encargo y quedó
+como **tercera pestaña de Jornadas** («Aprobaciones · Permisos · Métricas»):
+
+- es **el mismo trabajo, el mismo público y el mismo lenguaje** que
+  «Aprobaciones»: un manager revisa lo que registró el equipo y lo aprueba o lo
+  rechaza con una nota que el colaborador lee. Los componentes, los textos y la
+  matriz de estados son los mismos;
+- **se revisan juntas**: las horas que faltan una semana se explican, muchas
+  veces, con el permiso de esa semana;
+- el **menú del panel se queda en ocho entradas**, que es justo lo que GPI pidió
+  agrupar en el pulido del 12 de agosto. Una novena entrada para algo que se usa
+  unas pocas veces al mes lo habría vuelto a inflar;
+- la pantalla **no se recarga**: cada pestaña es una vista distinta, no un bloque
+  más de la misma página.
+
+La bandeja tiene filtros por estado, persona y fechas (que se aplican al
+cambiar, reescribiendo la URL sin `pagina`), 10 fichas por página, y por cada
+solicitud: motivo, reemplazo, observaciones, qué pidió, si aporta soporte, el
+botón de descarga, la nota de revisión y quién revisó. Acciones:
+
+- **Aprobar decidiendo si se paga** — la casilla llega marcada con lo que pidió
+  el colaborador, el texto de al lado dice qué implica cada opción y la
+  confirmación lo repite;
+- **Rechazar con nota obligatoria** — y se dice, en tres sitios distintos, que
+  **rechazar no es eliminar**;
+- **Volver a pendiente** — deshace la decisión completa (quién revisó, la nota y
+  el pago). Es la forma de corregir una aprobación equivocada: si descontaba,
+  deja de hacerlo en las liquidaciones que sigan en borrador;
+- **Eliminar** — doble barrera (aviso desplegable + confirmación del navegador),
+  borra también el soporte;
+- **«Registrar una falta»** — un manager registra directamente la falta de
+  cualquier persona (`origen = registro_admin`): nace **aprobada y no
+  remunerada**, con su motivo, observaciones y, si hace falta, el soporte que
+  llegó después.
+
+### 6. El descuento en la nómina
+
+La regla, decidida con el cliente:
+
+- **Día completo** → ese día **y el domingo de esa semana**. Al faltar sin justa
+  causa se pierde el descanso dominical remunerado (**art. 173 del CST**). Si hay
+  varias faltas en la misma semana, el domingo se descuenta **una sola vez**.
+  Semana de lunes a domingo.
+- **Por horas** → solo esas horas, **en proporción a la jornada programada de ese
+  día** (2 h de un día de 8,5 h = 2 ÷ 8,5 de día). **No** arrastra el domingo.
+- El descuento se aplica sobre **el salario y el auxilio de transporte** —todo lo
+  que se paga por día—: base diaria `(salario + auxilio) ÷ 30`.
+- El domingo perdido se descuenta en la **misma liquidación donde cae el día de
+  la falta**, aunque el domingo caiga en el período siguiente.
+
+**Dónde vive el cálculo.** Los DÍAS los cuenta `faltasDelPeriodo()` de
+`src/lib/permisos.ts`; los pesos, `calcularLiquidacion()` de `src/lib/nomina.ts`.
+Los dos son módulos **puros**: `permisos.ts` no importa nada y `nomina.ts` solo
+importa su tipo. Quien lee (`src/lib/admin.ts`) resuelve, para cada permiso por
+horas, las horas de la jornada programada de ese día con `horarios_mensuales`, y
+lee **una semana de margen a cada lado del período**: el domingo se atribuye al
+período donde cae el PRIMER día de falta de esa semana, y sin ver los días
+vecinos no se sabría si ya se cobró antes.
+
+Dos salvaguardas contra el doble descuento: si el domingo de la semana es él
+mismo un día de falta no se suma aparte, y un permiso por horas en un día que ya
+está cubierto por uno de día completo no suma nada.
+
+**Cómo se ve.** La línea «Jornada laboral: N días» pasa a mostrar los días
+**efectivos** (`diasPagados`) y justo debajo aparece **«Faltas no remuneradas: N
+días (incluye M domingos)»** con su valor en negativo y las **fechas exactas**
+—los días y los domingos perdidos, con el artículo citado—, tanto en el detalle
+de la liquidación como en el volante en PDF. El valor no se vuelve a restar: es
+exactamente `(sueldo + auxilio del período completo) − (sueldo + auxilio de los
+días efectivos)`, calculado así para que el volante cuadre al peso. El CSV suma
+cuatro columnas: «Días pagados», «Días de falta no remunerada», «Domingos
+perdidos» y «Descuento por faltas».
+
+**La base de salud y pensión baja con el sueldo**, que es lo correcto (el IBC
+sigue a lo devengado) y queda fijado en las pruebas para que nadie lo «arregle».
+
+**Las liquidaciones cerradas no cambian.** `normalizarSnapshot` lee un snapshot
+anterior a esta iteración como «se pagaron todos los días y no hubo faltas», que
+es exactamente lo que pasó.
+
+`REGLAS_NOMINA` de `ayudas.ts` gana el grupo **«Las faltas que no se pagan»**,
+con la regla del domingo explicada en llano y el art. 173 citado.
+
+### 7. Un tropiezo que conviene recordar
+
+La barra de filtros es un Client Component y la función que arma su URL
+(`urlPermisos`) la necesita también el Server Component de la bandeja, para el
+`hrefBase` de la paginación. Exportarla desde el módulo `"use client"` tumbaba la
+página entera en producción con «Attempted to call `urlPermisos()` from the
+server». Vive en `src/lib/permisos.ts` (módulo puro), que es la misma solución
+que ya se había aplicado a `JORNADA_FILTRO_ESTADOS` en `src/lib/admin-types.ts`.
+
+Y en el volante: el signo «menos» tipográfico (U+2212) **no está en la fuente que
+incrusta `@react-pdf/renderer`** y desaparecía al imprimir, dejando el descuento
+como si sumara. Ahora el importe se pinta con `formatearPesos(-valor)`, que pega
+un guion normal a la cifra.
+
+### 8. Verificación
+
+- **Pruebas puras**: `scripts/pruebas-nomina.mjs` sube a **306 comprobaciones**
+  (eran 257) con dos grupos nuevos —los días que se pierden y el dinero—: la
+  falta de un día (2 días), dos faltas en la misma semana (3 días y **un solo**
+  domingo), un permiso de varios días seguidos, la falta en sábado, faltar el
+  propio domingo (1 día, no 2), el permiso por horas prorrateado, el día sin
+  jornada programada, lo que NO descuenta (remunerado, pendiente, rechazado), el
+  domingo que cae en la otra quincena —y que la quincena siguiente **no lo
+  vuelve a cobrar**—, la semana partida entre dos quincenas, los pesos al peso, y
+  que una liquidación **cerrada no se mueve** aunque se apruebe una falta
+  después. `scripts/pruebas-jornada.mjs` sigue en 129/129. `lint` y `build`
+  limpios.
+- **`next start` + Playwright contra localhost**, con dos cuentas temporales
+  (una de empleado y una de manager, **eliminadas al terminar**): solicitud de
+  día completo **con soporte adjunto** y solicitud por horas desde el portal;
+  aprobación como no remunerado y rechazo con nota desde el panel; registro de
+  una falta por el manager; el descuento reflejado en una liquidación en
+  borrador («Jornada laboral: 12 días» · «Faltas no remuneradas: 3 días (incluye
+  1 domingo)» · −$ 230.000 sobre un salario de ejemplo de 2.100.000 y un auxilio
+  de 200.000) y en el **volante en PDF**, revisado como imagen. **Cero errores de
+  consola.** Capturas en 1440 y 390 px del portal, de la bandeja y de la nómina.
+- **Seguridad del soporte, probada pidiendo la URL directamente**: el dueño
+  **200**, un manager **200**, **otro empleado 404** y sin sesión **401**.
+- **Datos**: listado antes y después de `profiles`, `jornadas`, `permisos`,
+  `nomina_config_mensual`, `nomina_liquidaciones` y del bucket. Todo quedó
+  idéntico (9 perfiles, 37 jornadas, 5 configuraciones, 1 liquidación, 126
+  objetos en `site-images`), con la tabla `permisos` vacía y el bucket de
+  soportes vacío. No se tocó nada de septiembre de 2026 ni los datos de
+  `oprueba`.
+
 ## Decisiones técnicas
 
 - **Fallback estático primero**: toda la capa de contenido (`src/lib/content.ts`)
