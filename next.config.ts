@@ -186,6 +186,26 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["nodemailer", "@react-pdf/renderer"],
 
   /**
+   * SOPORTES DE LOS PERMISOS (migración 0014): el colaborador adjunta un PDF o
+   * una foto de hasta **5 MB** y el archivo viaja DENTRO de una server action
+   * (`multipart/form-data`). El tope por defecto de Next para el cuerpo de una
+   * server action es 1 MB, así que con él una incapacidad escaneada se
+   * rechazaría antes de llegar al servidor.
+   *
+   * Se deja en 6 MB y no en 5: el límite se aplica al cuerpo HTTP CRUDO, que
+   * además del archivo lleva los demás campos del formulario y los separadores
+   * de `multipart` (la documentación de Next recomienda dejar 10–20 KB de
+   * holgura; aquí sobra de largo). El tope REAL de 5 MB lo aplican
+   * `validarSoporte()` en el servidor y el `file_size_limit` del propio bucket:
+   * esto solo evita que la petición muera por el camino.
+   */
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "6mb",
+    },
+  },
+
+  /**
    * El volante de nómina lee el logo de `public/images/logo-volante.png` con
    * `fs` en tiempo de ejecución (`src/lib/volante.tsx`). El trazado automático
    * de Next no puede adivinar esa ruta, así que se declara: sin esto el archivo

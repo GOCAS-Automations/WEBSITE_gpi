@@ -267,6 +267,22 @@ export const REGLAS_NOMINA: ReglaNomina[] = [
     ],
   },
   {
+    titulo: "Las faltas que no se pagan",
+    puntos: [
+      "Un permiso APROBADO y marcado como NO remunerado descuenta en la nómina del período. Uno remunerado no descuenta nada, y uno pendiente o rechazado tampoco: solo cuenta lo aprobado.",
+      "Falta de un DÍA completo: se descuenta ese día y, ADEMÁS, el domingo de esa semana. No es un castigo doble: el domingo de descanso se paga porque se trabajó la semana completa, y al faltar sin justa causa se pierde ese derecho. La semana va de lunes a domingo.",
+      "Si en la misma semana hay varias faltas, el domingo se pierde UNA sola vez. Dos faltas en una semana descuentan 3 días: los dos días y un domingo.",
+      "Un sábado también arrastra el domingo, porque cae en la misma semana.",
+      "Permiso por HORAS: se descuenta solo esa parte del día, en proporción a la jornada programada de ese día. Dos horas de un día de 8 horas y media descuentan 2 ÷ 8,5 de un día. Un permiso por horas NO arrastra el domingo.",
+      "El descuento se aplica sobre TODO lo que se paga por día: el salario y el auxilio de transporte. La base diaria es (salario + auxilio mensual) ÷ 30.",
+      "En la liquidación y en el volante, la línea «Jornada laboral: N días» ya muestra los días que de verdad se pagan, y justo debajo aparece «Faltas no remuneradas: N días (incluye M domingos)» con el dinero que no se pagó y las fechas exactas, para que se pueda revisar.",
+      "El domingo perdido se descuenta en la MISMA liquidación donde cae el día de la falta, aunque ese domingo caiga ya en el período siguiente. Así el descuento no se parte en dos quincenas ni se cobra dos veces.",
+      "Como todo lo demás, esto solo afecta a las liquidaciones en borrador: una ya cerrada no se mueve.",
+    ],
+    norma:
+      "Artículo 173 del Código Sustantivo del Trabajo: el descanso dominical remunerado se pierde cuando el trabajador falta al trabajo sin justa causa durante la semana.",
+  },
+  {
     titulo: "Salud y pensión",
     puntos: [
       "Se descuentan del sueldo del período más las horas y recargos. NO entran ni el auxilio de transporte ni los bonos.",
@@ -275,6 +291,32 @@ export const REGLAS_NOMINA: ReglaNomina[] = [
     ],
   },
 ];
+
+/* --- Permisos de falta (migración 0014) --------------------------- */
+
+/** Qué es esta bandeja y de dónde viene (el formato en papel de GPI). */
+export const AYUDA_PERMISOS =
+  "Aquí llegan las solicitudes de permiso del equipo: es la versión digital del formato en papel «SOLICITUD DE PERMISO», con los mismos campos. Cada solicitud dice qué día (o qué horas) se pide, por qué, quién reemplaza y si el colaborador pide que se le pague. Tú decides si se aprueba y si se paga.";
+
+/** La decisión que importa: remunerado o no, y qué implica. */
+export const AYUDA_PERMISOS_REMUNERADO =
+  "La casilla «Remunerado» llega marcada con lo que pidió el colaborador, pero manda tu decisión. Si apruebas el permiso como REMUNERADO no se descuenta nada. Si lo apruebas como NO remunerado se descuenta en la nómina del período: el día que faltó y, además, el domingo de esa semana (una sola vez aunque falte varios días de la misma semana). Un permiso por horas descuenta solo esa parte del día y no arrastra el domingo.";
+
+/** Rechazar no borra (mismo discurso que en jornadas y en el calendario). */
+export const AYUDA_PERMISOS_RECHAZAR =
+  "Rechazar NO es eliminar: la solicitud se queda en el sistema con tu nota, y el colaborador la lee en su Mi Cuenta para saber por qué no se concedió y volver a pedirla bien. Escribe el motivo con claridad: ese texto lo va a leer él.";
+
+/** Qué es «Registrar una falta» y en qué se diferencia de aprobar. */
+export const AYUDA_PERMISOS_REGISTRO =
+  "Sirve para dejar constancia de una falta que NO se pidió por el sistema (alguien no llegó, o trajo el papel después). Nace ya aprobada y NO remunerada, así que descuenta en la nómina desde el momento en que la registras. Si esa falta sí se va a pagar, márcala como remunerada al crearla.";
+
+/** El soporte: dónde se guarda y quién lo puede abrir. */
+export const AYUDA_PERMISOS_SOPORTE =
+  "El soporte (la incapacidad, la citación médica, el documento que respalde el permiso) se guarda en un almacén PRIVADO, no en las imágenes del sitio: solo lo pueden abrir la persona que lo subió y quien aprueba. El enlace de descarga dura un minuto y se genera en el momento; no se puede compartir ni adivinar.";
+
+/** Para el portal: qué puede hacer el colaborador con sus permisos. */
+export const AYUDA_PERMISOS_PORTAL =
+  "Aquí pides tus permisos y ves cómo van. Mientras una solicitud siga PENDIENTE puedes corregirla o anularla; una vez que la revisan, ya no. Marca «Pido que sea remunerado» si crees que se te debe pagar el día, pero la decisión es de quien aprueba: si queda como NO remunerado, ese día (y el domingo de esa semana) se descuentan de tu nómina.";
 
 /** Qué es el apodo de una cuenta y quién puede cambiarlo (migración 0010). */
 export const AYUDA_APODO =
