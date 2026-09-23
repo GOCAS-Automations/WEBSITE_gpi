@@ -564,7 +564,7 @@ export function LiquidacionPanel({
             href="/admin/jornadas"
             className="font-semibold text-amber-900 underline"
           >
-            Ir a Jornadas
+            Ir a Jornadas y Permisos
           </Link>
           .
         </AyudaSeccion>
@@ -656,7 +656,8 @@ export function LiquidacionPanel({
                     y las filas no queden altísimas. */}
                 <Th className="pl-5 min-w-[12rem]">Persona</Th>
                 <Th align="right">Días</Th>
-                <Th align="right">Sueldo</Th>
+                <Th align="right" className="min-w-[7rem]">Sueldo del período</Th>
+                <Th align="right">Auxilio de transporte</Th>
                 <Th align="right">Horas y recargos</Th>
                 <Th align="right">Otros devengados</Th>
                 <Th align="right">Descuentos</Th>
@@ -696,7 +697,8 @@ export function LiquidacionPanel({
                   <td className="px-3 py-3 text-right tabular-nums text-graphite">
                     {cifrasValidas(f) ? formatearNumero(f.dias) : "—"}
                   </td>
-                  <Money valor={cifrasValidas(f) ? f.calculo.basico + f.calculo.auxTransporte : null} />
+                  <Money valor={cifrasValidas(f) ? f.calculo.basico : null} />
+                  <Money valor={cifrasValidas(f) ? f.calculo.auxTransporte : null} />
                   <Money valor={cifrasValidas(f) ? f.calculo.totalHoras : null} />
                   <Money valor={cifrasValidas(f) ? f.calculo.totalDevengadosManuales : null} />
                   <Money valor={cifrasValidas(f) ? f.calculo.totalDescuentos : null} />

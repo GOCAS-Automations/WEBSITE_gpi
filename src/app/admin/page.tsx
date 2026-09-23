@@ -83,12 +83,12 @@ export default async function AdminDashboardPage() {
     },
     {
       href: "/admin/jornadas",
-      label: "Jornadas y horas extra",
+      label: "Jornadas y Permisos",
       icon: Clock,
       count: team.pending,
       unit: "pendientes",
       description:
-        "Las jornadas que registra el equipo, con su desglose de horas, para aprobarlas o rechazarlas; y el tablero con los totales del período.",
+        "Las jornadas que registra el equipo, con su desglose de horas extra, y los permisos y faltas, para aprobarlos o rechazarlos; y el tablero con los totales del período.",
     },
     {
       href: "/admin/calendario",

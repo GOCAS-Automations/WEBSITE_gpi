@@ -135,7 +135,7 @@ export const AYUDA_NOMINA_CERRAR =
 
 /** Las jornadas pendientes no se pagan. */
 export const AYUDA_NOMINA_PENDIENTES =
-  "Solo entran a la nómina las jornadas APROBADAS. Si en el período quedan jornadas pendientes de revisión, sus horas no se pagan: apruébalas primero en «Jornadas» y la liquidación se actualizará sola mientras siga en borrador.";
+  "Solo entran a la nómina las jornadas APROBADAS. Si en el período quedan jornadas pendientes de revisión, sus horas no se pagan: apruébalas primero en «Jornadas y Permisos» y la liquidación se actualizará sola mientras siga en borrador.";
 
 /** Qué es el volante y qué lleva. */
 export const AYUDA_NOMINA_VOLANTE =
@@ -164,7 +164,7 @@ export interface ReglaNomina {
 }
 
 export const REGLAS_NOMINA_INTRO =
-  "Así calcula el sistema lo que hay que pagarle a cada persona. Todo sale de dos cosas: el salario que está en «Configuración» y las jornadas que ya se aprobaron en «Jornadas». Ningún valor por hora se digita a mano.";
+  "Así calcula el sistema lo que hay que pagarle a cada persona. Todo sale de dos cosas: el salario que está en «Configuración» y las jornadas que ya se aprobaron en «Jornadas y Permisos». Ningún valor por hora se digita a mano.";
 
 export const REGLAS_NOMINA: ReglaNomina[] = [
   {
@@ -254,7 +254,7 @@ export const REGLAS_NOMINA: ReglaNomina[] = [
   {
     titulo: "Solo se paga lo aprobado",
     puntos: [
-      "A la nómina solo entran las jornadas APROBADAS. Una jornada pendiente de revisión no se paga: la pantalla lo avisa para que se apruebe primero en «Jornadas».",
+      "A la nómina solo entran las jornadas APROBADAS. Una jornada pendiente de revisión no se paga: la pantalla lo avisa para que se apruebe primero en «Jornadas y Permisos».",
       "Las horas de una jornada quedan CONGELADAS al aprobarla: cambiar después el horario del mes ya no las mueve. Para recalcularla hay que devolverla a pendiente y volver a aprobarla.",
     ],
   },

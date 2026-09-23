@@ -1445,7 +1445,7 @@
     <div class="flecha">→</div>
     <div class="paso alt"><b>2. Pendiente</b>queda a la espera; el empleado aún puede editarla o eliminarla</div>
     <div class="flecha">→</div>
-    <div class="paso"><b>3. El coordinador</b>la revisa con el desglose calculado en la sección Jornadas</div>
+    <div class="paso"><b>3. El coordinador</b>la revisa con el desglose calculado en la sección Jornadas y Permisos</div>
     <div class="flecha">→</div>
     <div class="paso"><b>4a. Aprobada</b>queda firme y suma al tablero de métricas y a nómina</div>
   </div>
@@ -1506,11 +1506,11 @@
       <li><strong>FAQ</strong> · las preguntas frecuentes</li>
       <li><strong>Valores</strong> · los valores corporativos</li>
     </ul>
-    <b style="display:block;margin-top:.5em">Equipo · Horarios · Jornadas · Calendario</b> — solo administrador y coordinador
+    <b style="display:block;margin-top:.5em">Equipo · Horarios · Jornadas y Permisos · Calendario</b> — solo administrador y coordinador
     <ul>
       <li><strong>Equipo</strong> · las cuentas del personal, con su apodo (ver 6.13)</li>
       <li><strong>Horarios</strong> · el horario laboral de cada mes</li>
-      <li><strong>Jornadas</strong> · aprobaciones, permisos y faltas, y tablero de métricas (ver 6.15 a 6.17)</li>
+      <li><strong>Jornadas y Permisos</strong> · aprobaciones, permisos y faltas, y tablero de métricas (ver 6.15 a 6.17)</li>
       <li><strong>Calendario</strong> · agenda de eventos, notas y métricas de cumplimiento (ver 6.18)</li>
     </ul>
     <b style="display:block;margin-top:.5em">Nómina</b> · liquidación, configuración y tablero — <strong>solo administrador</strong> (ver 6.19)
@@ -1530,7 +1530,7 @@
   hacer, ofrece el enlace <span class="ui-wrap">Registrar mi jornada</span> y presenta una
   tarjeta por cada sección del menú, con un contador cuando aplica («11 elementos») y el
   enlace <span class="ui">Administrar</span>. Está dividido en dos grupos, igual que el menú:
-  <strong>Gestión interna</strong> (Equipo, Horarios, Jornadas y Calendario —solo
+  <strong>Gestión interna</strong> (Equipo, Horarios, Jornadas y Permisos, y Calendario —solo
   administrador y coordinador— y Nómina, solo para el administrador) y
   <strong>El sitio web</strong> (Contenido del sitio y Contacto y ajustes).
   Abajo hay tarjetas de ayuda permanente sobre el guardado, la visibilidad y las imágenes.</p>
@@ -2230,7 +2230,7 @@
   </div>
 
   <h2 id="s6-15"><span class="num">6.15</span> Aprobar o rechazar jornadas</h2>
-  <p>Sección <span class="ui">Jornadas</span> del menú. Solo para administrador y
+  <p>Sección <span class="ui">Jornadas y Permisos</span> del menú. Solo para administrador y
   coordinador. Tiene tres pestañas: <span class="ui">Aprobaciones</span> (la que se abre por
   defecto), <span class="ui">Permisos</span> (ver 6.16) y <span class="ui">Métricas</span>
   (ver 6.17). Se cambia de una a otra con un clic, y la pestaña viaja en la dirección
@@ -2322,11 +2322,11 @@
     <span class="titulo">Consejo</span>
     <p>Revise las jornadas al menos una vez a la semana, antes del cierre de nómina. El
     Dashboard muestra permanentemente cuántas hay pendientes, así que basta con mirar la
-    tarjeta <span class="ui-wrap">Jornadas y horas extra</span> al entrar.</p>
+    tarjeta <span class="ui-wrap">Jornadas y Permisos</span> al entrar.</p>
   </div>
 
   <h2 id="s6-16"><span class="num">6.16</span> Permisos y faltas</h2>
-  <p>Pestaña <span class="ui">Permisos</span> de la sección <span class="ui">Jornadas</span>
+  <p>Pestaña <span class="ui">Permisos</span> de la sección <span class="ui">Jornadas y Permisos</span>
   (<code>/admin/jornadas?vista=permisos</code>). Solo para administrador y coordinador. Aquí
   llegan las solicitudes que el equipo envía desde su portal (ver 5.8): es la versión
   digital del formato en papel «Solicitud de permiso», con los mismos campos. Vive junto a
@@ -2444,7 +2444,7 @@
   </ul>
 
   <h2 id="s6-17"><span class="num">6.17</span> Tablero de métricas</h2>
-  <p>Pestaña <span class="ui">Métricas</span> dentro de la sección Jornadas. Responde de un
+  <p>Pestaña <span class="ui">Métricas</span> dentro de la sección Jornadas y Permisos. Responde de un
   vistazo a «¿cómo se están repartiendo las horas del equipo?». Trae los últimos 90 días de
   información y muestra por defecto los últimos 30.</p>
 
@@ -2712,7 +2712,7 @@
 
   <h3>El orden de trabajo</h3>
   <ol class="steps">
-    <li><strong>Apruebe las jornadas</strong> del período, en Jornadas (ver 6.15). Solo las
+    <li><strong>Apruebe las jornadas</strong> del período, en Jornadas y Permisos (ver 6.15). Solo las
       aprobadas se pagan: si queda alguna pendiente, la pantalla lo avisa y sus horas no
       entran.</li>
     <li><strong>Configure</strong> el salario, el auxilio de transporte y los aportes de
@@ -3124,7 +3124,7 @@
 
   <h2>Permisos y secciones</h2>
 
-  <h3>No veo la sección Equipo (ni Horarios, ni Jornadas)</h3>
+  <h3>No veo la sección Equipo (ni Horarios, ni Jornadas y Permisos)</h3>
   <p>Esas tres secciones son solo para <strong>administrador y coordinador</strong>. Si su
   rol es Community Manager, verá únicamente las secciones de contenido; si es Empleado, no
   entra al panel en absoluto. Si cree que le corresponde otro rol, pídale a un administrador
@@ -3187,7 +3187,7 @@
   Eliminar la cuenta borra también todas sus jornadas, y eso no se puede deshacer.</p>
 
   <h3>Un empleado registró mal una jornada y ya la aprobé</h3>
-  <p>Abra la sección Jornadas, cambie el filtro de estado a <em>Aprobadas</em>, busque la
+  <p>Abra la sección Jornadas y Permisos, cambie el filtro de estado a <em>Aprobadas</em>, busque la
   jornada y pulse <span class="ui-wrap">Volver a pendiente</span>. El empleado podrá
   corregirla y usted la revisa de nuevo. Tenga en cuenta que al reabrirla se borra la nota
   de revisión anterior.</p>
@@ -3217,7 +3217,7 @@
       horas; en turno nocturno, nunca (ver 7.5).</li>
     <li>Si ese día hubo <strong>dos jornadas</strong>, la jornada del día se reparte entre
       las dos (ver 7.7).</li>
-    <li>Abra la jornada en la sección Jornadas y lea la línea explicativa del desglose: dice
+    <li>Abra la jornada en la sección Jornadas y Permisos y lea la línea explicativa del desglose: dice
       exactamente qué jornada ordinaria se usó y cuánto almuerzo se descontó.</li>
   </ol>
 
@@ -3240,7 +3240,7 @@
   a su coordinador que lo devuelva a pendiente.</p>
 
   <h3>Aprobé un permiso como no remunerado y era remunerado</h3>
-  <p>En <em>Jornadas → Permisos</em>, filtre por <em>Aprobados</em>, busque el permiso y
+  <p>En <em>Jornadas y Permisos → Permisos</em>, filtre por <em>Aprobados</em>, busque el permiso y
   pulse <span class="ui-wrap">Volver a pendiente</span>; después apruébelo otra vez con la
   casilla <span class="ui">Remunerado</span> marcada. El descuento desaparece de las
   liquidaciones que sigan en borrador. Si la liquidación ya estaba cerrada, hay que

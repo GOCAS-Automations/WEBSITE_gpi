@@ -112,7 +112,7 @@ export default async function AdminHorariosPage({
           href="/admin/jornadas"
           className="font-semibold text-brand-dark hover:text-brand"
         >
-          Jornadas
+          Jornadas y Permisos
         </Link>
         , devuélvela a pendiente y apruébala de nuevo: así se recalcula.
       </AyudaSeccion>
@@ -192,7 +192,7 @@ export default async function AdminHorariosPage({
             <strong>Jornadas ya aprobadas.</strong> Conservan el cálculo con el
             que se aprobaron: editar este horario no las cambia. Para recalcular
             una, un coordinador debe devolverla a pendiente en{" "}
-            <em>Jornadas</em> y volver a aprobarla.
+            <em>Jornadas y Permisos</em> y volver a aprobarla.
           </li>
           <li>
             <strong>Almuerzo.</strong> No cuenta como tiempo trabajado. Como el

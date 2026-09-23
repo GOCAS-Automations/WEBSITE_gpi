@@ -75,7 +75,7 @@ export default async function AdminJornadasPage({
       <AdminPageHeader
         title="Jornadas, permisos y horas extra"
         description={DESCRIPCIONES[vista]}
-        breadcrumb={[{ label: "Panel", href: "/admin" }, { label: "Jornadas" }]}
+        breadcrumb={[{ label: "Panel", href: "/admin" }, { label: "Jornadas y Permisos" }]}
       />
 
       {/* ---------------- Pestañas ---------------- */}

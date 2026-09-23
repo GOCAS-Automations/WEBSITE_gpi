@@ -72,7 +72,7 @@ export const adminSections: AdminSection[] = [
   },
   { href: "/admin/empleados", label: "Equipo", icon: User, managerOnly: true },
   { href: "/admin/horarios", label: "Horarios", icon: Calendar, managerOnly: true },
-  { href: "/admin/jornadas", label: "Jornadas", icon: Clock, managerOnly: true },
+  { href: "/admin/jornadas", label: "Jornadas y Permisos", icon: Clock, managerOnly: true },
   {
     href: "/admin/calendario",
     label: "Calendario",
