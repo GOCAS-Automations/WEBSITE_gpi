@@ -856,7 +856,7 @@ function CamposConfig({
       <Card>
         <CardTitle
           title="Salario y auxilio"
-          description="El salario mensual cubre las horas ordinarias diurnas. El auxilio de transporte se escribe completo: el sistema lo reparte entre los días que se liquiden."
+          description="El salario mensual cubre la jornada laboral (las horas del horario trabajadas de día). El auxilio de transporte se escribe completo: el sistema lo reparte entre los días que se liquiden."
         />
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
