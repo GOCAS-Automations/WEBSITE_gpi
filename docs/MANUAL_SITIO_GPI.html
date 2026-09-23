@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Manual de uso del sitio web — GPI</title>
 <meta name="author" content="GOCAS Automations">
-<meta name="description" content="Manual de uso del sitio web de GPI — Grupo de Profesionales en Ingeniería GPI S.A.S. Sitio público, Mi Cuenta y panel de administración. Septiembre de 2026.">
+<meta name="description" content="Manual de uso del sitio web de GPI — Grupo de Profesionales en Ingeniería GPI S.A.S. Sitio público, Mi Cuenta y panel de administración. 23 de septiembre de 2026.">
 <style>
   :root{
     --verde:#3dae2b;
@@ -403,6 +403,12 @@
       page-break-inside:avoid;
     }
     .portada{ min-height:0; height:240mm; }
+    /* El índice tiene que caber en una sola hoja A4. */
+    .indice ol ol{ line-height:1.36; }
+    .indice > ol > li{ padding:.16em 0; }
+    /* Un término del glosario nunca se separa de su definición. */
+    dl.gloss dt{ break-after:avoid; page-break-after:avoid; }
+    dl.gloss dd{ break-before:avoid; page-break-before:avoid; break-inside:avoid; }
   }
 
   /* ---------- Modo oscuro (solo pantalla) ---------- */
@@ -451,7 +457,7 @@
   <div class="regla"></div>
   <p class="sub">gpiprofesionales.com<br>Sitio público · Mi Cuenta · Panel de administración</p>
   <p class="pie">
-    Septiembre de 2026<br>
+    23 de septiembre de 2026<br>
     Elaborado por <strong>GOCAS Automations</strong>
   </p>
 </div>
@@ -511,9 +517,10 @@
         <li><a href="#s5-5"><span class="n">5.5</span> Los tres estados</a></li>
         <li><a href="#s5-6"><span class="n">5.6</span> Mis jornadas: el historial</a></li>
         <li><a href="#s5-7"><span class="n">5.7</span> Corregir o eliminar</a></li>
-        <li><a href="#s5-8"><span class="n">5.8</span> Mis eventos</a></li>
-        <li><a href="#s5-9"><span class="n">5.9</span> Mi nómina</a></li>
-        <li><a href="#s5-10"><span class="n">5.10</span> El recorrido completo</a></li>
+        <li><a href="#s5-8"><span class="n">5.8</span> Permisos</a></li>
+        <li><a href="#s5-9"><span class="n">5.9</span> Mis eventos</a></li>
+        <li><a href="#s5-10"><span class="n">5.10</span> Mi nómina</a></li>
+        <li><a href="#s5-11"><span class="n">5.11</span> El recorrido completo</a></li>
       </ol>
     </li>
     <li><a href="#c6"><span class="n">6.</span> El panel de administración</a>
@@ -533,9 +540,10 @@
         <li><a href="#s6-13"><span class="n">6.13</span> Equipo y cuentas</a></li>
         <li><a href="#s6-14"><span class="n">6.14</span> Horario laboral del mes</a></li>
         <li><a href="#s6-15"><span class="n">6.15</span> Aprobar o rechazar jornadas</a></li>
-        <li><a href="#s6-16"><span class="n">6.16</span> Tablero de métricas</a></li>
-        <li><a href="#s6-17"><span class="n">6.17</span> Calendario interno de programación</a></li>
-        <li><a href="#s6-18"><span class="n">6.18</span> Nómina</a></li>
+        <li><a href="#s6-16"><span class="n">6.16</span> Permisos y faltas</a></li>
+        <li><a href="#s6-17"><span class="n">6.17</span> Tablero de métricas</a></li>
+        <li><a href="#s6-18"><span class="n">6.18</span> Calendario interno de programación</a></li>
+        <li><a href="#s6-19"><span class="n">6.19</span> Nómina</a></li>
       </ol>
     </li>
     <li><a href="#c7"><span class="n">7.</span> Cómo se calculan las horas extra</a>
@@ -543,10 +551,11 @@
         <li><a href="#s7-1"><span class="n">7.1</span> La idea en una frase</a></li>
         <li><a href="#s7-2"><span class="n">7.2</span> Los cinco pasos del cálculo</a></li>
         <li><a href="#s7-3"><span class="n">7.3</span> Las ocho categorías de horas</a></li>
-        <li><a href="#s7-4"><span class="n">7.4</span> Porcentajes configurados</a></li>
-        <li><a href="#s7-5"><span class="n">7.5</span> El almuerzo (pendiente)</a></li>
-        <li><a href="#s7-6"><span class="n">7.6</span> Festivos y domingos</a></li>
-        <li><a href="#s7-7"><span class="n">7.7</span> Tres ejemplos resueltos</a></li>
+        <li><a href="#s7-4"><span class="n">7.4</span> Los recargos de ley</a></li>
+        <li><a href="#s7-5"><span class="n">7.5</span> El almuerzo: tres reglas</a></li>
+        <li><a href="#s7-6"><span class="n">7.6</span> Sábados, domingos y festivos</a></li>
+        <li><a href="#s7-7"><span class="n">7.7</span> Dos jornadas el mismo día</a></li>
+        <li><a href="#s7-8"><span class="n">7.8</span> Ejemplos resueltos</a></li>
       </ol>
     </li>
     <li><a href="#c8"><span class="n">8.</span> Preguntas frecuentes y solución de problemas</a></li>
@@ -571,6 +580,8 @@
     <li>Entender qué muestra cada página del sitio público y cómo se navega.</li>
     <li>Ingresar a su cuenta personal y registrar las jornadas que trabaja.</li>
     <li>Revisar, aprobar o rechazar las jornadas que registra el equipo.</li>
+    <li>Pedir un permiso desde el portal y, del lado de quien aprueba, decidir si se paga
+      o registrar una falta.</li>
     <li>Editar los textos, las imágenes y los datos de contacto del sitio sin ayuda técnica.</li>
     <li>Definir el horario laboral de cada mes y entender cómo se calculan las horas extra.</li>
   </ul>
@@ -584,10 +595,10 @@
         <tr><th style="width:32%">Si usted es…</th><th>Qué leer primero</th></tr>
       </thead>
       <tbody>
-        <tr><td>Técnico o profesional de campo</td><td>Los capítulos 3, 5 y 7: cómo entrar, cómo registrar sus jornadas y cómo se cuentan sus horas extra.</td></tr>
-        <tr><td>Coordinador</td><td>Todo. En especial 6.13 a 6.17: cuentas del equipo (con el apodo), horario del mes, aprobaciones, métricas y calendario interno.</td></tr>
+        <tr><td>Técnico o profesional de campo</td><td>Los capítulos 3, 5 y 7: cómo entrar, cómo registrar sus jornadas, cómo pedir un permiso (5.8) y cómo se cuentan sus horas extra.</td></tr>
+        <tr><td>Coordinador</td><td>Todo. En especial 6.13 a 6.18: cuentas del equipo (con el apodo), horario del mes, aprobaciones de jornadas, permisos y faltas, métricas y calendario interno.</td></tr>
         <tr><td>Community Manager</td><td>Los capítulos 2 y 6.2 a 6.12: el sitio público y la edición de contenido e imágenes.</td></tr>
-        <tr><td>Gerencia / administrador</td><td>Todo, con énfasis en el capítulo 4 (roles), el 6.16 (métricas), el 6.18 (nómina) y el 7 (cálculo de horas).</td></tr>
+        <tr><td>Gerencia / administrador</td><td>Todo, con énfasis en el capítulo 4 (roles), el 6.17 (métricas), el 6.19 (nómina) y el 7 (cálculo de horas).</td></tr>
       </tbody>
     </table>
   </div>
@@ -597,7 +608,8 @@
   <ol class="steps">
     <li><strong>Capítulo 2</strong> — recorrido por el sitio que ve cualquier visitante.</li>
     <li><strong>Capítulos 3 y 4</strong> — cómo se entra a la zona privada y qué puede hacer cada persona según su rol.</li>
-    <li><strong>Capítulo 5</strong> — el día a día de un empleado: registrar jornadas.</li>
+    <li><strong>Capítulo 5</strong> — el día a día de un empleado: registrar jornadas, pedir
+      permisos, ver sus eventos y su nómina.</li>
     <li><strong>Capítulo 6</strong> — el panel de administración, módulo por módulo.</li>
     <li><strong>Capítulo 7</strong> — el cálculo de las horas extra explicado en lenguaje llano.</li>
     <li><strong>Capítulos 8 a 10</strong> — problemas frecuentes, glosario y soporte.</li>
@@ -929,8 +941,8 @@
     <li>En el campo <span class="ui">Usuario</span> escriba el usuario que le entregó GPI.
       Va todo en minúsculas, sin espacios ni tildes.</li>
     <li>En el campo <span class="ui">Contraseña</span> escriba su contraseña. Si le
-      entregaron una generada por el sistema, tendrá una forma fácil de dictar, como
-      <em>Sol-Andes42</em>.</li>
+      entregaron una generada por el sistema, tendrá una forma fácil de dictar: dos palabras
+      separadas por un guion y dos cifras al final.</li>
     <li>Pulse <span class="ui">Ingresar</span>. Mientras verifica, el botón dice
       <span class="ui">Verificando…</span>.</li>
     <li>Si los datos son correctos, el sistema lo lleva a la pantalla que le corresponde
@@ -976,7 +988,7 @@
   <h2 id="s3-4"><span class="num">3.4</span> Cambiar su propia contraseña</h2>
   <ol class="steps">
     <li>Ingrese al portal y abra la pestaña <span class="ui">Mi contraseña</span>
-      (<code>/mi-cuenta?seccion=clave</code>), la última de las cuatro (ver 5.1).</li>
+      (<code>/mi-cuenta?seccion=clave</code>), la última de las cinco (ver 5.1).</li>
     <li>Escriba la nueva clave en <span class="ui">Nueva contraseña</span>. Debe tener
       <strong>al menos 8 caracteres</strong>.</li>
     <li>Repítala exactamente igual en <span class="ui">Repite la nueva contraseña</span>.</li>
@@ -986,7 +998,7 @@
   <div class="caja tip">
     <span class="titulo">Consejo</span>
     <p>Use una frase fácil de recordar y difícil de adivinar, por ejemplo tres palabras
-    con un número: <em>ChirimoyaCali2026</em>. Es más segura que una palabra corta con
+    que solo usted relacione, con un número al final. Es más segura que una palabra corta con
     símbolos y no se olvida.</p>
   </div>
 
@@ -1024,16 +1036,16 @@
   <h2 id="s4-2"><span class="num">4.2</span> Los cuatro roles</h2>
   <div class="kpi-grid">
     <div class="kpi"><b>Administrador</b>Control total: contenido del sitio, horarios,
-      cuentas del equipo, calendario interno, aprobación de jornadas y la
+      cuentas del equipo, calendario interno, aprobación de jornadas y de permisos, y la
       <strong>nómina completa</strong>.</div>
     <div class="kpi"><b>Coordinador</b>Contenido del sitio, horarios del mes, cuentas de
-      empleados (no de administradores), calendario interno y aprobación de jornadas. No
-      administra la nómina: de esa ve solo la suya, como cualquier empleado.</div>
+      empleados (no de administradores), calendario interno y aprobación de jornadas y
+      de permisos. No administra la nómina: de esa ve solo la suya, como cualquier empleado.</div>
     <div class="kpi"><b>Community Manager</b>Edita todo el contenido del sitio —textos,
-      imágenes y ajustes— y registra sus propias jornadas. No gestiona empleados, ni el
-      calendario, ni las jornadas de otros.</div>
+      imágenes y ajustes—, registra sus propias jornadas y pide sus permisos. No gestiona
+      empleados, ni el calendario, ni las jornadas o permisos de otros.</div>
     <div class="kpi"><b>Empleado</b>Su portal en Mi Cuenta, en pestañas: registrar sus
-      jornadas, ver los eventos del calendario en los que es responsable, consultar su
+      jornadas, pedir permisos, ver los eventos del calendario en los que es responsable, consultar su
       nómina ya cerrada y cambiar su contraseña.</div>
   </div>
   <div class="caja nota">
@@ -1051,19 +1063,18 @@
         <tr><th style="width:30%">Rol</th><th style="width:35%">Pantalla al entrar</th><th>Cómo llega a la otra</th></tr>
       </thead>
       <tbody>
-        <tr><td>Administrador y Coordinador</td><td>El <strong>panel de administración</strong>: es su pantalla principal de trabajo</td><td>Botón <span class="ui">Registrar mi jornada</span>, arriba en el panel</td></tr>
-        <tr><td>Community Manager</td><td>Su <strong>portal de jornadas</strong></td><td>Botón <span class="ui">Ir al panel</span>, arriba en el portal</td></tr>
+        <tr><td>Administrador, Coordinador y Community Manager</td><td>El <strong>panel de administración</strong>: es su pantalla principal de trabajo</td><td>Botón <span class="ui">Registrar mi jornada</span>, arriba en el panel</td></tr>
         <tr><td>Empleado</td><td>Su <strong>portal de jornadas</strong></td><td>No tiene panel</td></tr>
       </tbody>
     </table>
   </div>
-  <p>Nadie queda encerrado en una sola pantalla: los administradores y coordinadores
-  conservan íntegro su portal de jornadas —registrar horas, ver su historial y cambiar su
-  contraseña— y solo cambia por dónde empiezan.</p>
+  <p>Nadie queda encerrado en una sola pantalla: los administradores, coordinadores y
+  Community Manager conservan íntegro su portal —registrar horas, pedir permisos, ver su
+  historial y cambiar su contraseña— y solo cambia por dónde empiezan.</p>
 
   <h2 id="s4-3"><span class="num">4.3</span> Tabla de permisos</h2>
   <div class="tabla-wrap">
-    <table>
+    <table class="keep">
       <thead>
         <tr>
           <th style="width:38%">Puede…</th>
@@ -1083,12 +1094,15 @@
         <tr><td>Editar el <strong>apodo</strong> de una cuenta del equipo</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c no">No</td><td class="c no">No</td></tr>
         <tr><td>Definir el horario laboral del mes</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c no">No</td><td class="c no">No</td></tr>
         <tr><td>Aprobar o rechazar jornadas de otros</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c no">No</td><td class="c no">No</td></tr>
+        <tr><td>Aprobar o rechazar <strong>permisos</strong> de otros y decidir si se pagan</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c no">No</td><td class="c no">No</td></tr>
+        <tr><td>Registrar una <strong>falta</strong> a cualquier persona</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c no">No</td><td class="c no">No</td></tr>
         <tr><td>Ver el tablero de métricas y exportar a Excel</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c no">No</td><td class="c no">No</td></tr>
         <tr><td>Programar, cerrar y aplazar eventos del calendario</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c no">No</td><td class="c no">No</td></tr>
         <tr><td>Ver sus eventos asignados y dejar notas (<em>Mis eventos</em>)</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c si">Sí</td></tr>
         <tr><td><strong>Administrar la nómina</strong> (configurar y liquidar)</td><td class="c si">Sí</td><td class="c no">No <sup>2</sup></td><td class="c no">No</td><td class="c no">No</td></tr>
         <tr><td>Ver y descargar <strong>su propia</strong> nómina (<em>Mi nómina</em>)</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c si">Sí</td></tr>
         <tr><td>Registrar <strong>sus propias</strong> jornadas</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c si">Sí</td></tr>
+        <tr><td>Pedir <strong>sus propios</strong> permisos (<em>Permisos</em>)</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c si">Sí</td></tr>
         <tr><td>Cambiar su propia contraseña</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c si">Sí</td><td class="c si">Sí</td></tr>
       </tbody>
       <caption><sup>1</sup> Un coordinador gestiona cuentas de coordinador, Community Manager
@@ -1110,6 +1124,9 @@
       burlar escribiendo una dirección a mano.</li>
     <li>El empleado solo puede editar o borrar sus jornadas <strong>mientras estén
       pendientes</strong>. Una vez revisadas quedan congeladas.</li>
+    <li>Lo mismo con los permisos: cada persona corrige o anula su solicitud
+      <strong>solo mientras esté pendiente</strong>, y <strong>nadie puede aprobarse un
+      permiso a sí mismo</strong>.</li>
   </ul>
 </section>
 
@@ -1129,33 +1146,36 @@
   <span class="ui">Cerrar sesión</span>, y, si su rol le da acceso al panel, un recuadro
   verde con el botón <span class="ui">Ir al panel</span>.</p>
 
-  <p>Desde el 18 de septiembre de 2026 el portal ya no es una sola página larga: son
-  <strong>cuatro pestañas</strong>, y la pestaña viaja en la dirección —igual que en el
+  <p>Desde el 18 de septiembre de 2026 el portal ya no es una sola página larga, y desde el
+  23 de septiembre son <strong>cinco pestañas</strong>, y la pestaña viaja en la dirección —igual que en el
   panel—, así que el enlace se puede compartir:</p>
   <div class="tabla-wrap">
     <table class="keep">
       <thead><tr><th style="width:26%">Pestaña</th><th style="width:26%">Dirección</th><th>Qué tiene</th></tr></thead>
       <tbody>
         <tr><td><span class="ui">Registrar jornada</span> <em>(la que abre por defecto)</em></td><td><code>/mi-cuenta</code></td><td>Los tres contadores, el formulario y el historial «Mis jornadas» (5.2 a 5.7).</td></tr>
-        <tr><td><span class="ui">Mis eventos</span></td><td><code>?seccion=eventos</code></td><td>Los eventos del calendario asignados, de hoy en adelante, con la caja para dejar notas (5.8).</td></tr>
-        <tr><td><span class="ui">Mi nómina</span></td><td><code>?seccion=nomina</code></td><td>Las liquidaciones ya cerradas o pagadas y el volante para descargar (5.9).</td></tr>
+        <tr><td><span class="ui">Permisos</span></td><td><code>?seccion=permisos</code></td><td>Pedir un permiso, con su soporte, y ver en qué va cada solicitud (5.8).</td></tr>
+        <tr><td><span class="ui">Mis eventos</span></td><td><code>?seccion=eventos</code></td><td>El calendario del mes con los eventos en los que figura como responsable, con la caja para dejar notas (5.9).</td></tr>
+        <tr><td><span class="ui">Mi nómina</span></td><td><code>?seccion=nomina</code></td><td>Las liquidaciones ya cerradas o pagadas y el volante para descargar (5.10).</td></tr>
         <tr><td><span class="ui">Mi contraseña</span></td><td><code>?seccion=clave</code></td><td>Cambiar la contraseña (ver 3.4).</td></tr>
       </tbody>
     </table>
   </div>
-  <p>En el celular las pestañas se ven en <strong>dos filas de dos</strong>, con el nombre
-  corto (<em>Jornada · Eventos · Nómina · Clave</em>). Las tres primeras llevan un
-  contador: las jornadas que están esperando revisión, los eventos asignados y los
-  volantes disponibles. Quien no tenga eventos o volantes ve un mensaje explicando qué va
+  <p>En el celular las pestañas se ven en <strong>dos filas —tres arriba y dos abajo—</strong>,
+  con el nombre corto (<em>Jornada · Permisos · Eventos · Nómina · Clave</em>). Las cuatro
+  primeras llevan un contador: las jornadas que están esperando revisión, los permisos que
+  esperan respuesta, los eventos asignados de hoy en adelante y los volantes disponibles.
+  Quien no tenga permisos, eventos o volantes ve un mensaje explicando qué va
   a aparecer ahí, no una pestaña en blanco.</p>
   <div class="caja warn">
     <span class="titulo">Atención</span>
     <p>Al cambiar de pestaña se pierde lo que estuviera escribiendo en el formulario de
-    jornada: <strong>regístrela primero y después mire lo demás</strong>.</p>
+    jornada o de permiso: <strong>envíelo primero y después mire lo demás</strong>.</p>
   </div>
   <p>Las secciones 5.2 a 5.7 de este capítulo describen la pestaña
-  <span class="ui">Registrar jornada</span>; las secciones 5.8 y 5.9, las pestañas
-  <span class="ui">Mis eventos</span> y <span class="ui">Mi nómina</span>.</p>
+  <span class="ui">Registrar jornada</span>; las secciones 5.8, 5.9 y 5.10, las pestañas
+  <span class="ui">Permisos</span>, <span class="ui">Mis eventos</span> y
+  <span class="ui">Mi nómina</span>.</p>
 
   <h2 id="s5-2"><span class="num">5.2</span> Registrar una jornada, paso a paso</h2>
   <ol class="steps">
@@ -1189,11 +1209,14 @@
     <span class="titulo">Atención — no se pueden registrar dos jornadas que se crucen</span>
     <p>Si el horario que escribe se cruza con otra jornada suya que no esté rechazada, el
     sistema <strong>no la deja guardar</strong>: le muestra cuál es la otra jornada, con su
-    fecha y sus horas. Si lo que pasó fue que salió y volvió el mismo día, no registre dos
-    tramos: <strong>edite</strong> la jornada que ya tenía y regístrela desde la primera
+    fecha y sus horas.</p>
+    <p>Dos jornadas el <strong>mismo día que no se crucen</strong> —por ejemplo, una en la
+    mañana y otra en la noche— sí se permiten: el sistema reparte entre las dos la jornada
+    laboral de ese día y descuenta el almuerzo una sola vez (ver 7.7). Al guardar la segunda
+    le recuerda que ese día ya tenía otra: si lo que pasó fue que salió un rato y volvió,
+    lo más claro es <strong>editar</strong> la que ya tenía y registrarla desde la primera
     entrada hasta la última salida (puede contar la interrupción en
-    <span class="ui">Observaciones</span>). Si el día ya tenía otra jornada que no se cruza
-    en el horario, el sistema igual se lo recuerda, aunque sí lo deja guardar.</p>
+    <span class="ui">Observaciones</span>).</p>
   </div>
 
   <div class="caja tip">
@@ -1226,7 +1249,10 @@
     <li><strong>Duración total</strong> del turno, arriba a la derecha.</li>
     <li>Una línea explicativa: cuál es la jornada ordinaria de ese día según el horario del
       mes, cuánto almuerzo se descontó y cuánto tiempo se contó como trabajado. Si el día no
-      es laboral o es festivo, dice que todo el turno se calcula con recargo.</li>
+      tiene jornada programada (un sábado o un domingo), dice que todo lo trabajado es hora
+      extra; si es festivo, que las horas dentro de la jornada llevan recargo de domingo o
+      festivo; y si el almuerzo ya se descontó en otra jornada de ese mismo día, lo avisa
+      (ver capítulo 7).</li>
     <li>Dos cifras grandes: <span class="ui">Horas ordinarias</span> y
       <span class="ui">Horas extra</span>.</li>
     <li>El detalle por categoría (solo las que tienen minutos), y etiquetas como
@@ -1297,32 +1323,115 @@
     crearla.</p>
   </div>
 
-  <h2 id="s5-8"><span class="num">5.8</span> Mis eventos</h2>
-  <p>En la pestaña <span class="ui">Mis eventos</span> (<code>/mi-cuenta?seccion=eventos</code>)
-  cada persona ve <strong>solo</strong> los eventos del calendario interno (ver 6.17) de
-  hoy en adelante en los que figura como responsable: el día, la hora, qué hay que hacer,
-  con quién lo comparte y el estado, con los mismos colores del panel —gris programado,
-  verde cumplido, rojo incompleto y ámbar aplazado—. Con más de diez eventos, la lista se
-  reparte en páginas de diez.</p>
+  <h2 id="s5-8"><span class="num">5.8</span> Permisos</h2>
+  <p>La pestaña <span class="ui">Permisos</span> (<code>/mi-cuenta?seccion=permisos</code>)
+  es la versión digital del formato en papel «Solicitud de permiso» de GPI, con los mismos
+  campos. La usa <strong>cualquier cuenta activa</strong>, sea cual sea su rol. Arriba, en
+  el recuadro <span class="ui-wrap">Pedir un permiso</span>, ya aparecen su nombre, su
+  cédula, su cargo y la fecha de diligenciamiento (la de hoy): no hay que escribirlos.</p>
+
+  <h3>Pedir un permiso, paso a paso</h3>
+  <ol class="steps">
+    <li><span class="ui-wrap">¿Qué necesitas?</span> — elija <em>Día completo (uno o
+      varios días)</em> o <em>Por horas (un rato de un día)</em>.</li>
+    <li>Las fechas. Para un día completo: <span class="ui">Primer día</span> y
+      <span class="ui">Último día</span> (déjelo igual al primero si es un solo día). Por
+      horas: <span class="ui-wrap">Día del permiso</span> y las horas
+      <span class="ui">Desde</span> y <span class="ui">Hasta</span>.</li>
+    <li><span class="ui-wrap">Motivo del permiso</span> — <strong>obligatorio</strong>. Por
+      ejemplo: «cita médica de control en la EPS».</li>
+    <li><span class="ui-wrap">¿Quién te reemplaza?</span> (opcional) — el compañero que
+      cubre su labor, si alguien la cubre.</li>
+    <li><span class="ui">Soporte</span> (opcional) — un PDF o una foto en JPG o PNG de hasta
+      5 MB: la incapacidad, la citación médica o el documento que respalde el permiso.</li>
+    <li><span class="ui">Observaciones</span> (opcional) — cualquier cosa que quien aprueba
+      deba tener en cuenta.</li>
+    <li>La casilla <span class="ui-wrap">Pido que sea remunerado</span>, si considera que se
+      le debe pagar ese tiempo. <strong>Lo decide quien aprueba</strong>, no la casilla.</li>
+    <li>Pulse <span class="ui-wrap">Enviar la solicitud</span>. Queda
+      <strong>pendiente</strong> hasta que la revise el administrador o el coordinador.</li>
+  </ol>
+
+  <h3>Mis permisos: en qué va cada solicitud</h3>
+  <p>Debajo del formulario, la lista <span class="ui-wrap">Mis permisos</span> muestra cada
+  solicitud con su etiqueta de estado —<strong>Pendiente</strong>,
+  <strong>Aprobado</strong> o <strong>Rechazado</strong>—, las fechas, el motivo y, cuando
+  ya la revisaron, el recuadro <span class="ui">Respuesta</span> con la nota y el nombre de
+  quien la revisó. Un permiso aprobado dice además si quedó
+  <span class="ui">Remunerado</span> o <span class="ui-wrap">No remunerado · se
+  descuenta</span>. Si adjuntó un soporte, lo puede volver a abrir con
+  <span class="ui-wrap">Descargar mi soporte</span>. Con más de diez solicitudes, la lista
+  se reparte en páginas de diez.</p>
   <ul class="check">
-    <li>Puede <strong>dejar una nota</strong> en cualquiera de sus eventos, para contar
-      cómo va o qué encontró.</li>
-    <li><strong>No puede</strong> crear, editar ni cerrar eventos: eso es del
-      administrador y del coordinador.</li>
+    <li>Mientras una solicitud siga <strong>pendiente</strong>, tiene los botones
+      <span class="ui">Corregir</span> (abre el formulario ya lleno; se guarda con
+      <span class="ui-wrap">Guardar los cambios</span>) y <span class="ui">Anular</span>, que
+      la borra del sistema junto con su soporte, después de pedir confirmación.</li>
+    <li>Una vez revisada, ya no se puede corregir ni anular. Si hay un error, pídale a su
+      coordinador que la devuelva a pendiente.</li>
+    <li>Si un administrador o coordinador le registró una falta directamente (ver 6.16),
+      también aparece aquí, con la etiqueta <em>Falta registrada por un manager</em>.</li>
   </ul>
+  <div class="caja warn">
+    <span class="titulo">Atención — un permiso no remunerado se descuenta</span>
+    <p>Si el permiso queda aprobado como <strong>no remunerado</strong>, se descuenta de su
+    nómina ese día y, además, el domingo de esa semana, porque el descanso dominical se
+    paga cuando se trabaja la semana completa. Si son varias faltas en la misma semana, el
+    domingo se descuenta una sola vez. Un permiso por horas descuenta solo esa parte del
+    día (ver 6.16).</p>
+  </div>
   <div class="caja nota">
     <span class="titulo">Para tener en cuenta</span>
-    <p>Si no tiene ningún evento asignado, la pestaña no queda en blanco: muestra un
-    mensaje explicando qué va a aparecer ahí en cuanto lo incluyan como responsable de
-    algo.</p>
+    <p>El soporte se guarda en un almacén <strong>privado</strong>, separado de las
+    imágenes del sitio: solo lo pueden abrir la persona que lo subió y quien aprueba. Cada
+    vez que se pulsa el botón de descarga, el sistema genera un enlace que dura un minuto,
+    así que no sirve compartirlo ni se puede adivinar.</p>
   </div>
 
-  <h2 id="s5-9"><span class="num">5.9</span> Mi nómina</h2>
+  <h2 id="s5-9"><span class="num">5.9</span> Mis eventos</h2>
+  <p>Desde el 23 de septiembre de 2026, la pestaña <span class="ui">Mis eventos</span>
+  (<code>/mi-cuenta?seccion=eventos</code>) se ve como un <strong>calendario mensual</strong>,
+  igual al del panel (ver 6.18), pero con <strong>solo</strong> los eventos en los que la
+  persona figura como responsable: los de los demás no aparecen. Cada evento lleva los
+  colores del panel —gris programado, verde cumplido, rojo incompleto y ámbar aplazado—, y
+  el día de hoy y los festivos quedan marcados.</p>
+  <ul class="check">
+    <li><strong>Cambiar de mes</strong>: con las flechas a cada lado del nombre del mes, y
+      con <span class="ui">Hoy</span> para volver al mes en curso.</li>
+    <li><strong>Abrir un evento</strong>: en computador, pulse la ficha del evento dentro de
+      su día. Se abre el detalle con el título, la fecha, las horas, la descripción, el
+      estado, los responsables y las notas.</li>
+    <li><strong>Dejar una nota</strong>: en el detalle, escríbala en
+      <span class="ui-wrap">Agregar una nota</span> y pulse
+      <span class="ui-wrap">Guardar nota</span>, para contar cómo va o qué encontró.</li>
+    <li>Debajo del calendario sigue la <strong>agenda del mes</strong>, con sus eventos en
+      orden; con más de diez, se reparte en páginas de diez.</li>
+  </ul>
+  <h3>En el celular</h3>
+  <p>La cuadrícula del mes cabe completa en la pantalla, pero en lugar de fichas con texto
+  cada día muestra <strong>puntos del color del estado</strong> de sus eventos. Toque un día
+  con puntos y, justo debajo del calendario, aparece la <strong>agenda de ese día</strong>,
+  con fichas grandes que se abren con el dedo. Mientras no haya tocado ningún día, ese
+  recuadro dice <em>«Toca un día del calendario»</em>.</p>
+  <div class="caja nota">
+    <span class="titulo">Para tener en cuenta</span>
+    <p>El empleado <strong>no puede</strong> crear, editar, aplazar, cerrar ni eliminar
+    eventos: eso sigue siendo del administrador y del coordinador, y en su portal ni siquiera
+    aparecen esos botones. Si un mes no tiene nada asignado, la pestaña lo dice
+    («Este mes no tienes actividades asignadas») y recuerda revisar los meses siguientes con
+    las flechas.</p>
+  </div>
+
+  <h2 id="s5-10"><span class="num">5.10</span> Mi nómina</h2>
   <p>En la pestaña <span class="ui">Mi nómina</span> (<code>/mi-cuenta?seccion=nomina</code>)
   cada persona ve <strong>solo sus</strong> liquidaciones, y <strong>solo cuando están
-  cerradas o pagadas</strong> (ver 6.18): el período, el neto, el estado, la fecha de pago
+  cerradas o pagadas</strong> (ver 6.19): el período, el neto, el estado, la fecha de pago
   y el botón para descargar su volante en PDF. Con más de diez liquidaciones, la lista se
   reparte en páginas de diez.</p>
+  <p>En el volante, el sueldo del período aparece como <strong>«Jornada laboral: N
+  días»</strong>, y debajo una línea informativa con las horas trabajadas en el período. Si
+  hubo faltas no remuneradas, aparece además la línea <strong>«Faltas no remuneradas»</strong>
+  con los días y las fechas descontadas (ver 6.19).</p>
   <div class="caja nota">
     <span class="titulo">Para tener en cuenta</span>
     <p>Las liquidaciones en <strong>borrador</strong> no aparecen aquí a propósito: sus
@@ -1330,7 +1439,7 @@
     explica en vez de quedar vacía y muda.</p>
   </div>
 
-  <h2 id="s5-10"><span class="num">5.10</span> El recorrido completo</h2>
+  <h2 id="s5-11"><span class="num">5.11</span> El recorrido completo</h2>
   <div class="flujo">
     <div class="paso"><b>1. El empleado</b>registra su jornada en Mi Cuenta y ve la vista previa de horas</div>
     <div class="flecha">→</div>
@@ -1401,10 +1510,10 @@
     <ul>
       <li><strong>Equipo</strong> · las cuentas del personal, con su apodo (ver 6.13)</li>
       <li><strong>Horarios</strong> · el horario laboral de cada mes</li>
-      <li><strong>Jornadas</strong> · aprobaciones y tablero de métricas</li>
-      <li><strong>Calendario</strong> · agenda de eventos, notas y métricas de cumplimiento (ver 6.17)</li>
+      <li><strong>Jornadas</strong> · aprobaciones, permisos y faltas, y tablero de métricas (ver 6.15 a 6.17)</li>
+      <li><strong>Calendario</strong> · agenda de eventos, notas y métricas de cumplimiento (ver 6.18)</li>
     </ul>
-    <b style="display:block;margin-top:.5em">Nómina</b> · liquidación, configuración y tablero — <strong>solo administrador</strong> (ver 6.18)
+    <b style="display:block;margin-top:.5em">Nómina</b> · liquidación, configuración y tablero — <strong>solo administrador</strong> (ver 6.19)
     <b style="display:block;margin-top:.5em">Ajustes</b> · datos de contacto, redes sociales, el correo del formulario, los datos de la empresa para el volante de nómina y la visibilidad de los valores en todo el sitio
   </div>
   <div class="caja nota">
@@ -1445,9 +1554,10 @@
   mismo control debajo en todas partes: «Mostrando 11–20 de 33» · <span class="ui">Anterior</span>
   · Página [<em>número escribible</em>] de 4 · <span class="ui">Siguiente</span>. Si todo cabe
   en una sola página, el control ni siquiera aparece.</p>
-  <p>En las pantallas cuyos filtros viajan en la dirección —Aprobaciones (6.15), Notas del
-  calendario (6.17), Liquidación de nómina (6.18), los listados de contenido, Equipo (6.13)
-  y Mi nómina (5.9)— la página también queda en la dirección (<code>?pagina=2</code>): así
+  <p>En las pantallas cuyos filtros viajan en la dirección —Aprobaciones (6.15), Permisos
+  (6.16), Notas del
+  calendario (6.18), Liquidación de nómina (6.19), los listados de contenido, Equipo (6.13)
+  y Mi nómina (5.10)— la página también queda en la dirección (<code>?pagina=2</code>): así
   sobrevive a una recarga y se puede compartir. <strong>Cambiar cualquier filtro devuelve
   siempre a la página 1.</strong></p>
   <div class="caja tip">
@@ -1786,7 +1896,7 @@
       <thead><tr><th style="width:30%">Tarjeta</th><th>Qué contiene</th></tr></thead>
       <tbody>
         <tr><td><strong>Datos de contacto</strong><br><span class="ui-wrap">Guardar contacto</span></td><td>Nombre corto, razón social, tagline, dirección completa (calle, barrio, ciudad, departamento, país), coordenadas del mapa, la lista de <strong>teléfonos / WhatsApp</strong>, el <strong>WhatsApp principal</strong>, la lista de <strong>correos</strong>, el <strong>correo del formulario de contacto</strong>, Facebook, Instagram, canal de YouTube, horario de atención, el mapa de Google y la dirección del sitio.</td></tr>
-        <tr><td><strong>Datos de la empresa para nómina</strong><br><span class="ui-wrap">Guardar datos de la empresa</span></td><td>Razón social, NIT, ciudad y una nota opcional al pie: lo que se imprime en el encabezado del volante de pago de la sección Nómina (ver 6.18). <strong>No sale al sitio público.</strong></td></tr>
+        <tr><td><strong>Datos de la empresa para nómina</strong><br><span class="ui-wrap">Guardar datos de la empresa</span></td><td>Razón social, NIT, ciudad y una nota opcional al pie: lo que se imprime en el encabezado del volante de pago de la sección Nómina (ver 6.19). <strong>No sale al sitio público.</strong></td></tr>
         <tr><td><strong>Visibilidad en todo el sitio</strong><br><span class="ui-wrap">Guardar visibilidad</span></td><td>Un único interruptor, <span class="ui-wrap">Valores corporativos</span>: apaga los valores <strong>a la vez</strong> en el inicio y en Nosotros (ver 6.12). El resto de los interruptores vive en la pantalla de la página a la que pertenece.</td></tr>
       </tbody>
     </table>
@@ -1961,7 +2071,7 @@
   <h3>El apodo</h3>
   <p>El <strong>apodo</strong> es un nombre corto —«YC» para Yeison Camacho— que el sistema
   usa donde el nombre completo no cabe: las fichas de responsables del calendario interno,
-  la agenda del mes, la tabla de notas y las gráficas por responsable (ver 6.17). Donde sí
+  la agenda del mes, la tabla de notas y las gráficas por responsable (ver 6.18). Donde sí
   hay espacio —el detalle de un evento, este mismo formulario— se ve el nombre completo con
   el apodo entre paréntesis, y al pasar el mouse siempre aparece el nombre entero.</p>
   <ul class="check">
@@ -1987,7 +2097,7 @@
     <li>Pulse <span class="ui-wrap">Copiar usuario y contraseña</span>. El botón cambiará a
       <span class="ui">¡Copiado!</span> durante unos segundos.</li>
     <li>Pegue el texto en un mensaje de WhatsApp para la persona. Queda con el formato
-      «Usuario: mgomez · Contraseña: Sol-Andes42».</li>
+      «Usuario: <em>usuario</em> · Contraseña: <em>contraseña generada</em>».</li>
     <li>Si el navegador no permite copiar, seleccione el texto con el mouse y cópielo a mano;
       la pantalla también se lo indica.</li>
     <li>Dígale a la persona que <strong>cambie esa contraseña</strong> al entrar (ver 3.4).</li>
@@ -1995,7 +2105,7 @@
   <div class="caja nota">
     <span class="titulo">Para tener en cuenta</span>
     <p>Las contraseñas generadas tienen la forma <em>Palabra-Palabra##</em>
-    (<em>Sol-Andes42</em>, <em>Rio-Cumbre07</em>) justamente para poder
+    —dos palabras comunes y dos cifras— justamente para poder
     <strong>dictarlas por teléfono</strong> al personal de campo sin confusiones.</p>
   </div>
 
@@ -2121,8 +2231,10 @@
 
   <h2 id="s6-15"><span class="num">6.15</span> Aprobar o rechazar jornadas</h2>
   <p>Sección <span class="ui">Jornadas</span> del menú. Solo para administrador y
-  coordinador. Tiene dos pestañas: <span class="ui">Aprobaciones</span> (la que se abre por
-  defecto) y <span class="ui">Métricas</span>. Se cambia de una a otra con un clic.</p>
+  coordinador. Tiene tres pestañas: <span class="ui">Aprobaciones</span> (la que se abre por
+  defecto), <span class="ui">Permisos</span> (ver 6.16) y <span class="ui">Métricas</span>
+  (ver 6.17). Se cambia de una a otra con un clic, y la pestaña viaja en la dirección
+  (<code>?vista=permisos</code>, <code>?vista=metricas</code>).</p>
 
   <h3>Filtrar lo que quiere revisar</h3>
   <p>Arriba hay cuatro filtros. <strong>Se aplican solos, en cuanto los cambia</strong>: no
@@ -2213,7 +2325,125 @@
     tarjeta <span class="ui-wrap">Jornadas y horas extra</span> al entrar.</p>
   </div>
 
-  <h2 id="s6-16"><span class="num">6.16</span> Tablero de métricas</h2>
+  <h2 id="s6-16"><span class="num">6.16</span> Permisos y faltas</h2>
+  <p>Pestaña <span class="ui">Permisos</span> de la sección <span class="ui">Jornadas</span>
+  (<code>/admin/jornadas?vista=permisos</code>). Solo para administrador y coordinador. Aquí
+  llegan las solicitudes que el equipo envía desde su portal (ver 5.8): es la versión
+  digital del formato en papel «Solicitud de permiso», con los mismos campos. Vive junto a
+  las aprobaciones de jornadas porque es el mismo trabajo —revisar lo que registró el
+  equipo— y porque muchas veces las horas que faltan en una semana se explican con el
+  permiso de esa semana.</p>
+
+  <h3>La bandeja</h3>
+  <p>Arriba hay cuatro filtros que <strong>se aplican solos al cambiarlos</strong>, igual
+  que en Aprobaciones: <span class="ui">Estado</span> (Pendientes —por defecto—, Aprobados,
+  Rechazados o Todos), <span class="ui">Persona</span>, <span class="ui">Desde</span> y
+  <span class="ui">Hasta</span>, más el botón <span class="ui">Limpiar</span>. Las
+  solicitudes van en fichas de diez en diez. Cada ficha muestra quién la pide, con su
+  cédula; el tipo (día completo o por horas) y las fechas; el
+  <span class="ui-wrap">Motivo del permiso</span>, el reemplazo y las observaciones; lo que
+  pidió la persona («Que fuera remunerado» o «Sin pedir remuneración»); si
+  <span class="ui-wrap">Aporta soporte</span> y, si lo trae, el botón
+  <span class="ui-wrap">Descargar el soporte</span>; y, cuando ya se revisó, la nota y quién
+  la revisó.</p>
+  <div class="caja nota">
+    <span class="titulo">Para tener en cuenta — el soporte es privado</span>
+    <p>Un soporte suele ser una incapacidad o una citación médica, es decir, un dato de
+    salud. Por eso no se guarda con las imágenes del sitio, sino en un almacén
+    <strong>privado</strong>: solo lo abren la persona que lo subió y el administrador o el
+    coordinador. Al pulsar <span class="ui-wrap">Descargar el soporte</span>, el sistema
+    comprueba quién lo pide y genera en ese momento un enlace que dura <strong>un
+    minuto</strong>; si otra persona intenta abrirlo, no encuentra nada.</p>
+  </div>
+
+  <h3>Aprobar, decidiendo si se paga</h3>
+  <ol class="steps">
+    <li>Revise la casilla <span class="ui">Remunerado</span>. Llega marcada con lo que pidió
+      la persona, pero <strong>manda su decisión</strong>: el texto de al lado explica qué
+      implica cada opción.</li>
+    <li>Si quiere, escriba una <span class="ui-wrap">Nota para el colaborador
+      (opcional)</span>.</li>
+    <li>Pulse el botón, que cambia según la casilla: <span class="ui-wrap">Aprobar y
+      pagar</span> o <span class="ui-wrap">Aprobar sin pagar</span>, y confirme en el aviso
+      del navegador, que repite la decisión.</li>
+  </ol>
+
+  <h3>Rechazar</h3>
+  <ol class="steps">
+    <li>Pulse <span class="ui">Rechazar</span>. Se despliega un recuadro rojo y el botón
+      cambia a <span class="ui-wrap">Cancelar rechazo</span>.</li>
+    <li>Escriba el <span class="ui-wrap">Motivo del rechazo</span>. <strong>Es
+      obligatorio</strong> y la persona lo leerá en su portal, así que diga con claridad por
+      qué no se concede.</li>
+    <li>Pulse <span class="ui-wrap">Confirmar rechazo</span>.</li>
+  </ol>
+
+  <h3>Volver a pendiente y eliminar</h3>
+  <p>En un permiso ya aprobado o rechazado aparece <span class="ui-wrap">Volver a
+  pendiente</span>: deshace la decisión completa —quién revisó, la nota y si se pagaba— y
+  es la forma de corregir una aprobación equivocada. Si el permiso descontaba, deja de
+  hacerlo en las liquidaciones que sigan en borrador. <span class="ui">Eliminar</span>
+  tiene doble barrera, como en las jornadas: primero un aviso con
+  <span class="ui-wrap">Sí, eliminar definitivamente</span> y después la confirmación del
+  navegador. Borra también el soporte.</p>
+  <div class="caja warn">
+    <span class="titulo">Atención — rechazar no es eliminar</span>
+    <p><strong>Rechazar</strong> conserva la solicitud con su nota: la persona sabe por qué
+    no se concedió y puede volver a pedirla bien. <strong>Eliminar</strong> la hace
+    desaparecer para siempre, con su soporte, y la persona deja de verla. Deje eliminar para
+    registros de prueba o duplicados.</p>
+  </div>
+
+  <h3>Registrar una falta</h3>
+  <p>Sirve para dejar constancia de una falta que <strong>no</strong> se pidió por el
+  sistema: alguien no llegó, o trajo el papel después. Se puede registrar a
+  <strong>cualquier persona</strong> del equipo.</p>
+  <ol class="steps">
+    <li>Pulse <span class="ui-wrap">Registrar una falta</span>, arriba de la bandeja. Se
+      despliega el formulario.</li>
+    <li>Elija la <span class="ui">Persona</span> y el <span class="ui-wrap">Tipo de
+      falta</span> (día completo o por horas), con sus fechas u horas.</li>
+    <li>Escriba el <span class="ui">Motivo</span> (obligatorio) y, si aplica, el
+      <span class="ui">Reemplazo</span>, el <span class="ui-wrap">Soporte (opcional)</span> y
+      las <span class="ui">Observaciones</span>.</li>
+    <li>En <span class="ui-wrap">¿Esta falta se paga?</span> el interruptor
+      <span class="ui">Remunerada</span> viene apagado. Enciéndalo solo si esa falta sí se va
+      a pagar.</li>
+    <li>Pulse <span class="ui-wrap">Registrar la falta</span> y confirme. La falta nace
+      <strong>ya aprobada</strong> y, si no es remunerada, descuenta desde ese
+      momento.</li>
+  </ol>
+
+  <h3>Qué pasa con la nómina</h3>
+  <p>Solo descuenta un permiso o una falta <strong>aprobado y no remunerado</strong>. Uno
+  remunerado no descuenta nada, y uno pendiente o rechazado tampoco.</p>
+  <div class="tabla-wrap">
+    <table class="keep">
+      <thead><tr><th style="width:30%">Caso</th><th>Qué se descuenta</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Falta de un día completo</strong></td><td>Ese día <strong>y el domingo de esa semana</strong> (la semana va de lunes a domingo): el descanso dominical se paga porque se trabajó la semana completa, y al faltar sin justa causa se pierde (art. 173 del Código Sustantivo del Trabajo).</td></tr>
+        <tr><td><strong>Varias faltas en la misma semana</strong></td><td>Los días de falta y el domingo <strong>una sola vez</strong>. Dos faltas en una semana descuentan 3 días.</td></tr>
+        <tr><td><strong>Permiso por horas</strong></td><td>Solo esas horas, en proporción a la jornada programada de ese día (2 horas de un día de 8,5 descuentan 2 ÷ 8,5 de un día). No arrastra el domingo.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <ul class="check">
+    <li>El descuento se hace sobre <strong>el salario y el auxilio de transporte</strong>,
+      es decir, todo lo que se paga por día. Por ejemplo, con un salario de 2.100.000 y un
+      auxilio de 200.000 (cifras de ejemplo), dos faltas en la misma semana descuentan 3
+      días de (2.100.000 + 200.000) ÷ 30: <strong>230.000 pesos</strong>.</li>
+    <li>El domingo perdido se descuenta en la <strong>misma liquidación</strong> donde cae
+      el día de la falta, aunque ese domingo ya sea del período siguiente: así no se parte en
+      dos quincenas ni se cobra dos veces.</li>
+    <li>En la liquidación y en el volante, la línea <strong>«Jornada laboral: N
+      días»</strong> muestra los días que de verdad se pagan, y justo debajo aparece
+      <strong>«Faltas no remuneradas: N días (incluye M domingos)»</strong>, en negativo y con
+      las fechas exactas. El archivo CSV de la nómina suma las columnas correspondientes.</li>
+    <li>Solo afecta a las liquidaciones en <strong>borrador</strong>: una liquidación ya
+      cerrada no se mueve nunca (ver 6.19).</li>
+  </ul>
+
+  <h2 id="s6-17"><span class="num">6.17</span> Tablero de métricas</h2>
   <p>Pestaña <span class="ui">Métricas</span> dentro de la sección Jornadas. Responde de un
   vistazo a «¿cómo se están repartiendo las horas del equipo?». Trae los últimos 90 días de
   información y muestra por defecto los últimos 30.</p>
@@ -2319,7 +2549,7 @@
     pueden cambiar.</p>
   </div>
 
-  <h2 id="s6-17"><span class="num">6.17</span> Calendario interno de programación</h2>
+  <h2 id="s6-18"><span class="num">6.18</span> Calendario interno de programación</h2>
   <p>Sección <span class="ui">Calendario</span> del menú. Solo para administrador y
   coordinador. Es la agenda de trabajo de GPI: aquí se programa lo que hay que hacer, con
   su día, su hora y sus responsables, y después se cierra contando cómo salió.</p>
@@ -2353,7 +2583,7 @@
   <div class="caja nota">
     <span class="titulo">Para tener en cuenta</span>
     <p>Las cuentas del portal que queden como responsables ven el evento en su
-    <em>Mi Cuenta → Mis eventos</em> (ver 5.8) y pueden dejar notas ahí. Un responsable
+    <em>Mi Cuenta → Mis eventos</em> (ver 5.9) y pueden dejar notas ahí. Un responsable
     marcado con <span class="ui">Otro</span> queda registrado en la ficha, pero no recibe
     acceso al sistema.</p>
   </div>
@@ -2441,17 +2671,18 @@
   se calcula distinto: cumplidos entre <em>todos</em> sus eventos del rango, incluidos los
   que siguen abiertos.</p>
 
-  <h2 id="s6-18"><span class="num">6.18</span> Nómina</h2>
+  <h2 id="s6-19"><span class="num">6.19</span> Nómina</h2>
   <p>Sección <span class="ui">Nómina</span> del menú. <strong>Solo para el
   administrador.</strong> Aquí se calcula, persona por persona y período por período, lo
   que hay que pagarle a cada empleado: el sueldo, las horas y recargos que salen solos de
-  las jornadas ya aprobadas, y los bonos y descuentos que el administrador digita.</p>
+  las jornadas ya aprobadas, los descuentos por faltas no remuneradas que salen de los
+  permisos aprobados (ver 6.16), y los bonos y descuentos que el administrador digita.</p>
   <div class="caja warn">
     <span class="titulo">Atención — el coordinador no administra la nómina</span>
     <p>Desde el 18 de septiembre de 2026, a pedido de GPI, esta sección la maneja
     únicamente el administrador. El coordinador conserva todo lo demás del panel
     —contenido, equipo, horarios, jornadas y el calendario completo—, y de la nómina ve
-    solo la suya, igual que cualquier empleado (ver 5.9).</p>
+    solo la suya, igual que cualquier empleado (ver 5.10).</p>
   </div>
 
   <p>La pantalla tiene <strong>tres pestañas</strong>, y la pestaña viaja en la
@@ -2461,10 +2692,22 @@
       <thead><tr><th style="width:22%">Pestaña</th><th>Para qué</th></tr></thead>
       <tbody>
         <tr><td><span class="ui">Liquidación</span></td><td>El período en curso, persona por persona, con su desglose y su volante. Abre con la quincena de hoy preseleccionada.</td></tr>
-        <tr><td><span class="ui">Configuración</span></td><td>Salario, tarifas por hora y aportes de cada empleado, vigentes desde el mes en que se guardan.</td></tr>
+        <tr><td><span class="ui">Configuración</span></td><td>Salario, auxilio de transporte y aportes de cada empleado, vigentes desde el mes en que se guardan. Las siete tarifas por hora las calcula el sistema.</td></tr>
         <tr><td><span class="ui">Tablero</span></td><td>Totales por período, reparto por concepto y por persona, e historial.</td></tr>
       </tbody>
     </table>
+  </div>
+  <div class="caja tip">
+    <span class="titulo">Consejo — el botón «Reglas de cálculo»</span>
+    <p>Junto a las pestañas, visible desde las tres, está el botón
+    <span class="ui-wrap">Reglas de cálculo</span>. Abre una ventana titulada
+    <em>«Reglas de cálculo de la nómina»</em> con todas las reglas explicadas en lenguaje
+    llano y la norma que sostiene cada una: qué cubre el salario, cómo se calcula el valor de
+    la hora, los siete tipos de hora y su factor, el recargo de domingos y festivos, la
+    franja nocturna, los sábados, los festivos en día programado, el almuerzo, dos jornadas el
+    mismo día, las faltas que no se pagan, salud y pensión, entre otras.
+    <strong>Para el detalle completo de cómo se calcula cada concepto, con la norma citada,
+    use ese botón</strong>: este manual resume lo esencial.</p>
   </div>
 
   <h3>El orden de trabajo</h3>
@@ -2472,8 +2715,8 @@
     <li><strong>Apruebe las jornadas</strong> del período, en Jornadas (ver 6.15). Solo las
       aprobadas se pagan: si queda alguna pendiente, la pantalla lo avisa y sus horas no
       entran.</li>
-    <li><strong>Configure</strong> el salario y las tarifas de cada persona, en la pestaña
-      Configuración. Solo hace falta una vez: lo que se guarda en un mes rige para ese mes
+    <li><strong>Configure</strong> el salario, el auxilio de transporte y los aportes de
+      cada persona, en la pestaña Configuración. Solo hace falta una vez: lo que se guarda en un mes rige para ese mes
       y todos los siguientes, hasta que se guarde otro cambio (ver «vigente desde», más
       abajo).</li>
     <li><strong>Cree las liquidaciones</strong> del período con el botón
@@ -2495,25 +2738,55 @@
   </div>
 
   <h3>Cómo se calcula</h3>
+  <p>Desde el 23 de septiembre de 2026, a decisión de GPI, <strong>la nómina se rige
+  estrictamente por la ley</strong>: ningún valor por hora se digita a mano. Lo esencial:</p>
   <ul class="check">
-    <li>El <strong>salario básico ya paga las horas ordinarias diurnas</strong>: se
-      muestran en el desglose para cuadrar el total de horas, pero no se suman aparte.</li>
-    <li>Las <strong>siete tarifas por hora</strong> se pagan <strong>además</strong> del
-      salario: rotación diurna (la referencia con la que se calculan las demás), rotación
-      nocturna (un recargo sobre la hora ordinaria de noche), hora extra diurna, hora
-      extra nocturna, hora en domingo o festivo, extra diurna en festivo y extra nocturna
-      en festivo.</li>
-    <li>La hora ordinaria <strong>nocturna en festivo</strong> no tiene tarifa propia: se
-      paga como «hora en festivo + rotación nocturna», con línea propia en el desglose y
-      en el volante para que se pueda revisar.</li>
+    <li>El <strong>salario paga la jornada laboral</strong>: las horas del horario del mes
+      trabajadas de día, en un día programado. Por eso en la liquidación y en el volante esas
+      horas ya no aparecen como un renglón de «horas ordinarias», sino como
+      <strong>«Jornada laboral: N días»</strong> —el sueldo del período, con la cuenta
+      <em>salario mensual ÷ 30 × N</em> debajo—, seguida de una línea informativa, sin
+      dinero, con las <em>Horas trabajadas en el período</em>.</li>
     <li>El sueldo del período sale de <em>salario ÷ 30 × días liquidados</em> (convención
       colombiana: una quincena completa son 15 días, tenga el mes 28 o 31), y el auxilio
       de transporte se reparte con la misma regla.</li>
+    <li>Las <strong>siete tarifas por hora</strong> se pagan <strong>además</strong> del
+      salario: rotación diurna (la referencia con la que se calculan las demás), rotación
+      nocturna (un recargo sobre la hora de la jornada trabajada de noche), hora extra
+      diurna, hora extra nocturna, hora en domingo o festivo, extra diurna en festivo y extra
+      nocturna en festivo. La hora de la jornada <strong>nocturna en festivo</strong> se paga
+      como «hora en festivo + rotación nocturna», con línea propia.</li>
+    <li>Los <strong>sábados</strong> se pagan como hora extra normal, no como domingo; y un
+      <strong>festivo o domingo en día programado</strong> paga como hora festiva las horas de
+      la jornada normal de ese día y solo el exceso como extra festiva (ver 7.6).</li>
+    <li>El <strong>almuerzo</strong> se descuenta con tres reglas distintas y, si hay
+      <strong>dos jornadas el mismo día</strong>, la jornada del día se reparte entre ellas y
+      el almuerzo se descuenta una sola vez (ver 7.5 y 7.7).</li>
+    <li>Las <strong>faltas no remuneradas</strong> descuentan el día y el domingo de esa
+      semana (ver 6.16).</li>
     <li>Salud y pensión se calculan sobre el sueldo del período más las horas y recargos,
       <strong>sin</strong> incluir el auxilio de transporte ni los bonos.</li>
     <li>Todo se paga en <strong>pesos enteros</strong>, redondeando línea por línea, así
       que el volante cuadra al sumarlo a mano.</li>
   </ul>
+
+  <h3>Las tarifas se calculan solas</h3>
+  <p>En la pestaña Configuración, el administrador <strong>solo edita cuatro datos</strong>
+  por persona: el <strong>salario</strong>, el <strong>auxilio de transporte</strong> y los
+  porcentajes de <strong>salud</strong> y <strong>pensión</strong>. Las siete tarifas
+  aparecen en el bloque <span class="ui-wrap">Valor de cada tipo de hora</span> como una
+  tabla de <strong>solo lectura</strong>, con la cuenta al lado de cada una (por ejemplo,
+  «salario ÷ 210 × 1,25»). Encima, una línea dice qué ley rige ese mes: jornada de
+  <strong>42 horas semanales</strong>, valor de la hora = <strong>salario ÷ 210</strong> y
+  el recargo de domingos y festivos vigente (90 % desde el 1 de julio de 2026).</p>
+  <div class="caja nota">
+    <span class="titulo">Para tener en cuenta — el sistema sigue a la ley solo</span>
+    <p>Las tarifas se derivan siempre con la ley <strong>del mes que se liquida</strong>.
+    Cuando la ley cambie, el sistema se ajusta sin que nadie toque nada: por ejemplo, el
+    <strong>1 de julio de 2027</strong> el recargo de domingos y festivos pasa al 100 % y las
+    liquidaciones de ese mes en adelante ya lo aplican. Las liquidaciones cerradas antes de
+    un cambio conservan su cálculo.</p>
+  </div>
 
   <h3>La configuración se hereda («vigente desde»)</h3>
   <p>Lo que se guarda para una persona en un mes <strong>rige desde ese mes en
@@ -2525,17 +2798,6 @@
   aparece la lista de <span class="ui-wrap">Cambios guardados</span> de la persona. Si un
   mes se configuró por error, el botón <span class="ui-wrap">Quitar el cambio de este
   mes</span> lo borra y el mes vuelve a heredar el anterior.</p>
-
-  <div class="caja tip">
-    <span class="titulo">Consejo</span>
-    <p>El botón <span class="ui-wrap">Usar los valores sugeridos</span> propone las siete
-    tarifas con el <strong>mínimo que pide la ley ese mes</strong>: valor de la hora =
-    salario ÷ 210 (con la jornada de 42 horas semanales) y el recargo dominical y festivo
-    vigente —90 % desde el 1 de julio de 2026—. Después se puede subir cualquiera a mano,
-    nunca hace falta bajarla: si una tarifa queda por debajo del mínimo legal, el
-    formulario la marca en ámbar. Es un aviso, <strong>no un bloqueo</strong>: GPI puede
-    pagar más que la ley, nunca menos.</p>
-  </div>
 
   <h3>Dejar a alguien sin configuración (retiro o licencia)</h3>
   <p>Cuando una persona se retira o sale a una licencia sin sueldo, abra en Configuración
@@ -2568,8 +2830,8 @@
     <table class="keep">
       <thead><tr><th style="width:20%">Estado</th><th>Qué significa</th></tr></thead>
       <tbody>
-        <tr><td><strong>Borrador</strong></td><td>Se puede editar y se recalcula sola: si se aprueba otra jornada o se corrige una tarifa, la cifra cambia.</td></tr>
-        <tr><td><strong>Cerrada</strong></td><td>El cálculo quedó congelado. Cambiar después un horario, una tarifa o una jornada ya no la altera.</td></tr>
+        <tr><td><strong>Borrador</strong></td><td>Se puede editar y se recalcula sola: si se aprueba otra jornada, se aprueba una falta o se corrige el salario, la cifra cambia.</td></tr>
+        <tr><td><strong>Cerrada</strong></td><td>El cálculo quedó congelado. Cambiar después un horario, un salario, una jornada, un permiso o la ley ya no la altera.</td></tr>
         <tr><td><strong>Pagada</strong></td><td>Cerrada y ya girada, con su fecha de pago.</td></tr>
       </tbody>
     </table>
@@ -2587,7 +2849,8 @@
   cada persona, desde el historial del <span class="ui">Tablero</span> y desde el propio
   Mi Cuenta del empleado. Lleva el logo de GPI, la razón social y el NIT que estén en
   Ajustes (ver 6.10), el empleado con su cédula y cargo, el período con fechas reales, la
-  tabla de devengados y descuentos, el neto a pagar destacado y las firmas de «Recibí
+  tabla de devengados y descuentos —con la línea «Jornada laboral: N días» y, si las hubo,
+  «Faltas no remuneradas»—, el neto a pagar destacado y las firmas de «Recibí
   conforme» y «Firma autorizada». Si la liquidación todavía está en borrador, el volante
   sale marcado como <strong>BORRADOR</strong>.</p>
   <p>El <span class="ui">Tablero</span> muestra, sobre el filtro elegido, el neto pagado,
@@ -2624,11 +2887,17 @@
   <div class="caja tip">
     <span class="titulo">La regla de oro</span>
     <p>La <strong>jornada ordinaria de cada día</strong> sale del horario de ese mes
-    (sección Horarios del panel): es <em>hora de salida − hora de entrada − almuerzo</em>.
-    Todo lo que se trabaje por encima de esa cantidad es <strong>hora extra</strong>, y
-    cada minuto se clasifica además según si fue de día o de noche y si cayó en domingo o
-    festivo.</p>
+    (sección Horarios del panel): en los días que el horario tiene programados es
+    <em>hora de salida − hora de entrada − almuerzo</em>. Todo lo que se trabaje por encima
+    de esa cantidad es <strong>hora extra</strong>, y en un día sin jornada programada
+    —un sábado o un domingo— todo lo trabajado es extra. Cada minuto se clasifica además
+    según si fue de día o de noche y si cayó en domingo o festivo.</p>
   </div>
+  <p>Desde el 23 de septiembre de 2026, a decisión de GPI, <strong>el cálculo se rige
+  estrictamente por la ley colombiana</strong>: no hay reglas de la casa que se aparten del
+  Código Sustantivo del Trabajo. Este capítulo lo explica en lenguaje llano; el detalle
+  completo, con la norma citada en cada punto, está en el botón
+  <span class="ui-wrap">Reglas de cálculo</span> de la pantalla de Nómina (ver 6.19).</p>
 
   <h2 id="s7-2"><span class="num">7.2</span> Los cinco pasos del cálculo</h2>
   <ol class="steps">
@@ -2636,160 +2905,186 @@
       averigua qué mes es, mira el horario cargado para ese mes y toma el día de la semana.
       Esa es la jornada ordinaria de referencia. Si el mes no está cargado, usa el horario
       predeterminado de GPI, así que el cálculo nunca se detiene.</li>
-    <li><strong>Se descuenta el almuerzo.</strong> El almuerzo no es tiempo de trabajo
-      (ver 7.5).</li>
+    <li><strong>Se decide si hubo almuerzo.</strong> El almuerzo no es tiempo de trabajo y
+      se descuenta según tres reglas (ver 7.5).</li>
     <li><strong>Se separa lo ordinario de lo extra.</strong> Lo trabajado hasta completar la
-      jornada ordinaria del día son horas ordinarias; el exceso son horas extra.</li>
+      jornada ordinaria del día son horas ordinarias; el exceso son horas extra. Si ese día
+      ya hubo otra jornada, se cuenta solo lo que quede de la jornada (ver 7.7).</li>
     <li><strong>Se clasifica minuto a minuto.</strong> Cada minuto se mira por separado:
-      ¿cae en la franja nocturna? ¿es domingo, festivo nacional o un día marcado como no
-      laboral? De esa combinación salen las ocho categorías de 7.3.</li>
-    <li><strong>Se aplican los porcentajes.</strong> Con los recargos configurados
-      (tabla 7.4) el sistema calcula el equivalente en horas ordinarias, como referencia de
-      costo.</li>
+      ¿cae en la franja nocturna? ¿es domingo o festivo nacional? De esa combinación salen
+      las ocho categorías de 7.3.</li>
+    <li><strong>Se congela al aprobar.</strong> Cuando el coordinador aprueba la jornada, su
+      desglose queda guardado tal cual; la nómina multiplica esas horas por las tarifas de
+      ley del mes (ver 6.19).</li>
   </ol>
-  <p>La <strong>franja nocturna</strong> configurada va de las <strong>7:00 p. m. a las
-  6:00 a. m.</strong> Un mismo turno puede tener minutos diurnos y nocturnos, y el sistema
+  <p>La <strong>franja nocturna</strong> va de las <strong>7:00 p. m. a las 6:00 a. m.</strong>
+  (Ley 2466 de 2025). Un mismo turno puede tener minutos diurnos y nocturnos, y el sistema
   los separa correctamente.</p>
 
   <h2 id="s7-3"><span class="num">7.3</span> Las ocho categorías de horas</h2>
-  <p>Son las mismas ocho que aparecen en el desglose del portal y de las aprobaciones,
-  en este orden:</p>
+  <p style="break-after:avoid;page-break-after:avoid">Son las mismas ocho que aparecen en el
+  desglose del portal y de las aprobaciones, en este orden:</p>
   <div class="tabla-wrap">
-    <table>
+    <table class="keep">
       <thead><tr><th style="width:36%">Categoría</th><th>Cuándo se usa</th></tr></thead>
       <tbody>
-        <tr><td><strong>Ordinarias diurnas</strong></td><td>Dentro de la jornada normal y en horario de día. Son la mayoría de las horas de un día corriente.</td></tr>
-        <tr><td><strong>Ordinarias con recargo nocturno</strong></td><td>Dentro de la jornada normal, pero en franja nocturna. No son extra, pero se pagan con recargo.</td></tr>
-        <tr><td><strong>Extra diurnas</strong></td><td>Pasada la jornada ordinaria, en horario de día.</td></tr>
-        <tr><td><strong>Extra nocturnas</strong></td><td>Pasada la jornada ordinaria, en franja nocturna.</td></tr>
-        <tr><td><strong>Dominical/festivo diurnas</strong></td><td>Horas dentro de la jornada trabajadas en domingo, festivo o día no laboral, de día.</td></tr>
+        <tr><td><strong>Ordinarias diurnas</strong></td><td>Dentro de la jornada programada y en horario de día. Son la mayoría de las horas de un día corriente y las paga el salario.</td></tr>
+        <tr><td><strong>Ordinarias con recargo nocturno</strong></td><td>Dentro de la jornada programada, pero en franja nocturna. No son extra, pero llevan recargo.</td></tr>
+        <tr><td><strong>Extra diurnas</strong></td><td>Pasada la jornada del día, en horario de día. Incluye todo lo que se trabaje un sábado de día.</td></tr>
+        <tr><td><strong>Extra nocturnas</strong></td><td>Pasada la jornada del día, en franja nocturna. Incluye lo de un sábado de noche.</td></tr>
+        <tr><td><strong>Dominical/festivo diurnas</strong></td><td>Horas dentro de la jornada programada de un festivo que cae en un día con horario (por ejemplo, un lunes festivo), de día.</td></tr>
         <tr><td><strong>Dominical/festivo nocturnas</strong></td><td>Las mismas, pero en franja nocturna.</td></tr>
-        <tr><td><strong>Extra dominical diurnas</strong></td><td>Horas extra en domingo o festivo, de día.</td></tr>
-        <tr><td><strong>Extra dominical nocturnas</strong></td><td>Horas extra en domingo o festivo, en franja nocturna. Es la categoría con mayor recargo.</td></tr>
+        <tr><td><strong>Extra dominical diurnas</strong></td><td>Horas en domingo o festivo por encima de la jornada de ese día, de día. Como el domingo no tiene jornada programada, todo un turno de domingo cae aquí (o en la siguiente).</td></tr>
+        <tr><td><strong>Extra dominical nocturnas</strong></td><td>Lo mismo, en franja nocturna. Es la categoría con mayor recargo.</td></tr>
       </tbody>
     </table>
   </div>
 
-  <h2 id="s7-4"><span class="num">7.4</span> Porcentajes configurados</h2>
+  <h2 id="s7-4"><span class="num">7.4</span> Los recargos de ley</h2>
+  <p>Cada hora se paga con el recargo que fija la ley <strong>en la fecha trabajada</strong>.
+  El de domingos y festivos sube por etapas (80 % desde el 1 de julio de 2025, 90 % desde el
+  1 de julio de 2026 y 100 % desde el 1 de julio de 2027), y el sistema aplica el que
+  corresponde sin que nadie tenga que cambiar nada:</p>
   <div class="tabla-wrap">
     <table>
-      <thead><tr><th style="width:44%">Concepto</th><th class="c">Recargo</th><th class="c">Se paga como</th></tr></thead>
+      <thead><tr><th style="width:44%">Concepto</th><th class="c">Se paga como<br>(desde 1-jul-2026)</th><th class="c">Se paga como<br>(desde 1-jul-2027)</th></tr></thead>
       <tbody>
-        <tr><td>Hora extra diurna</td><td class="c">+25 %</td><td class="c">125 %</td></tr>
-        <tr><td>Hora extra nocturna</td><td class="c">+75 %</td><td class="c">175 %</td></tr>
-        <tr><td>Recargo nocturno (hora ordinaria de noche)</td><td class="c">+35 %</td><td class="c">135 %</td></tr>
-        <tr><td>Dominical o festivo (hora ordinaria)</td><td class="c">+80 %</td><td class="c">180 %</td></tr>
-        <tr><td>Hora extra diurna en domingo o festivo</td><td class="c">+105 %</td><td class="c">205 %</td></tr>
-        <tr><td>Hora extra nocturna en domingo o festivo</td><td class="c">+155 %</td><td class="c">255 %</td></tr>
+        <tr><td>Recargo nocturno (hora de la jornada trabajada de noche)</td><td class="c">+35 %</td><td class="c">+35 %</td></tr>
+        <tr><td>Hora extra diurna</td><td class="c">125 %</td><td class="c">125 %</td></tr>
+        <tr><td>Hora extra nocturna</td><td class="c">175 %</td><td class="c">175 %</td></tr>
+        <tr><td>Hora en domingo o festivo (dentro de la jornada)</td><td class="c">190 %</td><td class="c">200 %</td></tr>
+        <tr><td>Hora extra diurna en domingo o festivo</td><td class="c">215 %</td><td class="c">225 %</td></tr>
+        <tr><td>Hora extra nocturna en domingo o festivo</td><td class="c">265 %</td><td class="c">275 %</td></tr>
       </tbody>
     </table>
   </div>
   <div class="tabla-wrap">
     <table class="keep">
-      <thead><tr><th style="width:44%">Otros parámetros</th><th>Valor configurado</th></tr></thead>
+      <thead><tr><th style="width:44%">Otros parámetros</th><th>Valor</th></tr></thead>
       <tbody>
         <tr><td>Franja nocturna</td><td>De 7:00 p. m. a 6:00 a. m.</td></tr>
+        <tr><td>Jornada máxima legal</td><td>42 horas semanales desde el 15 de julio de 2026: valor de la hora = salario ÷ 210</td></tr>
         <tr><td>Tope de horas extra por día</td><td>2 horas (solo genera aviso)</td></tr>
         <tr><td>Tope de horas extra por semana</td><td>12 horas (solo genera aviso)</td></tr>
       </tbody>
     </table>
   </div>
-  <div class="caja warn">
-    <span class="titulo">Atención — estos valores son configurables y GPI debe confirmarlos</span>
-    <p>Los porcentajes y los topes de la tabla anterior corresponden a la normativa laboral
-    colombiana vigente en 2026 y funcionan como <strong>punto de partida</strong>. No están
-    escritos en el programa: viven en la configuración del sistema y se pueden cambiar sin
-    tocar el sitio. <strong>GPI debe confirmar sus propias reglas</strong> —franja nocturna,
-    porcentajes y tratamiento de festivos— para dejarlas ajustadas de forma definitiva.</p>
+  <div class="caja nota">
+    <span class="titulo">Para tener en cuenta</span>
+    <p>Estos valores <strong>no se digitan</strong>: salen de la ley vigente en cada fecha y
+    en Nómina se ven ya convertidos en pesos por hora, de solo lectura (ver 6.19).</p>
   </div>
 
-  <h2 id="s7-5"><span class="num">7.5</span> El almuerzo: la regla pendiente de confirmar</h2>
+  <h2 id="s7-5"><span class="num">7.5</span> El almuerzo: tres reglas</h2>
   <p>El horario del mes dice cuántas horas de almuerzo tiene cada día, pero el empleado
   solo registra <strong>a qué hora entró y a qué hora salió</strong>: no anota cuándo
-  almorzó. Para saber si dentro de ese rango hubo almuerzo, el sistema aplica una regla
-  práctica:</p>
-  <ul class="check">
-    <li>En un <strong>día laboral</strong>, si el turno dura <strong>más de 6 horas</strong>,
-      se descuenta el almuerzo de ese día (normalmente 1 hora).</li>
-    <li>En turnos de <strong>6 horas o menos</strong> no se descuenta nada: se entiende que
-      no hubo tiempo de almorzar dentro de la jornada.</li>
-    <li>En <strong>días no laborales o festivos</strong> tampoco se descuenta: todo el tiempo
-      es trabajo con recargo.</li>
-  </ul>
-  <p>El almuerzo se ubica en el centro de la parte ordinaria del turno, que es lo que ocurre
-  en la práctica: quien entra a las 8:00 a. m. almuerza alrededor del mediodía. Esa ubicación
-  solo influye en si esos minutos se cuentan como diurnos o nocturnos, nunca en cuántos son.</p>
-  <div class="caja warn">
-    <span class="titulo">Atención — decisión pendiente de GPI</span>
-    <p>Esta regla del almuerzo <strong>debe confirmarla GPI</strong>. La alternativa sería
-    pedirle al empleado que anote la hora exacta de su almuerzo en cada jornada, lo que
-    complica el formulario y aumenta los errores de digitación. Se optó por la regla
-    automática, pero se puede cambiar.</p>
+  almorzó. Para saber si dentro de ese rango hubo almuerzo, el sistema aplica tres reglas,
+  en este orden:</p>
+  <ol class="steps">
+    <li><strong>Turno nocturno: nunca se descuenta.</strong> Es nocturno el turno que no tiene
+      ni un minuto entre las 6:00 a. m. y las 7:00 p. m. Por ejemplo, de 8:00 p. m. a
+      6:00 a. m. es nocturno; de 4:00 p. m. a 2:00 a. m. no lo es, porque de 4:00 a
+      7:00 p. m. es de día.</li>
+    <li><strong>Día programado normal</strong> (lunes a viernes, sin festivo): se descuenta
+      la hora de almuerzo del horario <strong>solo si el turno cubre la jornada
+      completa</strong>, es decir, si dura lo mismo o más que el horario de ese día (de lunes
+      a jueves 9 horas y media, el viernes 9). Un turno de 6 horas no descuenta nada.</li>
+    <li><strong>Sábado, domingo o festivo:</strong> se descuenta 1 hora <strong>solo si el
+      turno llega a 8 horas</strong> o más.</li>
+  </ol>
+  <p>Si ese mismo día ya se descontó el almuerzo en otra jornada, no se vuelve a descontar:
+  el almuerzo del día es uno solo (ver 7.7). El almuerzo se ubica en el centro del turno,
+  que es lo que ocurre en la práctica; esa ubicación solo influye en si esos minutos se
+  cuentan como diurnos o nocturnos, nunca en cuántos son.</p>
+
+  <h2 id="s7-6"><span class="num">7.6</span> Sábados, domingos y festivos</h2>
+  <div class="tabla-wrap">
+    <table class="keep">
+      <thead><tr><th style="width:28%">Día</th><th>Cómo se paga</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Sábado</strong></td><td>En el horario de GPI no es un día programado, así que no tiene jornada ordinaria: todo lo trabajado es <strong>hora extra normal</strong> (125 % de día, 175 % de noche), <strong>no</strong> como domingo. Si el sábado es festivo, manda el festivo.</td></tr>
+        <tr><td><strong>Domingo</strong></td><td>Tampoco tiene jornada programada: todo el turno se paga como <strong>extra festiva</strong>.</td></tr>
+        <tr><td><strong>Festivo en día programado</strong><br>(por ejemplo, un lunes festivo)</td><td>Las horas de la <strong>jornada normal</strong> de ese día se pagan como <strong>hora festiva</strong> (190 % hoy), y <strong>solo las que excedan</strong> esa jornada se pagan como extra festiva.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>El sistema <strong>calcula solo los festivos nacionales de cualquier año</strong> —los
+  fijos, los que la Ley Emiliani traslada al lunes (incluido el nuevo 9 de julio, Ley 2578)
+  y los de Semana Santa—: ya no hay que cargarlos año por año.</p>
+  <div class="caja nota">
+    <span class="titulo">Para tener en cuenta</span>
+    <p>Las jornadas aprobadas antes del 23 de septiembre de 2026 conservan la regla anterior
+    (sábado como domingo); para recalcular una, devuélvala a pendiente y apruébela otra vez.</p>
   </div>
 
-  <h2 id="s7-6"><span class="num">7.6</span> Festivos y domingos</h2>
-  <p>Cuando el día está apagado en el horario del mes (por defecto sábado y domingo) o es
-  <strong>festivo nacional</strong>, la jornada ordinaria de ese día es <strong>cero</strong>:
-  todo el turno se calcula con el tratamiento dominical o festivo. El sistema conoce los
-  festivos nacionales de Colombia de 2026:</p>
+  <h2 id="s7-7"><span class="num">7.7</span> Dos jornadas el mismo día</h2>
+  <p>Una persona puede registrar dos jornadas el mismo día —por ejemplo, mañana y
+  noche— siempre que <strong>no se crucen</strong>: dos registros que se solapan se
+  rechazan (ver 5.2). Cuando hay dos:</p>
+  <ul class="check">
+    <li>La jornada laboral del día es <strong>una sola</strong> y se reparte por orden
+      cronológico: la primera jornada la va gastando y la segunda arranca con lo que quede.
+      Así las horas extra del día no se pierden.</li>
+    <li>El almuerzo se descuenta <strong>una sola vez</strong>, no dos.</li>
+  </ul>
   <div class="tabla-wrap">
-    <table>
-      <thead><tr><th style="width:25%">Fecha</th><th style="width:25%">Festivo</th><th style="width:25%">Fecha</th><th style="width:25%">Festivo</th></tr></thead>
+    <table class="keep">
+      <thead><tr><th style="width:34%">Lunes (jornada de 8,5 h)</th><th>Resultado</th></tr></thead>
       <tbody>
-        <tr><td>1 de enero</td><td>Año Nuevo</td><td>29 de junio</td><td>San Pedro y San Pablo</td></tr>
-        <tr><td>12 de enero</td><td>Reyes Magos</td><td>20 de julio</td><td>Independencia</td></tr>
-        <tr><td>23 de marzo</td><td>San José</td><td>7 de agosto</td><td>Batalla de Boyacá</td></tr>
-        <tr><td>2 de abril</td><td>Jueves Santo</td><td>17 de agosto</td><td>Asunción de la Virgen</td></tr>
-        <tr><td>3 de abril</td><td>Viernes Santo</td><td>12 de octubre</td><td>Día de la Raza</td></tr>
-        <tr><td>1 de mayo</td><td>Día del Trabajo</td><td>2 de noviembre</td><td>Todos los Santos</td></tr>
-        <tr><td>18 de mayo</td><td>Ascensión del Señor</td><td>16 de noviembre</td><td>Independencia de Cartagena</td></tr>
-        <tr><td>8 de junio</td><td>Corpus Christi</td><td>8 de diciembre</td><td>Inmaculada Concepción</td></tr>
-        <tr><td>15 de junio</td><td>Sagrado Corazón</td><td>25 de diciembre</td><td>Navidad</td></tr>
+        <tr><td>Jornada A · 6:00 a. m. a 12:00 m.</td><td>6 h ordinarias (no cubre la jornada completa, así que no descuenta almuerzo).</td></tr>
+        <tr><td>Jornada B · 2:00 p. m. a 8:00 p. m.</td><td>Quedan 2,5 h de jornada: <strong>2,5 h ordinarias + 2,5 h extra diurnas + 1 h extra nocturna</strong>.</td></tr>
       </tbody>
-      <caption>Festivos nacionales de Colombia para 2026 reconocidos por el sistema.</caption>
     </table>
   </div>
   <div class="caja warn">
-    <span class="titulo">Atención — hay que cargar los festivos cada año</span>
-    <p>La lista de festivos se carga año por año. Antes de terminar 2026 hay que pedir al
-    soporte que agregue los festivos de 2027. Si un año no está cargado, el sistema sigue
-    funcionando: solo los domingos se tratarían como día de recargo, y los festivos se
-    contarían como días normales.</p>
+    <span class="titulo">Atención — apruebe en orden</span>
+    <p>Apruebe las jornadas de un mismo día en <strong>orden cronológico</strong>. Si se
+    aprueba primero la de la tarde, las dos quedan con la jornada completa. Se corrige
+    devolviendo la segunda a pendiente y volviéndola a aprobar.</p>
   </div>
 
-  <h2 id="s7-7"><span class="num">7.7</span> Tres ejemplos resueltos</h2>
+  <h2 id="s7-8"><span class="num">7.8</span> Ejemplos resueltos</h2>
   <p>Todos con el horario predeterminado de GPI (lunes a jueves 8:00 a. m. – 5:30 p. m.,
   8,5 h netas).</p>
   <div class="tabla-wrap">
-    <table class="keep">
+    <table>
       <thead><tr><th style="width:24%">Situación</th><th>Cómo lo calcula el sistema</th></tr></thead>
       <tbody>
         <tr>
           <td><strong>Lunes normal</strong><br>8:00 a. m. a 5:30 p. m.</td>
-          <td>9 h 30 min de presencia − 1 h de almuerzo = <strong>8 h 30 min trabajadas</strong>.
-          Coincide justo con la jornada ordinaria del día: <strong>8,5 h ordinarias, 0 extra</strong>.</td>
+          <td>9 h 30 min de presencia: cubre la jornada completa, así que se descuenta 1 h de
+          almuerzo = <strong>8 h 30 min trabajadas</strong>. Coincide justo con la jornada
+          ordinaria del día: <strong>8,5 h ordinarias, 0 extra</strong>.</td>
         </tr>
         <tr>
           <td><strong>Lunes largo</strong><br>8:00 a. m. a 7:00 p. m.</td>
           <td>11 h de presencia − 1 h de almuerzo = <strong>10 h trabajadas</strong>.
           Las primeras 8,5 h son ordinarias y las <strong>1,5 h restantes son extra
-          diurnas</strong> (el reloj de las extras arranca a las 5:30 p. m., y a las 7:00 p. m.
-          empieza la franja nocturna). Aparecería en el control semanal por pasar del tope
-          de 2 h solo si hubiera trabajado un poco más.</td>
+          diurnas</strong> (a las 7:00 p. m. empieza la franja nocturna).</td>
         </tr>
         <tr>
           <td><strong>Turno de noche</strong><br>Miércoles 10:00 p. m. a jueves 2:00 a. m.</td>
-          <td>4 h de presencia. Como el turno <strong>no pasa de 6 horas</strong>, no se
-          descuenta almuerzo: <strong>4 h trabajadas</strong>. Al ser menos que la jornada
-          ordinaria del día, son <strong>4 h ordinarias con recargo nocturno</strong>: todas
-          caen dentro de la franja de 7:00 p. m. a 6:00 a. m. El empleado debió marcar
-          «terminé al día siguiente».</td>
+          <td>4 h de presencia. Es un turno nocturno (ningún minuto entre las 6:00 a. m. y las
+          7:00 p. m.), así que no se descuenta almuerzo: <strong>4 h ordinarias con recargo
+          nocturno</strong>. El empleado debió marcar «terminé al día siguiente».</td>
+        </tr>
+        <tr>
+          <td><strong>Sábado</strong><br>8:00 a. m. a 4:00 p. m.</td>
+          <td>8 h de presencia: en sábado llega a 8 h, así que se descuenta 1 h de almuerzo.
+          El sábado no tiene jornada programada: <strong>7 h extra diurnas</strong>, al 125 %
+          (no como domingo).</td>
+        </tr>
+        <tr>
+          <td><strong>Lunes festivo</strong><br>12 de octubre de 2026, 8:00 a. m. a 5:30 p. m.</td>
+          <td>9,5 h de presencia; en festivo pasa de 8 h, así que se descuenta 1 h. Es un día
+          programado: las <strong>8,5 h de la jornada son horas festivas</strong> (190 %) y no
+          hay extra. Si hubiera salido a las 7:30 p. m., las 2 h adicionales serían extra
+          festivas.</td>
         </tr>
         <tr>
           <td><strong>Domingo</strong><br>8:00 a. m. a 2:00 p. m.</td>
-          <td>El domingo está apagado en el horario, así que la jornada ordinaria de ese día
-          es cero y no se descuenta almuerzo: <strong>6 h, todas con tratamiento dominical
-          diurno</strong>. Con los porcentajes actuales, se pagarían al 180 %.</td>
+          <td>6 h: no llega a 8, así que no se descuenta almuerzo. El domingo no tiene jornada
+          programada: <strong>6 h extra dominicales diurnas</strong>, al 215 % hoy.</td>
         </tr>
       </tbody>
     </table>
@@ -2902,10 +3197,11 @@
   guarde.</p>
   <div class="caja warn">
     <span class="titulo">Atención</span>
-    <p>Cambiar el horario de un mes pasado <strong>cambia el cálculo de todas las jornadas
-    de ese mes</strong>, incluidas las ya aprobadas: el desglose se recalcula cada vez que
-    se consulta. Si ya liquidó nómina con esas cifras, exporte primero el archivo de Excel
-    como respaldo y avise al área administrativa antes de guardar.</p>
+    <p>Cambiar el horario de un mes pasado cambia el cálculo de las jornadas de ese mes que
+    sigan <strong>pendientes</strong>. Las <strong>aprobadas no se mueven</strong>: su
+    desglose quedó congelado al aprobarlas, y para recalcular una hay que devolverla a
+    pendiente y volver a aprobarla. Si ya liquidó nómina con esas cifras, avise al área
+    administrativa antes de tocar nada.</p>
   </div>
 
   <h3>Las horas extra no me cuadran</h3>
@@ -2913,10 +3209,14 @@
     <li>Verifique el <strong>horario de ese mes</strong> en la sección Horarios: es de ahí de
       donde sale la jornada ordinaria. Un día con la hora de salida mal puesta desajusta todo
       el mes.</li>
-    <li>Revise si el día era <strong>festivo</strong> o estaba marcado como no laboral: en
-      ese caso todo el turno se calcula con recargo.</li>
-    <li>Recuerde que se descuenta <strong>1 hora de almuerzo</strong> en los turnos de más de
-      6 horas en día laboral (ver 7.5).</li>
+    <li>Revise qué día era: un <strong>sábado</strong> es todo hora extra normal, un
+      <strong>domingo</strong> todo extra festiva y un <strong>festivo entre semana</strong>
+      paga su jornada como hora festiva y solo el exceso como extra festiva (ver 7.6).</li>
+    <li>Recuerde las tres reglas del <strong>almuerzo</strong>: en día programado solo se
+      descuenta si el turno cubre la jornada completa; en sábado, domingo o festivo, desde 8
+      horas; en turno nocturno, nunca (ver 7.5).</li>
+    <li>Si ese día hubo <strong>dos jornadas</strong>, la jornada del día se reparte entre
+      las dos (ver 7.7).</li>
     <li>Abra la jornada en la sección Jornadas y lea la línea explicativa del desglose: dice
       exactamente qué jornada ordinaria se usó y cuánto almuerzo se descontó.</li>
   </ol>
@@ -2930,6 +3230,32 @@
   <p>Ocurre con algunas configuraciones regionales. El archivo está preparado para Excel en
   español; si su Excel está configurado en inglés, use <em>Datos → Texto en columnas</em> y
   elija el punto y coma como separador.</p>
+
+  <h2>Permisos y faltas</h2>
+
+  <h3>Pedí un permiso y me equivoqué de fecha</h3>
+  <p>Si todavía está <strong>pendiente</strong>, búsquelo en la pestaña
+  <span class="ui">Permisos</span> de su portal y pulse <span class="ui">Corregir</span>, o
+  <span class="ui">Anular</span> para borrarlo y pedirlo de nuevo. Si ya lo revisaron, pídale
+  a su coordinador que lo devuelva a pendiente.</p>
+
+  <h3>Aprobé un permiso como no remunerado y era remunerado</h3>
+  <p>En <em>Jornadas → Permisos</em>, filtre por <em>Aprobados</em>, busque el permiso y
+  pulse <span class="ui-wrap">Volver a pendiente</span>; después apruébelo otra vez con la
+  casilla <span class="ui">Remunerado</span> marcada. El descuento desaparece de las
+  liquidaciones que sigan en borrador. Si la liquidación ya estaba cerrada, hay que
+  reabrirla para que se recalcule (ver 6.19).</p>
+
+  <h3>¿Por qué se descontó un domingo si la falta fue un martes?</h3>
+  <p>Porque la ley lo pide así: el descanso del domingo se paga cuando se trabaja la semana
+  completa, y al faltar sin justa causa se pierde (art. 173 del Código Sustantivo del
+  Trabajo). Se descuenta una sola vez por semana, aunque haya varias faltas, y solo cuando
+  la falta es de día completo y no remunerada (ver 6.16).</p>
+
+  <h3>No puedo abrir el soporte de un permiso</h3>
+  <p>El soporte solo lo abren la persona que lo subió y el administrador o el coordinador,
+  y el enlace de descarga dura un minuto. Vuelva a pulsar el botón de descarga desde la
+  pantalla en lugar de usar un enlace guardado o reenviado.</p>
 
   <h2>Otros</h2>
 
@@ -2972,6 +3298,11 @@
     <dd>El detalle de una jornada repartido en horas ordinarias, extra y recargos. Aparece en
     la vista previa del empleado, en las aprobaciones y en el archivo exportado.</dd>
 
+    <dt>Día programado</dt>
+    <dd>Un día que tiene horario en el mes (de lunes a viernes en el horario de GPI). Solo
+    los días programados tienen jornada ordinaria; en un sábado o un domingo todo lo
+    trabajado es extra.</dd>
+
     <dt>Dirección de una página (o «slug»)</dt>
     <dd>La parte final de la dirección web de un servicio o de un proyecto. Cambiarla cambia
     el enlace público de esa página, por lo que conviene no tocarla en lo que ya está
@@ -2980,6 +3311,11 @@
     <dt>Exportar CSV</dt>
     <dd>Descargar la tabla de jornadas como archivo de hoja de cálculo, listo para abrir en
     Excel y usar en la liquidación de nómina.</dd>
+
+    <dt>Falta no remunerada</dt>
+    <dd>Un permiso o una falta aprobado sin pago. Descuenta de la nómina el día y el domingo
+    de esa semana (una sola vez por semana), o solo la parte proporcional si fue por horas.
+    Aparece como línea propia en la liquidación y en el volante.</dd>
 
     <dt>Franja nocturna</dt>
     <dd>El horario que el sistema considera «noche» para efectos de recargo. Está configurado
@@ -2996,6 +3332,11 @@
     <dt>Jornada</dt>
     <dd>Un turno de trabajo registrado: una fecha, una hora de entrada, una de salida, la
     descripción de lo que se hizo y, si la tiene, la orden de trabajo.</dd>
+
+    <dt>Jornada laboral (en la nómina)</dt>
+    <dd>La línea «Jornada laboral: N días» de la liquidación y del volante: el sueldo del
+    período, que cubre las horas del horario trabajadas de día. Reemplaza a la antigua línea
+    de «horas ordinarias».</dd>
 
     <dt>Jornada ordinaria</dt>
     <dd>Las horas que se consideran normales en un día, según el horario del mes. Se calcula
@@ -3015,6 +3356,10 @@
     <dd>Estado inicial de toda jornada registrada. Nadie la ha revisado todavía y el empleado
     aún puede corregirla o eliminarla.</dd>
 
+    <dt>Permiso</dt>
+    <dd>Solicitud para ausentarse un día completo, varios días o unas horas, que se pide desde
+    la pestaña Permisos del portal. Quien aprueba decide si es remunerado o no.</dd>
+
     <dt>Recargo nocturno</dt>
     <dd>Aumento que se paga por trabajar en franja nocturna, aunque esas horas estén dentro
     de la jornada ordinaria (es decir, sin ser horas extra).</dd>
@@ -3023,6 +3368,10 @@
     <dd>Estado de una jornada que se revisó y no quedó bien. Siempre trae una nota obligatoria
     explicando qué corregir.</dd>
 
+    <dt>Reglas de cálculo</dt>
+    <dd>El botón de la pantalla de Nómina que abre todas las reglas del cálculo explicadas,
+    con la norma legal citada en cada una.</dd>
+
     <dt>Rol</dt>
     <dd>El nivel de permisos de una cuenta dentro del sistema: Administrador, Coordinador,
     Community Manager o Empleado.</dd>
@@ -3030,6 +3379,11 @@
     <dt>Ruta de migas</dt>
     <dd>La línea de enlaces pequeños del estilo <em>Inicio › Servicios › Recurso Hídrico</em>
     que indica en qué parte del sitio se encuentra y permite subir un nivel.</dd>
+
+    <dt>Soporte</dt>
+    <dd>El documento que respalda un permiso (una incapacidad, una citación): un PDF o una foto
+    de hasta 5 MB. Se guarda en un almacén privado y solo lo abren su dueño y quien
+    aprueba.</dd>
 
     <dt>Texto alternativo</dt>
     <dd>Descripción breve de una imagen. La leen los programas que usan las personas con
@@ -3058,8 +3412,7 @@
   <h1 class="cap"><span class="num">10.</span> Contacto de soporte</h1>
 
   <p class="lead">Si algo no funciona como dice este manual, si necesita un cambio que el
-  panel no permite hacer, o si hay que ajustar los porcentajes de recargo o cargar los
-  festivos de un año nuevo, escríbanos.</p>
+  panel no permite hacer, escríbanos.</p>
 
   <div class="caja tip">
     <span class="titulo">Soporte técnico del sitio</span>
@@ -3079,12 +3432,11 @@
 
   <h2>Cosas que necesitan al soporte, no al panel</h2>
   <ul class="check">
-    <li><strong>Ajustar los porcentajes de recargo</strong> o los topes de horas extra, cuando
-      GPI confirme sus reglas definitivas (ver 7.4).</li>
+    <li><strong>Ajustar los topes de horas extra</strong> (hoy 2 por día y 12 por semana, solo
+      como aviso; ver 7.4). Los recargos, el valor de la hora y los festivos ya no necesitan
+      a nadie: el sistema los toma de la ley y los actualiza solo.</li>
     <li><strong>Cambiar la regla del almuerzo</strong>, si GPI decide otra forma de contarlo
       (ver 7.5).</li>
-    <li><strong>Cargar los festivos de un año nuevo</strong> antes de que termine 2026
-      (ver 7.6).</li>
     <li>Añadir páginas o secciones nuevas al sitio, o cambiar su diseño.</li>
     <li>Recuperar algo borrado por error, si hay copia de respaldo disponible.</li>
   </ul>
@@ -3094,12 +3446,17 @@
     <table class="keep">
       <thead><tr><th style="width:34%">Tema</th><th>Qué hay que definir</th></tr></thead>
       <tbody>
-        <tr><td>Regla del almuerzo</td><td>Confirmar que descontar el almuerzo cuando el turno pasa de 6 horas en día laboral es lo correcto.</td></tr>
-        <tr><td>Porcentajes de recargo</td><td>Confirmar la franja nocturna, los porcentajes y el tratamiento de los festivos. Los valores actuales son los de la ley colombiana de 2026.</td></tr>
         <tr><td>Quién aprueba las jornadas</td><td>Definir qué personas llevan el rol de Coordinador, frente a quienes solo editan contenido.</td></tr>
         <tr><td>Fotografías</td><td>Confirmar o reemplazar las imágenes de servicios y proyectos heredadas del sitio anterior.</td></tr>
       </tbody>
     </table>
+  </div>
+  <div class="caja nota">
+    <span class="titulo">Ya resuelto</span>
+    <p>El 23 de septiembre de 2026 GPI cerró las dudas del cálculo de horas —el sábado, el
+    festivo entre semana, la regla del almuerzo y dos jornadas el mismo día— con una sola
+    decisión: <strong>la nómina se rige estrictamente por la ley</strong>. Lo que quedó es
+    lo que explica el capítulo 7.</p>
   </div>
 
 </section>
@@ -3109,20 +3466,30 @@
   <h1 class="cap"><span class="num">Anexo</span> — Cuentas creadas para GPI</h1>
 
   <p class="lead">Este anexo reúne las cuentas que ya existen en el sistema para el
-  equipo de GPI: con qué usuario y contraseña entra cada persona, qué rol tiene y qué
-  cuentas faltan por crear.</p>
+  equipo de GPI: con qué usuario entra cada persona, qué rol tiene y qué cuentas faltan
+  por crear.</p>
 
-  <h2>Aviso de confidencialidad</h2>
+  <h2>Las contraseñas no van en este documento</h2>
   <div class="caja warn">
-    <span class="titulo">Atención — información confidencial</span>
-    <p>Este anexo contiene las contraseñas iniciales del equipo. Guarde este documento
-    en un lugar seguro y entregue a cada persona únicamente su propia contraseña. Cada
-    quien debe cambiarla la primera vez que ingrese, desde <em>Mi Cuenta → Cambiar
-    contraseña</em>.</p>
+    <span class="titulo">Atención — contraseñas</span>
+    <p>Las contraseñas iniciales que se entregaron al instalar el sistema <strong>ya fueron
+    cambiadas por GPI</strong> y dejaron de ser válidas, así que este anexo ya no las
+    incluye. Cada persona <strong>gestiona la suya</strong> desde su portal, en
+    <em>Mi Cuenta → Mi contraseña</em> (ver 3.4). Nunca envíe una contraseña por escrito
+    en un documento compartido.</p>
+  </div>
+  <div class="caja nota">
+    <span class="titulo">Si alguien la olvida</span>
+    <p>Un <strong>administrador</strong> puede restablecer la contraseña de cualquier
+    cuenta desde <em>Panel → Equipo → Gestionar → Restablecer contraseña</em>; un
+    <strong>coordinador</strong> puede hacerlo con cualquier cuenta que no sea de
+    administrador. El sistema genera una contraseña nueva, la muestra una sola vez y la
+    anterior deja de funcionar de inmediato (ver 3.3 y 6.13).</p>
   </div>
 
   <h2>Cómo se ingresa</h2>
-  <p>El acceso está en <strong>https://website-gpi.vercel.app/mi-cuenta</strong>.</p>
+  <p>El acceso está en <strong>https://www.gpiprofesionales.com/mi-cuenta</strong>, o con
+  el enlace <span class="ui">Mi Cuenta</span> de la barra superior del sitio.</p>
   <p>Se entra con <strong>usuario y contraseña</strong> —el usuario, nunca un correo
   electrónico—, tal como se explica en el capítulo 3.</p>
 
@@ -3133,13 +3500,13 @@
         <tr><th style="width:14%">Usuario</th><th style="width:19%">Contraseña</th><th style="width:27%">Nombre</th><th style="width:14%">Rol</th><th>Cargo</th></tr>
       </thead>
       <tbody>
-        <tr><td><code>xperea</code></td><td><code>Bambu-Palma92</code></td><td>Xiomara Perea Escobar</td><td>Administrador</td><td>Jefe comercial y gestión ambiental</td></tr>
-        <tr><td><code>ycamacho</code></td><td><code>Cumbre-Brisa75</code></td><td>Yeison Camacho Rojas</td><td>Administrador</td><td>Jefe de proyectos y mantenimiento</td></tr>
-        <tr><td><code>llopez</code></td><td><code>Cumbre-Gaviota54</code></td><td>Lincy Jhojany López Prada</td><td>Empleado</td><td>Coordinadora SST</td></tr>
-        <tr><td><code>clopez</code></td><td><code>Andes-Cedro89</code></td><td>Carlos Andrés López Rojas</td><td>Empleado</td><td>Auxiliar Técnico</td></tr>
-        <tr><td><code>dgomez</code></td><td><code>Selva-Faro50</code></td><td>Daniel Andrés Gómez Hernández</td><td>Empleado</td><td>Dibujante y Operador de mantenimiento</td></tr>
-        <tr><td><code>javendano</code></td><td><code>Cumbre-Horizonte54</code></td><td>Jesús Ariel Avendaño</td><td>Empleado</td><td>Auxiliar Técnico</td></tr>
-        <tr><td><code>scordoba</code></td><td><code>Rio-Lago87</code></td><td>Santiago Córdoba Tovar</td><td>Empleado</td><td>Ingeniero electrónico</td></tr>
+        <tr><td><code>xperea</code></td><td rowspan="7" style="vertical-align:middle">La gestiona cada persona desde <em>Mi Cuenta → Mi contraseña</em></td><td>Xiomara Perea Escobar</td><td>Administrador</td><td>Jefe comercial y gestión ambiental</td></tr>
+        <tr><td><code>ycamacho</code></td><td>Yeison Camacho Rojas</td><td>Administrador</td><td>Jefe de proyectos y mantenimiento</td></tr>
+        <tr><td><code>llopez</code></td><td>Lincy Jhojany López Prada</td><td>Empleado</td><td>Coordinadora SST</td></tr>
+        <tr><td><code>clopez</code></td><td>Carlos Andrés López Rojas</td><td>Empleado</td><td>Auxiliar Técnico</td></tr>
+        <tr><td><code>dgomez</code></td><td>Daniel Andrés Gómez Hernández</td><td>Empleado</td><td>Dibujante y Operador de mantenimiento</td></tr>
+        <tr><td><code>javendano</code></td><td>Jesús Ariel Avendaño</td><td>Empleado</td><td>Auxiliar Técnico</td></tr>
+        <tr><td><code>scordoba</code></td><td>Santiago Córdoba Tovar</td><td>Empleado</td><td>Ingeniero electrónico</td></tr>
       </tbody>
     </table>
   </div>
@@ -3149,13 +3516,13 @@
     <table class="keep">
       <thead><tr><th style="width:22%">Usuario</th><th style="width:32%">Contraseña</th><th>Rol</th></tr></thead>
       <tbody>
-        <tr><td><code>admin</code></td><td>Se entrega por un canal privado</td><td>Administrador</td></tr>
+        <tr><td><code>admin</code></td><td>La gestiona su responsable desde <em>Mi Cuenta → Mi contraseña</em></td><td>Administrador</td></tr>
       </tbody>
     </table>
   </div>
   <p>Es la cuenta que se creó al instalar el sistema; sirve como respaldo de acceso si
-  alguien queda por fuera. Se recomienda cambiarle la contraseña una vez que el equipo
-  esté usando sus cuentas con normalidad.</p>
+  alguien queda por fuera. Conviene que su contraseña la conozcan solo quienes administran
+  el sistema.</p>
 
   <h2>Datos registrados por cuenta</h2>
   <p>Cada cuenta tiene guardados el <strong>nombre completo</strong>, la
@@ -3186,7 +3553,7 @@
 
   <div class="pie-doc">
     Manual de uso del sitio web de GPI — Grupo de Profesionales en Ingeniería GPI S.A.S<br>
-    Septiembre de 2026 · Elaborado por GOCAS Automations
+    23 de septiembre de 2026 · Elaborado por GOCAS Automations
   </div>
 </section>
 
