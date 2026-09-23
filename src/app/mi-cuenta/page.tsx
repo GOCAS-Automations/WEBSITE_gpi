@@ -8,9 +8,11 @@ import { signOutAction } from "@/lib/session-actions";
 import {
   getJornadaConfig,
   getMapaHorarios,
+  getProfileRecord,
   listEventos,
   listJornadas,
   listLiquidaciones,
+  listPermisos,
 } from "@/lib/admin";
 import { isContentEditorRole, ROLE_LABELS } from "@/lib/roles";
 import { consumoPorDia, hoyEnColombia } from "@/lib/jornada";
@@ -21,10 +23,12 @@ import { JornadaForm } from "./JornadaForm";
 import { MisJornadas } from "./MisJornadas";
 import { MisEventos } from "./MisEventos";
 import { MiNomina } from "./MiNomina";
+import { MisPermisos } from "./MisPermisos";
 import { leerPagina } from "@/lib/paginacion";
 import { VigilanteDeAcciones } from "@/components/admin/ui-base";
 import { PasswordForm } from "./PasswordForm";
 import { saveJornada, deleteJornada, changeOwnPassword } from "./actions";
+import { anularPermiso, guardarPermiso } from "./permisos-actions";
 // La acción de las notas vive con el resto del calendario: es la MISMA para el
 // panel y para el portal, y su permiso lo decide RLS (manager o responsable).
 import { agregarNotaEvento } from "@/app/admin/calendario/actions";
@@ -36,6 +40,7 @@ import {
   Clock,
   ClockPlus,
   Calendar,
+  CalendarCheck,
   Banknote,
 } from "@/lib/icons";
 
@@ -62,14 +67,23 @@ const BYPASS_PORTAL = "portal";
  * panel»— y sigue funcionando igual, combinado con este (`?portal=1&seccion=nomina`).
  *
  * Cambiar de pestaña es una navegación completa, así que un formulario a medio
- * llenar se pierde. Se acepta a conciencia: mantener las tres secciones montadas
- * a la vez para conservar el borrador obligaría a un componente de cliente con
- * estado y a traer todo siempre, y la pestaña por defecto es justamente la del
- * formulario —el empleado entra, registra su jornada y se va—.
+ * llenar se pierde. Se acepta a conciencia: mantener todas las secciones
+ * montadas a la vez para conservar el borrador obligaría a un componente de
+ * cliente con estado y a traer todo siempre, y la pestaña por defecto es
+ * justamente la del formulario —el empleado entra, registra su jornada y se va—.
+ *
+ * Desde el 23 sep 2026 son CINCO: se suma «Permisos» (migración 0014), donde el
+ * colaborador pide sus permisos de falta y ve la respuesta.
  */
-type SeccionPortal = "jornada" | "eventos" | "nomina" | "clave";
+type SeccionPortal = "jornada" | "permisos" | "eventos" | "nomina" | "clave";
 
-const SECCIONES: SeccionPortal[] = ["jornada", "eventos", "nomina", "clave"];
+const SECCIONES: SeccionPortal[] = [
+  "jornada",
+  "permisos",
+  "eventos",
+  "nomina",
+  "clave",
+];
 
 function normalizarSeccion(valor: string | string[] | undefined): SeccionPortal {
   const v = Array.isArray(valor) ? valor[0] : valor;
@@ -241,8 +255,16 @@ async function PortalEmpleado({
   const anio = Math.min(Math.max(entero(anioParam, hoyPartes.anio), 2000), 2200);
   const mes = Math.min(Math.max(entero(mesParam, hoyPartes.mes), 1), 12);
 
-  const [jornadas, config, horarios, eventos, eventosMes, liquidaciones] =
-    await Promise.all([
+  const [
+    jornadas,
+    config,
+    horarios,
+    eventos,
+    eventosMes,
+    liquidaciones,
+    permisos,
+    perfilCompleto,
+  ] = await Promise.all([
       listJornadas({ employeeId: profile.id, limit: 100 }),
       getJornadaConfig(),
       getMapaHorarios(),
@@ -269,6 +291,12 @@ async function PortalEmpleado({
       // Sus propias liquidaciones. La RLS de la 0011 ya filtra: solo las suyas y
       // solo cuando están cerradas o pagadas, así que aquí no hace falta nada más.
       listLiquidaciones({ employeeId: profile.id, limit: 24 }),
+      // Sus propios permisos (la RLS de la 0014 ya filtra). Se piden siempre
+      // porque alimentan el contador de la pestaña, como los eventos.
+      listPermisos({ estado: "todos", employeeId: profile.id, limit: 100 }),
+      // La cédula y el cargo que el formato en papel trae impresos. Solo hacen
+      // falta en esa pestaña: en las otras no se pide nada.
+      seccion === "permisos" ? getProfileRecord(profile.id) : Promise.resolve(null),
     ]);
 
   // Lo que ya consumieron del día las jornadas APROBADAS: con eso la vista
@@ -301,6 +329,14 @@ async function PortalEmpleado({
       corto: "Jornada",
       icon: ClockPlus,
       badge: pendientes,
+    },
+    {
+      value: "permisos",
+      label: "Permisos",
+      corto: "Permisos",
+      icon: CalendarCheck,
+      // Lo que tiene esperando respuesta.
+      badge: permisos.filter((p) => p.estado === "pendiente").length,
     },
     {
       value: "eventos",
@@ -368,12 +404,12 @@ async function PortalEmpleado({
       {/* ---------------- Pestañas del portal ----------------
           La sección viaja en `?seccion=`; `?portal=1` se conserva para que las
           cuentas con panel no reboten al cambiar de pestaña. En móvil son dos
-          filas de dos, no una tira con desplazamiento horizontal: así se ven
-          las cuatro de una vez. */}
+          filas —tres y dos—, no una tira con desplazamiento horizontal: así se
+          ven las cinco de una vez. */}
       <div className="border-b border-line bg-white">
         <Container className="py-3">
           <nav aria-label="Secciones de Mi Cuenta">
-            <ul className="grid grid-cols-2 gap-1.5 rounded-2xl border border-line bg-mist p-1.5 sm:inline-flex sm:gap-1 sm:rounded-full sm:p-1">
+            <ul className="grid grid-cols-3 gap-1.5 rounded-2xl border border-line bg-mist p-1.5 sm:inline-flex sm:gap-1 sm:rounded-full sm:p-1">
               {pestanas.map((p) => {
                 const activa = p.value === seccion;
                 const Icon = p.icon;
@@ -510,6 +546,21 @@ async function PortalEmpleado({
               </span>
             </p>
           </>
+        )}
+
+        {/* ---------------- Permisos ---------------- */}
+        {seccion === "permisos" && (
+          <MisPermisos
+            permisos={permisos}
+            perfil={{
+              nombre: profile.fullName,
+              cedula: perfilCompleto?.cedula ?? null,
+              cargo: perfilCompleto?.cargo ?? profile.cargo,
+            }}
+            hoy={hoy}
+            guardar={guardarPermiso}
+            anular={anularPermiso}
+          />
         )}
 
         {/* ---------------- Mis eventos ---------------- */}
