@@ -25,9 +25,11 @@ import {
   getLiquidacion,
   getNominaConfigVigente,
   horasDelPeriodo,
+  parametrosLegalesNomina,
 } from "@/lib/admin";
 import { hoyEnColombia } from "@/lib/jornada";
 import {
+  derivarTarifas,
   minutosVacios,
   nombreArchivoVolante,
   normalizarManuales,
@@ -55,7 +57,7 @@ export async function resolverVolante(id: string): Promise<VolanteResuelto | nul
 
   const congelada = liquidacion.estado !== "borrador";
 
-  const [settings, config, horas] = await Promise.all([
+  const [settings, config, horas, legal] = await Promise.all([
     getAdminSettings(),
     congelada
       ? Promise.resolve(null)
@@ -67,6 +69,11 @@ export async function resolverVolante(id: string): Promise<VolanteResuelto | nul
           liquidacion.fecha_inicio,
           liquidacion.fecha_fin,
         ),
+    // La ley del mes liquidado: es la que fija las tarifas de un borrador
+    // (23 sep 2026). Una liquidación cerrada no la necesita: manda su snapshot.
+    congelada
+      ? Promise.resolve(null)
+      : parametrosLegalesNomina(liquidacion.anio, liquidacion.mes),
   ]);
 
   // Borrador HUÉRFANO (su mes ya no tiene configuración, 22 sep 2026): no hay
@@ -77,7 +84,8 @@ export async function resolverVolante(id: string): Promise<VolanteResuelto | nul
     config: {
       salarioBasico: config?.salario_basico ?? 0,
       auxTransporte: config?.aux_transporte ?? 0,
-      tarifas: config?.tarifas ?? tarifasVacias(),
+      tarifas:
+        config && legal ? derivarTarifas(config.salario_basico, legal) : tarifasVacias(),
       pctSalud: config?.pct_salud ?? 4,
       pctPension: config?.pct_pension ?? 4,
     },

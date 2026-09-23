@@ -3,10 +3,11 @@
 /**
  * FORMULARIO DE CONFIGURACIÓN DE NÓMINA — /admin/nomina?vista=configuracion
  * =========================================================================
- * Salario, auxilio de transporte, las siete tarifas por hora y los aportes de
- * una persona **desde** un mes (modelo «vigente desde», 18 sep 2026: lo que se
- * guarda en un mes rige para ese mes y los siguientes, hasta el próximo cambio
- * guardado).
+ * Salario, auxilio de transporte y aportes de una persona **desde** un mes
+ * (modelo «vigente desde», 18 sep 2026: lo que se guarda en un mes rige para ese
+ * mes y los siguientes, hasta el próximo cambio guardado). Las siete tarifas
+ * por hora se muestran, pero **no se editan**: desde el 23 sep 2026 las calcula
+ * el sistema con el salario y la ley del mes (ver `src/lib/nomina.ts`).
  *
  * Lo que hace que sea usable para quien no es de nómina:
  *  · arriba dice SIEMPRE de dónde salen los valores que se ven, con uno de
@@ -19,13 +20,11 @@
  *    que dice ANTES qué borradores de liquidación se eliminarían —los de los
  *    meses que se quedan sin configuración— y cuáles se conservan; las
  *    liquidaciones cerradas y pagadas no se tocan nunca;
- *  · al escribir el salario, las siete tarifas SUGERIDAS se recalculan en vivo
- *    y se ofrecen con un botón («Usar los valores sugeridos»), en vez de
- *    obligar a hacer siete multiplicaciones a mano;
+ *  · al escribir el salario, las siete tarifas se recalculan en vivo y se
+ *    enseñan de SOLO LECTURA con su cuenta al lado («salario ÷ 210 × 1,25»),
+ *    para que se puedan auditar de un vistazo;
  *  · todos los importes se escriben y se leen con separador de miles
- *    (`CampoDinero` + `src/lib/dinero.ts`);
- *  · si una tarifa queda por debajo del mínimo legal del mes sale un aviso en
- *    ámbar (aviso, no bloqueo).
+ *    (`CampoDinero` + `src/lib/dinero.ts`).
  *
  * EL BUG DE «AL CAMBIAR DE PERSONA SIGUEN LOS VALORES DE ANTES» (18 sep 2026)
  * --------------------------------------------------------------------------
@@ -60,8 +59,8 @@ import {
   AYUDA_NOMINA_BORRADORES,
   AYUDA_NOMINA_CONFIG,
   AYUDA_NOMINA_CORTE,
-  AYUDA_NOMINA_SUGERIDAS,
   AYUDA_NOMINA_TARIFAS,
+  AYUDA_NOMINA_TARIFAS_AUTOMATICAS,
 } from "@/components/admin/ayudas";
 import { CampoDinero } from "@/components/admin/CampoDinero";
 import { ModalPanel } from "@/components/calendario/ModalPanel";
@@ -71,7 +70,6 @@ import {
   factoresTarifa,
   mesAnterior,
   nombreMesNomina,
-  tarifasBajoMinimoLegal,
   type OrigenConfigMes,
   type ParametrosTarifas,
   type TarifasNomina,
@@ -88,8 +86,8 @@ interface Mes {
 
 /**
  * Lo que la LEY pone en el mes que se está viendo (lo calcula el servidor con
- * `parametrosLegalesDelMes()` y el horario del mes): con eso se sugieren las
- * tarifas y se avisa si alguna queda por debajo del mínimo.
+ * `parametrosLegalesDelMes()` y el horario del mes): con eso se CALCULAN las
+ * siete tarifas, que ya no se digitan.
  */
 export interface LegalMesVista extends ParametrosTarifas {
   /** Horas semanales con que se sacó el divisor (las del horario, hoy 42). */
@@ -136,7 +134,11 @@ export interface EstadoConfigVista {
   alCortarBorradores: EfectoBorradoresVista | null;
 }
 
-/** Las siete tarifas, en el orden y con el texto que ve el administrador. */
+/**
+ * Las siete tarifas, en el orden y con el texto que ve el administrador. Ya no
+ * hay campos de formulario: `name` se conserva solo como identificador estable
+ * de cada fila de la tabla de solo lectura.
+ */
 const CAMPOS_TARIFA: {
   clave: keyof TarifasNomina;
   name: string;
@@ -161,7 +163,8 @@ const CAMPOS_TARIFA: {
     clave: "extraDiurna",
     name: "valor_extra_diurna",
     label: "Hora extra diurna",
-    ayuda: "Valor completo de cada hora extra trabajada de día.",
+    ayuda:
+      "Valor completo de cada hora extra trabajada de día, incluido todo lo trabajado un sábado (un sábado no lleva recargo de domingo).",
   },
   {
     clave: "extraNocturna",
@@ -174,7 +177,7 @@ const CAMPOS_TARIFA: {
     name: "valor_festivo",
     label: "Hora en domingo o festivo",
     ayuda:
-      "Hora ordinaria trabajada en domingo o festivo. Si además es nocturna, se paga esta tarifa más la de rotación nocturna.",
+      "Hora trabajada en domingo o festivo DENTRO de la jornada programada de ese día (un festivo que cae en un lunes tiene jornada programada). Si además es nocturna, se paga esta tarifa más la de rotación nocturna.",
   },
   {
     clave: "extraFestivoDiurna",
@@ -838,26 +841,14 @@ function CamposConfig({
   mesEtiqueta: string;
 }) {
   const [salario, setSalario] = useState(config.salario);
-  const [tarifas, setTarifas] = useState<TarifasNomina>(config.tarifas);
 
-  // Sugeridas = mínimo legal del mes: salario ÷ divisor × factor de ley.
-  const sugeridas = useMemo(
-    () => derivarTarifas(salario, legal),
-    [salario, legal],
-  );
+  // LAS TARIFAS NO SE EDITAN (23 sep 2026): se derivan del salario y de la ley
+  // del mes. Se recalculan en vivo mientras se escribe el salario y se
+  // muestran de SOLO LECTURA, con la cuenta a la vista.
+  const tarifas = useMemo(() => derivarTarifas(salario, legal), [salario, legal]);
   const factores = useMemo(
     () => factoresTarifa(legal.recargoDominical),
     [legal.recargoDominical],
-  );
-
-  /**
-   * Tarifas por debajo del mínimo legal: se AVISA, no se bloquea (GPI puede
-   * pagar más, nunca menos). Reemplaza al viejo aviso de «incoherencia
-   * festiva», que culpaba al Excel de un 2,15 que en realidad era el legal.
-   */
-  const bajoMinimo = useMemo(
-    () => tarifasBajoMinimoLegal(tarifas, salario, legal),
-    [tarifas, salario, legal],
   );
 
   return (
@@ -915,96 +906,70 @@ function CamposConfig({
       <Card>
         <CardTitle
           title="Valor de cada tipo de hora"
-          description="En pesos por hora. Se pagan ADEMÁS del salario, sobre las horas que salen de las jornadas aprobadas. Usa coma para los centavos: 9.115,08."
-          action={
-            <button
-              type="button"
-              onClick={() => setTarifas(sugeridas)}
-              disabled={salario <= 0}
-              className="inline-flex items-center gap-1.5 rounded-full border border-brand/40 bg-brand-tint px-4 py-2 text-sm font-semibold text-brand-deep transition-colors hover:border-brand hover:bg-brand/15 disabled:opacity-50"
-            >
-              Usar los valores sugeridos
-            </button>
-          }
+          description="Lo calcula el sistema con la ley: no se digita. Son pesos por hora que se pagan ADEMÁS del salario, sobre las horas que salen de las jornadas aprobadas."
         />
 
-        <AyudaSeccion className="mb-5">
-          {AYUDA_NOMINA_SUGERIDAS}
+        <AyudaSeccion className="mb-5" title="De dónde sale cada valor">
+          {AYUDA_NOMINA_TARIFAS_AUTOMATICAS}
           <span className="mt-1.5 block font-semibold text-ink">
             Ley de {mesEtiqueta}: jornada de{" "}
             {formatearNumero(legal.horasSemanales)} h semanales → valor hora =
-            salario ÷ {formatearNumero(legal.divisor)} · recargo dominical y
+            salario ÷ {formatearNumero(legal.divisor)} · recargo de domingo y
             festivo del {formatearNumero(Math.round(legal.recargoDominical * 100))}&nbsp;%.
           </span>
         </AyudaSeccion>
 
-        {bajoMinimo.length > 0 && (
-          <AyudaSeccion
-            tono="aviso"
-            title={`${bajoMinimo.length === 1 ? "Una tarifa está" : `${bajoMinimo.length} tarifas están`} por debajo del mínimo legal de ${mesEtiqueta}`}
-            className="mb-5"
-          >
-            {bajoMinimo.map((b) => b.etiqueta).join(", ")}.{" "}
-            Con este salario, la ley de {mesEtiqueta} pide al menos lo que
-            aparece como <strong>sugerido</strong> debajo de cada campo (salario ÷{" "}
-            {formatearNumero(legal.divisor)} × el factor de ley, con el recargo
-            dominical del {formatearNumero(Math.round(legal.recargoDominical * 100))}&nbsp;%).
-            GPI puede pagar más, nunca menos: pulsa «Usar los valores
-            sugeridos» o sube las que están marcadas. Se puede guardar igual:
-            es un aviso, no un bloqueo.
-          </AyudaSeccion>
+        {salario <= 0 ? (
+          <p className="rounded-xl border border-dashed border-line bg-mist/60 px-4 py-6 text-center text-sm leading-relaxed text-graphite">
+            Escribe primero el salario básico mensual: en cuanto lo pongas
+            aparecen aquí los siete valores, ya calculados.
+          </p>
+        ) : (
+          <div className="overflow-hidden rounded-2xl border border-line">
+            <table className="w-full text-sm">
+              <caption className="sr-only">
+                Valor de cada tipo de hora en {mesEtiqueta}, calculado por el
+                sistema
+              </caption>
+              <thead>
+                <tr className="bg-mist/70 text-left text-xs font-bold uppercase tracking-wide text-graphite">
+                  <th scope="col" className="px-4 py-2.5">
+                    Tipo de hora
+                  </th>
+                  <th scope="col" className="px-4 py-2.5 text-right">
+                    Valor por hora
+                  </th>
+                  <th scope="col" className="hidden px-4 py-2.5 text-right sm:table-cell">
+                    Cuenta
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {CAMPOS_TARIFA.map((campo) => (
+                  <tr key={campo.clave} className="border-t border-line align-top">
+                    <th scope="row" className="px-4 py-3 text-left font-semibold text-ink">
+                      {campo.label}
+                      <span className="mt-0.5 block text-xs font-normal leading-relaxed text-graphite">
+                        {campo.ayuda}
+                      </span>
+                    </th>
+                    <td className="whitespace-nowrap px-4 py-3 text-right font-bold text-ink">
+                      {formatearDinero(tarifas[campo.clave])}
+                      <span className="mt-0.5 block text-xs font-normal text-graphite sm:hidden">
+                        salario ÷ {formatearNumero(legal.divisor)} ×{" "}
+                        {formatearNumero(factores[campo.clave])}
+                      </span>
+                    </td>
+                    <td className="hidden whitespace-nowrap px-4 py-3 text-right text-xs text-graphite sm:table-cell">
+                      salario ÷ {formatearNumero(legal.divisor)} ×{" "}
+                      {formatearNumero(factores[campo.clave])}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          {CAMPOS_TARIFA.map((campo) => {
-            const factor = factores[campo.clave];
-            const sugerida = sugeridas[campo.clave];
-            const bajo = bajoMinimo.some((b) => b.clave === campo.clave);
-            return (
-              <div key={campo.clave}>
-                <label
-                  htmlFor={`config-${campo.name}`}
-                  className="mb-1.5 block text-sm font-semibold text-ink"
-                >
-                  {campo.label}
-                </label>
-                <CampoDinero
-                  id={`config-${campo.name}`}
-                  name={campo.name}
-                  prefijo="$"
-                  decimales={2}
-                  valor={tarifas[campo.clave]}
-                  onCambio={(n) =>
-                    setTarifas((t) => ({
-                      ...t,
-                      [campo.clave]: n,
-                    }))
-                  }
-                  aria-describedby={`config-${campo.name}-ayuda`}
-                />
-                <p
-                  id={`config-${campo.name}-ayuda`}
-                  className="mt-1 text-xs leading-relaxed text-graphite"
-                >
-                  {campo.ayuda}
-                  {salario > 0 && (
-                    <>
-                      {" "}
-                      Sugerido: <strong>{formatearDinero(sugerida)}</strong>{" "}
-                      (salario ÷ {formatearNumero(legal.divisor)} ×{" "}
-                      {formatearNumero(factor)}).
-                    </>
-                  )}
-                </p>
-                {bajo && (
-                  <p className="mt-1 text-xs font-semibold text-amber-700">
-                    Por debajo del mínimo legal de {mesEtiqueta}.
-                  </p>
-                )}
-              </div>
-            );
-          })}
-        </div>
       </Card>
 
       <Card>

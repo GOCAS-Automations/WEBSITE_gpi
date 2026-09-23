@@ -351,8 +351,6 @@ export function LiquidacionPanel({
   // snapshot y no cuentan); los borradores huérfanos tienen su propio aviso.
   const sinConfig = filas.filter((f) => !f.tieneConfig && !f.liquidacionId);
   const huerfanas = filas.filter((f) => f.huerfana);
-  // Configuraciones que pagan menos que la ley del mes: aviso, no bloqueo.
-  const bajoMinimo = filas.filter((f) => f.tarifasBajoMinimo.length > 0);
   const conPendientes = filas.filter((f) => f.pendientes > 0);
   const sinCrear = filas.filter((f) => f.liquidacionId === null && f.tieneConfig);
 
@@ -540,27 +538,6 @@ export function LiquidacionPanel({
             la pestaña Configuración
           </Link>{" "}
           y el borrador se recalculará conservando sus conceptos.
-        </AyudaSeccion>
-      )}
-
-      {bajoMinimo.length > 0 && (
-        <AyudaSeccion tono="aviso" title="Hay tarifas por debajo del mínimo legal">
-          {bajoMinimo
-            .map((f) => `${f.nombre} (${f.tarifasBajoMinimo.join(", ").toLowerCase()})`)
-            .join("; ")}
-          . Con la ley de {nombreMesNomina(mes)} de {anio} —valor hora = salario ÷ el
-          divisor de la jornada del mes y el recargo de domingo y festivo
-          vigente— esas tarifas pagan menos que el mínimo. GPI puede pagar más,
-          nunca menos. Corrígelas en{" "}
-          <Link
-            prefetch={false}
-            href={`/admin/nomina?vista=configuracion&anio=${anio}&mes=${mes}&empleado=${bajoMinimo[0].employeeId}`}
-            className="font-semibold text-amber-900 underline"
-          >
-            la pestaña Configuración
-          </Link>{" "}
-          («Usar los valores sugeridos») antes de cerrar: las liquidaciones en
-          borrador se recalculan solas y las ya cerradas no cambian.
         </AyudaSeccion>
       )}
 
@@ -1041,9 +1018,13 @@ function DetalleLiquidacion({
         <div className="overflow-hidden rounded-2xl border border-line">
           <table className="w-full text-sm">
             <tbody>
+              {/* «Jornada laboral: N días» (23 sep 2026): lo que cubre el
+                  salario ya no se enseña como «horas ordinarias», sino como los
+                  días de jornada del período. Las horas trabajadas van más
+                  abajo, en una línea informativa sin dinero. */}
               <Renglon
-                label="Sueldo del período"
-                detalle={`${formatearNumero(c.dias)} días · salario mensual ${formatearPesos(c.salarioBasico)}${
+                label={`Jornada laboral: ${formatearNumero(c.dias)} ${c.dias === 1 ? "día" : "días"}`}
+                detalle={`Salario mensual ${formatearPesos(c.salarioBasico)} ÷ 30 × ${formatearNumero(c.dias)}${
                   !fila.congelada && fila.configDesde
                     ? ` · configurado en ${nombreMesNomina(fila.configDesde.mes)} de ${fila.configDesde.anio}`
                     : ""
@@ -1059,22 +1040,34 @@ function DetalleLiquidacion({
               )}
 
               {c.lineasHoras
-                .filter((l) => l.minutos > 0)
+                .filter((l) => l.minutos > 0 && l.sePaga)
                 .map((l) => (
                   <Renglon
                     key={l.clave}
                     label={l.label}
-                    detalle={
-                      l.sePaga
-                        ? `${formatearHorasNomina(l.minutos)} × ${formatearDinero(l.tarifa)}${
-                            l.composicion ? ` · ${l.composicion}` : ""
-                          }`
-                        : `${formatearHorasNomina(l.minutos)} · ya incluidas en el sueldo`
-                    }
+                    detalle={`${formatearHorasNomina(l.minutos)} × ${formatearDinero(l.tarifa)}${
+                      l.composicion ? ` · ${l.composicion}` : ""
+                    }`}
                     valor={l.valor}
-                    apagado={!l.sePaga}
                   />
                 ))}
+
+              {/* Línea INFORMATIVA, sin dinero: cuántas horas se trabajaron de
+                  verdad en el período. Las de la jornada laboral las paga el
+                  sueldo de arriba; las demás ya están en los renglones. */}
+              {c.minutosOrdinarios + c.minutosPagados > 0 && (
+                <Renglon
+                  label="Horas trabajadas en el período"
+                  detalle={`${formatearHorasNomina(
+                    c.minutosOrdinarios + c.minutosPagados,
+                  )} en total, de las cuales ${formatearHorasNomina(
+                    c.minutosOrdinarios,
+                  )} son de la jornada laboral (las paga el sueldo de arriba)`}
+                  valor={0}
+                  apagado
+                  textoValor="—"
+                />
+              )}
 
               {c.devengadosManuales
                 .filter((l) => l.valor > 0)
@@ -1542,12 +1535,15 @@ function Renglon({
   valor,
   total = false,
   apagado = false,
+  textoValor,
 }: {
   label: string;
   detalle?: string;
   valor: number;
   total?: boolean;
   apagado?: boolean;
+  /** Qué escribir en la columna de dinero cuando el renglón no lleva importe. */
+  textoValor?: string;
 }) {
   return (
     <tr
@@ -1568,7 +1564,7 @@ function Renglon({
           apagado ? "text-graphite/60" : ""
         }`}
       >
-        {apagado ? "incluido" : formatearPesos(valor)}
+        {apagado ? (textoValor ?? "incluido") : formatearPesos(valor)}
       </td>
     </tr>
   );

@@ -75,12 +75,12 @@ import {
   normalizarManuales,
   pesos,
   rangoPeriodo,
-  tarifasBajoMinimoLegal,
+  derivarTarifas,
   type ConceptoManual,
   type ConceptosManuales,
   type TipoPeriodo,
 } from "@/lib/nomina";
-import { formatearDinero, parsearNumero } from "@/lib/dinero";
+import { formatearDinero, formatearNumero, parsearNumero } from "@/lib/dinero";
 import type { ActionState } from "@/lib/admin-types";
 
 const SIN_PERMISO: ActionState = {
@@ -179,17 +179,6 @@ function leerPeriodo(formData: FormData): {
 /* Configuración por empleado y mes                                    */
 /* ================================================================== */
 
-/** Las siete tarifas: campo del formulario → clave → etiqueta del aviso. */
-const CAMPOS_TARIFA = [
-  ["valor_hora_base", "horaBase", "Hora de rotación diurna"],
-  ["valor_rotacion_nocturna", "rotacionNocturna", "Rotación nocturna"],
-  ["valor_extra_diurna", "extraDiurna", "Hora extra diurna"],
-  ["valor_extra_nocturna", "extraNocturna", "Hora extra nocturna"],
-  ["valor_festivo", "festivo", "Hora en domingo o festivo"],
-  ["valor_extra_festivo_diurna", "extraFestivoDiurna", "Hora extra diurna en festivo"],
-  ["valor_extra_festivo_nocturna", "extraFestivoNocturna", "Hora extra nocturna en festivo"],
-] as const;
-
 /** «octubre de 2026». */
 const mesTexto = (fecha: { anio: number; mes: number }) =>
   `${nombreMesNomina(fecha.mes)} de ${fecha.anio}`;
@@ -247,20 +236,12 @@ export async function saveNominaConfig(
   const aux = leerImporte(formData, "aux_transporte", { decimales: 0 });
   if (aux === null) return campoInvalido("Auxilio de transporte mensual");
 
-  const tarifas = {
-    horaBase: 0,
-    rotacionNocturna: 0,
-    extraDiurna: 0,
-    extraNocturna: 0,
-    festivo: 0,
-    extraFestivoDiurna: 0,
-    extraFestivoNocturna: 0,
-  };
-  for (const [campo, clave, etiqueta] of CAMPOS_TARIFA) {
-    const valor = leerImporte(formData, campo, { decimales: 2 });
-    if (valor === null) return campoInvalido(etiqueta);
-    tarifas[clave] = valor;
-  }
+  // LAS TARIFAS NO SE DIGITAN (23 sep 2026): se derivan del salario y de la ley
+  // del mes desde el que rige la configuración. Se siguen escribiendo en sus
+  // columnas como HISTÓRICO, pero el cálculo de cada liquidación las vuelve a
+  // derivar con la ley del mes que se liquida.
+  const legal = await parametrosLegalesNomina(anio, mes);
+  const tarifas = derivarTarifas(salario, legal);
 
   // Los porcentajes no llevan miles, pero sí coma decimal («4,5»): el mismo
   // lector los entiende.
@@ -301,20 +282,19 @@ export async function saveNominaConfig(
     ? ` Rige ${vigencia({ anio, mes }, siguiente)}: en ${mesTexto(siguiente)} hay otro cambio guardado y desde ahí manda ese.`
     : ` Rige desde ${mesTexto({ anio, mes })} en adelante, hasta que guardes otro cambio.`;
 
-  // Aviso (no bloqueo) si alguna tarifa queda por debajo del mínimo legal del
-  // mes: GPI puede pagar más que la ley, nunca menos.
-  const legal = await parametrosLegalesNomina(anio, mes);
-  const bajo = tarifasBajoMinimoLegal(tarifas, salario, legal);
-  const avisoLegal =
-    bajo.length === 0
-      ? ""
-      : ` OJO: ${bajo.length === 1 ? "una tarifa quedó" : `${bajo.length} tarifas quedaron`} POR DEBAJO del mínimo legal de ${mesTexto({ anio, mes })}: ${bajo
-          .map((b) => `${b.etiqueta} (${formatearDinero(b.tarifa)}; mínimo ${formatearDinero(b.minimo)})`)
-          .join(", ")}. Se guardó igual, pero conviene subirlas antes de liquidar.`;
+  // El valor de cada tipo de hora no se digita: lo pone la ley.
+  const avisoTarifas =
+    ` El valor de cada tipo de hora lo calcula el sistema con la ley: salario ÷ ${formatearNumero(
+      legal.divisor,
+    )} (jornada de ${formatearNumero(legal.horasSemanales)} h semanales) × el factor de cada concepto, con el recargo de domingo y festivo del ${formatearNumero(
+      Math.round(legal.recargoDominical * 100),
+    )} % vigente en ${mesTexto({ anio, mes })}. La hora ordinaria queda en ${formatearDinero(
+      tarifas.horaBase,
+    )}; cada mes se vuelve a calcular con la ley de ese mes.`;
 
   revalidar();
   return ok(
-    `Configuración guardada.${tramo} Las liquidaciones en borrador de esos meses se recalculan solas; las ya cerradas no se tocan.${avisoLegal}`,
+    `Configuración guardada.${tramo}${avisoTarifas} Las liquidaciones en borrador de esos meses se recalculan solas; las ya cerradas no se tocan.`,
   );
 }
 
@@ -820,17 +800,23 @@ export async function cerrarLiquidacion(
       "No se puede cerrar: esa persona no tiene salario configurado ni en el mes ni en ninguno anterior. Configúralo en la pestaña «Configuración».",
     );
 
-  const horas = await horasDelPeriodo(
-    liquidacion.employee_id,
-    liquidacion.fecha_inicio,
-    liquidacion.fecha_fin,
-  );
+  // Las TARIFAS las pone la ley del mes que se liquida (23 sep 2026), no las
+  // columnas de la configuración (que quedan como histórico): así el
+  // 1-jul-2027 el recargo dominical pasa al 100 % sin que nadie toque nada.
+  const [horas, legal] = await Promise.all([
+    horasDelPeriodo(
+      liquidacion.employee_id,
+      liquidacion.fecha_inicio,
+      liquidacion.fecha_fin,
+    ),
+    parametrosLegalesNomina(liquidacion.anio, liquidacion.mes),
+  ]);
 
   const calculo = calcularLiquidacion({
     config: {
       salarioBasico: config.salario_basico,
       auxTransporte: config.aux_transporte,
-      tarifas: config.tarifas,
+      tarifas: derivarTarifas(config.salario_basico, legal),
       pctSalud: config.pct_salud,
       pctPension: config.pct_pension,
     },

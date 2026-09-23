@@ -44,6 +44,7 @@
 import { Suspense } from "react";
 import { AdminPageHeader } from "@/components/admin/ui";
 import { PestanasNomina, type VistaNomina } from "@/components/nomina/PestanasNomina";
+import { ReglasCalculo } from "@/components/nomina/ReglasCalculo";
 import { LiquidacionView } from "./liquidacion";
 import { ConfiguracionView } from "./configuracion";
 import { TableroView } from "./tablero";
@@ -113,7 +114,12 @@ export default async function AdminNominaPage({
         breadcrumb={[{ label: "Panel", href: "/admin" }, { label: "Nómina" }]}
       />
 
-      <PestanasNomina vista={vista} />
+      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
+        <PestanasNomina vista={vista} />
+        {/* Pedido de GPI: todas las reglas del cálculo a un clic, desde
+            cualquiera de las tres pestañas. El texto vive en `ayudas.ts`. */}
+        <ReglasCalculo />
+      </div>
 
       <Suspense key={clave} fallback={<EsqueletoNomina vista={vista} />}>
         {vista === "configuracion" ? (

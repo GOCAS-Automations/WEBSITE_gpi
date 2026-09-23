@@ -46,10 +46,12 @@
  * y aparece como **línea propia** en el desglose para que sea auditable. Es la
  * misma composición que ya usaba `horasEquivalentes` en `src/lib/jornada.ts`.
  *
- * VALORES SUGERIDOS = MÍNIMO LEGAL DEL MES (auditoría legal, 19 sep 2026)
- * -----------------------------------------------------------------------
- * Las siete tarifas se **derivan** del salario con la LEY del mes configurado:
- * `salario ÷ divisor × factor`, donde
+ * LAS TARIFAS SON AUTOMÁTICAS Y NO SE EDITAN (23 sep 2026)
+ * --------------------------------------------------------
+ * GPI decidió que la nómina se rija ESTRICTAMENTE por la ley colombiana, para
+ * que resista una auditoría. Las siete tarifas ya no se digitan: se **derivan
+ * siempre** del salario y de la ley VIGENTE EN EL MES QUE SE LIQUIDA
+ * (`derivarTarifas`), `salario ÷ divisor × factor`, donde
  *   · el **divisor** sale de la jornada semanal (`horas ÷ 6 × 30`): con las 42 h
  *     de GPI, **210** (antes se usaba 240, la cuenta de la semana de 48 h que
  *     traía el Excel de GPI: todo salía un 12,5 % por debajo de la ley);
@@ -59,10 +61,18 @@
  * dos números: los recibe (`ParametrosTarifas`). Quien llama los saca de
  * `parametrosLegalesDelMes()` de `src/lib/ley-laboral.ts`.
  *
- * Todas las tarifas son **editables**: GPI puede pagar MÁS que la ley, nunca
- * menos. Por eso una tarifa por debajo del mínimo legal solo se AVISA
- * (`tarifasBajoMinimoLegal`), en la configuración, al guardarla y en la
- * liquidación; no se bloquea.
+ * Consecuencias:
+ *   · el administrador solo edita **salario, auxilio de transporte y los % de
+ *     salud y pensión**; las tarifas se muestran de SOLO LECTURA con su cuenta
+ *     a la vista;
+ *   · una liquidación en **borrador** toma siempre las tarifas de la ley del
+ *     mes liquidado, así que el **1 de julio de 2027** el recargo dominical
+ *     pasa al 100 % sin que nadie toque nada;
+ *   · las liquidaciones **cerradas** siguen con su `snapshot`, intactas;
+ *   · las columnas de tarifas de `nomina_config_mensual` quedan como
+ *     **histórico** (se siguen escribiendo con lo derivado al guardar), pero el
+ *     cálculo ya no depende de ellas. Por eso desapareció el aviso de «tarifa
+ *     por debajo del mínimo legal»: ya no hay nada que corregir.
  *
  * REDONDEO
  * --------
@@ -285,9 +295,9 @@ export const CONCEPTOS_HORA: {
 }[] = [
   {
     clave: "ordinariaDiurna",
-    label: "Horas ordinarias diurnas",
+    label: "Horas de la jornada laboral",
     descripcion:
-      "Trabajo normal, de día, dentro del horario del mes. Ya están pagadas por el salario básico: se muestran para cuadrar el total de horas, pero no se suman aparte.",
+      "Trabajo normal, de día, dentro de la jornada programada del día. Las paga el salario (en la liquidación y en el volante aparecen como «Jornada laboral: N días»): se guardan para cuadrar el total de horas, pero no se suman aparte.",
     campo: "ordinariaDiurna",
     sePaga: false,
   },
@@ -302,14 +312,16 @@ export const CONCEPTOS_HORA: {
   {
     clave: "extraDiurna",
     label: "Horas extra diurnas",
-    descripcion: "Lo que se trabajó por encima de la jornada del día, de día.",
+    descripcion:
+      "Lo que se trabajó por encima de la jornada programada del día, de día. Aquí entra también todo lo trabajado un SÁBADO, que no lleva recargo de domingo.",
     campo: "extraDiurna",
     sePaga: true,
   },
   {
     clave: "extraNocturna",
     label: "Horas extra nocturnas",
-    descripcion: "Lo que se trabajó por encima de la jornada del día, de noche.",
+    descripcion:
+      "Lo que se trabajó por encima de la jornada programada del día, de noche (franja de 7:00 p. m. a 6:00 a. m.). Un sábado de noche también entra aquí.",
     campo: "extraNocturna",
     sePaga: true,
   },
@@ -317,7 +329,7 @@ export const CONCEPTOS_HORA: {
     clave: "festivo",
     label: "Horas en domingo o festivo",
     descripcion:
-      "Horas ordinarias trabajadas en domingo o festivo (dentro de la jornada del día).",
+      "Horas trabajadas en domingo o festivo DENTRO de la jornada programada de ese día. Un festivo que cae en un día programado (por ejemplo, un lunes) paga así las horas de la jornada y solo el exceso como extra festiva.",
     campo: "dominicalDiurna",
     sePaga: true,
   },
@@ -333,7 +345,7 @@ export const CONCEPTOS_HORA: {
     clave: "extraFestivoDiurna",
     label: "Horas extra diurnas en domingo o festivo",
     descripcion:
-      "Lo que se trabajó en domingo o festivo por encima de la jornada, de día. En un día no laboral (sábado, domingo o festivo) la jornada ordinaria es cero, así que todo el turno entra aquí.",
+      "Lo que se trabajó en domingo o festivo por encima de la jornada programada de ese día, de día. Un domingo sin horario no tiene jornada programada, así que todo el turno entra aquí. Un SÁBADO no: no lleva recargo de domingo y sus horas son extra normales.",
     campo: "extraDominicalDiurna",
     sePaga: true,
   },
@@ -459,11 +471,14 @@ export function tarifasVacias(): TarifasNomina {
 }
 
 /**
- * Tarifas SUGERIDAS a partir del salario, que son también el MÍNIMO LEGAL del
- * mes: `salario ÷ divisor × factor`, con dos decimales (la columna de la base
- * de datos es `numeric(14,2)`). El divisor y el recargo dominical llegan como
- * parámetros (ver `ParametrosTarifas`). Son una propuesta: el administrador
- * puede sobrescribir cualquiera, hacia arriba.
+ * **LAS tarifas de un mes**: `salario ÷ divisor × factor`, con dos decimales (la
+ * columna de la base de datos es `numeric(14,2)`). El divisor y el recargo
+ * dominical llegan como parámetros (ver `ParametrosTarifas`) y salen de
+ * `parametrosLegalesDelMes()` con el AÑO Y MES QUE SE LIQUIDA.
+ *
+ * Desde el 23 sep 2026 no son una sugerencia editable: son el valor que se
+ * paga. Como dependen de la fecha, el 1-jul-2027 el recargo dominical sube al
+ * 100 % y las tarifas cambian solas.
  */
 export function derivarTarifas(
   salarioBasico: number,
@@ -482,37 +497,6 @@ export function derivarTarifas(
     extraFestivoDiurna: dos(base * f.extraFestivoDiurna),
     extraFestivoNocturna: dos(base * f.extraFestivoNocturna),
   };
-}
-
-/** Una tarifa configurada por debajo del mínimo legal del mes. */
-export interface TarifaBajoMinimo {
-  clave: keyof TarifasNomina;
-  etiqueta: string;
-  tarifa: number;
-  minimo: number;
-}
-
-/**
- * Las tarifas que quedan POR DEBAJO del mínimo legal del mes
- * (`salario ÷ divisor × factor legal`, con 1 peso de tolerancia por redondeo).
- * Es un AVISO, nunca un bloqueo: GPI puede pagar más, nunca menos. Sin salario
- * no hay contra qué comparar y devuelve una lista vacía.
- */
-export function tarifasBajoMinimoLegal(
-  tarifas: TarifasNomina,
-  salarioBasico: number,
-  params: ParametrosTarifas,
-): TarifaBajoMinimo[] {
-  if (!(numeroSeguro(salarioBasico) > 0)) return [];
-  const minimas = derivarTarifas(salarioBasico, params);
-  return (Object.keys(ETIQUETAS_TARIFA) as (keyof TarifasNomina)[])
-    .filter((clave) => numeroSeguro(tarifas[clave]) < minimas[clave] - 1)
-    .map((clave) => ({
-      clave,
-      etiqueta: ETIQUETAS_TARIFA[clave],
-      tarifa: numeroSeguro(tarifas[clave]),
-      minimo: minimas[clave],
-    }));
 }
 
 /**

@@ -52,6 +52,7 @@ import { requireAdmin } from "@/lib/supabase/auth";
 import { hoyEnColombia } from "@/lib/jornada";
 import {
   calcularLiquidacion,
+  derivarTarifas,
   estadoConfigMes,
   etiquetaPeriodo,
   manualesVacios,
@@ -60,7 +61,6 @@ import {
   obtenerLiquidacion,
   periodoDeHoy,
   rangoPeriodo,
-  tarifasBajoMinimoLegal,
   tarifasVacias,
   type TipoPeriodo,
 } from "@/lib/nomina";
@@ -135,9 +135,10 @@ export async function LiquidacionView({
       leerJornadasNomina(rango.fechaInicio, rango.fechaFin),
     ]);
 
-  // La ley del mes (divisor con el horario del mes y recargo dominical), para
-  // avisar de tarifas por debajo del mínimo legal. Aviso, no bloqueo. Con los
-  // horarios ya leídos no consulta nada.
+  // La ley del mes (divisor con el horario del mes y recargo dominical). Desde
+  // el 23 sep 2026 es lo que FIJA las tarifas de una liquidación en borrador:
+  // no se leen de la configuración, se derivan del salario con esta ley. Con
+  // los horarios ya leídos no consulta nada.
   const legal = await parametrosLegalesNomina(anioSel, mesSel, horarios);
   const horasEquipo = horasPorEmpleado(jornadas, jornadaConfig, horarios);
 
@@ -170,7 +171,9 @@ export async function LiquidacionView({
       config: {
         salarioBasico: config?.salario_basico ?? 0,
         auxTransporte: config?.aux_transporte ?? 0,
-        tarifas: config?.tarifas ?? tarifasVacias(),
+        tarifas: config
+          ? derivarTarifas(config.salario_basico, legal)
+          : tarifasVacias(),
         pctSalud: config?.pct_salud ?? 4,
         pctPension: config?.pct_pension ?? 4,
       },
@@ -212,12 +215,6 @@ export async function LiquidacionView({
         ? { anio: estadoConfig.corte.anio, mes: estadoConfig.corte.mes }
         : null,
       huerfana: !!liquidacion && !resuelta.congelada && !tieneConfig,
-      tarifasBajoMinimo:
-        config && !resuelta.congelada
-          ? tarifasBajoMinimoLegal(config.tarifas, config.salario_basico, legal).map(
-              (b) => b.etiqueta,
-            )
-          : [],
     };
   });
 

@@ -361,7 +361,10 @@ function VolanteDocument({
     periodo.quincena,
   );
 
-  const lineasHoras = c.lineasHoras.filter((l) => l.minutos > 0);
+  // Solo las líneas que SE PAGAN: la de la jornada laboral ya está arriba, como
+  // «Jornada laboral: N días» (el sueldo del período).
+  const lineasHoras = c.lineasHoras.filter((l) => l.minutos > 0 && l.sePaga);
+  const minutosTrabajados = c.minutosOrdinarios + c.minutosPagados;
   const devengadosManuales = c.devengadosManuales.filter((l) => l.valor > 0);
   const descuentosManuales = c.descuentosManuales.filter((l) => l.valor > 0);
 
@@ -424,8 +427,12 @@ function VolanteDocument({
           <View style={s.tabla}>
             <Cabecera primera="CONCEPTO" />
 
+            {/* «Jornada laboral: N días» (23 sep 2026): lo que cubre el salario
+                ya no se imprime como «horas ordinarias», sino como los días de
+                jornada del período. Las horas trabajadas van más abajo, en una
+                línea informativa sin dinero. */}
             <Renglon
-              concepto="Sueldo del período"
+              concepto={`Jornada laboral: ${formatearNumero(c.dias)} ${c.dias === 1 ? "día" : "días"}`}
               nota={`Salario mensual ${formatearPesos(c.salarioBasico)} ÷ 30 × ${formatearNumero(c.dias)} días`}
               cantidad={`${formatearNumero(c.dias)} días`}
               valor={formatearPesos(c.basico)}
@@ -444,17 +451,23 @@ function VolanteDocument({
               <Renglon
                 key={l.clave}
                 concepto={l.label}
-                nota={
-                  l.sePaga
-                    ? l.composicion
-                    : "Ya incluidas en el sueldo del período"
-                }
+                nota={l.composicion}
                 cantidad={formatearHorasNomina(l.minutos)}
-                unitario={l.sePaga ? formatearDinero(l.tarifa) : ""}
-                valor={l.sePaga ? formatearPesos(l.valor) : "incluido"}
-                apagado={!l.sePaga}
+                unitario={formatearDinero(l.tarifa)}
+                valor={formatearPesos(l.valor)}
               />
             ))}
+
+            {/* Informativo, sin dinero: lo trabajado de verdad en el período. */}
+            {minutosTrabajados > 0 && (
+              <Renglon
+                concepto="Horas trabajadas en el período"
+                nota={`De ellas, ${formatearHorasNomina(c.minutosOrdinarios)} son de la jornada laboral y ya están pagadas por el sueldo`}
+                cantidad={formatearHorasNomina(minutosTrabajados)}
+                valor="—"
+                apagado
+              />
+            )}
 
             {devengadosManuales.map((l) => (
               <Renglon
