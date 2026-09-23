@@ -288,11 +288,14 @@ export interface VisibilitySettings {
  * DATOS DE LA EMPRESA PARA DOCUMENTOS INTERNOS (migración 0011).
  *
  * Solo los usa el **volante de pago de nómina**: no salen al sitio público (la
- * razón social que se publica es `contact.legalName`). Son editables desde
- * `/admin/ajustes` porque el NIT que imprime el volante actual de GPI
- * (901.638.649-7) **no coincide** con el que figura en los documentos
- * comerciales del proyecto (901.877.993-0) y está pendiente de confirmar con el
- * cliente: tiene que poder corregirse sin tocar código.
+ * razón social que se publica es `contact.legalName`). Siguen siendo editables
+ * desde `/admin/ajustes` para que se puedan corregir sin tocar código.
+ *
+ * NIT — RESUELTO (23 sep 2026): GPI decidió quedarse con el del documento que
+ * ya venían usando, **901.638.649-7**, que es el que imprime su comprobante
+ * actual y el que está sembrado aquí y en la migración 0011. El otro número que
+ * aparecía en los documentos comerciales del proyecto (901.877.993-0) queda
+ * descartado.
  */
 export interface EmpresaSettings {
   razonSocial: string;
@@ -602,7 +605,7 @@ export const nosotrosDefaults: NosotrosSettings = {
 
 /**
  * Valores iniciales del volante: los que imprime HOY el comprobante de GPI.
- * El NIT está pendiente de confirmación (ver `EmpresaSettings`).
+ * El NIT quedó confirmado el 23 sep 2026 (ver `EmpresaSettings`).
  */
 export const empresaDefaults: EmpresaSettings = {
   razonSocial: "GRUPO DE PROFESIONALES EN INGENIERÍA S.A.S. — GPI S.A.S.",

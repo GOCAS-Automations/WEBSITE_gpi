@@ -1879,47 +1879,37 @@ jornadas aprobadas siguen congeladas.
 Además: `.claude/` al `.gitignore`, y ningún nombre real ni salario de una
 persona en pruebas, comentarios ni documentación (el repositorio es público).
 
-### Decisiones pendientes con GPI (reunión del martes 22 sep)
+### Decisiones que quedaron pendientes con GPI — TODAS RESUELTAS el 23 sep 2026
 
-No se tocó el comportamiento actual en ninguna de las tres. La batería
-`scripts/pruebas-jornada.mjs` fija lo que el sistema hace HOY en esos casos,
-para que cualquier cambio sea deliberado.
+En su día no se tocó el comportamiento en ninguna de las tres, y la batería
+`scripts/pruebas-jornada.mjs` fijó lo que el sistema hacía entonces. GPI
+respondió el 23 de septiembre: **la nómina se rige estrictamente por la ley**.
+El detalle de cada una está en la iteración del 23 de septiembre, más abajo.
 
-1. **P4 · El sábado.** Hoy un día sin horario (sábado) se paga **como
-   domingo** (extra dominical: ×2,15 con la ley de hoy). La ley lo paga como
-   **extra normal** (×1,25 de día, ×1,75 de noche). *Qué cambiaría*: en
-   `calcularJornada` (`jornada.ts`), `const dominical = diaSemana === 0 ||
-   festivo !== null || noLaboral;` pasaría a no incluir `noLaboral`, o se
-   haría explícito con un `jornada_config.sabadoComoFestivo` si GPI quiere
-   seguir pagándolo como domingo. Hay **6 jornadas de sábado de agosto ya
-   aprobadas y congeladas** como extra dominical: no cambian solas; si GPI
-   decide aplicar la ley y se van a liquidar en el sistema, un manager las
-   devuelve a pendiente y las vuelve a aprobar (nunca por SQL).
-2. **P5 · Festivo entre semana** (p. ej. lunes 12 de octubre). Hoy **todo el
-   turno** va como extra festiva. La ley pide las horas de la jornada del día
-   como **festivas ordinarias** (×1,90) y solo el exceso como extra festiva
-   (×2,15). *Qué cambiaría*: en `calcularJornada` y `construirContextoCalculo`,
-   separar «día programado» (`horarioBase !== null`) de «día laboral», dar la
-   jornada del horario también en festivo y aplicar el almuerzo con el día
-   programado. Hoy GPI paga más que el mínimo en ese caso, lo cual es legal.
-3. **P7 · La regla del almuerzo.** Hoy se descuenta 1 h si el turno pasa de 6 h
-   en día laboral, con un **salto**: 6 h 1 min trabajadas quedan en 5 h 1 min.
-   *Qué cambiaría*: un descuento continuo (`min(almuerzo, total − 6 h)`) o una
-   casilla «tomé almuerzo» en el formulario del portal.
-
-Relacionado: la versión **completa** de P6 (que el cálculo reste la jornada ya
-usada ese día por otra jornada aprobada) no se hizo; con el rechazo de
-solapados y el aviso del mismo día no hace falta mientras GPI pida un solo
-registro por día.
+1. **P4 · El sábado** — *resuelta: se paga como la ley*. Antes, un día sin
+   horario (sábado) se pagaba **como domingo** (extra dominical ×2,15). Ahora es
+   **extra normal** (×1,25 de día, ×1,75 de noche).
+2. **P5 · Festivo entre semana** — *resuelta: se paga como la ley*. Antes, todo
+   el turno iba como extra festiva. Ahora, las horas de la jornada del día van
+   como **festivas ordinarias** (×1,90) y solo el exceso como extra festiva.
+3. **P7 · La regla del almuerzo** — *resuelta: tres reglas*, con el salto de las
+   6 h eliminado.
+4. **P6 (completo)** — *resuelta*: el cálculo ya resta la jornada ordinaria y el
+   almuerzo que otra jornada del mismo día haya consumido.
 
 ### Después del despliegue (lo hace el administrador desde el panel)
 
 1. `/admin/nomina` → **Configuración**, septiembre de 2026: «Usar los valores
    sugeridos» y Guardar en la cuenta configurada (hoy tiene las tarifas ÷ 240 y
    el panel las marca en ámbar), y completar las demás cuentas.
+   *(Desde el 23 sep 2026 esto ya no hace falta: las tarifas se derivan solas y
+   el botón desapareció. Basta con que el salario esté bien.)*
 2. El borrador de la 2.ª quincena de septiembre se recalcula solo (no hay nada
    cerrado).
 3. Decidir con GPI el destino de las 6 jornadas de sábado (P4).
+   *(Decidido el 23 sep: las 6 siguen congeladas como extra dominical; si se
+   quieren recalcular, un manager las devuelve a pendiente y las vuelve a
+   aprobar.)*
 
 ### Verificación
 
@@ -2332,6 +2322,211 @@ el «Evento de Prueba» de César ni nada de `oprueba`.
 
 ---
 
+## Iteración del 23 de septiembre de 2026 — la nómina se rige estrictamente por la ley
+
+GPI decidió que la nómina tiene que **resistir una auditoría**: nada de reglas
+de la casa que se aparten del Código Sustantivo del Trabajo, y ningún valor por
+hora escrito a mano. Con eso se cierran las tres decisiones que quedaban
+pendientes (P4, P5 y P7), se completa P6 y las tarifas dejan de ser editables.
+
+**Sin migración y sin tocar datos.** Las jornadas ya aprobadas siguen con su
+desglose congelado y las liquidaciones cerradas con su `snapshot`.
+
+### 1. P4 · El sábado se paga como extra normal
+
+En `calcularJornada` (`src/lib/jornada.ts`) la condición por minuto pasó de
+`diaSemana === 0 || festivo !== null || noLaboral` a
+`diaSemana === 0 || festivo !== null`. Un día sin horario en el mes sigue con
+**jornada ordinaria 0** —todo lo trabajado es extra—, pero ya no arrastra el
+recargo dominical. Un sábado que además sea festivo sigue siendo festivo.
+
+| Turno | Antes | Ahora |
+| --- | --- | --- |
+| Sábado 19-sep 08:00–14:00 | extra dominical diurna 6 h (×2,15) | **extra diurna 6 h** (×1,25) |
+| Sábado 19-sep 08:00–17:00 | extra dominical diurna 9 h | **extra diurna 8 h** (descuenta 1 h de almuerzo) |
+| Sábado 20:00 → domingo 04:00 | extra dominical nocturna 8 h | **extra nocturna 4 h + extra dominical nocturna 4 h** |
+
+Con un salario de ejemplo de 2.100.000 (hora de 10.000), el sábado de 6 h pasa
+de 129.000 a **75.000 pesos**: GPI venía pagando por encima de la ley.
+
+### 2. P5 · Festivo o domingo en día programado
+
+Se separó **día programado** (`horarioBase !== null`: el horario del mes tiene
+turno ese día) de **día laboral** (programado y no festivo). La jornada
+ordinaria sale ahora del día PROGRAMADO, también cuando es festivo;
+`diaLaboral` se conserva como indicador de interfaz y para la regla del
+almuerzo, y `construirContextoCalculo` guarda los dos en el contexto congelado.
+
+| Turno | Antes | Ahora |
+| --- | --- | --- |
+| Festivo lunes 12-oct-2026 08:00–17:30 | extra dominical diurna 9,5 h | **dominical diurna 8,5 h** (×1,90), 0 extra |
+| Festivo lunes 12-oct-2026 08:00–19:30 | extra dominical 9,5 h + 1 h nocturna | **dominical 8,5 h + extra festiva 1,5 h diurna y 0,5 h nocturna** |
+| Festivo martes 8-dic-2026 08:00–12:00 | extra dominical diurna 4 h | **dominical diurna 4 h** |
+
+Un **domingo** no tiene jornada programada en el horario de GPI, así que sigue
+yendo entero como extra festiva: la regla es la misma, cambia el horario.
+
+### 3. P7 · La regla del almuerzo, en tres reglas
+
+Constantes nombradas en `jornada.ts`, no números sueltos:
+`UMBRAL_ALMUERZO_DIA_NO_PROGRAMADO_MINUTOS` (480),
+`ALMUERZO_DIA_NO_PROGRAMADO_MINUTOS` (60),
+`TURNO_NOCTURNO_DIA_DESDE_MINUTOS` / `TURNO_NOCTURNO_DIA_HASTA_MINUTOS`
+(360 y 1140) y la función `esTurnoNocturno()`.
+
+1. **Turno nocturno: nunca se descuenta.** Definición inequívoca y documentada:
+   el turno que **no tiene ningún minuto entre las 6:00 a. m. y las 7:00 p. m.**
+   Manda sobre las otras dos. Así, 20:00–06:00 es nocturno; **16:00–02:00 no lo
+   es**, porque de 16:00 a 19:00 es de día.
+2. **Día programado** (y no festivo): se descuenta el almuerzo del horario solo
+   si **la duración del turno ≥ la duración programada de ese día** (presencia:
+   jornada neta + almuerzo; L–J 9,5 h, V 9 h). Un turno de 6 h no descuenta, y
+   **desaparece el salto**: 6 h 1 min ya no se convierten en 5 h 1 min.
+3. **Día no programado** (sábado, domingo o festivo): 1 h **solo si el turno
+   dura 8 horas o más**.
+
+Y si ese día ya se descontó el almuerzo en otra jornada, aquí no se vuelve a
+descontar (ver P6).
+
+| Turno | Antes | Ahora |
+| --- | --- | --- |
+| Lunes 08:00–17:30 (justo la jornada) | ordinaria 8,5 h | **ordinaria 8,5 h** (igual) |
+| Lunes 08:00–17:29 | 8,5 h + 0,48 h extra | **8,5 h + 0,98 h extra** (no descuenta) |
+| Lunes 08:00–14:01 | ordinaria 5,02 h | **ordinaria 6,02 h** |
+| Sábado 08:00–16:00 (8 h justas) | extra dominical 8 h | **extra diurna 7 h** |
+| Sábado 08:00–15:59 | extra dominical 7,98 h | **extra diurna 7,98 h** |
+| Miércoles 22:00 → jueves 06:00 | ordinaria nocturna 7 h | **ordinaria nocturna 8 h** |
+
+Detalle de implementación: cuando no hay tramo ordinario (día sin jornada
+programada), el almuerzo se centra en el **turno completo** en vez de pegarse a
+la hora de entrada, y el límite del tramo ordinario es 0 —no `0 + almuerzo`—,
+que si no contaría como ordinarios los primeros minutos de un sábado.
+
+### 4. P6 completo · dos jornadas el mismo día
+
+GPI confirmó que puede haber dos jornadas el mismo día, sin cruzarse (el rechazo
+por solapamiento del 19 sep sigue vigente). Antes, cada registro recibía su
+propia jornada ordinaria y su propio almuerzo: las extras del día se perdían y
+el almuerzo se descontaba dos veces.
+
+Ahora `calcularJornada` y `obtenerDesglose` reciben un `ConsumoPrevioDia`
+opcional —`{ ordinariosUsados, almuerzoDescontado }`—: la **jornada ordinaria
+del día es una sola**, se reparte **por orden cronológico**, y el **almuerzo se
+descuenta una sola vez**. Lo alimentan tres sitios:
+
+- **`approveJornada`** (`src/app/admin/jornadas/actions.ts`): `consumoPrevioDelDia`
+  lee las otras jornadas **aprobadas** del mismo día con `start_at` anterior,
+  las resuelve con `obtenerDesglose()` (su snapshot) y las suma con
+  `acumularConsumo()`, **antes** de congelar el desglose.
+- **`horasPorEmpleado`** (`src/lib/admin.ts`), vía el helper puro
+  `resolverDesglosesDeUnaPersona()`: agrupa por día, ordena y va acumulando. Las
+  congeladas no se recalculan, pero sí cuentan para lo que consumieron.
+- **La vista previa del portal**: `/mi-cuenta` calcula `consumoPorDia()` en el
+  servidor con las jornadas aprobadas del empleado y se lo pasa a `JornadaForm`,
+  que filtra con `consumoAntesDe()` según la hora de inicio que se esté
+  escribiendo.
+
+Ejemplo (lunes, jornada de 8,5 h):
+
+| Jornada | Sin consumo previo | Con consumo previo |
+| --- | --- | --- |
+| A · 06:00–12:00 | ordinaria 6 h | ordinaria 6 h |
+| B · 14:00–20:00 | ordinaria 5 h + nocturna 1 h (se perdían las extras) | **ordinaria 2,5 h + extra diurna 2,5 h + extra nocturna 1 h** |
+
+Y con almuerzo: A de 05:00 a 15:00 descuenta 1 h; B de 16:00 a 22:00 ya **no**
+vuelve a descontar y todo lo suyo es extra (la jornada del día se agotó).
+
+**Aprobar fuera de orden** (primero la de la tarde) dejaría a las dos con la
+jornada completa: se corrige devolviendo la segunda a pendiente y volviéndola a
+aprobar. Está documentado en la propia función.
+
+### 5. Las tarifas se bloquean y se vuelven automáticas
+
+Las siete tarifas **dejaron de editarse**. Se derivan siempre del **salario** y
+de la **ley vigente del mes que se liquida**
+(`derivarTarifas(salario, parametrosLegalesDelMes(...))`), y en Configuración
+aparecen en una tabla de **solo lectura** con la cuenta al lado
+(«salario ÷ 210 × 1,25»). El administrador solo edita **salario, auxilio de
+transporte y los porcentajes de salud y pensión**.
+
+- **Borradores**: `liquidacion.tsx`, `cerrarLiquidacion` y `volante-datos.ts`
+  derivan las tarifas con la ley del mes liquidado. Así, el **1 de julio de
+  2027** el recargo dominical pasa al 100 % **sin que nadie toque nada** (era el
+  pedido nº 7 del cliente): con un salario de 2.100.000, la hora en festivo pasa
+  de 19.000 a 20.000, la extra festiva diurna de 21.500 a 22.500 y la nocturna
+  de 26.500 a 27.500; la hora base y las extras normales no se mueven.
+- **Cerradas**: intactas, con su `snapshot`.
+- **Columnas de `nomina_config_mensual`**: quedan como **histórico**.
+  `saveNominaConfig` las sigue escribiendo con lo derivado, pero **el cálculo ya
+  no depende de ellas**.
+- **Código muerto retirado**: `tarifasBajoMinimoLegal()` y `TarifaBajoMinimo`
+  (`nomina.ts`), `FilaNomina.tarifasBajoMinimo` (`admin-types.ts`), el aviso
+  ámbar de la Liquidación, el botón «Usar los valores sugeridos», los siete
+  campos del formulario y su lectura en `saveNominaConfig`, y la constante
+  `AYUDA_NOMINA_SUGERIDAS` (sustituida por `AYUDA_NOMINA_TARIFAS_AUTOMATICAS`).
+
+### 6. «Horas ordinarias» pasa a «Jornada laboral: N días»
+
+En el desglose de la Liquidación y en el **volante**, lo que cubre el salario ya
+no se imprime como un renglón de horas: el básico del período se titula
+**«Jornada laboral: N días»**, con la cuenta debajo
+(«Salario mensual $X ÷ 30 × N»). Las líneas de horas que no se pagan salen del
+cuadro y, en su lugar, va una línea **informativa sin dinero** —«Horas
+trabajadas en el período», con «—» en la columna de importe— que dice el total
+trabajado y cuántas de esas horas son de la jornada laboral.
+
+Los datos **no cambian**: `CONCEPTOS_HORA` sigue guardando `ordinariaDiurna`
+con `sePaga: false` (su importe siempre fue 0), así que ningún total se mueve y
+una liquidación cerrada se sigue leyendo igual. Las pruebas lo fijan: quitar del
+cuadro las líneas que no se pagan no cambia `totalHoras`.
+
+### 7. Botón «Reglas de cálculo»
+
+Pedido explícito de GPI. En `/admin/nomina`, junto a las pestañas —así se ve
+desde Liquidación, Configuración y Tablero—, un botón abre una ventana
+(`ModalPanel`) con **doce grupos** de reglas explicadas para alguien que no es
+técnico, con la norma citada en lenguaje llano: qué cubre el salario; cómo se
+calcula el valor de la hora (÷210 con la jornada de 42 h) y desde cuándo; los
+siete conceptos con su factor y qué los dispara; el recargo dominical por fecha
+(80 % → 90 % desde jul-2026 → 100 % desde jul-2027) y que el sistema lo cambia
+solo; la franja nocturna 19:00–06:00 y de qué ley sale; los sábados; los
+festivos en día programado; **las tres reglas del almuerzo**; dos jornadas el
+mismo día; que solo se pagan jornadas **aprobadas**; que al cerrar se congela; y
+de dónde salen salud y pensión.
+
+El texto vive en **un solo sitio**: `REGLAS_NOMINA` y `REGLAS_NOMINA_INTRO` de
+`src/components/admin/ayudas.ts` (módulo puro: grupos con `titulo`, `puntos` y
+`norma`). Lo pinta `src/components/nomina/ReglasCalculo.tsx`. **Si cambia una
+regla del cálculo, se cambia ahí.**
+
+### 8. NIT del volante
+
+Lo guardado en `site_settings.empresa` ya era **901.638.649-7**, que es
+justamente el que GPI decidió dejar. No se tocó la base: solo se corrigieron los
+comentarios de `src/data/site.ts` que lo daban por pendiente.
+
+### Verificación
+
+- `scripts/pruebas-jornada.mjs` **129/129** y `scripts/pruebas-nomina.mjs`
+  **257/257**; `npm run lint` y `npm run build` limpios.
+- La batería de jornadas se actualizó al comportamiento NUEVO, con lo que daba
+  ANTES escrito al lado de cada caso. El **modelo legal independiente** del
+  script también se actualizó (sábado no dominical, jornada en día programado,
+  las tres reglas del almuerzo, consumo previo), y los casos de P4 y P5 pasaron
+  del grupo «decisiones pendientes» al de «coinciden con la ley minuto a minuto
+  y en pesos». Casos nuevos: los bordes del almuerzo (turno exactamente igual a
+  la jornada programada y un minuto menos; 8 h justas y un minuto menos en día
+  no programado; 20:00–06:00 y 16:00–02:00) y dos jornadas el mismo día.
+- `next start` + Playwright contra **localhost**, como administrador:
+  Configuración con las siete tarifas de solo lectura y su explicación, la
+  ventana de reglas en 1440 y 390 px, una liquidación en borrador con «Jornada
+  laboral: N días» y una liquidación cerrada que no cambia. Sin errores de
+  consola.
+- **Datos**: se guardó un listado de `nomina_config_mensual`,
+  `nomina_liquidaciones`, `jornadas` y `profiles` antes de empezar; se probó con
+  una cuenta temporal de administrador, **eliminada al terminar**. Las tablas
+  quedaron idénticas y no se tocó nada de septiembre de 2026.
+
 ## Decisiones técnicas
 
 - **Fallback estático primero**: toda la capa de contenido (`src/lib/content.ts`)
@@ -2480,10 +2675,12 @@ conviene cerrarlas antes de liquidar de verdad.
 7. **Prima y cesantías**: hoy entran como **campos manuales** del período
    cuando corresponde pagarlas. ¿Se quiere que el sistema las calcule (proceso
    semestral/anual aparte) o siguen a cargo del contador?
-8. **NIT y razón social del volante** ⚠️: el comprobante actual imprime
-   **901.638.649-7**, pero en los documentos comerciales del proyecto aparece
-   **901.877.993-0**. Se dejó el del comprobante como valor inicial y es
-   editable en `/admin/ajustes`. **Confirmar cuál es el correcto.**
+8. **NIT y razón social del volante** ✅ *(resuelto el 23 sep 2026)*: GPI se
+   queda con el del documento que ya usaba, **901.638.649-7**. Es el valor por
+   defecto del código (`empresaDefaults`), el que siembra la migración 0011 y el
+   que está guardado en `site_settings.empresa`: **no hubo que cambiar nada**.
+   El 901.877.993-0 de los documentos comerciales queda descartado. Sigue siendo
+   editable en `/admin/ajustes`.
 9. **«Bono» vs «Bono cumplimiento» vs «Comisiones»**: el Excel usa las tres
    etiquetas en distintas copias del mismo bloque. ¿Son tres conceptos reales y
    simultáneos o nombres alternativos según el cargo? (Hoy existen los tres.)
