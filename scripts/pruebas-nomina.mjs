@@ -17,9 +17,12 @@
  *   · el período que se preselecciona sin período en la URL (`periodoDeHoy`);
  *   · `src/lib/paginacion.ts`, la regla de 10 filas por página de las tablas
  *     del panel (también módulo puro, sin importaciones);
- *   · las tarifas sugeridas con la LEY del mes (divisor 210 con 42 h, recargo
- *     dominical por fecha) y el aviso de «por debajo del mínimo legal», contra
- *     `src/lib/ley-laboral.ts` (auditoría legal del 19 sep 2026).
+ *   · las tarifas con la LEY del mes (divisor 210 con 42 h, recargo dominical
+ *     por fecha), contra `src/lib/ley-laboral.ts` (auditoría legal del 19 sep
+ *     2026). Desde el 23 sep 2026 esas tarifas ya no se digitan: se derivan
+ *     siempre, así que aquí se comprueba que cambian solas al cambiar la ley
+ *     (sep-2026 → jul-2027) y que la presentación «Jornada laboral: N días»
+ *     cuadra con los totales.
  * Y desde el 22 sep 2026:
  *   · el CORTE de configuración («dejar sin configuración desde este mes»,
  *     migración 0013) dentro de `configVigente` / `estadoConfigMes`;
@@ -49,7 +52,7 @@ const ley = await import("../src/lib/ley-laboral.ts");
 const {
   CONCEPTOS_HORA,
   factoresTarifa,
-  tarifasBajoMinimoLegal,
+
   calcularLiquidacion,
   construirSnapshot,
   configVigente,
@@ -199,6 +202,29 @@ comprobarQue(
     volante.minutosOrdinarios === 7200,
 );
 
+/* --- «Jornada laboral: N días» (23 sep 2026) ---
+   En la liquidación y en el volante, lo que cubre el salario ya no se imprime
+   como un renglón de «horas ordinarias», sino como «Jornada laboral: N días»
+   (el básico del período), más una línea INFORMATIVA con las horas trabajadas.
+   Aquí se fija que esa presentación cuadra: quitar del cuadro las líneas que no
+   se pagan no puede mover ningún total. */
+comprobar("«Jornada laboral» son los días liquidados", volante.dias, 15);
+comprobar("… y su importe es el básico del período", volante.basico, 875_048);
+comprobarQue(
+  "quitar las líneas que no se pagan no cambia el total de horas",
+  volante.lineasHoras.filter((l) => l.sePaga).reduce((s, l) => s + l.valor, 0) ===
+    volante.totalHoras,
+);
+comprobar(
+  "la línea informativa suma TODO lo trabajado (ordinarias + pagadas)",
+  volante.minutosOrdinarios + volante.minutosPagados,
+  15 * 8 * 60 + 16 * 60,
+);
+comprobarQue(
+  "ninguna línea que no se paga tiene importe",
+  volante.lineasHoras.every((l) => l.sePaga || l.valor === 0),
+);
+
 console.log(`
    Nota sobre el redondeo: el Excel de GPI arrastra centavos y solo redondea al
    imprimir, así que sus subtotales no cuadran al sumarlos a mano (875.048 +
@@ -302,10 +328,10 @@ comprobarQue(
 );
 
 /* ================================================================== */
-/* 4. Tarifas sugeridas = mínimo legal del mes (auditoría, 19 sep 2026) */
+/* 4. Tarifas automáticas por ley del mes (23 sep 2026)                */
 /* ================================================================== */
 
-grupoDe("Tarifas sugeridas con la ley del mes y aviso de mínimo legal");
+grupoDe("Tarifas automáticas: salario ÷ divisor × factor legal del mes");
 
 // Parámetros de la ley: los da ley-laboral.ts (nomina.ts no importa nada).
 const sep26 = ley.parametrosLegalesDelMes(2026, 9, 42);
@@ -340,26 +366,32 @@ comprobar("→ hora en festivo 19.000", t2.festivo, 19_000);
 comprobar("→ extra festiva diurna 21.500", t2.extraFestivoDiurna, 21_500);
 comprobar("→ extra festiva nocturna 26.500", t2.extraFestivoNocturna, 26_500);
 
-// El aviso: las tarifas del modelo viejo (÷240 y factores del Excel) quedan
-// por debajo de la ley de septiembre; las sugeridas, no; pagar más, tampoco.
-comprobar("las tarifas del Excel (÷240) avisan en las 7", tarifasBajoMinimoLegal(tarifas, SALARIO, sep26).length, 7);
-comprobar("las sugeridas no avisan", tarifasBajoMinimoLegal(derivarTarifas(SALARIO, sep26), SALARIO, sep26).length, 0);
+// Las tarifas ya NO se digitan (23 sep 2026): se derivan siempre del salario y
+// de la ley del mes que se liquida. Lo que hay que fijar es que un cambio de
+// mes cambie los valores SOLO donde la ley cambia.
+const t27 = derivarTarifas(2_100_000, jul27);
+comprobar("jul-2027: la hora base no cambia (el divisor sigue en 210)", t27.horaBase, 10_000);
+comprobar("jul-2027: la extra diurna no cambia (no depende del dominical)", t27.extraDiurna, 12_500);
+comprobar("jul-2027: la hora en festivo pasa de 19.000 a 20.000", t27.festivo, 20_000);
+comprobar("jul-2027: la extra festiva diurna pasa de 21.500 a 22.500", t27.extraFestivoDiurna, 22_500);
+comprobar("jul-2027: la extra festiva nocturna pasa de 26.500 a 27.500", t27.extraFestivoNocturna, 27_500);
 comprobar(
-  "pagar MÁS que la ley no avisa",
-  tarifasBajoMinimoLegal({ ...t2, extraDiurna: 20_000 }, 2_100_000, sep26).length,
-  0,
+  "jun-2027 (todavía 90 %) sigue con la hora en festivo en 19.000",
+  derivarTarifas(2_100_000, ley.parametrosLegalesDelMes(2027, 6, 42)).festivo,
+  19_000,
 );
-comprobar(
-  "1 peso por debajo se tolera (redondeo)",
-  tarifasBajoMinimoLegal({ ...t2, extraDiurna: 12_499.5 }, 2_100_000, sep26).length,
-  0,
+comprobarQue(
+  "el mismo salario con la ley de sep-2026 y la de jul-2027 solo difiere en lo dominical",
+  ["horaBase", "rotacionNocturna", "extraDiurna", "extraNocturna"].every((k) => t2[k] === t27[k]) &&
+    ["festivo", "extraFestivoDiurna", "extraFestivoNocturna"].every((k) => t27[k] - t2[k] === 1_000),
 );
-comprobar(
-  "más de 1 peso por debajo avisa",
-  tarifasBajoMinimoLegal({ ...t2, extraDiurna: 12_400 }, 2_100_000, sep26).map((b) => b.clave).join(","),
-  "extraDiurna",
+comprobar("sin salario, todas las tarifas quedan en cero", derivarTarifas(0, sep26).festivo, 0);
+// Las tarifas del Excel viejo (÷240) quedaban un 12,5 % por debajo de la ley:
+// ya no se pueden guardar, pero la comparación documenta cuánto se corrigió.
+comprobarQue(
+  "las tarifas del Excel (÷240) pagaban menos que las de la ley",
+  ["horaBase", "extraDiurna", "extraNocturna"].every((k) => tarifas[k] < derivarTarifas(SALARIO, sep26)[k]),
 );
-comprobar("sin salario no hay contra qué comparar", tarifasBajoMinimoLegal(t2, 0, sep26).length, 0);
 
 /* ================================================================== */
 /* 5. Conceptos manuales                                               */

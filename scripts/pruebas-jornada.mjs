@@ -109,23 +109,55 @@ const partes = (t) => {
 const dowDe = (f) => new Date(`${f}T12:00:00Z`).getUTCDay();
 const esNocturno = (m) => m >= 19 * 60 || m < 6 * 60;
 
+/** Turno nocturno = ningún minuto entre las 6:00 a. m. y las 7:00 p. m. */
+const turnoNocturnoLey = (inicio, total) => {
+  const primero = partes(inicio.getTime()).min;
+  for (let i = 0; i < total; i++) {
+    const m = (primero + i) % 1440;
+    if (m >= 6 * 60 && m < 19 * 60) return false;
+  }
+  return total > 0;
+};
+
 /**
- * MODELO LEGAL. Nocturno 19:00–06:00 (Ley 2466/2025). Dominical = domingo o
- * festivo. Jornada ordinaria = la del horario ese día de la semana; sábado y
- * domingo 0 (la semana de 42 h ya estaba completa: todo es extra). Almuerzo:
- * la MISMA regla del sistema (política de GPI, no ley), para aislar las
- * diferencias de clasificación. Recargo dominical según la fecha de cada minuto.
- * (Los casos donde ley y sistema difieren por decisiones pendientes no se
- * comparan contra este modelo: ver el grupo 2.)
+ * MODELO LEGAL (actualizado el 23 sep 2026 con las decisiones P4, P5 y P7 ya
+ * resueltas por GPI). Nocturno 19:00–06:00 (Ley 2466/2025). **Dominical =
+ * domingo o festivo, y nada más**: un sábado no lleva recargo dominical (P4).
+ * Jornada ordinaria = la del horario ese día de la semana, TAMBIÉN si ese día
+ * es festivo (P5); sábado y domingo, 0 (la semana de 42 h ya estaba completa:
+ * todo es extra).
+ *
+ * Almuerzo: las tres reglas de GPI (P7), que son política de la empresa y no
+ * ley, escritas aquí aparte para que un cambio en el código se note:
+ *   · turno nocturno → nunca;
+ *   · día programado y no festivo → solo si el turno cubre la jornada
+ *     programada completa (presencia: jornada neta + almuerzo);
+ *   · día no programado (sábado, domingo o festivo) → 1 h desde 8 h de turno.
+ * Además se respeta el CONSUMO PREVIO del día (P6): la jornada ordinaria del
+ * día es una sola y el almuerzo también.
+ *
+ * Recargo dominical según la fecha de cada minuto.
  */
-function ley(inicio, fin, workDate) {
+function ley(inicio, fin, workDate, previo = { ordinariosUsados: 0, almuerzoDescontado: false }) {
   const total = Math.round((fin - inicio) / 60_000);
   const sched = HORARIO[dowDe(workDate)];
   const festivoBase = FESTIVOS_LEY.has(workDate);
-  const jornada = sched && !festivoBase ? sched[0] : 0;
-  const almuerzo = sched && !festivoBase && total > 360 ? Math.min(sched[1], total) : 0;
-  const limite = Math.min(total, jornada + almuerzo);
-  const aD = almuerzo > 0 ? Math.max(0, Math.round((limite - almuerzo) / 2)) : -1;
+  const programado = sched !== null;
+  const laboral = programado && !festivoBase;
+  const jornada = programado ? sched[0] : 0;
+  const presencia = programado ? sched[0] + sched[1] : 0;
+
+  let almuerzo = 0;
+  if (!turnoNocturnoLey(inicio, total) && !previo.almuerzoDescontado) {
+    if (laboral) {
+      if (presencia > 0 && total >= presencia) almuerzo = Math.min(sched[1], total);
+    } else if (total >= 480) almuerzo = Math.min(60, total);
+  }
+
+  const disponible = Math.max(0, jornada - previo.ordinariosUsados);
+  const limite = disponible > 0 ? Math.min(total, disponible + almuerzo) : 0;
+  const tramo = disponible > 0 ? limite : total;
+  const aD = almuerzo > 0 ? Math.max(0, Math.round((tramo - almuerzo) / 2)) : -1;
   const aH = aD + almuerzo;
   const r = Object.fromEntries(CATS.map((c) => [c, 0]));
   let factorMinutos = 0;
@@ -162,8 +194,15 @@ function pagoSistema(desglose, workDate) {
   return liq.totalHoras;
 }
 
-const turno = (f0, h0, f1, h1) =>
-  J.calcularJornada(J.instanteColombia(f0, h0), J.instanteColombia(f1, h1), f0);
+const turno = (f0, h0, f1, h1, previo = null) =>
+  J.calcularJornada(
+    J.instanteColombia(f0, h0),
+    J.instanteColombia(f1, h1),
+    f0,
+    undefined,
+    undefined,
+    previo,
+  );
 const resumen = (d) =>
   CATS.filter((c) => d[c] > 0).map((c) => `${CORTO[c]} ${+(d[c] / 60).toFixed(2)}h`).join(" · ") || "—";
 
@@ -190,6 +229,22 @@ const COINCIDEN = [
   ["C21 domingo 21-jun-2026 08:00–14:00 (recargo 80 %)", "2026-06-21", "08:00", "2026-06-21", "14:00"],
   ["C22 domingo 5-jul-2026 08:00–14:00 (recargo 90 %)", "2026-07-05", "08:00", "2026-07-05", "14:00"],
   ["C23 domingo 4-jul-2027 08:00–14:00 (recargo 100 %)", "2027-07-04", "08:00", "2027-07-04", "14:00"],
+
+  /* --- P4, P5 y P7 resueltos (23 sep 2026): ya coinciden con la ley --- */
+  ["C06 sábado 19-sep 08:00–14:00 (P4: extra NORMAL)", "2026-09-19", "08:00", "2026-09-19", "14:00"],
+  ["C07 sábado 19-sep 08:00–17:00 (P4 + almuerzo de 8 h)", "2026-09-19", "08:00", "2026-09-19", "17:00"],
+  ["C10 sábado 20:00 → domingo 04:00 (P4: cambia a festivo a medianoche)", "2026-09-19", "20:00", "2026-09-20", "04:00"],
+  ["C12 festivo lunes 12-oct-2026 08:00–17:30 (P5)", "2026-10-12", "08:00", "2026-10-12", "17:30"],
+  ["C13 festivo martes 8-dic-2026 08:00–12:00 (P5)", "2026-12-08", "08:00", "2026-12-08", "12:00"],
+  ["C19 festivo 2027: lunes 11-ene (Reyes) 08:00–17:30 (P5)", "2027-01-11", "08:00", "2027-01-11", "17:30"],
+  ["C20 festivo 2027: viernes 1-ene 08:00–12:00 (P5)", "2027-01-01", "08:00", "2027-01-01", "12:00"],
+  ["C25 festivo nuevo: lunes 13-jul-2026, Chiquinquirá (P5)", "2026-07-13", "08:00", "2026-07-13", "17:30"],
+  ["C26 borde P7: lunes 08:00–17:29 (un minuto menos que la jornada)", "2026-09-14", "08:00", "2026-09-14", "17:29"],
+  ["C27 borde P7: viernes 08:00–17:00 (justo la jornada del viernes)", "2026-09-18", "08:00", "2026-09-18", "17:00"],
+  ["C28 borde P7: sábado 08:00–16:00 (8 h justas)", "2026-09-19", "08:00", "2026-09-19", "16:00"],
+  ["C29 borde P7: sábado 08:00–15:59 (un minuto menos de 8 h)", "2026-09-19", "08:00", "2026-09-19", "15:59"],
+  ["C30 P7: turno nocturno sábado 20:00 → domingo 06:00", "2026-09-19", "20:00", "2026-09-20", "06:00"],
+  ["C31 P7: lunes 16:00 → martes 02:00 (NO es turno nocturno)", "2026-09-14", "16:00", "2026-09-15", "02:00"],
 ];
 
 for (const [nombre, f0, h0, f1, h1] of COINCIDEN) {
@@ -209,25 +264,111 @@ for (const [nombre, f0, h0, f1, h1] of COINCIDEN) {
 /* 2. Decisiones pendientes con GPI: comportamiento actual fijado      */
 /* ================================================================== */
 
-grupoDe("Decisiones pendientes con GPI (P4 sábado, P5 festivo programado): comportamiento ACTUAL");
+grupoDe("Decisiones resueltas por GPI el 23 sep 2026 (P4 sábado, P5 festivo programado, P7 almuerzo)");
 
-const PENDIENTES = [
-  // [nombre, turno, esperado del sistema HOY, qué diría la ley]
-  ["C06 sábado 19-sep 08:00–14:00 (P4)", ["2026-09-19", "08:00", "2026-09-19", "14:00"], "EDD 6h", "ED 6h"],
-  ["C07 sábado 19-sep 08:00–17:00 (P4)", ["2026-09-19", "08:00", "2026-09-19", "17:00"], "EDD 9h", "ED 9h"],
-  ["C10 sábado 20:00 → domingo 04:00 (P4)", ["2026-09-19", "20:00", "2026-09-20", "04:00"], "EDN 8h", "EN 4h · EDN 4h"],
-  ["C12 festivo lunes 12-oct-2026 08:00–17:30 (P5)", ["2026-10-12", "08:00", "2026-10-12", "17:30"], "EDD 9.5h", "DD 8.5h · EDD 1h"],
-  ["C13 festivo martes 8-dic-2026 08:00–12:00 (P5)", ["2026-12-08", "08:00", "2026-12-08", "12:00"], "EDD 4h", "DD 4h"],
-  ["C19 festivo 2027: lunes 11-ene (Reyes) 08:00–17:30 (P5)", ["2027-01-11", "08:00", "2027-01-11", "17:30"], "EDD 9.5h", "DD 8.5h · EDD 1h"],
-  ["C20 festivo 2027: viernes 1-ene 08:00–12:00 (P5)", ["2027-01-01", "08:00", "2027-01-01", "12:00"], "EDD 4h", "DD 4h"],
-  ["C25 festivo nuevo: lunes 13-jul-2026, Chiquinquirá (P5)", ["2026-07-13", "08:00", "2026-07-13", "17:30"], "EDD 9.5h", "DD 8.5h · EDD 1h"],
+const RESUELTAS = [
+  // [nombre, turno, lo que debe dar AHORA, lo que daba ANTES del cambio]
+  ["P4 sábado 19-sep 08:00–14:00", ["2026-09-19", "08:00", "2026-09-19", "14:00"], "ED 6h", "EDD 6h"],
+  ["P4 sábado 19-sep 08:00–17:00 (9 h: descuenta 1 h de almuerzo)", ["2026-09-19", "08:00", "2026-09-19", "17:00"], "ED 8h", "EDD 9h"],
+  ["P4 sábado 20:00 → domingo 04:00 (el domingo sí es festivo)", ["2026-09-19", "20:00", "2026-09-20", "04:00"], "EN 4h · EDN 4h", "EDN 8h"],
+  ["P5 festivo lunes 12-oct-2026 08:00–17:30", ["2026-10-12", "08:00", "2026-10-12", "17:30"], "DD 8.5h", "EDD 9.5h"],
+  ["P5 festivo martes 8-dic-2026 08:00–12:00", ["2026-12-08", "08:00", "2026-12-08", "12:00"], "DD 4h", "EDD 4h"],
+  ["P5 festivo lunes 11-ene-2027 (Reyes) 08:00–17:30", ["2027-01-11", "08:00", "2027-01-11", "17:30"], "DD 8.5h", "EDD 9.5h"],
+  ["P5 festivo viernes 1-ene-2027 08:00–12:00", ["2027-01-01", "08:00", "2027-01-01", "12:00"], "DD 4h", "EDD 4h"],
+  ["P5 festivo lunes 13-jul-2026 (Chiquinquirá) 08:00–17:30", ["2026-07-13", "08:00", "2026-07-13", "17:30"], "DD 8.5h", "EDD 9.5h"],
+  ["P5 festivo lunes 12-oct 08:00–19:30 (el exceso sí es extra festiva)", ["2026-10-12", "08:00", "2026-10-12", "19:30"], "DD 8.5h · EDD 1.5h · EDN 0.5h", "EDD 9.5h · EDN 1h"],
+  ["P7 lunes 08:00–17:30 (justo la jornada: sí descuenta)", ["2026-09-14", "08:00", "2026-09-14", "17:30"], "OD 8.5h", "OD 8.5h"],
+  ["P7 lunes 08:00–17:29 (un minuto menos: NO descuenta)", ["2026-09-14", "08:00", "2026-09-14", "17:29"], "OD 8.5h · ED 0.98h", "OD 8.5h · ED 0.48h"],
+  ["P7 lunes 08:00–14:01 (se acabó el salto de las 6 h)", ["2026-09-14", "08:00", "2026-09-14", "14:01"], "OD 6.02h", "OD 5.02h"],
+  ["P7 lunes 08:00–15:00 (7 h: no cubre la jornada)", ["2026-09-14", "08:00", "2026-09-14", "15:00"], "OD 7h", "OD 6h"],
+  ["P7 viernes 08:00–17:00 (justo la jornada del viernes)", ["2026-09-18", "08:00", "2026-09-18", "17:00"], "OD 8h", "OD 8h"],
+  ["P7 sábado 08:00–16:00 (8 h justas: descuenta)", ["2026-09-19", "08:00", "2026-09-19", "16:00"], "ED 7h", "EDD 8h"],
+  ["P7 sábado 08:00–15:59 (un minuto menos: no descuenta)", ["2026-09-19", "08:00", "2026-09-19", "15:59"], "ED 7.98h", "EDD 7.98h"],
+  ["P7 turno nocturno 20:00 → 06:00 (nunca descuenta)", ["2026-09-19", "20:00", "2026-09-20", "06:00"], "EN 4h · EDN 6h", "EDN 10h"],
+  ["P7 miércoles 22:00 → jueves 06:00 (turno nocturno)", ["2026-09-16", "22:00", "2026-09-17", "06:00"], "ON 8h", "ON 7h"],
+  ["P7 lunes 16:00 → martes 02:00 (NO es nocturno: sí descuenta)", ["2026-09-14", "16:00", "2026-09-15", "02:00"], "OD 3h · ON 5.5h · EN 0.5h", "OD 3h · ON 5.5h · EN 0.5h"],
 ];
-for (const [nombre, t, hoy, legal] of PENDIENTES) {
+for (const [nombre, t, ahora, antes] of RESUELTAS) {
   const d = turno(...t);
-  comprobar(`${nombre} — la ley diría ${legal}`, resumen(d), hoy);
+  comprobar(`${nombre} — antes daba ${antes}`, resumen(d), ahora);
 }
-// Lo que SÍ se arregló: los festivos de 2027 y el del 13-jul-2026 ahora existen
-// (antes esos turnos se pagaban como un día normal: 0 pesos adicionales).
+
+comprobarQue(
+  "un sábado ya NO se marca como dominical/festivo",
+  turno("2026-09-19", "08:00", "2026-09-19", "14:00").esDominicalFestivo === false,
+);
+comprobarQue(
+  "un festivo en día programado SÍ tiene jornada ordinaria",
+  turno("2026-10-12", "08:00", "2026-10-12", "17:30").jornadaOrdinariaMinutos === 510,
+);
+comprobarQue(
+  "un sábado NO tiene jornada programada",
+  turno("2026-09-19", "08:00", "2026-09-19", "14:00").diaProgramado === false,
+);
+comprobarQue(
+  "esTurnoNocturno: 20:00–06:00 sí; 16:00–02:00 no; 08:00–17:30 no",
+  J.esTurnoNocturno(new Date(J.instanteColombia("2026-09-19", "20:00")), 600) === true &&
+    J.esTurnoNocturno(new Date(J.instanteColombia("2026-09-14", "16:00")), 600) === false &&
+    J.esTurnoNocturno(new Date(J.instanteColombia("2026-09-14", "08:00")), 570) === false,
+);
+
+/* ---- P6 completo: dos jornadas el mismo día ---- */
+
+grupoDe("Dos jornadas el mismo día (P6): la jornada ordinaria y el almuerzo son UNO solo");
+
+const diaA = turno("2026-09-14", "06:00", "2026-09-14", "12:00");
+comprobar("1.ª jornada del lunes, 06:00–12:00", resumen(diaA), "OD 6h");
+const previoA = J.acumularConsumo([diaA]);
+comprobar("consumo previo tras la 1.ª: minutos ordinarios", previoA.ordinariosUsados, 360);
+comprobar("consumo previo tras la 1.ª: ¿almuerzo?", previoA.almuerzoDescontado, false);
+
+const diaB = turno("2026-09-14", "14:00", "2026-09-14", "20:00", previoA);
+comprobar(
+  "2.ª jornada 14:00–20:00 con el consumo previo (antes daba OD 6h y se perdían las extras)",
+  resumen(diaB),
+  "OD 2.5h · ED 2.5h · EN 1h",
+);
+comprobar(
+  "… y sin el consumo previo todo sería ordinario (se perderían las extras)",
+  resumen(turno("2026-09-14", "14:00", "2026-09-14", "20:00")),
+  "OD 5h · ON 1h",
+);
+comprobar(
+  "la 2.ª jornada declara lo ya usado del día",
+  diaB.ordinariasPreviasMinutos,
+  360,
+);
+comprobarQue(
+  "las dos jornadas juntas no pasan de la jornada ordinaria del día (8,5 h)",
+  diaA.ordinarias + diaB.ordinarias === 510,
+  `${diaA.ordinarias} + ${diaB.ordinarias}`,
+);
+// La ley (modelo independiente) dice lo mismo para la segunda jornada.
+{
+  const l = ley(
+    new Date(J.instanteColombia("2026-09-14", "14:00")),
+    new Date(J.instanteColombia("2026-09-14", "20:00")),
+    "2026-09-14",
+    previoA,
+  );
+  comprobarQue(
+    "   … y coincide con el modelo legal independiente",
+    CATS.every((c) => diaB[c] === l.r[c]),
+    `ley: ${resumen(l.r)}`,
+  );
+}
+
+const almuerzoA = turno("2026-09-14", "05:00", "2026-09-14", "15:00");
+comprobar("1.ª jornada larga 05:00–15:00 descuenta 1 h de almuerzo", almuerzoA.almuerzoMinutos, 60);
+const previoAlmuerzo = J.acumularConsumo([almuerzoA]);
+comprobar("el consumo previo recuerda el almuerzo", previoAlmuerzo.almuerzoDescontado, true);
+const almuerzoB = turno("2026-09-14", "16:00", "2026-09-14", "22:00", previoAlmuerzo);
+comprobar("la 2.ª jornada NO vuelve a descontar almuerzo", almuerzoB.almuerzoMinutos, 0);
+comprobar("… y todo lo suyo es extra (la jornada del día ya se agotó)", resumen(almuerzoB), "ED 3h · EN 3h");
+
+/* ---- Lo que ya se había arreglado antes ---- */
+// Los festivos de 2027 y el del 13-jul-2026 existen (antes esos turnos se
+// pagaban como un día normal: 0 pesos adicionales).
 comprobar("C19: el 11-ene-2027 ya se reconoce como festivo", turno("2027-01-11", "08:00", "2027-01-11", "17:30").festivos.join(), "Día de los Reyes Magos");
 comprobar(
   "C25: el 13-jul-2026 ya se reconoce como festivo",
