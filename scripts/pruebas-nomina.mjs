@@ -29,6 +29,12 @@
  *   · la REGLA DE LOS BORRADORES al quitar o suspender la configuración
  *     (`efectoEnBorradores`): qué borradores se eliminan, cuáles se conservan
  *     y que las cerradas y pagadas no se tocan nunca.
+ * Y desde el 23 sep 2026:
+ *   · el DESCUENTO POR FALTAS NO REMUNERADAS (`faltasDelPeriodo` de
+ *     `src/lib/permisos.ts` y su conversión a pesos en `nomina.ts`): el día y
+ *     el domingo de esa semana, un solo domingo por semana, el sábado, los
+ *     permisos por horas prorrateados, lo que NO descuenta, el domingo que cae
+ *     en la otra quincena y que una liquidación cerrada no se mueve.
  *
  * El cálculo de HORAS (`jornada.ts`) tiene su propia batería:
  * `scripts/pruebas-jornada.mjs`.
@@ -874,6 +880,296 @@ comprobar(
   hrefConPagina("/mi-cuenta?seccion=nomina&pagina=2", 3),
   "/mi-cuenta?seccion=nomina&pagina=3",
 );
+
+/* ================================================================== */
+/* 13. Faltas no remuneradas: el descuento (23 sep 2026)               */
+/* ================================================================== */
+
+/**
+ * LA REGLA (decidida con GPI el 23 sep 2026)
+ * ------------------------------------------
+ * Un permiso APROBADO y NO remunerado descuenta:
+ *   · día completo → ese día Y el domingo de esa semana (art. 173 del CST),
+ *     una sola vez por semana, sea cual sea el número de faltas;
+ *   · por horas → solo su proporción de la jornada programada de ese día, sin
+ *     arrastrar el domingo;
+ *   · el descuento afecta al salario Y al auxilio de transporte: la base diaria
+ *     es (salario + auxilio) ÷ 30;
+ *   · el domingo se descuenta en la MISMA liquidación donde cae el día de la
+ *     falta, aunque caiga en el período siguiente.
+ *
+ * El CALENDARIO que se usa aquí (octubre de 2026, comprobado):
+ *   lun 5 · mar 6 · mié 7 · … · sáb 10 · dom 11   ← semana A
+ *   lun 12 · … · jue 15 · vie 16 · … · dom 18     ← semana B
+ * Quincena 1 = del 1 al 15 · quincena 2 = del 16 al 31.
+ *
+ * Cifras de ejemplo, REDONDAS y de nadie (el repositorio es público):
+ * salario 2.100.000 y auxilio 200.000 → base diaria 76.666,67.
+ */
+
+grupoDe("Faltas no remuneradas: los días que se pierden (src/lib/permisos.ts)");
+
+const permisosLib = await import("../src/lib/permisos.ts");
+const { faltasDelPeriodo, faltasVacias, textoFaltas } = permisosLib;
+
+const Q1 = { desde: "2026-10-01", hasta: "2026-10-15" };
+const Q2 = { desde: "2026-10-16", hasta: "2026-10-31" };
+
+/** Un permiso de día(s) completo(s) aprobado y no remunerado. */
+const faltaDia = (id, inicio, fin = inicio, extra = {}) => ({
+  id,
+  tipo: "dia",
+  fecha_inicio: inicio,
+  fecha_fin: fin,
+  estado: "aprobado",
+  remunerado: false,
+  motivo: "Prueba",
+  ...extra,
+});
+
+/** Un permiso por horas aprobado y no remunerado. */
+const faltaHoras = (id, fecha, desde, hasta, horasJornada, extra = {}) => ({
+  id,
+  tipo: "horas",
+  fecha_inicio: fecha,
+  fecha_fin: fecha,
+  hora_inicio: desde,
+  hora_fin: hasta,
+  horasJornada,
+  estado: "aprobado",
+  remunerado: false,
+  motivo: "Prueba",
+  ...extra,
+});
+
+/* --- 13.1 Una falta de un día: el día y su domingo --- */
+const unDia = faltasDelPeriodo([faltaDia("p1", "2026-10-06")], Q1.desde, Q1.hasta);
+comprobar("un día de falta → 2 días descontados", unDia.dias, 2);
+comprobar("…de los cuales 1 es día completo", unDia.diasCompletos, 1);
+comprobar("…y 1 es el domingo de esa semana", unDia.diasDomingos, 1);
+comprobar("el domingo es el 11 (semana de lun 5 a dom 11)", unDia.domingos[0], "2026-10-11");
+comprobar(
+  "el texto del volante lo dice",
+  textoFaltas(unDia),
+  "2 días (incluye 1 domingo)",
+);
+
+/* --- 13.2 Dos faltas en la misma semana: UN solo domingo --- */
+const dosMismaSemana = faltasDelPeriodo(
+  [faltaDia("p1", "2026-10-06"), faltaDia("p2", "2026-10-07")],
+  Q1.desde,
+  Q1.hasta,
+);
+comprobar("dos faltas de la misma semana → 3 días", dosMismaSemana.dias, 3);
+comprobar("…dos días completos", dosMismaSemana.diasCompletos, 2);
+comprobar("…y UN solo domingo", dosMismaSemana.diasDomingos, 1);
+
+/* --- 13.3 Un permiso de varios días seguidos es lo mismo --- */
+const dosSeguidos = faltasDelPeriodo(
+  [faltaDia("p1", "2026-10-06", "2026-10-07")],
+  Q1.desde,
+  Q1.hasta,
+);
+comprobar("un permiso de mar a mié → también 3 días", dosSeguidos.dias, 3);
+
+/* --- 13.4 Un sábado también arrastra el domingo --- */
+const sabado = faltasDelPeriodo([faltaDia("p1", "2026-10-10")], Q1.desde, Q1.hasta);
+comprobar("falta en sábado → 2 días", sabado.dias, 2);
+comprobar("…y el domingo perdido es el día siguiente", sabado.domingos[0], "2026-10-11");
+
+/* --- 13.5 Faltar el propio domingo no se cuenta dos veces --- */
+const soloDomingo = faltasDelPeriodo([faltaDia("p1", "2026-10-11")], Q1.desde, Q1.hasta);
+comprobar("faltar el domingo → 1 día, no 2", soloDomingo.dias, 1);
+comprobar("…y no se suma un domingo aparte", soloDomingo.diasDomingos, 0);
+
+/* --- 13.6 Por horas: proporcional a la jornada, sin domingo --- */
+const porHoras = faltasDelPeriodo(
+  [faltaHoras("p1", "2026-10-06", "08:00", "10:00", 8.5)],
+  Q1.desde,
+  Q1.hasta,
+);
+comprobar("2 h de una jornada de 8,5 h → 0,2353 días", porHoras.dias, 0.2353);
+comprobar("…no arrastra el domingo", porHoras.diasDomingos, 0);
+const horasSinHorario = faltasDelPeriodo(
+  [faltaHoras("p1", "2026-10-11", "08:00", "10:00", 0)],
+  Q1.desde,
+  Q1.hasta,
+);
+comprobar("en un día sin jornada programada no descuenta nada", horasSinHorario.dias, 0);
+
+/* --- 13.7 Lo que NO descuenta --- */
+comprobar(
+  "un permiso REMUNERADO no descuenta",
+  faltasDelPeriodo(
+    [faltaDia("p1", "2026-10-06", "2026-10-06", { remunerado: true })],
+    Q1.desde,
+    Q1.hasta,
+  ).dias,
+  0,
+);
+comprobar(
+  "un permiso PENDIENTE no descuenta",
+  faltasDelPeriodo(
+    [faltaDia("p1", "2026-10-06", "2026-10-06", { estado: "pendiente", remunerado: null })],
+    Q1.desde,
+    Q1.hasta,
+  ).dias,
+  0,
+);
+comprobar(
+  "un permiso RECHAZADO no descuenta",
+  faltasDelPeriodo(
+    [faltaDia("p1", "2026-10-06", "2026-10-06", { estado: "rechazado", remunerado: null })],
+    Q1.desde,
+    Q1.hasta,
+  ).dias,
+  0,
+);
+comprobar("sin permisos, cero", faltasDelPeriodo([], Q1.desde, Q1.hasta).dias, 0);
+comprobar("`faltasVacias()` es el cero canónico", faltasVacias().dias, 0);
+
+/* --- 13.8 El domingo que cae en la OTRA quincena --- */
+// Falta el jueves 15 (quincena 1); su semana termina el domingo 18 (quincena 2).
+// El domingo se descuenta CON el día, en la quincena 1, y no se vuelve a cobrar.
+const juevesQ1 = faltasDelPeriodo([faltaDia("p1", "2026-10-15")], Q1.desde, Q1.hasta);
+comprobar("falta el 15 → la quincena 1 descuenta 2 días", juevesQ1.dias, 2);
+comprobar(
+  "…y el domingo perdido es el 18, de la quincena siguiente",
+  juevesQ1.domingos[0],
+  "2026-10-18",
+);
+const juevesQ2 = faltasDelPeriodo([faltaDia("p1", "2026-10-15")], Q2.desde, Q2.hasta);
+comprobar("…la quincena 2 NO lo vuelve a cobrar", juevesQ2.dias, 0);
+// Y si la semana tiene faltas en las dos quincenas, el domingo va con la primera.
+const aCaballo = [faltaDia("p1", "2026-10-15"), faltaDia("p2", "2026-10-16")];
+comprobar(
+  "semana partida: la quincena 1 se queda con el domingo",
+  faltasDelPeriodo(aCaballo, Q1.desde, Q1.hasta).diasDomingos,
+  1,
+);
+comprobar(
+  "semana partida: la quincena 2 solo descuenta su día",
+  faltasDelPeriodo(aCaballo, Q2.desde, Q2.hasta).dias,
+  1,
+);
+
+/* ================================================================== */
+/* 14. Faltas no remuneradas: el dinero                                */
+/* ================================================================== */
+
+grupoDe("Faltas no remuneradas: el dinero (src/lib/nomina.ts)");
+
+const SALARIO_FALTAS = 2_100_000;
+const AUXILIO_FALTAS = 200_000;
+const DIARIO_FALTAS = (SALARIO_FALTAS + AUXILIO_FALTAS) / 30; // 76.666,67
+
+const liquidarConFaltas = (faltas) =>
+  calcularLiquidacion({
+    config: {
+      salarioBasico: SALARIO_FALTAS,
+      auxTransporte: AUXILIO_FALTAS,
+      tarifas: derivarTarifas(SALARIO_FALTAS, { divisor: 210, recargoDominical: 0.9 }),
+      pctSalud: 4,
+      pctPension: 4,
+    },
+    minutos: minutosVacios(),
+    dias: 15,
+    manuales: manualesVacios(),
+    faltas,
+  });
+
+const sinFaltas = liquidarConFaltas(null);
+comprobar("sin faltas, se pagan los 15 días", sinFaltas.diasPagados, 15);
+comprobar("sin faltas, el sueldo del período es 1.050.000", sinFaltas.basico, 1_050_000);
+comprobar("sin faltas, el auxilio es 100.000", sinFaltas.auxTransporte, 100_000);
+comprobar("sin faltas, el descuento es 0", sinFaltas.faltas.valor, 0);
+
+const conUnDia = liquidarConFaltas(unDia);
+comprobar("con una falta de un día se pagan 13 días", conUnDia.diasPagados, 13);
+comprobar("…el sueldo baja a 910.000", conUnDia.basico, 910_000);
+comprobar("…el auxilio baja a 86.667", conUnDia.auxTransporte, 86_667);
+comprobar("…y el descuento es 153.333", conUnDia.faltas.valor, 153_333);
+comprobar(
+  "…que es exactamente 2 días de (salario + auxilio) ÷ 30",
+  Math.round(2 * DIARIO_FALTAS),
+  153_333,
+);
+comprobarQue(
+  "el sueldo + el auxilio + el descuento cuadran con el período completo",
+  conUnDia.basico + conUnDia.auxTransporte + conUnDia.faltas.valor ===
+    sinFaltas.basico + sinFaltas.auxTransporte,
+);
+comprobar(
+  "el detalle del volante dice qué días se perdieron",
+  conUnDia.faltas.fechas.join(",") + "|" + conUnDia.faltas.domingos.join(","),
+  "2026-10-06|2026-10-11",
+);
+
+const conDosMismaSemana = liquidarConFaltas(dosMismaSemana);
+comprobar("dos faltas en la semana → se pagan 12 días", conDosMismaSemana.diasPagados, 12);
+comprobar("…y se descuentan 230.000 (3 días)", conDosMismaSemana.faltas.valor, 230_000);
+
+const conHoras = liquidarConFaltas(porHoras);
+comprobar("un permiso por horas deja 14,7647 días pagados", conHoras.diasPagados, 14.7647);
+comprobar("…el sueldo es 1.033.529", conHoras.basico, 1_033_529);
+comprobar("…y el descuento, 18.040", conHoras.faltas.valor, 18_040);
+
+// La base de salud y pensión baja con el sueldo: es lo correcto (el IBC sigue a
+// lo devengado), y hay que dejarlo comprobado para que nadie lo «arregle».
+comprobarQue(
+  "salud y pensión se calculan sobre el sueldo ya descontado",
+  conUnDia.salud === Math.round((conUnDia.basico * 4) / 100) &&
+    conUnDia.salud < sinFaltas.salud,
+);
+
+comprobar(
+  "nunca se descuentan más días que los del período",
+  liquidarConFaltas({ ...faltasVacias(), dias: 40, diasCompletos: 40 }).diasPagados,
+  0,
+);
+
+/* --- Una liquidación CERRADA no se mueve --- */
+const snapshotSinFaltas = construirSnapshot(sinFaltas, {
+  jornadas: 0,
+  fechaInicio: Q1.desde,
+  fechaFin: Q1.hasta,
+});
+const cerradaConFaltasNuevas = obtenerLiquidacion(snapshotSinFaltas, () => ({
+  config: {
+    salarioBasico: SALARIO_FALTAS,
+    auxTransporte: AUXILIO_FALTAS,
+    tarifas: derivarTarifas(SALARIO_FALTAS, { divisor: 210, recargoDominical: 0.9 }),
+    pctSalud: 4,
+    pctPension: 4,
+  },
+  minutos: minutosVacios(),
+  dias: 15,
+  manuales: manualesVacios(),
+  faltas: dosMismaSemana,
+}));
+comprobarQue("una liquidación cerrada sigue congelada", cerradaConFaltasNuevas.congelada);
+comprobar(
+  "…y no se le aplica una falta aprobada después",
+  cerradaConFaltasNuevas.calculo.diasPagados,
+  15,
+);
+comprobar(
+  "…su neto no cambia",
+  cerradaConFaltasNuevas.calculo.neto,
+  sinFaltas.neto,
+);
+
+/* --- Un snapshot ANTERIOR a los permisos se lee como «sin faltas» --- */
+const snapshotViejo = JSON.parse(JSON.stringify(snapshotSinFaltas));
+delete snapshotViejo.calculo.diasPagados;
+delete snapshotViejo.calculo.faltas;
+const leidoViejo = normalizarSnapshot(snapshotViejo);
+comprobar(
+  "un snapshot de antes del 23 sep 2026 paga todos sus días",
+  leidoViejo.calculo.diasPagados,
+  15,
+);
+comprobar("…y no inventa faltas", leidoViejo.calculo.faltas.dias, 0);
 
 /* ------------------------------------------------------------------ */
 
