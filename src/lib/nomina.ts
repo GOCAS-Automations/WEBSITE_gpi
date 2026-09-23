@@ -14,6 +14,15 @@
  *     nómina es mes de 30 días fijos, sin importar si el mes tiene 28 o 31: una
  *     quincena completa (15 días) es exactamente medio salario.
  *   · **Auxilio de transporte** = `auxilio mensual / 30 × días liquidados`.
+ *   · **Faltas no remuneradas**: un permiso APROBADO y NO remunerado baja los
+ *     días que se pagan. Un día completo descuenta ese día **y el domingo de esa
+ *     semana** (art. 173 CST, una sola vez por semana); un permiso por horas
+ *     descuenta su proporción de la jornada programada de ese día. El descuento
+ *     afecta al básico Y al auxilio de transporte —todo lo que se paga por
+ *     día—, así que la línea «Jornada laboral: N días» ya enseña los días
+ *     EFECTIVOS y aparte se imprime «Faltas no remuneradas: N días (incluye M
+ *     domingos)» con su valor. Los días los cuenta `faltasDelPeriodo()` de
+ *     `src/lib/permisos.ts`; aquí solo se convierten en pesos.
  *   · **Horas y recargos** = por cada concepto, `horas × tarifa en pesos`. Las
  *     horas salen del **desglose congelado** de las jornadas aprobadas
  *     (`obtenerDesglose()` de `src/lib/jornada.ts`), nunca de un recálculo.
@@ -86,6 +95,7 @@
  */
 
 import type { DesgloseJornada } from "@/lib/jornada";
+import type { FaltasPeriodo } from "@/lib/permisos";
 
 /* ================================================================== */
 /* 1. Parámetros                                                       */
@@ -238,6 +248,51 @@ export interface LineaManual {
   nota: string;
 }
 
+/**
+ * Las faltas NO REMUNERADAS que se descontaron, ya en días y en pesos.
+ *
+ * Los DÍAS los cuenta `faltasDelPeriodo()` de `src/lib/permisos.ts` (con la
+ * regla del domingo perdido); aquí se guardan tal cual, junto con el `valor`
+ * que dejó de pagarse, para que el volante lo pueda imprimir y auditar.
+ */
+export interface ResumenFaltasNomina {
+  /** Días descontados en total: completos + domingos + fracciones por horas. */
+  dias: number;
+  /** De esos, los días completos de ausencia. */
+  diasCompletos: number;
+  /** De esos, los domingos de descanso remunerado perdidos (art. 173 CST). */
+  diasDomingos: number;
+  /** De esos, lo que suman los permisos por horas. */
+  diasPorHoras: number;
+  /** Lo que NO se pagó por esas faltas: salario + auxilio de transporte. */
+  valor: number;
+  /** Las fechas de los días completos, en orden. */
+  fechas: string[];
+  /** Los domingos perdidos, en orden. */
+  domingos: string[];
+  /** El detalle de cada permiso por horas. */
+  parciales: {
+    fecha: string;
+    horas: number;
+    horasJornada: number;
+    fraccion: number;
+  }[];
+}
+
+/** Sin faltas: lo que se guarda cuando no hubo ninguna (y lo que leen los snapshots viejos). */
+export function faltasNominaVacias(): ResumenFaltasNomina {
+  return {
+    dias: 0,
+    diasCompletos: 0,
+    diasDomingos: 0,
+    diasPorHoras: 0,
+    valor: 0,
+    fechas: [],
+    domingos: [],
+    parciales: [],
+  };
+}
+
 /** Resultado completo de liquidar un período. */
 export interface LiquidacionCalculada {
   /* --- Entrada usada (queda dentro del snapshot, para auditoría) --- */
@@ -246,7 +301,12 @@ export interface LiquidacionCalculada {
   tarifas: TarifasNomina;
   pctSalud: number;
   pctPension: number;
+  /** Días del período que se liquidan (15 en una quincena completa). */
   dias: number;
+  /** Días que de verdad se pagan: `dias` menos las faltas no remuneradas. */
+  diasPagados: number;
+  /** Las faltas no remuneradas descontadas (vacío si no hubo). */
+  faltas: ResumenFaltasNomina;
 
   /* --- Devengados --- */
   basico: number;
@@ -451,6 +511,15 @@ export function pesos(value: number): number {
   return Number.isFinite(value) ? Math.round(value) : 0;
 }
 
+/**
+ * Cuatro decimales. Lo usan los DÍAS, que pueden ser fraccionarios cuando hay
+ * un permiso por horas (2 h de un día de 8,5 h = 0,2353 días): con cuatro
+ * decimales el descuento cuadra al peso y no arrastra ruido binario.
+ */
+export function cuatro(valor: number): number {
+  return Number.isFinite(valor) ? Math.round(valor * 10000) / 10000 : 0;
+}
+
 /** Minutos → horas decimales con dos decimales (510 → 8,5). */
 export function horasDeMinutos(minutos: number): number {
   const m = Number.isFinite(minutos) && minutos > 0 ? minutos : 0;
@@ -602,6 +671,12 @@ export interface EntradaLiquidacion {
   /** Días liquidados del período (15 en una quincena completa, 30 en un mes). */
   dias: number;
   manuales: ConceptosManuales;
+  /**
+   * Los días que se pierden por permisos APROBADOS y NO remunerados, ya
+   * contados por `faltasDelPeriodo()` de `src/lib/permisos.ts` (incluido el
+   * domingo de descanso perdido). Ausente o `null` = no hubo faltas.
+   */
+  faltas?: FaltasPeriodo | null;
 }
 
 /**
@@ -625,12 +700,42 @@ export function calcularLiquidacion(entrada: EntradaLiquidacion): LiquidacionCal
   );
   const dias = Math.min(31, Math.max(0, numeroSeguro(entrada.dias)));
 
+  /* ---- Faltas no remuneradas (permisos aprobados y no remunerados) ---- */
+  // Los DÍAS ya vienen contados de `faltasDelPeriodo()` (con su domingo
+  // perdido); aquí solo se restan de los días liquidados. Nunca más de los días
+  // del período: descontar 16 días de una quincena de 15 no tendría sentido.
+  const faltasEntrada = entrada.faltas ?? null;
+  const diasFalta = Math.min(dias, Math.max(0, cuatro(numeroSeguro(faltasEntrada?.dias))));
+  const diasPagados = Math.max(0, cuatro(dias - diasFalta));
+
   /* ---- Devengados fijos ---- */
   // Se multiplica ANTES de dividir: `(249.095 / 30) × 15` da 124.547,49999999
   // en coma flotante y se redondearía a 124.547, un peso menos que el volante
   // real de GPI. `(249.095 × 15) / 30` da 124.547,5 exacto → 124.548.
-  const basico = pesos((salarioBasico * dias) / DIAS_MES_NOMINA);
-  const auxTransporte = pesos((auxMensual * dias) / DIAS_MES_NOMINA);
+  const basico = pesos((salarioBasico * diasPagados) / DIAS_MES_NOMINA);
+  const auxTransporte = pesos((auxMensual * diasPagados) / DIAS_MES_NOMINA);
+
+  // El valor de las faltas es, EXACTAMENTE, la diferencia entre lo que se
+  // habría pagado por el período completo y lo que se paga con los días
+  // efectivos. Calculado así (y no con una regla de tres aparte) el volante
+  // cuadra al peso cuando alguien lo suma a mano.
+  const basicoPleno = pesos((salarioBasico * dias) / DIAS_MES_NOMINA);
+  const auxPleno = pesos((auxMensual * dias) / DIAS_MES_NOMINA);
+  const faltas: ResumenFaltasNomina = {
+    dias: diasFalta,
+    diasCompletos: Math.max(0, numeroSeguro(faltasEntrada?.diasCompletos)),
+    diasDomingos: Math.max(0, numeroSeguro(faltasEntrada?.diasDomingos)),
+    diasPorHoras: Math.max(0, cuatro(numeroSeguro(faltasEntrada?.diasPorHoras))),
+    valor: basicoPleno + auxPleno - (basico + auxTransporte),
+    fechas: (faltasEntrada?.completos ?? []).map((c) => c.fecha),
+    domingos: [...(faltasEntrada?.domingos ?? [])],
+    parciales: (faltasEntrada?.parciales ?? []).map((p) => ({
+      fecha: p.fecha,
+      horas: numeroSeguro(p.horas),
+      horasJornada: numeroSeguro(p.horasJornada),
+      fraccion: numeroSeguro(p.fraccion),
+    })),
+  };
 
   /* ---- Horas y recargos ---- */
   const minutos = { ...minutosVacios(), ...(entrada.minutos ?? {}) };
@@ -693,6 +798,8 @@ export function calcularLiquidacion(entrada: EntradaLiquidacion): LiquidacionCal
     pctSalud,
     pctPension,
     dias,
+    diasPagados,
+    faltas,
 
     basico,
     auxTransporte,
@@ -743,6 +850,34 @@ export function construirSnapshot(
     fechaInicio: datos.fechaInicio,
     fechaFin: datos.fechaFin,
   };
+}
+
+/** El resumen de faltas de un snapshot guardado; vacío si no lo trae. */
+function normalizarFaltasNomina(value: unknown): ResumenFaltasNomina {
+  const salida = faltasNominaVacias();
+  if (!value || typeof value !== "object") return salida;
+  const f = value as Record<string, unknown>;
+  const textos = (v: unknown): string[] =>
+    Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
+
+  salida.dias = numeroSeguro(f.dias);
+  salida.diasCompletos = numeroSeguro(f.diasCompletos);
+  salida.diasDomingos = numeroSeguro(f.diasDomingos);
+  salida.diasPorHoras = numeroSeguro(f.diasPorHoras);
+  salida.valor = numeroSeguro(f.valor);
+  salida.fechas = textos(f.fechas);
+  salida.domingos = textos(f.domingos);
+  salida.parciales = Array.isArray(f.parciales)
+    ? (f.parciales as unknown[])
+        .filter((p): p is Record<string, unknown> => !!p && typeof p === "object")
+        .map((p) => ({
+          fecha: String(p.fecha ?? ""),
+          horas: numeroSeguro(p.horas),
+          horasJornada: numeroSeguro(p.horasJornada),
+          fraccion: numeroSeguro(p.fraccion),
+        }))
+    : [];
+  return salida;
 }
 
 /**
@@ -806,6 +941,13 @@ export function normalizarSnapshot(value: unknown): SnapshotNomina | null {
       pctSalud: numeroSeguro(c.pctSalud, PCT_SALUD_DEFECTO),
       pctPension: numeroSeguro(c.pctPension, PCT_PENSION_DEFECTO),
       dias: numeroSeguro(c.dias),
+      // Snapshots anteriores a los permisos (23 sep 2026) no traen estas dos
+      // claves: se leen como «todos los días se pagaron y no hubo faltas», que
+      // es exactamente lo que ocurrió. Una liquidación cerrada no cambia.
+      diasPagados: Number.isFinite(Number(c.diasPagados))
+        ? numeroSeguro(c.diasPagados)
+        : numeroSeguro(c.dias),
+      faltas: normalizarFaltasNomina(c.faltas),
 
       basico: numeroSeguro(c.basico),
       auxTransporte: numeroSeguro(c.auxTransporte),

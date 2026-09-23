@@ -21,12 +21,14 @@
  */
 
 import {
+  faltasDelPeriodoEmpleado,
   getAdminSettings,
   getLiquidacion,
   getNominaConfigVigente,
   horasDelPeriodo,
   parametrosLegalesNomina,
 } from "@/lib/admin";
+import { faltasVacias } from "@/lib/permisos";
 import { hoyEnColombia } from "@/lib/jornada";
 import {
   derivarTarifas,
@@ -57,7 +59,7 @@ export async function resolverVolante(id: string): Promise<VolanteResuelto | nul
 
   const congelada = liquidacion.estado !== "borrador";
 
-  const [settings, config, horas, legal] = await Promise.all([
+  const [settings, config, horas, legal, faltas] = await Promise.all([
     getAdminSettings(),
     congelada
       ? Promise.resolve(null)
@@ -74,6 +76,15 @@ export async function resolverVolante(id: string): Promise<VolanteResuelto | nul
     congelada
       ? Promise.resolve(null)
       : parametrosLegalesNomina(liquidacion.anio, liquidacion.mes),
+    // Faltas no remuneradas del período. Una liquidación cerrada ya las lleva
+    // dentro de su snapshot: no se vuelven a leer.
+    congelada
+      ? Promise.resolve(faltasVacias())
+      : faltasDelPeriodoEmpleado(
+          liquidacion.employee_id,
+          liquidacion.fecha_inicio,
+          liquidacion.fecha_fin,
+        ),
   ]);
 
   // Borrador HUÉRFANO (su mes ya no tiene configuración, 22 sep 2026): no hay
@@ -92,6 +103,7 @@ export async function resolverVolante(id: string): Promise<VolanteResuelto | nul
     minutos: horas.minutos,
     dias: liquidacion.dias_liquidados,
     manuales: normalizarManuales(liquidacion.conceptos),
+    faltas,
   }));
 
   return {

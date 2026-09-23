@@ -73,8 +73,10 @@ import {
   horasDeMinutos,
   nombreMesNomina,
   periodoDeHoy,
+  type ResumenFaltasNomina,
   type TipoPeriodo,
 } from "@/lib/nomina";
+import { fechaCorta, textoFaltas } from "@/lib/permisos";
 import {
   formatearDinero,
   formatearMiles,
@@ -132,6 +134,12 @@ function descargarCSV(filas: FilaNomina[], etiquetaArchivo: string): void {
     "Cargo",
     "Estado",
     "Días liquidados",
+    // Faltas no remuneradas (23 sep 2026): «Días pagados» es lo que de verdad
+    // se liquida, y las dos siguientes explican la diferencia.
+    "Días pagados",
+    "Días de falta no remunerada",
+    "Domingos perdidos",
+    "Descuento por faltas",
     "Salario básico mensual",
     "Sueldo del período",
     "Auxilio de transporte",
@@ -182,6 +190,10 @@ function descargarCSV(filas: FilaNomina[], etiquetaArchivo: string): void {
       f.cargo ?? "",
       f.estado ? NOMINA_ESTADO_LABELS[f.estado] : "Sin crear",
       decimalCSV(f.dias),
+      decimalCSV(f.calculo.diasPagados),
+      decimalCSV(f.calculo.faltas.dias),
+      decimalCSV(f.calculo.faltas.diasDomingos),
+      decimalCSV(f.calculo.faltas.valor),
       // El del cálculo (el congelado si está cerrada), no el de la configuración de hoy.
       decimalCSV(f.calculo.salarioBasico),
       decimalCSV(f.calculo.basico),
@@ -1023,8 +1035,12 @@ function DetalleLiquidacion({
                   días de jornada del período. Las horas trabajadas van más
                   abajo, en una línea informativa sin dinero. */}
               <Renglon
-                label={`Jornada laboral: ${formatearNumero(c.dias)} ${c.dias === 1 ? "día" : "días"}`}
-                detalle={`Salario mensual ${formatearPesos(c.salarioBasico)} ÷ 30 × ${formatearNumero(c.dias)}${
+                label={`Jornada laboral: ${formatearNumero(c.diasPagados)} ${c.diasPagados === 1 ? "día" : "días"}`}
+                detalle={`Salario mensual ${formatearPesos(c.salarioBasico)} ÷ 30 × ${formatearNumero(c.diasPagados)}${
+                  c.faltas.dias > 0
+                    ? ` · del período (${formatearNumero(c.dias)} días) se descontaron ${textoFaltas(c.faltas)}`
+                    : ""
+                }${
                   !fila.congelada && fila.configDesde
                     ? ` · configurado en ${nombreMesNomina(fila.configDesde.mes)} de ${fila.configDesde.anio}`
                     : ""
@@ -1034,8 +1050,25 @@ function DetalleLiquidacion({
               {c.auxTransporte > 0 && (
                 <Renglon
                   label="Auxilio de transporte"
-                  detalle={`Proporcional a ${formatearNumero(c.dias)} días de ${formatearPesos(c.auxTransporteMensual)} al mes`}
+                  detalle={`Proporcional a ${formatearNumero(c.diasPagados)} días de ${formatearPesos(c.auxTransporteMensual)} al mes`}
                   valor={c.auxTransporte}
+                />
+              )}
+
+              {/* Faltas NO REMUNERADAS (23 sep 2026). La línea de arriba ya
+                  muestra los días EFECTIVOS; esta deja explícito cuántos días
+                  se perdieron —con el domingo que arrastran, art. 173 CST— y
+                  cuánto dinero es. No se vuelve a restar. */}
+              {c.faltas.dias > 0 && (
+                <Renglon
+                  label={`Faltas no remuneradas: ${textoFaltas(c.faltas)}`}
+                  detalle={detalleFaltas(c.faltas)}
+                  valor={0}
+                  apagado
+                  // `formatearPesos` de un negativo pega el signo al importe
+                  // («-$ 230.000»); un «−» suelto delante se partía de línea en
+                  // la columna estrecha y parecía que la cifra sumaba.
+                  textoValor={formatearPesos(-c.faltas.valor)}
                 />
               )}
 
@@ -1527,6 +1560,27 @@ function Money({ valor }: { valor: number | null }) {
       {valor === null || valor === 0 ? "—" : formatearMiles(valor)}
     </td>
   );
+}
+
+/**
+ * El detalle de las faltas no remuneradas: qué días se perdieron, qué domingos
+ * arrastraron (art. 173 CST) y qué permisos por horas se prorratearon. Es lo
+ * que hace auditable el descuento sin salir de la ficha.
+ */
+function detalleFaltas(faltas: ResumenFaltasNomina): string {
+  const partes: string[] = [];
+  if (faltas.fechas.length > 0)
+    partes.push(`Días: ${faltas.fechas.map(fechaCorta).join(", ")}`);
+  if (faltas.domingos.length > 0)
+    partes.push(
+      `Domingo de descanso perdido: ${faltas.domingos.map(fechaCorta).join(", ")}`,
+    );
+  for (const p of faltas.parciales) {
+    partes.push(
+      `${fechaCorta(p.fecha)}: ${p.horas} h de una jornada de ${p.horasJornada} h`,
+    );
+  }
+  return partes.join(" · ");
 }
 
 function Renglon({

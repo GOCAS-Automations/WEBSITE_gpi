@@ -51,8 +51,10 @@ import {
   formatearHorasNomina,
   type LiquidacionCalculada,
   type NominaEstado,
+  type ResumenFaltasNomina,
   type TipoPeriodo,
 } from "@/lib/nomina";
+import { fechaCorta, textoDias, textoFaltas } from "@/lib/permisos";
 import {
   formatearDinero,
   formatearNumero,
@@ -277,6 +279,29 @@ function fecha(valor: string | null | undefined): string {
   return `${valor.slice(8, 10)}/${valor.slice(5, 7)}/${valor.slice(0, 4)}`;
 }
 
+/**
+ * El detalle de las faltas no remuneradas, en una línea: qué días se perdieron,
+ * qué domingos arrastraron y qué permisos por horas se prorratearon. Es lo que
+ * hace auditable el descuento sin tener que abrir el panel.
+ */
+function notaFaltas(faltas: ResumenFaltasNomina): string {
+  const partes: string[] = [];
+  if (faltas.fechas.length > 0)
+    partes.push(`Días: ${faltas.fechas.map(fechaCorta).join(", ")}`);
+  if (faltas.domingos.length > 0)
+    partes.push(
+      `Domingo de descanso perdido (art. 173 CST): ${faltas.domingos
+        .map(fechaCorta)
+        .join(", ")}`,
+    );
+  for (const p of faltas.parciales) {
+    partes.push(
+      `${fechaCorta(p.fecha)}: ${p.horas} h de una jornada de ${p.horasJornada} h`,
+    );
+  }
+  return partes.join(" · ");
+}
+
 function Dato({ etiqueta, valor }: { etiqueta: string; valor: string }) {
   return (
     <View style={s.fichaFila}>
@@ -415,7 +440,14 @@ function VolanteDocument({
               etiqueta="Período"
               valor={`${fecha(periodo.fechaInicio)} – ${fecha(periodo.fechaFin)}`}
             />
-            <Dato etiqueta="Días" valor={formatearNumero(c.dias)} />
+            <Dato
+              etiqueta="Días"
+              valor={
+                c.faltas.dias > 0
+                  ? `${formatearNumero(c.diasPagados)} de ${formatearNumero(c.dias)}`
+                  : formatearNumero(c.dias)
+              }
+            />
             <Dato etiqueta="Fecha de pago" valor={fecha(datos.fechaPago)} />
             <Dato etiqueta="Estado" valor={NOMINA_ESTADO_LABELS[datos.estado]} />
           </View>
@@ -432,18 +464,41 @@ function VolanteDocument({
                 jornada del período. Las horas trabajadas van más abajo, en una
                 línea informativa sin dinero. */}
             <Renglon
-              concepto={`Jornada laboral: ${formatearNumero(c.dias)} ${c.dias === 1 ? "día" : "días"}`}
-              nota={`Salario mensual ${formatearPesos(c.salarioBasico)} ÷ 30 × ${formatearNumero(c.dias)} días`}
-              cantidad={`${formatearNumero(c.dias)} días`}
+              concepto={`Jornada laboral: ${formatearNumero(c.diasPagados)} ${c.diasPagados === 1 ? "día" : "días"}`}
+              nota={`Salario mensual ${formatearPesos(c.salarioBasico)} ÷ 30 × ${formatearNumero(c.diasPagados)} días${
+                c.faltas.dias > 0
+                  ? ` · del período (${formatearNumero(c.dias)} días) se descontaron ${textoFaltas(c.faltas)}`
+                  : ""
+              }`}
+              cantidad={`${formatearNumero(c.diasPagados)} días`}
               valor={formatearPesos(c.basico)}
             />
 
             {c.auxTransporte > 0 && (
               <Renglon
                 concepto="Auxilio de transporte"
-                nota={`Auxilio mensual ${formatearPesos(c.auxTransporteMensual)} ÷ 30 × ${formatearNumero(c.dias)} días`}
-                cantidad={`${formatearNumero(c.dias)} días`}
+                nota={`Auxilio mensual ${formatearPesos(c.auxTransporteMensual)} ÷ 30 × ${formatearNumero(c.diasPagados)} días`}
+                cantidad={`${formatearNumero(c.diasPagados)} días`}
                 valor={formatearPesos(c.auxTransporte)}
+              />
+            )}
+
+            {/* Las faltas NO REMUNERADAS, explícitas (23 sep 2026). La línea de
+                arriba ya enseña los días EFECTIVOS: esta dice cuántos días se
+                perdieron —con los domingos que arrastraron, art. 173 del CST— y
+                cuánto dinero es, para que el volante se pueda auditar. No se
+                resta otra vez: el valor ya está fuera del sueldo y del auxilio. */}
+            {c.faltas.dias > 0 && (
+              <Renglon
+                concepto={`Faltas no remuneradas: ${textoFaltas(c.faltas)}`}
+                nota={notaFaltas(c.faltas)}
+                // Guion normal y pegado al importe (`formatearPesos` de un
+                // negativo): el signo «menos» tipográfico (U+2212) no está en
+                // la fuente que incrusta react-pdf y se perdía al imprimir,
+                // dejando la cifra como si sumara.
+                cantidad={`-${textoDias(c.faltas.dias)}`}
+                valor={formatearPesos(-c.faltas.valor)}
+                apagado
               />
             )}
 

@@ -49,6 +49,7 @@
 import { revalidatePath } from "next/cache";
 import { getAdminOrNull } from "@/lib/supabase/auth";
 import {
+  faltasDelPeriodoEmpleado,
   getLiquidacion,
   getNominaConfigVigente,
   horasDelPeriodo,
@@ -803,13 +804,20 @@ export async function cerrarLiquidacion(
   // Las TARIFAS las pone la ley del mes que se liquida (23 sep 2026), no las
   // columnas de la configuración (que quedan como histórico): así el
   // 1-jul-2027 el recargo dominical pasa al 100 % sin que nadie toque nada.
-  const [horas, legal] = await Promise.all([
+  const [horas, legal, faltas] = await Promise.all([
     horasDelPeriodo(
       liquidacion.employee_id,
       liquidacion.fecha_inicio,
       liquidacion.fecha_fin,
     ),
     parametrosLegalesNomina(liquidacion.anio, liquidacion.mes),
+    // Permisos APROBADOS y NO remunerados del período: bajan los días que se
+    // pagan (y arrastran el domingo perdido). Quedan dentro del snapshot.
+    faltasDelPeriodoEmpleado(
+      liquidacion.employee_id,
+      liquidacion.fecha_inicio,
+      liquidacion.fecha_fin,
+    ),
   ]);
 
   const calculo = calcularLiquidacion({
@@ -823,6 +831,7 @@ export async function cerrarLiquidacion(
     minutos: horas.minutos,
     dias: liquidacion.dias_liquidados,
     manuales: normalizarManuales(liquidacion.conceptos),
+    faltas,
   });
 
   const snapshot = construirSnapshot(calculo, {

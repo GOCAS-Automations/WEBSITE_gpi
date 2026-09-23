@@ -42,7 +42,9 @@ import {
   getJornadaConfig,
   getMapaHorarios,
   horasPorEmpleado,
+  faltasPorEmpleado,
   leerJornadasNomina,
+  leerPermisosNomina,
   listLiquidaciones,
   listNominaConfigsPorEmpleado,
   listProfiles,
@@ -139,8 +141,15 @@ export async function LiquidacionView({
   // el 23 sep 2026 es lo que FIJA las tarifas de una liquidación en borrador:
   // no se leen de la configuración, se derivan del salario con esta ley. Con
   // los horarios ya leídos no consulta nada.
-  const legal = await parametrosLegalesNomina(anioSel, mesSel, horarios);
+  // Con los horarios ya leídos, estas dos no consultan horarios otra vez.
+  // `leerPermisosNomina` trae los permisos APROBADOS y NO remunerados que tocan
+  // el período (con una semana de margen, por el domingo perdido).
+  const [legal, permisos] = await Promise.all([
+    parametrosLegalesNomina(anioSel, mesSel, horarios),
+    leerPermisosNomina(rango.fechaInicio, rango.fechaFin, undefined, horarios),
+  ]);
   const horasEquipo = horasPorEmpleado(jornadas, jornadaConfig, horarios);
+  const faltasEquipo = faltasPorEmpleado(permisos, rango.fechaInicio, rango.fechaFin);
 
   const activos = perfiles.filter((p) => p.active);
   const personaSel = activos.some((p) => p.id === persona) ? persona : "";
@@ -167,6 +176,10 @@ export async function LiquidacionView({
       ? { minutos: minutosVacios(), jornadas: 0, pendientes: 0 }
       : (horasEquipo.get(perfil.id) ?? { minutos: minutosVacios(), jornadas: 0, pendientes: 0 });
 
+    // Las faltas no remuneradas del período. Como las horas, solo hacen falta
+    // para calcular en vivo: una liquidación cerrada ya las lleva congeladas.
+    const faltas = congelable ? null : (faltasEquipo.get(perfil.id) ?? null);
+
     const entradaEnVivo = () => ({
       config: {
         salarioBasico: config?.salario_basico ?? 0,
@@ -180,6 +193,7 @@ export async function LiquidacionView({
       minutos: horas.minutos,
       dias,
       manuales,
+      faltas,
     });
 
     const resuelta = liquidacion
