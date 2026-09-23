@@ -17,7 +17,7 @@ import {
   normalizarContextoCalculo,
   normalizarDesglose,
   normalizarJornadaConfig,
-  obtenerDesglose,
+  resolverDesglosesDeUnaPersona,
   jornadaConfigDefaults,
   type JornadaConfig,
 } from "@/lib/jornada";
@@ -1576,7 +1576,11 @@ export function horasPorEmpleado(
     salida.set(id, {
       minutos:
         suyas.length > 0
-          ? sumarMinutos(suyas.map((j) => obtenerDesglose(j, jornadaConfig, horarios).desglose))
+          ? sumarMinutos(
+              [
+                ...resolverDesglosesDeUnaPersona(suyas, jornadaConfig, horarios).values(),
+              ].map((r) => r.desglose),
+            )
           : minutosVacios(),
       jornadas: suyas.length,
       pendientes: pendientes.get(id) ?? 0,

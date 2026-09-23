@@ -13,7 +13,7 @@ import {
   listLiquidaciones,
 } from "@/lib/admin";
 import { isContentEditorRole, ROLE_LABELS } from "@/lib/roles";
-import { hoyEnColombia } from "@/lib/jornada";
+import { consumoPorDia, hoyEnColombia } from "@/lib/jornada";
 import { partesFecha, primerDiaMes, ultimoDiaMes } from "@/lib/calendario";
 import { LoginForm } from "./LoginForm";
 import { IrAlPanel } from "./IrAlPanel";
@@ -271,6 +271,15 @@ async function PortalEmpleado({
       listLiquidaciones({ employeeId: profile.id, limit: 24 }),
     ]);
 
+  // Lo que ya consumieron del día las jornadas APROBADAS: con eso la vista
+  // previa del formulario reparte bien la jornada ordinaria y el almuerzo
+  // cuando hay DOS jornadas el mismo día (P6, 23 sep 2026).
+  const consumoDias = consumoPorDia(
+    jornadas.filter((j) => j.status === "aprobada"),
+    config,
+    horarios,
+  );
+
   const conPanel = isContentEditorRole(profile.role);
   const pendientes = jornadas.filter((j) => j.status === "pendiente").length;
   const aprobadas = jornadas.filter((j) => j.status === "aprobada").length;
@@ -467,6 +476,7 @@ async function PortalEmpleado({
                 config={config}
                 hoy={hoy}
                 horarios={horarios}
+                consumoPorDia={consumoDias}
               />
             </section>
 
@@ -485,6 +495,7 @@ async function PortalEmpleado({
                 config={config}
                 hoy={hoy}
                 horarios={horarios}
+                consumoPorDia={consumoDias}
                 saveAction={saveJornada}
                 deleteAction={deleteJornada}
               />

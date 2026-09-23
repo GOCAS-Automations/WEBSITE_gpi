@@ -134,7 +134,7 @@ export function JornadaBreakdown({
           <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-900">
             {desglose.festivos.length > 0
               ? `Festivo: ${desglose.festivos.join(", ")}`
-              : "Domingo o día no laboral"}
+              : "Domingo"}
           </span>
         )}
       </div>
@@ -165,12 +165,30 @@ export function JornadaBreakdown({
 
       {/* De dónde sale la jornada ordinaria del día y qué se descontó */}
       <p className="mt-1.5 text-xs leading-relaxed text-graphite">
-        {desglose.diaLaboral ? (
+        {desglose.diaProgramado ? (
           <>
             Jornada ordinaria de ese día:{" "}
             <strong className="text-ink-soft">
               {formatearDuracion(desglose.jornadaOrdinariaMinutos)}
             </strong>
+            {desglose.ordinariasPreviasMinutos > 0 && (
+              <>
+                {" "}
+                · de esa jornada ya se usaron{" "}
+                <strong className="text-ink-soft">
+                  {formatearDuracion(desglose.ordinariasPreviasMinutos)}
+                </strong>{" "}
+                en otra jornada del mismo día
+              </>
+            )}
+            {!desglose.diaLaboral && (
+              <>
+                {" "}
+                · ese día es <strong className="text-ink-soft">festivo</strong>: las
+                horas dentro de la jornada se pagan con recargo de domingo o festivo
+                y solo el exceso es hora extra festiva
+              </>
+            )}
             {desglose.almuerzoMinutos > 0 && (
               <>
                 {" "}
@@ -184,12 +202,42 @@ export function JornadaBreakdown({
                 </strong>
               </>
             )}
+            {desglose.almuerzoPrevioDescontado && (
+              <>
+                {" "}
+                · el almuerzo de ese día ya se descontó en otra jornada: aquí no se
+                vuelve a descontar
+              </>
+            )}
           </>
         ) : (
           <>
-            Ese día <strong className="text-ink-soft">no es laboral</strong> en el
-            horario del mes (o es festivo): todo el turno se calcula con recargo
-            dominical/festivo.
+            Ese día <strong className="text-ink-soft">no tiene jornada programada</strong>{" "}
+            en el horario del mes: todo el turno es hora extra
+            {desglose.esDominicalFestivo
+              ? ", con recargo de domingo o festivo."
+              : " normal (un sábado no lleva recargo de domingo)."}
+            {desglose.almuerzoMinutos > 0 && (
+              <>
+                {" "}
+                Almuerzo descontado:{" "}
+                <strong className="text-ink-soft">
+                  {formatearDuracion(desglose.almuerzoMinutos)}
+                </strong>{" "}
+                (el turno llegó a 8 horas) · tiempo trabajado:{" "}
+                <strong className="text-ink-soft">
+                  {formatearDuracion(desglose.minutosTrabajados)}
+                </strong>
+                .
+              </>
+            )}
+          </>
+        )}
+        {desglose.turnoNocturno && (
+          <>
+            {" "}
+            Es un <strong className="text-ink-soft">turno nocturno</strong> (ningún
+            minuto entre las 6:00 a. m. y las 7:00 p. m.): no se descuenta almuerzo.
           </>
         )}
       </p>
@@ -240,7 +288,7 @@ export function JornadaBreakdown({
             <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-900">
               {desglose.festivos.length > 0
                 ? `Festivo: ${desglose.festivos.join(", ")}`
-                : "Domingo o día no laboral"}
+                : "Domingo"}
             </span>
           )}
         </div>

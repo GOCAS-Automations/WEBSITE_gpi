@@ -5,9 +5,11 @@ import { useAccionPanel } from "@/components/admin/ui-base";
 import { idleState, type ActionState, type JornadaRecord } from "@/lib/admin-types";
 import {
   calcularJornada,
+  consumoAntesDe,
   fechaColombia,
   horaColombia,
   instanteColombia,
+  type ConsumoJornadaDia,
   type JornadaConfig,
 } from "@/lib/jornada";
 import type { MapaHorarios } from "@/lib/horarios";
@@ -29,6 +31,7 @@ export function JornadaForm({
   config,
   hoy,
   horarios,
+  consumoPorDia,
   jornada,
   onCancel,
   submitLabel,
@@ -42,6 +45,13 @@ export function JornadaForm({
    * cada día: la vista previa se recalcula al cambiar la fecha del turno.
    */
   horarios?: MapaHorarios;
+  /**
+   * Lo que ya consumieron las jornadas APROBADAS de cada día (`YYYY-MM-DD`):
+   * la jornada ordinaria que gastaron y si descontaron el almuerzo. Con eso la
+   * vista previa reparte bien cuando se registran DOS jornadas el mismo día
+   * (P6): la jornada ordinaria del día es una sola y el almuerzo también.
+   */
+  consumoPorDia?: Record<string, ConsumoJornadaDia[]>;
   /** Si viene, el formulario edita esa jornada en lugar de crear una nueva. */
   jornada?: JornadaRecord;
   onCancel?: () => void;
@@ -85,8 +95,10 @@ export function JornadaForm({
     const startAt = instanteColombia(workDate, start);
     const endAt = instanteColombia(workDate, end, cruzaMedianoche ? 1 : 0);
     if (!startAt || !endAt) return null;
-    return calcularJornada(startAt, endAt, workDate, config, horarios);
-  }, [workDate, start, end, cruzaMedianoche, config, horarios]);
+    // Lo que ya gastaron del día las jornadas aprobadas que empezaron antes.
+    const previo = consumoAntesDe(consumoPorDia?.[workDate], startAt);
+    return calcularJornada(startAt, endAt, workDate, config, horarios, previo);
+  }, [workDate, start, end, cruzaMedianoche, config, horarios, consumoPorDia]);
 
   const exito = state.status === "success";
 

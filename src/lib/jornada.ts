@@ -20,6 +20,39 @@
  * usa el horario predeterminado de GPI, así que el cálculo nunca depende de la
  * base de datos.
  *
+ * DÍA PROGRAMADO ≠ DÍA LABORAL (23 sep 2026, decisiones P4 y P5 resueltas)
+ * -----------------------------------------------------------------------
+ * GPI decidió que la nómina se rija ESTRICTAMENTE por la ley colombiana, así
+ * que aquí conviven dos ideas que antes estaban mezcladas:
+ *
+ *   · **día programado** = el horario del mes tiene turno ese día de la semana
+ *     (`horarioBase !== null`). Es lo que define la JORNADA ORDINARIA del día,
+ *     aunque ese día caiga un festivo.
+ *   · **día laboral** = programado y NO festivo. Solo se usa como indicador de
+ *     interfaz y para la regla del almuerzo.
+ *
+ * De ahí salen las dos reglas nuevas:
+ *
+ *   · **P4 · Sábado.** Un día SIN horario (sábado, o cualquier día apagado en
+ *     el mes) ya no se trata como domingo: su jornada ordinaria es 0 —todo lo
+ *     trabajado es extra— pero es **extra NORMAL** (×1,25 de día, ×1,75 de
+ *     noche), que es lo que manda la ley. Solo el domingo y los festivos llevan
+ *     recargo dominical (art. 179 CST). Un sábado que además sea festivo sigue
+ *     siendo festivo.
+ *   · **P5 · Festivo o domingo en día programado.** Las horas DENTRO de la
+ *     jornada del día se pagan como **festivas ordinarias** (×1,90 hoy) y solo
+ *     **el exceso** como extra festiva (×2,15). Antes todo el turno iba como
+ *     extra festiva: GPI pagaba de más, lo cual es legal pero no es la ley.
+ *
+ * DOS JORNADAS EL MISMO DÍA (P6 completo, 23 sep 2026)
+ * ---------------------------------------------------
+ * GPI confirmó que una persona puede registrar dos jornadas el mismo día (sin
+ * cruzarse: el rechazo por solapamiento sigue vigente). La jornada ordinaria
+ * del día es **una sola** y se reparte por orden cronológico, y el almuerzo se
+ * descuenta **una sola vez**: por eso `calcularJornada` recibe opcionalmente el
+ * CONSUMO PREVIO del día (`ConsumoPrevioDia`), que sale de las otras jornadas
+ * aprobadas de esa persona ese mismo día que empezaron antes.
+ *
  * IMPORTANTE: los porcentajes de recargo son PARÁMETROS, no reglas fijas.
  * Salen del ajuste `jornada_config` de Supabase (editable) y aquí solo viven
  * como valores por defecto. GPI debe confirmar sus propias reglas. La
@@ -253,6 +286,20 @@ export interface DesgloseJornada {
   jornadaOrdinariaMinutos: number;
   /** false = el día no es laboral en el horario del mes (o es festivo). */
   diaLaboral: boolean;
+  /** true = el horario del mes tiene turno ese día (aunque sea festivo). */
+  diaProgramado: boolean;
+  /**
+   * Minutos de la jornada ordinaria del día que ya consumieron OTRAS jornadas
+   * aprobadas de esa persona ese mismo día (dos jornadas el mismo día, P6).
+   */
+  ordinariasPreviasMinutos: number;
+  /** true = el almuerzo del día ya se descontó en otra jornada de ese día. */
+  almuerzoPrevioDescontado: boolean;
+  /**
+   * true = el turno transcurrió ÍNTEGRO en franja nocturna (ningún minuto entre
+   * las 6:00 a. m. y las 7:00 p. m.): nunca se le descuenta almuerzo.
+   */
+  turnoNocturno: boolean;
 
   /* Minutos por categoría (las ocho combinaciones posibles). */
   ordinariaDiurna: number;
@@ -297,6 +344,10 @@ function desgloseVacio(error?: string): DesgloseJornada {
     minutosTrabajados: 0,
     jornadaOrdinariaMinutos: 0,
     diaLaboral: true,
+    diaProgramado: true,
+    ordinariasPreviasMinutos: 0,
+    almuerzoPrevioDescontado: false,
+    turnoNocturno: false,
     ordinariaDiurna: 0,
     ordinariaNocturna: 0,
     extraDiurna: 0,
@@ -324,28 +375,110 @@ function minutosDeHora(hora: string, porDefecto: number): number {
 const MAX_MINUTOS_TURNO = 24 * 60;
 
 /**
- * REGLA DEL ALMUERZO — pendiente de confirmar con GPI.
+ * REGLA DEL ALMUERZO — decisión P7, resuelta por GPI el 23 sep 2026.
  *
  * El horario del mes dice cuántas horas de almuerzo tiene cada día laboral,
  * pero el empleado solo registra su hora de entrada y su hora de salida. Para
- * saber si dentro de ese rango hubo almuerzo se aplica una regla pragmática:
+ * saber si dentro de ese rango hubo almuerzo se aplican TRES reglas, en este
+ * orden (la del turno nocturno manda sobre las otras dos):
  *
- *   · En un día LABORAL, si el turno dura más de 6 horas se descuenta el
- *     almuerzo del día (normalmente 1 hora).
- *   · En turnos de 6 horas o menos NO se descuenta nada (no dio tiempo de
- *     almorzar en la jornada).
- *   · En días NO laborales (sábado, domingo o festivo) tampoco se descuenta:
- *     todo el tiempo es trabajo con recargo.
+ *   1. **Turno nocturno: nunca se descuenta.** Un turno nocturno es el que
+ *      **no tiene ningún minuto entre las 6:00 a. m. y las 7:00 p. m.**, es
+ *      decir, el que transcurre íntegro en franja nocturna (20:00–06:00,
+ *      22:00–06:00…). Quien trabaja de noche no interrumpe el turno para
+ *      almorzar. Un turno de 16:00 a 02:00 SÍ tiene minutos de día (16:00–19:00),
+ *      así que no es nocturno para esta regla.
+ *   2. **Día programado** (el horario del mes tiene turno ese día y no es
+ *      festivo): se descuenta el almuerzo del horario —1 h en GPI— **solo si el
+ *      turno cubre la jornada programada completa**, es decir si la duración
+ *      del turno es mayor o igual que la duración programada de ese día
+ *      (L–J 8:00–17:30 = 9,5 h; V 8:00–17:00 = 9 h). Un turno de 6 h no
+ *      descuenta nada. Así desaparece el salto de la regla anterior, que
+ *      convertía 6 h 1 min de turno en 5 h 1 min de trabajo.
+ *   3. **Día NO programado** (sábado, domingo o festivo): se descuenta 1 h
+ *      **solo si el turno dura 8 horas o más**.
+ *
+ * Además, si ese día ya se descontó el almuerzo en OTRA jornada de la misma
+ * persona (`ConsumoPrevioDia.almuerzoDescontado`), aquí no se vuelve a
+ * descontar: el almuerzo del día es uno solo.
  *
  * El almuerzo se ubica en el centro del tramo ordinario del turno, que es lo
  * que ocurre en la práctica (empezando a las 8:00 a. m., cae alrededor del
  * mediodía). Esto solo afecta a la clasificación diurna/nocturna de esos
  * minutos, no a su cantidad.
- *
- * Está documentada también en `docs/ADMIN.md` para que GPI la confirme o la
- * ajuste.
  */
-const UMBRAL_ALMUERZO_MINUTOS = 6 * 60;
+
+/** Un turno de un día NO programado descuenta almuerzo desde esta duración. */
+export const UMBRAL_ALMUERZO_DIA_NO_PROGRAMADO_MINUTOS = 8 * 60;
+
+/** Lo que se descuenta en un día no programado que llega a ese umbral. */
+export const ALMUERZO_DIA_NO_PROGRAMADO_MINUTOS = 60;
+
+/**
+ * Franja de DÍA con que se decide si un turno es «nocturno» para la regla del
+ * almuerzo: 6:00 a. m. – 7:00 p. m. Es una definición propia y deliberadamente
+ * fija (no sale de `jornada_config`), para que «turno nocturno» signifique
+ * siempre lo mismo aunque mañana se ajuste la franja de recargo.
+ */
+export const TURNO_NOCTURNO_DIA_DESDE_MINUTOS = 6 * 60;
+export const TURNO_NOCTURNO_DIA_HASTA_MINUTOS = 19 * 60;
+
+/**
+ * ¿El turno transcurre ÍNTEGRO en franja nocturna? Es decir, ¿no tiene ningún
+ * minuto entre las 6:00 a. m. y las 7:00 p. m.? Un turno de duración cero no
+ * cuenta como nocturno.
+ */
+export function esTurnoNocturno(inicio: Date, totalMinutos: number): boolean {
+  if (!(totalMinutos > 0)) return false;
+  const primerMinuto = partesLocales(inicio).minutosDelDia;
+  for (let i = 0; i < totalMinutos; i += 1) {
+    const m = (primerMinuto + i) % 1440;
+    if (m >= TURNO_NOCTURNO_DIA_DESDE_MINUTOS && m < TURNO_NOCTURNO_DIA_HASTA_MINUTOS) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Lo que OTRAS jornadas de la misma persona ya consumieron ese mismo día.
+ *
+ * La jornada ordinaria del día es UNA sola y se reparte por orden cronológico;
+ * el almuerzo se descuenta UNA sola vez. Sin esto, dos registros del mismo día
+ * recibían cada uno la jornada ordinaria completa (las extras del día se
+ * perdían) y cada uno su almuerzo (se descontaba dos veces).
+ */
+export interface ConsumoPrevioDia {
+  /** Minutos ORDINARIOS del día ya usados por las jornadas anteriores. */
+  ordinariosUsados: number;
+  /** true = alguna de ellas ya descontó el almuerzo del día. */
+  almuerzoDescontado: boolean;
+}
+
+/** Nada consumido todavía: el valor por defecto de `calcularJornada`. */
+export const SIN_CONSUMO_PREVIO: ConsumoPrevioDia = {
+  ordinariosUsados: 0,
+  almuerzoDescontado: false,
+};
+
+/**
+ * Suma el consumo de varios desgloses YA RESUELTOS del mismo día: es lo que se
+ * le pasa como `previo` a la jornada siguiente (orden cronológico).
+ */
+export function acumularConsumo(
+  desgloses: readonly DesgloseJornada[],
+): ConsumoPrevioDia {
+  let ordinariosUsados = 0;
+  let almuerzoDescontado = false;
+  for (const d of desgloses) {
+    if (!d || d.valido === false) continue;
+    // `ordinarias` son los minutos que esa jornada clasificó DENTRO de la
+    // jornada del día (diurnos, nocturnos o dominicales): justo lo que gastó.
+    ordinariosUsados += d.ordinarias;
+    if (d.almuerzoMinutos > 0 || d.almuerzoPrevioDescontado) almuerzoDescontado = true;
+  }
+  return { ordinariosUsados, almuerzoDescontado };
+}
 
 /**
  * Calcula el desglose de una jornada minuto a minuto.
@@ -357,6 +490,9 @@ const UMBRAL_ALMUERZO_MINUTOS = 6 * 60;
  * @param horarios  Horarios mensuales de GPI indexados por `"YYYY-MM"`. Si no
  *                  se pasa (o el mes no está cargado) se usa el horario
  *                  semanal por defecto de `config`.
+ * @param previo    Lo que ya consumieron ese mismo día las OTRAS jornadas de
+ *                  la persona que empezaron antes (jornada ordinaria usada y
+ *                  si ya se descontó el almuerzo). Ver `ConsumoPrevioDia`.
  */
 export function calcularJornada(
   startAt: Date | string,
@@ -364,6 +500,7 @@ export function calcularJornada(
   workDate: string,
   config: JornadaConfig = jornadaConfigDefaults,
   horarios?: MapaHorarios | null,
+  previo: ConsumoPrevioDia | null = null,
 ): DesgloseJornada {
   const inicio = typeof startAt === "string" ? new Date(startAt) : startAt;
   const fin = typeof endAt === "string" ? new Date(endAt) : endAt;
@@ -417,31 +554,70 @@ export function calcularJornada(
     diasDe(fechaBase)[claveDiaSemana(diaSemanaDeFecha(fechaBase))];
   const festivoBase = nombreFestivo(fechaBase);
 
-  // Día laboral = el horario del mes lo marca como laboral y no es festivo.
-  // Sábado, domingo, festivo o día apagado en el horario → jornada ordinaria 0:
-  // todo el turno se paga como extra con tratamiento dominical/festivo.
-  const diaLaboral = horarioBase !== null && festivoBase === null;
-  const jornadaOrdinariaMinutos = diaLaboral ? minutosJornadaDia(horarioBase) : 0;
+  // DÍA PROGRAMADO = el horario del mes tiene turno ese día de la semana.
+  // Es lo que define la jornada ordinaria, TAMBIÉN cuando ese día es festivo
+  // (decisión P5): las horas dentro de esa jornada se pagan como festivas
+  // ordinarias y solo el exceso como extra festiva.
+  const diaProgramado = horarioBase !== null;
+  // DÍA LABORAL = programado y no festivo. Indicador de interfaz y regla del
+  // almuerzo; ya NO define la jornada ordinaria.
+  const diaLaboral = diaProgramado && festivoBase === null;
+  const jornadaOrdinariaMinutos = diaProgramado ? minutosJornadaDia(horarioBase) : 0;
 
-  // Regla del almuerzo (ver comentario de UMBRAL_ALMUERZO_MINUTOS).
-  const almuerzoMinutos =
-    diaLaboral && totalMinutos > UMBRAL_ALMUERZO_MINUTOS
-      ? Math.min(minutosAlmuerzoDia(horarioBase), totalMinutos)
-      : 0;
+  // Duración PROGRAMADA del día (presencia): jornada neta + almuerzo. Con el
+  // horario de GPI, 9,5 h de lunes a jueves y 9 h el viernes.
+  const duracionProgramadaMinutos = diaProgramado
+    ? minutosJornadaDia(horarioBase) + minutosAlmuerzoDia(horarioBase)
+    : 0;
+
+  // Consumo previo del día (dos jornadas el mismo día, P6).
+  const ordinariasPreviasMinutos = Math.max(
+    0,
+    Math.round(numeroOr(previo?.ordinariosUsados, 0)),
+  );
+  const almuerzoPrevioDescontado = previo?.almuerzoDescontado === true;
+
+  // REGLA DEL ALMUERZO (P7): ver el comentario largo de arriba.
+  const turnoNocturno = esTurnoNocturno(inicio, totalMinutos);
+  let almuerzoMinutos = 0;
+  if (!turnoNocturno && !almuerzoPrevioDescontado) {
+    if (diaLaboral) {
+      // Solo si el turno cubre la jornada programada completa.
+      if (duracionProgramadaMinutos > 0 && totalMinutos >= duracionProgramadaMinutos) {
+        almuerzoMinutos = Math.min(minutosAlmuerzoDia(horarioBase), totalMinutos);
+      }
+    } else if (totalMinutos >= UMBRAL_ALMUERZO_DIA_NO_PROGRAMADO_MINUTOS) {
+      almuerzoMinutos = Math.min(ALMUERZO_DIA_NO_PROGRAMADO_MINUTOS, totalMinutos);
+    }
+  }
 
   // Tramo ordinario medido en tiempo transcurrido desde la entrada: la jornada
-  // neta más el almuerzo que ocurre dentro de ella. Con el horario de GPI
-  // (8,5 h netas + 1 h de almuerzo) el reloj de las extras empieza a las 5:30
-  // p. m. para quien entró a las 8:00 a. m., que es justo lo esperado.
-  const limiteTranscurrido = Math.min(
-    totalMinutos,
-    jornadaOrdinariaMinutos + almuerzoMinutos,
+  // neta que QUEDE del día más el almuerzo que ocurre dentro de ella. Con el
+  // horario de GPI (8,5 h netas + 1 h de almuerzo) el reloj de las extras
+  // empieza a las 5:30 p. m. para quien entró a las 8:00 a. m., que es justo lo
+  // esperado; si otra jornada del día ya gastó parte de la jornada ordinaria,
+  // el reloj de las extras empieza antes.
+  const jornadaDisponibleMinutos = Math.max(
+    0,
+    jornadaOrdinariaMinutos - ordinariasPreviasMinutos,
   );
+  // Sin jornada ordinaria disponible (un sábado, un domingo, o un día cuya
+  // jornada ya gastó otra jornada) el tramo ordinario es CERO: todo es extra.
+  // Ojo: no se puede escribir `min(total, 0 + almuerzo)`, porque entonces los
+  // primeros minutos del turno se contarían como ordinarios.
+  const limiteTranscurrido =
+    jornadaDisponibleMinutos > 0
+      ? Math.min(totalMinutos, jornadaDisponibleMinutos + almuerzoMinutos)
+      : 0;
 
-  // Ventana de almuerzo, centrada en ese tramo ordinario.
+  // Ventana de almuerzo, centrada en el tramo ordinario. Si ese tramo no existe
+  // (día sin jornada programada), se centra en el TURNO completo: es donde cae
+  // en la práctica, y así no se pega artificialmente a la hora de entrada.
+  const tramoDelAlmuerzo =
+    jornadaDisponibleMinutos > 0 ? limiteTranscurrido : totalMinutos;
   const almuerzoDesde =
     almuerzoMinutos > 0
-      ? Math.max(0, Math.round((limiteTranscurrido - almuerzoMinutos) / 2))
+      ? Math.max(0, Math.round((tramoDelAlmuerzo - almuerzoMinutos) / 2))
       : -1;
   const almuerzoHasta = almuerzoDesde + almuerzoMinutos;
 
@@ -452,6 +628,10 @@ export function calcularJornada(
   resultado.minutosTrabajados = totalMinutos - almuerzoMinutos;
   resultado.jornadaOrdinariaMinutos = jornadaOrdinariaMinutos;
   resultado.diaLaboral = diaLaboral;
+  resultado.diaProgramado = diaProgramado;
+  resultado.ordinariasPreviasMinutos = ordinariasPreviasMinutos;
+  resultado.almuerzoPrevioDescontado = almuerzoPrevioDescontado;
+  resultado.turnoNocturno = turnoNocturno;
 
   const festivos = new Set<string>();
 
@@ -475,8 +655,12 @@ export function calcularJornada(
     // Se evalúa con la fecha REAL de cada minuto: un turno que cruza la
     // medianoche hacia un domingo o un festivo cambia de tratamiento a partir
     // de las 12:00 a. m.
-    const noLaboral = diasDe(fecha)[claveDiaSemana(diaSemana)] === null;
-    const dominical = diaSemana === 0 || festivo !== null || noLaboral;
+    //
+    // DOMINICAL = domingo o festivo, y NADA MÁS (decisión P4, 23 sep 2026).
+    // Un sábado —o cualquier día apagado en el horario del mes— ya no lleva
+    // recargo dominical: su jornada ordinaria es 0, así que todo lo trabajado
+    // es hora extra, pero extra NORMAL (art. 168 CST), no festiva.
+    const dominical = diaSemana === 0 || festivo !== null;
     const nocturno = esNocturno(minutosDelDia);
     const extra = i >= limiteTranscurrido;
 
@@ -734,11 +918,13 @@ export interface ContextoCalculo {
   horarioDia: HorarioDia | null;
   /** Resumen legible del horario semanal de ese mes. */
   horarioSemana: string;
-  /** false = día no laboral o festivo: todo el turno va con recargo. */
+  /** false = día no laboral o festivo (indicador de interfaz). */
   diaLaboral: boolean;
+  /** true = el horario del mes tiene turno ese día, aunque sea festivo. */
+  diaProgramado: boolean;
   /** Nombre del festivo del día imputado, si lo era. */
   festivo: string | null;
-  /** Jornada ordinaria neta de ese día, en minutos. */
+  /** Jornada ordinaria neta de ese día, en minutos (0 si no está programado). */
   jornadaOrdinariaMinutos: number;
   /** Franja nocturna vigente al calcular. */
   inicioNocturno: string;
@@ -793,7 +979,10 @@ export function construirContextoCalculo(
 
   const horarioDia = fecha ? dias[claveDiaSemana(diaSemanaDeFecha(fecha))] : null;
   const festivo = fecha ? nombreFestivo(fecha) : null;
-  const diaLaboral = horarioDia !== null && festivo === null;
+  // Programado = hay turno ese día en el horario del mes. Es lo que da la
+  // jornada ordinaria, también en festivo (decisión P5, 23 sep 2026).
+  const diaProgramado = horarioDia !== null;
+  const diaLaboral = diaProgramado && festivo === null;
 
   const mes = mesDeFecha(fecha);
   const anio = Number(mes.slice(0, 4));
@@ -808,8 +997,9 @@ export function construirContextoCalculo(
     horarioDia: horarioDia ? { ...horarioDia } : null,
     horarioSemana: resumenHorario(dias),
     diaLaboral,
+    diaProgramado,
     festivo,
-    jornadaOrdinariaMinutos: diaLaboral ? minutosJornadaDia(horarioDia) : 0,
+    jornadaOrdinariaMinutos: diaProgramado ? minutosJornadaDia(horarioDia) : 0,
     inicioNocturno: config.inicioNocturno,
     finNocturno: config.finNocturno,
     recargos: recargosAplicados(fecha, config),
@@ -863,6 +1053,15 @@ export function normalizarDesglose(value: unknown): DesgloseJornada | null {
     minutosTrabajados: minutosGuardados(value.minutosTrabajados),
     jornadaOrdinariaMinutos: minutosGuardados(value.jornadaOrdinariaMinutos),
     diaLaboral: value.diaLaboral !== false,
+    // Snapshots anteriores al 23 sep 2026 no traen estos campos: se deducen de
+    // lo que sí traen (un día con jornada ordinaria era un día programado).
+    diaProgramado:
+      value.diaProgramado === undefined
+        ? value.diaLaboral !== false
+        : value.diaProgramado !== false,
+    ordinariasPreviasMinutos: minutosGuardados(value.ordinariasPreviasMinutos),
+    almuerzoPrevioDescontado: value.almuerzoPrevioDescontado === true,
+    turnoNocturno: value.turnoNocturno === true,
     ordinariaDiurna: minutosGuardados(value.ordinariaDiurna),
     ordinariaNocturna: minutosGuardados(value.ordinariaNocturna),
     extraDiurna: minutosGuardados(value.extraDiurna),
@@ -914,6 +1113,10 @@ export function normalizarContextoCalculo(value: unknown): ContextoCalculo | nul
     horarioSemana:
       typeof value.horarioSemana === "string" ? value.horarioSemana : "",
     diaLaboral: value.diaLaboral !== false,
+    diaProgramado:
+      value.diaProgramado === undefined
+        ? value.diaLaboral !== false
+        : value.diaProgramado !== false,
     festivo: typeof value.festivo === "string" && value.festivo ? value.festivo : null,
     jornadaOrdinariaMinutos: minutosGuardados(value.jornadaOrdinariaMinutos),
     inicioNocturno: horaOr(value.inicioNocturno, d.inicioNocturno),
@@ -956,6 +1159,7 @@ export function obtenerDesglose(
   jornada: JornadaCalculable,
   config: JornadaConfig = jornadaConfigDefaults,
   horarios?: MapaHorarios | null,
+  previo: ConsumoPrevioDia | null = null,
 ): DesgloseResuelto {
   const guardado = normalizarDesglose(jornada.desglose);
 
@@ -978,11 +1182,107 @@ export function obtenerDesglose(
       jornada.work_date,
       config,
       horarios,
+      previo,
     ),
     congelado: false,
     contexto: construirContextoCalculo(jornada.work_date, config, horarios),
     calculadoEn: null,
   };
+}
+
+/**
+ * Resuelve el desglose de VARIAS jornadas de la MISMA persona aplicando el
+ * consumo previo del día (P6, dos jornadas el mismo día).
+ *
+ * Las agrupa por `work_date`, las ordena cronológicamente (`start_at`, y el id
+ * como desempate para que el reparto sea estable) y va acumulando lo que cada
+ * una gasta de la jornada ordinaria y si ya descontó el almuerzo. Las que
+ * tienen desglose CONGELADO no se recalculan —siguen siendo su snapshot—, pero
+ * sí cuentan para lo que consumieron.
+ *
+ * Devuelve un `Map` indexado por la propia jornada (identidad de objeto).
+ */
+export function resolverDesglosesDeUnaPersona<T extends JornadaCalculable>(
+  jornadas: readonly T[],
+  config: JornadaConfig = jornadaConfigDefaults,
+  horarios?: MapaHorarios | null,
+): Map<T, DesgloseResuelto> {
+  const porDia = new Map<string, T[]>();
+  for (const j of jornadas) {
+    const dia = typeof j.work_date === "string" ? j.work_date : "";
+    const lista = porDia.get(dia) ?? [];
+    lista.push(j);
+    porDia.set(dia, lista);
+  }
+
+  const salida = new Map<T, DesgloseResuelto>();
+  for (const lista of porDia.values()) {
+    const ordenadas = lista.slice().sort((a, b) => {
+      const ca = String(a.start_at ?? "").localeCompare(String(b.start_at ?? ""));
+      if (ca !== 0) return ca;
+      const ia = (a as { id?: string }).id ?? "";
+      const ib = (b as { id?: string }).id ?? "";
+      return ia.localeCompare(ib);
+    });
+
+    const previos: DesgloseJornada[] = [];
+    for (const j of ordenadas) {
+      const resuelto = obtenerDesglose(j, config, horarios, acumularConsumo(previos));
+      salida.set(j, resuelto);
+      previos.push(resuelto.desglose);
+    }
+  }
+  return salida;
+}
+
+/** Lo que consumió UNA jornada ya resuelta, con su hora de inicio. */
+export interface ConsumoJornadaDia extends ConsumoPrevioDia {
+  /** Instante ISO en que empezó, para poder quedarse solo con las anteriores. */
+  desde: string;
+}
+
+/**
+ * Consumo de cada jornada, agrupado por día (`YYYY-MM-DD`). Es lo que el portal
+ * le pasa a la vista previa del formulario: con eso, mientras el empleado
+ * escribe, ya se ve cuánta jornada ordinaria le queda del día y si el almuerzo
+ * ya se descontó en otro registro.
+ */
+export function consumoPorDia<T extends JornadaCalculable>(
+  jornadas: readonly T[],
+  config: JornadaConfig = jornadaConfigDefaults,
+  horarios?: MapaHorarios | null,
+): Record<string, ConsumoJornadaDia[]> {
+  const resueltos = resolverDesglosesDeUnaPersona(jornadas, config, horarios);
+  const salida: Record<string, ConsumoJornadaDia[]> = {};
+  for (const [jornada, { desglose }] of resueltos) {
+    const dia = typeof jornada.work_date === "string" ? jornada.work_date : "";
+    if (!dia || desglose.valido === false) continue;
+    (salida[dia] ??= []).push({
+      desde: String(jornada.start_at ?? ""),
+      ordinariosUsados: desglose.ordinarias,
+      almuerzoDescontado: desglose.almuerzoMinutos > 0 || desglose.almuerzoPrevioDescontado,
+    });
+  }
+  for (const lista of Object.values(salida)) {
+    lista.sort((a, b) => a.desde.localeCompare(b.desde));
+  }
+  return salida;
+}
+
+/** Suma el consumo de las jornadas del día que empezaron ANTES de `desde`. */
+export function consumoAntesDe(
+  lista: readonly ConsumoJornadaDia[] | undefined,
+  desde: string,
+): ConsumoPrevioDia {
+  if (!lista || lista.length === 0) return SIN_CONSUMO_PREVIO;
+  let ordinariosUsados = 0;
+  let almuerzoDescontado = false;
+  for (const c of lista) {
+    if (!(c.desde < desde)) continue;
+    ordinariosUsados += c.ordinariosUsados;
+    if (c.almuerzoDescontado) almuerzoDescontado = true;
+  }
+  return { ordinariosUsados, almuerzoDescontado };
 }
 
 /** "1 h de almuerzo" · "0,5 h de almuerzo" · "" si no hay almuerzo. */

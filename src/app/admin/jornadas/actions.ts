@@ -29,13 +29,19 @@ import { revalidatePath } from "next/cache";
 import { getManagerOrNull, type Session } from "@/lib/supabase/auth";
 import { getJornadaConfig, getMapaHorarios } from "@/lib/admin";
 import {
+  acumularConsumo,
   calcularJornada,
   construirContextoCalculo,
   faltaColumnaDesglose,
   formatearFechaLarga,
   formatearHora12,
   horaColombia,
+  obtenerDesglose,
+  SIN_CONSUMO_PREVIO,
+  type ConsumoPrevioDia,
+  type JornadaConfig,
 } from "@/lib/jornada";
+import type { MapaHorarios } from "@/lib/horarios";
 import type { ActionState } from "@/lib/admin-types";
 
 const SIN_PERMISO: ActionState = {
@@ -94,6 +100,74 @@ async function actualizarJornada(
   return segundo.error ? segundo.error.message : null;
 }
 
+/**
+ * CONSUMO PREVIO DEL DÍA (P6 completo, 23 sep 2026)
+ * ------------------------------------------------
+ * GPI confirmó que una persona puede registrar DOS jornadas el mismo día (sin
+ * cruzarse; el rechazo por solapamiento sigue en pie). La jornada ordinaria del
+ * día es UNA sola y se reparte por orden cronológico, y el almuerzo se
+ * descuenta UNA sola vez: por eso, antes de congelar el desglose, se mira qué
+ * gastaron ya las OTRAS jornadas APROBADAS de esa persona ese mismo día que
+ * empezaron ANTES que esta.
+ *
+ * Se leen con `obtenerDesglose()` (su snapshot congelado, si lo tienen) y se
+ * suman con `acumularConsumo()`. Si la consulta falla —o la migración 0004 no
+ * está aplicada y no hay columnas de snapshot— se devuelve «nada consumido»:
+ * el comportamiento es entonces el de antes, nunca un error al aprobar.
+ *
+ * Aprobar FUERA DE ORDEN (primero la jornada de la tarde y después la de la
+ * mañana) dejaría a las dos con la jornada ordinaria completa: para corregirlo,
+ * el manager devuelve a pendiente la segunda y la vuelve a aprobar.
+ */
+async function consumoPrevioDelDia(
+  session: Session,
+  { employeeId, workDate, startAt, idActual, config, horarios }: {
+    employeeId: string;
+    workDate: string;
+    startAt: string;
+    idActual: string;
+    config: JornadaConfig;
+    horarios: MapaHorarios;
+  },
+): Promise<ConsumoPrevioDia> {
+  if (!employeeId || !workDate || !startAt) return SIN_CONSUMO_PREVIO;
+
+  try {
+    const { data, error } = await session.supabase
+      .from("jornadas")
+      .select("id, start_at, end_at, work_date, desglose, contexto_calculo, calculado_at")
+      .eq("employee_id", employeeId)
+      .eq("work_date", workDate)
+      .eq("status", "aprobada")
+      .neq("id", idActual)
+      .lt("start_at", startAt)
+      .order("start_at", { ascending: true });
+
+    if (error || !data || data.length === 0) return SIN_CONSUMO_PREVIO;
+
+    return acumularConsumo(
+      data.map(
+        (fila) =>
+          obtenerDesglose(
+            {
+              start_at: String(fila.start_at ?? ""),
+              end_at: String(fila.end_at ?? ""),
+              work_date: String(fila.work_date ?? ""),
+              desglose: fila.desglose,
+              contexto_calculo: fila.contexto_calculo,
+              calculado_at:
+                typeof fila.calculado_at === "string" ? fila.calculado_at : null,
+            },
+            config,
+            horarios,
+          ).desglose,
+      ),
+    );
+  } catch {
+    return SIN_CONSUMO_PREVIO;
+  }
+}
+
 /* ------------------------------------------------------------------ */
 
 export async function approveJornada(
@@ -144,18 +218,30 @@ export async function approveJornada(
     );
   }
 
+  const workDate = String(fila.work_date ?? "");
+
   const [config, horarios] = await Promise.all([
     getJornadaConfig(),
     getMapaHorarios(),
   ]);
 
-  const workDate = String(fila.work_date ?? "");
+  // Dos jornadas el mismo día (P6): lo que ya gastaron las anteriores.
+  const previo = await consumoPrevioDelDia(session, {
+    employeeId: String(fila.employee_id ?? ""),
+    workDate,
+    startAt: String(fila.start_at ?? ""),
+    idActual: id,
+    config,
+    horarios,
+  });
+
   const desglose = calcularJornada(
     String(fila.start_at ?? ""),
     String(fila.end_at ?? ""),
     workDate,
     config,
     horarios,
+    previo,
   );
 
   // Con los datos que crea el portal esto no debería pasar (la base exige que la

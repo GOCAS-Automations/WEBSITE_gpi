@@ -16,6 +16,7 @@ import {
   horaColombia,
   obtenerDesglose,
   textoCalculoCongelado,
+  type ConsumoJornadaDia,
   type JornadaConfig,
 } from "@/lib/jornada";
 import type { MapaHorarios } from "@/lib/horarios";
@@ -32,6 +33,7 @@ export function MisJornadas({
   config,
   hoy,
   horarios,
+  consumoPorDia,
   saveAction,
   deleteAction,
 }: {
@@ -40,6 +42,8 @@ export function MisJornadas({
   hoy: string;
   /** Horarios laborales por mes: definen la jornada ordinaria de cada día. */
   horarios?: MapaHorarios;
+  /** Consumo por día de las jornadas aprobadas (dos jornadas el mismo día, P6). */
+  consumoPorDia?: Record<string, ConsumoJornadaDia[]>;
   saveAction: Accion;
   deleteAction: Accion;
 }) {
@@ -71,6 +75,7 @@ export function MisJornadas({
             config={config}
             hoy={hoy}
             horarios={horarios}
+            consumoPorDia={consumoPorDia}
             saveAction={saveAction}
             deleteAction={deleteAction}
           />
@@ -95,6 +100,7 @@ function JornadaItem({
   config,
   hoy,
   horarios,
+  consumoPorDia,
   saveAction,
   deleteAction,
 }: {
@@ -102,6 +108,7 @@ function JornadaItem({
   config: JornadaConfig;
   hoy: string;
   horarios?: MapaHorarios;
+  consumoPorDia?: Record<string, ConsumoJornadaDia[]>;
   saveAction: Accion;
   deleteAction: Accion;
 }) {
@@ -178,6 +185,7 @@ function JornadaItem({
             config={config}
             hoy={hoy}
             horarios={horarios}
+            consumoPorDia={consumoPorDia}
             jornada={jornada}
             onCancel={() => setEditando(false)}
           />
