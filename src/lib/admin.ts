@@ -43,11 +43,27 @@ import {
 import {
   claveMes,
   clonarHorario,
+  horarioDelDia,
+  minutosJornadaDia,
   minutosSemanales,
   normalizarHorarioDias,
   type HorarioDias,
   type MapaHorarios,
 } from "@/lib/horarios";
+import {
+  descuenta,
+  diasDelPermiso,
+  faltasDelPeriodo,
+  faltasVacias,
+  normalizarEstadoPermiso,
+  normalizarOrigenPermiso,
+  normalizarTipoPermiso,
+  sumarDias as sumarDiasFecha,
+  type FaltasPeriodo,
+  type PermisoEstado,
+  type PermisoParaNomina,
+  type PermisoRecord,
+} from "@/lib/permisos";
 import {
   parametrosLegalesDelMes,
   type ParametrosLegalesMes,
@@ -1617,3 +1633,268 @@ export async function getNominaCounts(): Promise<{
     return { borradores: 0, cerradas: 0 };
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Permisos de falta (migración 0014)                                  */
+/* ------------------------------------------------------------------ */
+
+/**
+ * PERMISOS — lecturas
+ * ===================
+ * La versión digital del formato «SOLICITUD DE PERMISO». El alcance lo decide
+ * **RLS** (migración 0014): una cuenta normal solo ve las suyas; un manager,
+ * las de todo el equipo. Aquí no se vuelve a filtrar por rol: se filtra por lo
+ * que pide la pantalla.
+ *
+ * Las reglas del DESCUENTO (el día, el domingo perdido, la proporción de un
+ * permiso por horas) viven en `src/lib/permisos.ts`, que es puro. Lo único que
+ * se hace aquí es leer las filas y resolver, para cada permiso por horas, las
+ * **horas de la jornada programada** de ese día (eso sí necesita
+ * `horarios_mensuales`).
+ */
+
+/** ¿El error dice que la tabla `permisos` todavía no existe (0014 sin aplicar)? */
+export function faltaTablaPermisos(
+  error: { code?: string | null; message?: string | null } | null | undefined,
+): boolean {
+  if (!error) return false;
+  if (error.code === "42P01" || error.code === "PGRST205") return true;
+  const mensaje = error.message ?? "";
+  return (
+    /permisos/i.test(mensaje) &&
+    /(does not exist|no existe|schema cache|find the table)/i.test(mensaje)
+  );
+}
+
+function rowToPermiso(row: Record<string, unknown>): PermisoRecord {
+  const texto = (v: unknown): string | null =>
+    typeof v === "string" && v.trim() !== "" ? v : null;
+  return {
+    id: String(row.id),
+    employee_id: String(row.employee_id),
+    tipo: normalizarTipoPermiso(row.tipo),
+    fecha_inicio: String(row.fecha_inicio ?? ""),
+    fecha_fin: String(row.fecha_fin ?? row.fecha_inicio ?? ""),
+    hora_inicio: texto(row.hora_inicio),
+    hora_fin: texto(row.hora_fin),
+    motivo: String(row.motivo ?? ""),
+    reemplazo: texto(row.reemplazo),
+    observaciones: texto(row.observaciones),
+    soporte_path: texto(row.soporte_path),
+    soporte_nombre: texto(row.soporte_nombre),
+    remunerado_solicitado: row.remunerado_solicitado === true,
+    remunerado: typeof row.remunerado === "boolean" ? row.remunerado : null,
+    estado: normalizarEstadoPermiso(row.estado),
+    nota_revision: texto(row.nota_revision),
+    revisado_por: texto(row.revisado_por),
+    revisado_at: texto(row.revisado_at),
+    origen: normalizarOrigenPermiso(row.origen),
+    creado_por: texto(row.creado_por),
+    created_at: texto(row.created_at),
+    updated_at: texto(row.updated_at),
+  };
+}
+
+export interface PermisoFilters {
+  estado?: PermisoEstado | "todos";
+  employeeId?: string;
+  /** `YYYY-MM-DD`: permisos que TOQUEN ese rango (no solo los que empiezan ahí). */
+  desde?: string;
+  hasta?: string;
+  limit?: number;
+  /** `false` = no resolver nombres contra `profiles` (ahorra una consulta). */
+  nombres?: boolean;
+}
+
+/**
+ * Permisos visibles para la sesión actual, del más reciente al más antiguo.
+ * Con `desde`/`hasta` se traen los que SE CRUZAN con el rango: un permiso del
+ * 28 de septiembre al 2 de octubre aparece en los dos meses.
+ */
+export async function listPermisos(
+  filters: PermisoFilters = {},
+): Promise<PermisoRecord[]> {
+  const supabase = await getServerSupabase();
+  if (!supabase) return [];
+
+  try {
+    let query = supabase
+      .from("permisos")
+      .select("*")
+      .order("fecha_inicio", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(filters.limit ?? 500);
+
+    if (filters.estado && filters.estado !== "todos")
+      query = query.eq("estado", filters.estado);
+    if (filters.employeeId) query = query.eq("employee_id", filters.employeeId);
+    // Se cruzan si empieza antes de que acabe el rango y acaba después de que empiece.
+    if (filters.hasta) query = query.lte("fecha_inicio", filters.hasta);
+    if (filters.desde) query = query.gte("fecha_fin", filters.desde);
+
+    const { data, error } = await query;
+    if (error || !data) return [];
+
+    const permisos = data.map(rowToPermiso);
+    if (filters.nombres === false || permisos.length === 0) return permisos;
+
+    // `mapaDePerfiles` completa con la clave de servicio lo que la sesión no
+    // puede leer: en el portal, RLS solo deja ver la propia fila de `profiles`,
+    // así que sin esto el aprobador saldría sin nombre.
+    const perfiles = await mapaDePerfiles(supabase, [
+      ...permisos.map((p) => p.employee_id),
+      ...permisos.map((p) => p.revisado_por),
+    ]);
+
+    return permisos.map((p) => ({
+      ...p,
+      employee_name: nombreDePerfil(perfiles, p.employee_id) ?? "Cuenta del equipo",
+      employee_cargo: perfiles.get(p.employee_id)?.cargo ?? null,
+      reviewer_name: nombreDePerfil(perfiles, p.revisado_por) ?? undefined,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+/** Un permiso por su id (RLS decide si la sesión puede verlo). */
+export async function getPermiso(id: string): Promise<PermisoRecord | null> {
+  const supabase = await getServerSupabase();
+  if (!supabase || !id) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from("permisos")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+    if (error || !data) return null;
+    return rowToPermiso(data);
+  } catch {
+    return null;
+  }
+}
+
+/** Cuántos permisos están esperando revisión (contador de la pestaña). */
+export async function getPermisosPendientes(): Promise<number> {
+  const supabase = await getServerSupabase();
+  if (!supabase) return 0;
+  try {
+    const { count } = await supabase
+      .from("permisos")
+      .select("id", { count: "exact", head: true })
+      .eq("estado", "pendiente");
+    return count ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Los permisos que DESCUENTAN y tocan el período, listos para
+ * `faltasDelPeriodo()`.
+ *
+ * Se lee una SEMANA a cada lado del período a propósito: el domingo de una
+ * semana se atribuye al período donde cae el PRIMER día de falta de esa semana,
+ * y sin ver los días vecinos no se sabría si ese domingo ya se cobró en la
+ * liquidación anterior.
+ *
+ * Cada permiso por horas sale con `horasJornada` = las horas de la jornada
+ * programada de su día (del horario del mes). Si ese día no estaba programado,
+ * queda en 0 y el permiso no descuenta nada.
+ */
+export async function leerPermisosNomina(
+  desde: string,
+  hasta: string,
+  employeeId?: string,
+  horarios?: MapaHorarios,
+): Promise<(PermisoParaNomina & { employee_id: string })[]> {
+  const supabase = await getServerSupabase();
+  if (!supabase) return [];
+
+  const margenDesde = sumarDiasFecha(desde, -8);
+  const margenHasta = sumarDiasFecha(hasta, 8);
+
+  try {
+    let query = supabase
+      .from("permisos")
+      .select(
+        "id, employee_id, tipo, fecha_inicio, fecha_fin, hora_inicio, hora_fin, estado, remunerado, motivo",
+      )
+      .eq("estado", "aprobado")
+      .eq("remunerado", false)
+      .lte("fecha_inicio", margenHasta)
+      .gte("fecha_fin", margenDesde)
+      .order("fecha_inicio", { ascending: true })
+      .limit(2000);
+    if (employeeId) query = query.eq("employee_id", employeeId);
+
+    const { data, error } = await query;
+    if (error || !data) return [];
+
+    const mapaHorarios = horarios ?? (await getMapaHorarios());
+
+    return data.map((row) => {
+      const permiso: PermisoParaNomina & { employee_id: string } = {
+        id: String(row.id),
+        employee_id: String(row.employee_id),
+        tipo: normalizarTipoPermiso(row.tipo),
+        fecha_inicio: String(row.fecha_inicio ?? ""),
+        fecha_fin: String(row.fecha_fin ?? row.fecha_inicio ?? ""),
+        hora_inicio: typeof row.hora_inicio === "string" ? row.hora_inicio : null,
+        hora_fin: typeof row.hora_fin === "string" ? row.hora_fin : null,
+        estado: normalizarEstadoPermiso(row.estado),
+        remunerado: typeof row.remunerado === "boolean" ? row.remunerado : null,
+        motivo: String(row.motivo ?? ""),
+      };
+      if (permiso.tipo === "horas") {
+        permiso.horasJornada =
+          minutosJornadaDia(horarioDelDia(permiso.fecha_inicio, mapaHorarios)) / 60;
+      }
+      return permiso;
+    });
+  } catch {
+    return [];
+  }
+}
+
+/** Las faltas del período de CADA empleado, a partir de una sola lectura. */
+export function faltasPorEmpleado(
+  permisos: readonly (PermisoParaNomina & { employee_id?: string })[],
+  desde: string,
+  hasta: string,
+): Map<string, FaltasPeriodo> {
+  const porEmpleado = new Map<string, PermisoParaNomina[]>();
+  for (const p of permisos) {
+    const id = p.employee_id ?? "";
+    if (!id) continue;
+    const lista = porEmpleado.get(id) ?? [];
+    lista.push(p);
+    porEmpleado.set(id, lista);
+  }
+
+  const salida = new Map<string, FaltasPeriodo>();
+  for (const [id, suyos] of porEmpleado) {
+    salida.set(id, faltasDelPeriodo(suyos, desde, hasta));
+  }
+  return salida;
+}
+
+/**
+ * Las faltas no remuneradas de UNA persona en un período. Es lo que usan
+ * `cerrarLiquidacion` y el volante; la pestaña «Liquidación» usa
+ * `leerPermisosNomina` + `faltasPorEmpleado`, una sola consulta para el equipo.
+ */
+export async function faltasDelPeriodoEmpleado(
+  employeeId: string,
+  desde: string,
+  hasta: string,
+  horarios?: MapaHorarios,
+): Promise<FaltasPeriodo> {
+  if (!employeeId) return faltasVacias();
+  const permisos = await leerPermisosNomina(desde, hasta, employeeId, horarios);
+  return faltasDelPeriodo(permisos, desde, hasta);
+}
+
+/** Reexportados por comodidad de los Server Components que pintan permisos. */
+export { descuenta as permisoDescuenta, diasDelPermiso };
